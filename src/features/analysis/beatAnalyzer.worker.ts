@@ -194,9 +194,11 @@ function chooseTempo(onsets: Onset[]) {
   const candidates = tempoHistogram(onsets);
   if (!candidates.length) return null;
 
+  const histogramPeak = Math.max(candidates[0]?.score || 0, 1e-6);
   const scored = candidates.map((candidate) => {
     const phase = phaseScore(onsets, candidate.bpm);
-    const combined = candidate.score * (0.55 + phase.score * 0.45);
+    const histogramEvidence = candidate.score / histogramPeak;
+    const combined = histogramEvidence * 0.35 + phase.score * 0.65;
     return { ...candidate, phase, combined };
   }).sort((left, right) => right.combined - left.combined);
 
