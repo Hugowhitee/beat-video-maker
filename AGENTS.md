@@ -74,4 +74,4 @@ For export changes verify a real encoded file, not only that an encoder call ret
 
 The vertical slice is now a regression floor: image + audio import → Clean preview → playback/waveform → configurable title/watermark → deterministic 1080p export with audio, with a real encoded-file smoke test and inspected minimum/normal/wide screenshots.
 
-Next milestone: BPM + beat-grid + bar-1 analysis with confidence and manual correction. Add musical timing as one canonical feature module before building extra presets; do not let presets invent their own tempo/phase logic.
+Musical timing now has one canonical analysis/clock module with confidence and manual correction. Next milestone: build the remaining presets on that clock, then PWA/offline settings. Do not let presets invent their own tempo/phase logic.

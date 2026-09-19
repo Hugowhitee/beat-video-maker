@@ -21,6 +21,9 @@ import {
   safeExportName,
 } from './features/export/exportVideo';
 import type { ExportCapability } from './features/export/exportVideo';
+import { analyzeBeatGrid } from './features/analysis/analyzeBeatGrid';
+import { markersForDuration } from './features/analysis/musicalClock';
+import type { BeatGridAnalysis, VerifiedGrid } from './features/analysis/types';
 
 const fixtureMode = new URLSearchParams(window.location.search).has('fixture');
 
@@ -114,6 +117,11 @@ function App() {
   const [exportState, setExportState] = useState<'idle' | 'exporting' | 'done' | 'error' | 'cancelled'>('idle');
   const [exportProgress, setExportProgress] = useState(0);
   const [exportMessage, setExportMessage] = useState('');
+  const [analysisState, setAnalysisState] = useState<'idle' | 'analyzing' | 'ready' | 'error'>('idle');
+  const [analysis, setAnalysis] = useState<BeatGridAnalysis | null>(null);
+  const [manualBpm, setManualBpm] = useState('');
+  const [manualBarOffset, setManualBarOffset] = useState<number | null>(null);
+  const [analysisMessage, setAnalysisMessage] = useState('');
 
   const settings: CompositionSettings = useMemo(() => ({
     title,
@@ -233,7 +241,31 @@ function App() {
       setAudioName(file.name);
       setPeaks(buildPeaks(decoded));
       setCurrentTime(0);
+      setAnalysis(null);
+      setManualBpm('');
+      setManualBarOffset(null);
+      setAnalysisState('analyzing');
+      setAnalysisMessage('Analyzing tempo and beat phase…');
       setMediaMessage('Audio ready · ' + decoded.duration.toFixed(1) + ' s');
+
+      void analyzeBeatGrid(decoded)
+        .then((result) => {
+          setAnalysis(result);
+          setManualBpm(result.bpm === null ? '' : result.bpm.toFixed(1));
+          setManualBarOffset(result.barConfidence >= 0.35 ? result.barOffset : null);
+          setAnalysisState('ready');
+          setAnalysisMessage(
+            result.bpm === null
+              ? 'Tempo uncertain · enter BPM manually.'
+              : result.confidence.toUpperCase() + ' confidence · ' + result.bpm.toFixed(1) + ' BPM',
+          );
+        })
+        .catch((analysisError: unknown) => {
+          setAnalysisState('error');
+          setAnalysisMessage(
+            analysisError instanceof Error ? analysisError.message : 'Beat analysis failed.',
+          );
+        });
     } catch (error) {
       setMediaMessage(error instanceof Error ? error.message : 'Could not load audio.');
     }
@@ -326,6 +358,32 @@ function App() {
   };
 
   const duration = audioBuffer?.duration || 0;
+  const parsedManualBpm = Number(manualBpm);
+  const effectiveBpm = Number.isFinite(parsedManualBpm) && parsedManualBpm >= 40 && parsedManualBpm <= 260
+    ? parsedManualBpm
+    : analysis?.bpm ?? null;
+  const effectiveBeatOffset = manualBarOffset ?? analysis?.beatOffset ?? null;
+  const verifiedGrid: VerifiedGrid | null = effectiveBpm !== null && effectiveBeatOffset !== null
+    ? {
+        bpm: effectiveBpm,
+        beatOffset: effectiveBeatOffset,
+        barOffset: manualBarOffset,
+        source:
+          manualBarOffset !== analysis?.barOffset ||
+          (analysis?.bpm !== null && Math.abs(effectiveBpm - analysis.bpm) > 0.01)
+            ? 'manual'
+            : 'auto',
+      }
+    : null;
+  const beatMarkers = verifiedGrid && duration > 0
+    ? markersForDuration(duration, verifiedGrid).slice(0, 600)
+    : [];
+  const barPeriod = effectiveBpm ? 240 / effectiveBpm : null;
+  const isBarMarker = (time: number) => {
+    if (manualBarOffset === null || barPeriod === null) return false;
+    const remainder = ((time - manualBarOffset) % barPeriod + barPeriod) % barPeriod;
+    return Math.min(remainder, barPeriod - remainder) < 0.02;
+  };
   const exportReady = Boolean(cover && audioBuffer && capability.supported);
 
   return (
@@ -466,11 +524,85 @@ function App() {
             />
           </div>
 
-          <div className="waveform" aria-label="Audio waveform">
-            {peaks.length > 0 ? peaks.map((peak, index) => (
-              <span key={index} style={{ height: Math.max(8, peak * 42) }} />
-            )) : <p>Waveform appears after audio is decoded.</p>}
+          <div className="waveform-shell">
+            <div className="waveform" aria-label="Audio waveform">
+              {peaks.length > 0 ? peaks.map((peak, index) => (
+                <span key={index} style={{ height: Math.max(8, peak * 42) }} />
+              )) : <p>Waveform appears after audio is decoded.</p>}
+            </div>
+            <div className="beat-markers" aria-hidden="true">
+              {beatMarkers.map((time, index) => (
+                <span
+                  key={index}
+                  className={isBarMarker(time) ? 'is-bar' : ''}
+                  style={{ left: (time / Math.max(duration, 0.001) * 100) + '%' }}
+                />
+              ))}
+            </div>
           </div>
+
+          {audioBuffer && (
+            <section className="analysis-card" data-testid="analysis-card" aria-label="Beat grid">
+              <div className="analysis-summary">
+                <div>
+                  <span className="eyebrow">GRID</span>
+                  <strong>{analysisMessage || 'Waiting for analysis…'}</strong>
+                </div>
+                <span className={'confidence-badge ' + (analysis?.confidence || 'low')}>
+                  {analysisState === 'analyzing' ? 'ANALYZING' : analysis?.confidence?.toUpperCase() || 'MANUAL'}
+                </span>
+              </div>
+
+              <div className="analysis-controls">
+                <label className="compact-control">
+                  <span>BPM</span>
+                  <input
+                    data-testid="bpm-input"
+                    type="number"
+                    min={40}
+                    max={260}
+                    step={0.1}
+                    value={manualBpm}
+                    placeholder="—"
+                    onChange={(event) => setManualBpm(event.target.value)}
+                  />
+                </label>
+                <div className="bar-control">
+                  <span>Bar 1</span>
+                  <strong data-testid="bar-offset">
+                    {manualBarOffset === null ? 'Unverified' : manualBarOffset.toFixed(3) + ' s'}
+                  </strong>
+                  <button
+                    className="small-button"
+                    type="button"
+                    onClick={() => setManualBarOffset(currentTime)}
+                  >
+                    Set here
+                  </button>
+                  <button
+                    className="nudge-button"
+                    type="button"
+                    disabled={manualBarOffset === null}
+                    onClick={() => setManualBarOffset((value) => value === null ? value : Math.max(0, value - 0.01))}
+                  >
+                    −10 ms
+                  </button>
+                  <button
+                    className="nudge-button"
+                    type="button"
+                    disabled={manualBarOffset === null}
+                    onClick={() => setManualBarOffset((value) => value === null ? value : value + 0.01)}
+                  >
+                    +10 ms
+                  </button>
+                </div>
+              </div>
+
+              {analysis?.notes.length ? (
+                <p className="analysis-note">{analysis.notes[0]}</p>
+              ) : null}
+            </section>
+          )}
 
           <div className="export-status" data-testid="export-status">
             <span className={'status-dot ' + (capability.supported ? 'ok' : '')} />
@@ -586,7 +718,7 @@ function App() {
 
           <div className="scope-note">
             <strong>Next milestone</strong>
-            <p>Vertical-slice export is proven. Beat/grid analysis and preset motion are next.</p>
+            <p>Beat/grid analysis now has confidence + manual correction. Preset motion must use this shared grid.</p>
           </div>
         </aside>
       </section>

@@ -16,9 +16,11 @@ The first vertical slice is implemented and validated:
 - MP4/H.264 + AAC when available, with an explicit WebM/VP9 + Opus fallback instead of putting VP9 in an MP4 container;
 - disk-backed OPFS streaming for long browser exports where available, with an in-memory compatibility fallback;
 - cancellable export with partial-output cleanup;
+- BPM + beat-phase analysis with explicit confidence, independent cross-check and manual BPM/bar-1 correction;
+- a shared musical-clock module that future presets must use;
 - fixed-viewport Playwright visual QA and a real encoded-file smoke test.
 
-The next v1 milestone is musical analysis: BPM/beat-grid/bar-1 confidence and manual correction, followed by the remaining visual presets.
+Musical analysis is now implemented as a first usable pass: an in-worker onset/tempo/phase analyzer is reconciled with `web-audio-beat-detector` as an independent cross-check. BPM and bar 1 remain manually correctable, and low-confidence bar inference is shown as unverified instead of being silently accepted. The next milestone is wiring this shared grid into the remaining visual presets.
 
 ## Run locally
 
@@ -54,7 +56,7 @@ Long exports prefer an Origin Private File System (OPFS) backed Mediabunny `Stre
 
 `src/features/compositor/renderComposition.ts` owns visual composition. Both live preview and export call it; title/watermark rendering must not fork into a second export-only implementation.
 
-`src/features/media/media.ts` owns local image/audio loading and waveform peak extraction. `src/features/export/exportVideo.ts` owns capability selection, Mediabunny/WebCodecs encoding and download. `src/features/export/outputTarget.ts` owns disk-backed versus in-memory output. `App.tsx` stays focused on the user flow and state.
+`src/features/media/media.ts` owns local image/audio loading and waveform peak extraction. `src/features/analysis/` owns tempo/phase inference and the shared musical clock; bar inference is confidence-gated and can remain unverified. `src/features/export/exportVideo.ts` owns capability selection, Mediabunny/WebCodecs encoding and download. `src/features/export/outputTarget.ts` owns disk-backed versus in-memory output. `App.tsx` stays focused on the user flow and state.
 
 Stable product boundaries and the layer model live in [docs/product.md](docs/product.md). Visual review rules live in [docs/visual-qa.md](docs/visual-qa.md).
 

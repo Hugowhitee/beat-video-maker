@@ -85,15 +85,27 @@ For long exports, prefer a Mediabunny `StreamTarget` backed by OPFS so encoded b
 
 Codec support is runtime state. Never report success until a non-empty finalized file exists.
 
+## Musical grid
+
+The first grid implementation now has one canonical analysis path:
+
+- a Web Worker derives onset strength, tempo candidates and beat phase from decoded audio;
+- `web-audio-beat-detector` is used only as an independent tempo/offset cross-check;
+- half/double-time agreement is reconciled explicitly;
+- tempo, beat phase and bar-1 confidence remain separate;
+- low-confidence bar-1 inference is not promoted to a verified bar position;
+- BPM and bar 1 remain directly correctable by the user;
+- `musicalClock.ts` owns beat/bar phase math for every future preset.
+
+Unknown remains unknown: analysis must never use a convincing-looking default BPM or bar offset merely because an estimator failed.
+
 ## Next v1 milestone
 
-With the vertical-slice regression floor green, implement:
+With the vertical-slice regression floor and first musical grid in place, implement:
 
-- BPM + beat-grid + bar-1 analysis with confidence;
-- manual BPM/bar-1 correction;
-- a shared musical clock for bar-synchronised preview;
-- the remaining strong presets built from the shared layer model;
+- the remaining strong presets built from the shared layer model and musical clock;
 - offline/local-first PWA behavior;
-- autosaved user settings.
+- autosaved user settings;
+- a real full-beat duration/memory smoke test.
 
-Beat analysis must keep tempo, beat phase/downbeat and arrangement as separate inferences rather than treating one detector as ground truth. New presets must extend the compositor rather than create parallel render paths.
+New presets must extend the compositor rather than create parallel render or timing paths.

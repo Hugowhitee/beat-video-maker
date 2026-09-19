@@ -14,7 +14,9 @@ for (const path of tracked) if (historicalName.test(path)) failures.push('Histor
 const required = [
   'AGENTS.md', 'README.md', 'docs/product.md', 'docs/visual-qa.md', 'package.json',
   'src/features/compositor/renderComposition.ts', 'src/features/export/exportVideo.ts',
-  'src/features/export/outputTarget.ts', 'tests/visual.spec.ts',
+  'src/features/export/outputTarget.ts',
+  'src/features/analysis/analyzeBeatGrid.ts',
+  'src/features/analysis/musicalClock.ts', 'tests/visual.spec.ts',
 ];
 for (const path of required) if (!existsSync(path)) failures.push('Required project file missing: ' + path);
 
