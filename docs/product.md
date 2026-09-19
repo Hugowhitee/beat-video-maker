@@ -117,12 +117,26 @@ Production builds generate a web app manifest and Workbox service worker through
 
 Versioned local settings persist only low-risk editor preferences: title styling, producer/wordmark text, brand placement/opacity, preset and motion amount. Invalid/old values fall back to conservative defaults and the user can reset the settings.
 
-## Next v1 milestone
+## Keyboard and editor history
 
-With export, musical grid, five presets, PWA shell and saved preferences in place, implement:
+v0.1 keyboard behavior is intentionally small and focus-safe:
 
-- a real full-beat duration/memory smoke test;
-- reproducible dependency installation with a committed lockfile;
-- release/deployment wiring only after those gates are green.
+- Space toggles play/pause;
+- Left/Right seeks one second;
+- Shift+Left/Right seeks one verified bar;
+- Home jumps to the beginning;
+- B sets bar 1 at the current playhead when audio is loaded;
+- Enter in the BPM field applies the manual tempo immediately;
+- Ctrl/Cmd+Z/Y (and Shift+Z for redo) restores relevant title/style editor state when a form control is not focused.
+
+Undo/Redo is session state, not a second project-storage system. Focused form fields keep their native editing shortcuts.
+
+## v0.1 release validation
+
+Normal CI uses the committed npm lockfile and `npm ci`. It gates repository hygiene, typecheck, production/PWA build, synthetic analysis regressions, real short media encoding/cancellation and fixed-viewport visual evidence.
+
+A separate manual **Full export smoke** workflow owns sustained-duration validation so every small commit does not encode an entire beat. It uses the same 1920×1080 / 30 fps production path, defaults to 120 seconds, verifies a real finalized container and requires the OPFS/disk-backed output target. Run it on current `main` before a tagged release.
+
+Real-user beat analysis quality still benefits from a ground-truth FL Studio corpus; do not invent such evidence from synthetic fixtures. Confidence gating and manual BPM/bar-1 correction remain the safety net until that corpus exists.
 
 New work must preserve the single compositor, analysis and export owners.

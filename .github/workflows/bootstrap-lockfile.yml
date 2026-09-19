@@ -1,0 +1,70 @@
+name: Bootstrap npm lockfile
+
+on:
+  push:
+    branches: [feat/vertical-slice]
+
+permissions:
+  contents: write
+
+concurrency:
+  group: beatvideo-lockfile-bootstrap
+  cancel-in-progress: true
+
+jobs:
+  lockfile:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          package-manager-cache: false
+
+      - name: Check whether bootstrap is needed
+        id: lock
+        shell: bash
+        run: |
+          if [[ -f package-lock.json ]]; then
+            echo "needed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "needed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Generate npm lockfile
+        if: steps.lock.outputs.needed == 'true'
+        run: npm install --package-lock-only --ignore-scripts --no-audit --no-fund
+
+      - name: Install exact dependencies
+        if: steps.lock.outputs.needed == 'true'
+        run: npm ci --no-audit --no-fund
+
+      - name: Install Playwright Chromium
+        if: steps.lock.outputs.needed == 'true'
+        run: npx playwright install --with-deps chromium
+
+      - name: Validate locked tree
+        if: steps.lock.outputs.needed == 'true'
+        run: npm run check
+
+      - name: Upload visual QA
+        if: always() && steps.lock.outputs.needed == 'true'
+        uses: actions/upload-artifact@v7
+        with:
+          name: Beatvideo-Visual-QA-lockfile
+          path: artifacts/visual-qa/**
+          if-no-files-found: warn
+          retention-days: 7
+
+      - name: Commit lockfile and remove bootstrap workflow
+        if: steps.lock.outputs.needed == 'true'
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git rm .github/workflows/bootstrap-lockfile.yml
+          git add package-lock.json
+          git commit -m "build: lock npm dependencies"
+          git push

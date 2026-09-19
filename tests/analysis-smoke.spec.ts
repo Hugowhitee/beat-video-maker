@@ -74,6 +74,12 @@ test('keyboard transport seeks without hijacking focused form controls', async (
   await page.keyboard.press('Home');
   expect(Number(await seek.inputValue())).toBeLessThan(0.01);
 
+  await page.keyboard.press('Shift+ArrowRight');
+  const barSeek = Number(await seek.inputValue());
+  expect(barSeek).toBeGreaterThanOrEqual(1.8);
+  expect(barSeek).toBeLessThanOrEqual(2.2);
+
+  await page.keyboard.press('Home');
   await page.getByTestId('bpm-input').focus();
   await page.keyboard.press('ArrowRight');
   expect(Number(await seek.inputValue())).toBeLessThan(0.01);

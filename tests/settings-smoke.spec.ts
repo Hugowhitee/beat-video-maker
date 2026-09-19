@@ -24,3 +24,17 @@ test('style preferences persist locally and reset cleanly', async ({ page }, tes
   await expect(page.getByTestId('title-font')).toHaveValue('clean');
   await expect(page.getByTestId('motion-amount')).toHaveValue('low');
 });
+
+
+test('undo and redo restore relevant editor state', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'desktop-normal', 'History is viewport-independent.');
+  await page.goto('/?fixture=1');
+  await expect(page.getByTestId('preset-clean')).toHaveClass(/is-selected/);
+  await page.getByTestId('preset-ambient').click();
+  await expect(page.getByTestId('undo-button')).toBeEnabled();
+  await page.getByTestId('undo-button').click();
+  await expect(page.getByTestId('preset-clean')).toHaveClass(/is-selected/);
+  await expect(page.getByTestId('redo-button')).toBeEnabled();
+  await page.getByTestId('redo-button').click();
+  await expect(page.getByTestId('preset-ambient')).toHaveClass(/is-selected/);
+});

@@ -666,3 +666,19 @@ button.preset-card:hover {
 .tempo-adjust .nudge-button {
   min-height: 26px;
 }
+
+
+.history-actions { display: flex; gap: 4px; }
+.history-button {
+  min-height: 30px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: #151719;
+  color: var(--soft);
+  padding: 5px 8px;
+  font-size: 9px;
+  font-weight: 650;
+  cursor: pointer;
+}
+.history-button:disabled { opacity: 0.38; cursor: default; }
+@media (max-width: 760px) { .history-button { padding-inline: 6px; } }

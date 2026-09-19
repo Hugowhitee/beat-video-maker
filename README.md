@@ -16,11 +16,12 @@ The first vertical slice is implemented and validated:
 - MP4/H.264 + AAC when available, with an explicit WebM/VP9 + Opus fallback instead of putting VP9 in an MP4 container;
 - disk-backed OPFS streaming for long browser exports where available, with an in-memory compatibility fallback;
 - cancellable export with partial-output cleanup;
-- BPM + beat-phase analysis with explicit confidence, independent cross-check and manual BPM/bar-1 correction;
+- BPM + beat-phase analysis with explicit confidence, independent cross-check, half/double tempo correction and manual bar-1 correction;
 - a shared musical-clock module used by all presets;
 - five presets: Clean, Ambient, Reactive, Pulse and Minimal visualizer;
 - versioned local style/brand preferences (media is never persisted);
 - generated Workbox service worker + web app manifest for install/offline app-shell use;
+- keyboard transport plus session Undo/Redo for relevant editor state;
 - fixed-viewport Playwright visual QA and a real encoded-file smoke test.
 
 Musical analysis is now implemented as a first usable pass: an in-worker onset/tempo/phase analyzer is reconciled with `web-audio-beat-detector` as an independent cross-check. BPM and bar 1 remain manually correctable, and low-confidence bar inference is shown as unverified instead of being silently accepted. All five v1 presets now share the same compositor, real amplitude envelope and musical clock. Style/brand preferences are saved locally, and production builds generate an installable offline PWA shell.
@@ -29,7 +30,7 @@ Musical analysis is now implemented as a first usable pass: an in-worker onset/t
 
 Requirements: Node.js 22.12 or newer and a current Chromium browser.
 
-    npm install
+    npm ci
     npm run dev
 
 Open the Vite URL, then choose a cover image and beat. Nothing is uploaded; media stays in the browser.
@@ -46,6 +47,18 @@ Open the Vite URL, then choose a cover image and beat. Nothing is uploaded; medi
 8. During a long render, the Export button becomes a Cancel action.
 
 The app checks codec support at runtime and never reports an export as successful until a real non-empty encoded file exists.
+
+### Keyboard
+
+- Space — play/pause.
+- Left / Right — seek one second.
+- Shift + Left / Right — seek one verified bar.
+- Home — jump to the start.
+- B — set bar 1 at the current playhead when audio is loaded.
+- Ctrl/Cmd+Z and Ctrl/Cmd+Y (or Shift+Ctrl/Cmd+Z) — undo/redo relevant title/style state when a form control is not focused.
+- Enter in the BPM field — apply the manual tempo and regrid immediately.
+
+Focused form controls keep their normal browser keyboard behavior.
 
 ## Browser support
 
@@ -73,6 +86,8 @@ Install Playwright's Chromium once, then run:
 `npm run check` runs repository hygiene, TypeScript, the production Vite build, a PWA-output gate and Playwright tests. The visual test writes ignored screenshots to `artifacts/visual-qa/` at 1024×768, 1440×900 and 1920×1080. CI uploads those screenshots as an artifact; generating them is not considered a visual review by itself.
 
 The media smoke test runs once at the normal desktop project because encoding is viewport-independent. It uploads generated local PNG/WAV fixtures, downloads an actual encoded file, validates the MP4/WebM container signature and separately verifies cancellation behavior.
+
+A separate **Full export smoke** GitHub Actions workflow is intentionally release-only rather than part of every commit. It runs the same 1080p production export path for a configurable sustained duration (120 seconds by default) and fails unless the browser reports the OPFS/disk-backed target. Locally, set `FULL_EXPORT_SECONDS` and run `npm run test:full-export`.
 
 ## Privacy and scope
 

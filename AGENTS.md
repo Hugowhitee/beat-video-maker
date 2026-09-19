@@ -58,7 +58,7 @@ Before coding, inspect `main`, open PRs and existing branches. Reuse an active b
 
 ## Validation loop
 
-Run the narrowest useful check while iterating. Before merge/release:
+Run the narrowest useful check while iterating. Dependency installation is lockfile-driven; use `npm ci`, not an unconstrained install. Before merge/release:
 
 ```bash
 npm run check
@@ -70,8 +70,8 @@ For export changes verify a real encoded file, not only that an encoder call ret
 
 **CI is evidence, not a waiting state.** Check a newly triggered run once. If it is queued or in progress, continue another useful task that cannot invalidate the run: code/doc review, residue scan, comparison research, preparing the visual-QA review, or inspecting already available evidence. Recheck only at a natural checkpoint or after a new commit. Never create a loop whose only action is polling CI.
 
-## Current baseline and next milestone
+## Current baseline and release gate
 
-The vertical slice is now a regression floor: image + audio import → Clean preview → playback/waveform → configurable title/watermark → deterministic 1080p export with audio, with a real encoded-file smoke test and inspected minimum/normal/wide screenshots.
+The v0.1 baseline is: image + audio import → preview/playback/waveform → configurable title/watermark → confidence-aware musical grid with direct correction → five shared-clock presets → deterministic 1080p export with audio. PWA shell, versioned local preferences, keyboard transport/history, a committed npm lockfile, real encoded-file smoke tests and inspected minimum/normal/wide screenshots are part of that baseline.
 
-Musical timing and all five v1 presets now share one canonical analysis/clock/compositor path; PWA shell and versioned local preferences are also part of the current baseline. Next milestone: lockfile reproducibility and a full-duration export/memory smoke. Do not let presets invent their own tempo/phase logic.
+Normal CI stays bounded. Before a tagged release, run the manual **Full export smoke** workflow on current `main` with a representative duration and require its OPFS/disk-backed assertion to pass. Do not let presets invent their own tempo/phase logic or turn release-only duration tests into a polling loop.

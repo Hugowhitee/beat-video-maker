@@ -49,6 +49,19 @@ const PRESET_LABELS: Record<VisualPreset, string> = {
   visualizer: 'Minimal visualizer',
 };
 
+type EditorSnapshot = {
+  title: string;
+  titleSize: number;
+  titlePosition: TitlePosition;
+  titleFont: TitleFont;
+  titleTracking: number;
+  brandText: string;
+  brandPosition: BrandPosition;
+  brandOpacity: number;
+  preset: VisualPreset;
+  motion: MotionAmount;
+};
+
 function FileControl(props: {
   label: string;
   detail: string;
@@ -147,6 +160,84 @@ function App() {
   const [amplitudeEnvelope, setAmplitudeEnvelope] = useState<AmplitudeEnvelope | null>(null);
   const [preset, setPreset] = useState<VisualPreset>(storedSettings.preset);
   const [motion, setMotion] = useState<MotionAmount>(storedSettings.motion);
+  const [historyState, setHistoryState] = useState({ canUndo: false, canRedo: false });
+  const historyRef = useRef<{
+    present: EditorSnapshot | null;
+    undo: EditorSnapshot[];
+    redo: EditorSnapshot[];
+    applying: boolean;
+  }>({ present: null, undo: [], redo: [], applying: false });
+
+  const editorSnapshot = useMemo<EditorSnapshot>(() => ({
+    title,
+    titleSize,
+    titlePosition,
+    titleFont,
+    titleTracking,
+    brandText,
+    brandPosition,
+    brandOpacity,
+    preset,
+    motion,
+  }), [
+    brandOpacity, brandPosition, brandText, motion, preset,
+    title, titleFont, titlePosition, titleSize, titleTracking,
+  ]);
+
+  useEffect(() => {
+    const history = historyRef.current;
+    if (history.applying) {
+      history.present = editorSnapshot;
+      history.applying = false;
+      setHistoryState({ canUndo: history.undo.length > 0, canRedo: history.redo.length > 0 });
+      return;
+    }
+    if (history.present === null) {
+      history.present = editorSnapshot;
+      return;
+    }
+    if (JSON.stringify(history.present) === JSON.stringify(editorSnapshot)) return;
+    history.undo.push(history.present);
+    if (history.undo.length > 50) history.undo.shift();
+    history.present = editorSnapshot;
+    history.redo = [];
+    setHistoryState({ canUndo: true, canRedo: false });
+  }, [editorSnapshot]);
+
+  const applyEditorSnapshot = useCallback((snapshot: EditorSnapshot) => {
+    setTitle(snapshot.title);
+    setTitleSize(snapshot.titleSize);
+    setTitlePosition(snapshot.titlePosition);
+    setTitleFont(snapshot.titleFont);
+    setTitleTracking(snapshot.titleTracking);
+    setBrandText(snapshot.brandText);
+    setBrandPosition(snapshot.brandPosition);
+    setBrandOpacity(snapshot.brandOpacity);
+    setPreset(snapshot.preset);
+    setMotion(snapshot.motion);
+  }, []);
+
+  const undoEditor = useCallback(() => {
+    const history = historyRef.current;
+    const previous = history.undo.pop();
+    if (!previous) return;
+    history.redo.push(history.present ?? editorSnapshot);
+    history.present = previous;
+    history.applying = true;
+    applyEditorSnapshot(previous);
+    setHistoryState({ canUndo: history.undo.length > 0, canRedo: true });
+  }, [applyEditorSnapshot, editorSnapshot]);
+
+  const redoEditor = useCallback(() => {
+    const history = historyRef.current;
+    const next = history.redo.pop();
+    if (!next) return;
+    history.undo.push(history.present ?? editorSnapshot);
+    history.present = next;
+    history.applying = true;
+    applyEditorSnapshot(next);
+    setHistoryState({ canUndo: true, canRedo: history.redo.length > 0 });
+  }, [applyEditorSnapshot, editorSnapshot]);
 
   const settings: CompositionSettings = useMemo(() => ({
     title,
@@ -392,7 +483,25 @@ function App() {
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
       const target = event.target as HTMLElement | null;
-      if (target?.matches('input, textarea, select, button, [contenteditable="true"]')) return;
+      const isFormTarget = Boolean(target?.matches('input, textarea, select, button, [contenteditable="true"]'));
+      const command = event.ctrlKey || event.metaKey;
+
+      if (command && !isFormTarget) {
+        const key = event.key.toLowerCase();
+        if (key === 'z') {
+          event.preventDefault();
+          if (event.shiftKey) redoEditor();
+          else undoEditor();
+          return;
+        }
+        if (key === 'y') {
+          event.preventDefault();
+          redoEditor();
+          return;
+        }
+      }
+
+      if (isFormTarget) return;
 
       if (event.code === 'Space') {
         event.preventDefault();
@@ -423,7 +532,7 @@ function App() {
 
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [audioBuffer, currentTime, resolveGrid, seekTo, togglePlayback]);
+  }, [audioBuffer, currentTime, redoEditor, resolveGrid, seekTo, togglePlayback, undoEditor]);
 
   const seek = (event: ChangeEvent<HTMLInputElement>) => {
     seekTo(Number(event.target.value));
@@ -516,6 +625,10 @@ function App() {
           </div>
         </div>
         <div className="topbar-actions">
+          <div className="history-actions" aria-label="Edit history">
+            <button data-testid="undo-button" className="history-button" type="button" disabled={!historyState.canUndo} onClick={undoEditor}>Undo</button>
+            <button data-testid="redo-button" className="history-button" type="button" disabled={!historyState.canRedo} onClick={redoEditor}>Redo</button>
+          </div>
           <span className="output-pill">1080p · 30 fps</span>
           <button
             data-testid="export-button"
