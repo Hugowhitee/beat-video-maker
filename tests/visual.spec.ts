@@ -50,3 +50,18 @@ test('all five presets have a reviewable normal-viewport state', async ({ page }
     });
   }
 });
+
+
+test('install help is visually reviewable', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'desktop-normal', 'Install help uses the normal review viewport.');
+
+  await page.goto('/?fixture=1');
+  await page.getByTestId('install-button').click();
+  await expect(page.getByTestId('install-help')).toBeVisible();
+
+  await mkdir('artifacts/visual-qa', { recursive: true });
+  await page.screenshot({
+    path: 'artifacts/visual-qa/install-help.png',
+    fullPage: true,
+  });
+});
