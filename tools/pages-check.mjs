@@ -13,6 +13,9 @@ if (!html.includes('/beat-video-maker/manifest.webmanifest')) {
 if (/\b(?:src|href)="\/assets\//.test(html)) {
   failures.push('Built HTML still contains root-level /assets paths.');
 }
+if (html.includes('registerSW.js') && !html.includes('/beat-video-maker/registerSW.js')) {
+  failures.push('Service-worker registration is not scoped to the GitHub Pages project path.');
+}
 if (manifest.start_url !== './') failures.push('Manifest start_url must remain relative.');
 if (manifest.scope !== './') failures.push('Manifest scope must remain relative.');
 if (!Array.isArray(manifest.icons) || !manifest.icons.some((icon) => icon.src === 'icon.svg')) {
