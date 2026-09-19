@@ -116,8 +116,9 @@ Motion is Off / Low / Medium. Presets must never invent tempo/phase logic or fak
 Production builds generate a web app manifest and Workbox service worker through `vite-plugin-pwa`. The canonical hosted surface is the GitHub Pages project site at `https://hugowhitee.github.io/beat-video-maker/`.
 
 The app owns a small install affordance in its top bar:
-- when Chromium exposes `beforeinstallprompt`, **Install app** invokes the browser-native install flow;
-- otherwise **Install** opens concise fallback guidance instead of pretending installability was detected;
+- **Install app** is always the visible user action while the app is not installed;
+- when Chromium exposes `beforeinstallprompt`, that action invokes the browser-native install flow;
+- otherwise the same action opens concise fallback guidance instead of pretending installability was detected;
 - when `appinstalled` fires or the app already runs in standalone display mode, the install control is hidden.
 
 The Pages build uses the project base `/beat-video-maker/`; local dev/test stays rooted at `/`. A deploy-path check must fail if the production HTML falls back to root-level `/assets` paths.
