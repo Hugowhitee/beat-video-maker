@@ -929,7 +929,7 @@ function App() {
                 { value: 'medium', label: 'Medium' },
               ]}
             />
-            {!verifiedGrid?.barOffset && (preset === 'ambient' || preset === 'pulse') ? (
+            {verifiedGrid?.barOffset == null && (preset === 'ambient' || preset === 'pulse') ? (
               <p className="control-hint">Verify bar 1 to enable bar-synchronised motion.</p>
             ) : null}
           </div>
