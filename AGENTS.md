@@ -74,4 +74,4 @@ For export changes verify a real encoded file, not only that an encoder call ret
 
 The vertical slice is now a regression floor: image + audio import → Clean preview → playback/waveform → configurable title/watermark → deterministic 1080p export with audio, with a real encoded-file smoke test and inspected minimum/normal/wide screenshots.
 
-Musical timing and all five v1 presets now share one canonical analysis/clock/compositor path. Next milestone: PWA/offline settings, lockfile reproducibility and a full-duration export/memory smoke. Do not let presets invent their own tempo/phase logic.
+Musical timing and all five v1 presets now share one canonical analysis/clock/compositor path; PWA shell and versioned local preferences are also part of the current baseline. Next milestone: lockfile reproducibility and a full-duration export/memory smoke. Do not let presets invent their own tempo/phase logic.

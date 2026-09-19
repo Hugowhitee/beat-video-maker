@@ -18,7 +18,10 @@ const required = [
   'src/features/analysis/analyzeBeatGrid.ts',
   'src/features/analysis/musicalClock.ts',
   'src/features/analysis/audioFeatures.ts',
-  'tests/fixtures/media.ts', 'tests/visual.spec.ts',
+  'tests/fixtures/media.ts',
+  'src/features/project/settings.ts',
+  'tools/pwa-check.mjs',
+  'public/icon.svg', 'tests/visual.spec.ts',
 ];
 for (const path of required) if (!existsSync(path)) failures.push('Required project file missing: ' + path);
 

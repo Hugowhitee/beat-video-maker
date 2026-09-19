@@ -111,13 +111,18 @@ All presets are configurations of the same compositor and use the shared musical
 
 Motion is Off / Low / Medium. Presets must never invent tempo/phase logic or fake spectrum data.
 
+## Local persistence and offline shell
+
+Production builds generate a web app manifest and Workbox service worker through `vite-plugin-pwa`. The cached app shell can reopen offline after first use. Imported audio/images are runtime user media and are never persisted or added to the application cache.
+
+Versioned local settings persist only low-risk editor preferences: title styling, producer/wordmark text, brand placement/opacity, preset and motion amount. Invalid/old values fall back to conservative defaults and the user can reset the settings.
+
 ## Next v1 milestone
 
-With export, musical grid and the five compositor presets in place, implement:
+With export, musical grid, five presets, PWA shell and saved preferences in place, implement:
 
-- offline/local-first PWA behavior;
-- autosaved user settings;
 - a real full-beat duration/memory smoke test;
-- reproducible dependency installation with a committed lockfile.
+- reproducible dependency installation with a committed lockfile;
+- release/deployment wiring only after those gates are green.
 
 New work must preserve the single compositor, analysis and export owners.

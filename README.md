@@ -19,9 +19,11 @@ The first vertical slice is implemented and validated:
 - BPM + beat-phase analysis with explicit confidence, independent cross-check and manual BPM/bar-1 correction;
 - a shared musical-clock module used by all presets;
 - five presets: Clean, Ambient, Reactive, Pulse and Minimal visualizer;
+- versioned local style/brand preferences (media is never persisted);
+- generated Workbox service worker + web app manifest for install/offline app-shell use;
 - fixed-viewport Playwright visual QA and a real encoded-file smoke test.
 
-Musical analysis is now implemented as a first usable pass: an in-worker onset/tempo/phase analyzer is reconciled with `web-audio-beat-detector` as an independent cross-check. BPM and bar 1 remain manually correctable, and low-confidence bar inference is shown as unverified instead of being silently accepted. All five v1 presets now share the same compositor, real amplitude envelope and musical clock.
+Musical analysis is now implemented as a first usable pass: an in-worker onset/tempo/phase analyzer is reconciled with `web-audio-beat-detector` as an independent cross-check. BPM and bar 1 remain manually correctable, and low-confidence bar inference is shown as unverified instead of being silently accepted. All five v1 presets now share the same compositor, real amplitude envelope and musical clock. Style/brand preferences are saved locally, and production builds generate an installable offline PWA shell.
 
 ## Run locally
 
@@ -68,7 +70,7 @@ Install Playwright's Chromium once, then run:
     npx playwright install chromium
     npm run check
 
-`npm run check` runs repository hygiene, TypeScript, the production Vite build and Playwright tests. The visual test writes ignored screenshots to `artifacts/visual-qa/` at 1024×768, 1440×900 and 1920×1080. CI uploads those screenshots as an artifact; generating them is not considered a visual review by itself.
+`npm run check` runs repository hygiene, TypeScript, the production Vite build, a PWA-output gate and Playwright tests. The visual test writes ignored screenshots to `artifacts/visual-qa/` at 1024×768, 1440×900 and 1920×1080. CI uploads those screenshots as an artifact; generating them is not considered a visual review by itself.
 
 The media smoke test runs once at the normal desktop project because encoding is viewport-independent. It uploads generated local PNG/WAV fixtures, downloads an actual encoded file, validates the MP4/WebM container signature and separately verifies cancellation behavior.
 
@@ -92,3 +94,10 @@ See [AGENTS.md](AGENTS.md) before changing architecture, workflow or validation.
 - **Minimal visualizer** — a small real amplitude line at the lower safe edge, never a fake spectrum.
 
 Motion has Off / Low / Medium levels. No preset owns its own timing detector; they all consume the shared grid.
+
+
+## Offline and saved preferences
+
+Production builds use `vite-plugin-pwa`/Workbox to generate the manifest and service worker. After the app shell has been visited and cached, the editor can reopen without a network connection. Imported media is never cached by the app.
+
+Style choices such as preset, motion amount, title styling and producer/wordmark defaults are stored in versioned `localStorage`. The Style panel can reset those preferences to defaults.

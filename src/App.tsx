@@ -31,8 +31,15 @@ import {
   buildAmplitudeEnvelope,
 } from './features/analysis/audioFeatures';
 import type { AmplitudeEnvelope } from './features/analysis/audioFeatures';
+import {
+  DEFAULT_USER_SETTINGS,
+  clearUserSettings,
+  loadUserSettings,
+  saveUserSettings,
+} from './features/project/settings';
 
 const fixtureMode = new URLSearchParams(window.location.search).has('fixture');
+const storedSettings = fixtureMode ? DEFAULT_USER_SETTINGS : loadUserSettings();
 
 function FileControl(props: {
   label: string;
@@ -101,13 +108,13 @@ function App() {
   const [audioBuffer, setAudioBuffer] = useState<AudioBuffer | null>(null);
   const [peaks, setPeaks] = useState<number[]>([]);
   const [title, setTitle] = useState(fixtureMode ? 'MIDNIGHT STATIC' : '');
-  const [titleSize, setTitleSize] = useState(58);
-  const [titlePosition, setTitlePosition] = useState<TitlePosition>('bottom-left');
-  const [titleFont, setTitleFont] = useState<TitleFont>('clean');
-  const [titleTracking, setTitleTracking] = useState(1);
-  const [brandText, setBrandText] = useState(fixtureMode ? 'prod. usolido' : '');
-  const [brandPosition, setBrandPosition] = useState<BrandPosition>('top-right');
-  const [brandOpacity, setBrandOpacity] = useState(0.72);
+  const [titleSize, setTitleSize] = useState(storedSettings.titleSize);
+  const [titlePosition, setTitlePosition] = useState<TitlePosition>(storedSettings.titlePosition);
+  const [titleFont, setTitleFont] = useState<TitleFont>(storedSettings.titleFont);
+  const [titleTracking, setTitleTracking] = useState(storedSettings.titleTracking);
+  const [brandText, setBrandText] = useState(fixtureMode ? 'prod. usolido' : storedSettings.brandText);
+  const [brandPosition, setBrandPosition] = useState<BrandPosition>(storedSettings.brandPosition);
+  const [brandOpacity, setBrandOpacity] = useState(storedSettings.brandOpacity);
   const [showGuides, setShowGuides] = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
@@ -130,8 +137,8 @@ function App() {
   const [manualBarOffset, setManualBarOffset] = useState<number | null>(null);
   const [analysisMessage, setAnalysisMessage] = useState('');
   const [amplitudeEnvelope, setAmplitudeEnvelope] = useState<AmplitudeEnvelope | null>(null);
-  const [preset, setPreset] = useState<VisualPreset>('clean');
-  const [motion, setMotion] = useState<MotionAmount>('low');
+  const [preset, setPreset] = useState<VisualPreset>(storedSettings.preset);
+  const [motion, setMotion] = useState<MotionAmount>(storedSettings.motion);
 
   const settings: CompositionSettings = useMemo(() => ({
     title,
@@ -160,6 +167,45 @@ function App() {
     motion,
     showGuides,
   ]);
+
+  useEffect(() => {
+    if (fixtureMode) return;
+
+    saveUserSettings({
+      titleSize,
+      titlePosition,
+      titleFont,
+      titleTracking,
+      brandText,
+      brandPosition,
+      brandOpacity,
+      preset,
+      motion,
+    });
+  }, [
+    brandOpacity,
+    brandPosition,
+    brandText,
+    motion,
+    preset,
+    titleFont,
+    titlePosition,
+    titleSize,
+    titleTracking,
+  ]);
+
+  const resetStyle = () => {
+    clearUserSettings();
+    setTitleSize(DEFAULT_USER_SETTINGS.titleSize);
+    setTitlePosition(DEFAULT_USER_SETTINGS.titlePosition);
+    setTitleFont(DEFAULT_USER_SETTINGS.titleFont);
+    setTitleTracking(DEFAULT_USER_SETTINGS.titleTracking);
+    setBrandText(DEFAULT_USER_SETTINGS.brandText);
+    setBrandPosition(DEFAULT_USER_SETTINGS.brandPosition);
+    setBrandOpacity(DEFAULT_USER_SETTINGS.brandOpacity);
+    setPreset(DEFAULT_USER_SETTINGS.preset);
+    setMotion(DEFAULT_USER_SETTINGS.motion);
+  };
 
   const resolveGrid = useCallback((): VerifiedGrid | null => {
     const parsedManualBpm = Number(manualBpm);
@@ -777,8 +823,11 @@ function App() {
           </div>
 
           <div className="scope-note">
-            <strong>Next milestone</strong>
-            <p>Beat/grid analysis now has confidence + manual correction. Preset motion must use this shared grid.</p>
+            <strong>Local preferences</strong>
+            <p>Style and producer settings are saved on this device. Media files are never persisted.</p>
+            <button type="button" className="link-button" data-testid="reset-settings" onClick={resetStyle}>
+              Reset style defaults
+            </button>
           </div>
         </aside>
       </section>
