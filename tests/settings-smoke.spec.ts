@@ -38,3 +38,18 @@ test('undo and redo restore relevant editor state', async ({ page }, testInfo) =
   await page.getByTestId('redo-button').click();
   await expect(page.getByTestId('preset-ambient')).toHaveClass(/is-selected/);
 });
+
+
+test('install control explains the fallback path when no native prompt is available', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'desktop-normal', 'Install guidance is viewport-independent.');
+
+  await page.goto('/?fixture=1');
+  const install = page.getByTestId('install-button');
+  await expect(install).toBeVisible();
+  await install.click();
+
+  const help = page.getByTestId('install-help');
+  await expect(help).toBeVisible();
+  await expect(help).toContainText('Chrome or Edge');
+  await expect(help).toContainText('hosted HTTPS version');
+});
