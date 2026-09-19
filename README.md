@@ -2,6 +2,23 @@
 
 A small local-first browser tool for turning a still cover image and a beat into a clean YouTube-ready video. It is preset-first on purpose: the common workflow should take minutes without becoming a miniature Premiere or CapCut.
 
+## Install the app
+
+The normal way to use Beatvideo Maker is the hosted PWA:
+
+**https://hugowhitee.github.io/beat-video-maker/**
+
+**Do not clone the repository or download a ZIP for normal use. You do not need Node.js or npm.**
+
+1. Open that link in current Chrome or Edge on Windows.
+2. Click **Install app** in Beatvideo Maker's top bar.
+3. If Chromium exposes its native install prompt, the button opens it directly. Otherwise the same button shows concise fallback instructions. You can also use the install icon in the browser address bar or the browser's install-app menu item; wording varies by browser.
+4. Accept the browser install dialog. Beatvideo Maker then opens as a standalone app and can be pinned to Start/taskbar like a normal app.
+
+The first successful visit needs the hosted site so the app shell can be cached. After that, the installed shell can reopen offline. Imported cover images/audio are never uploaded or stored in the app cache.
+
+If the hosted URL is not available yet, the repository owner must do the one-time GitHub setup: **Settings → Pages → Build and deployment → Source → GitHub Actions**. Normal users do not need Node.js or npm.
+
 ## Current state
 
 The first vertical slice is implemented and validated:
@@ -20,20 +37,20 @@ The first vertical slice is implemented and validated:
 - a shared musical-clock module used by all presets;
 - five presets: Clean, Ambient, Reactive, Pulse and Minimal visualizer;
 - versioned local style/brand preferences (media is never persisted);
-- generated Workbox service worker + web app manifest for install/offline app-shell use;
+- generated Workbox service worker + web app manifest, hosted through GitHub Pages for a normal install/offline app-shell flow;
 - keyboard transport plus session Undo/Redo for relevant editor state;
 - fixed-viewport Playwright visual QA and a real encoded-file smoke test.
 
 Musical analysis is now implemented as a first usable pass: an in-worker onset/tempo/phase analyzer is reconciled with `web-audio-beat-detector` as an independent cross-check. BPM and bar 1 remain manually correctable, and low-confidence bar inference is shown as unverified instead of being silently accepted. All five v1 presets now share the same compositor, real amplitude envelope and musical clock. Style/brand preferences are saved locally, and production builds generate an installable offline PWA shell.
 
-## Run locally
+## Development only
 
 Requirements: Node.js 22.12 or newer and a current Chromium browser.
 
     npm ci
     npm run dev
 
-Open the Vite URL, then choose a cover image and beat. Nothing is uploaded; media stays in the browser.
+Open the local Vite URL. Local development is not the recommended installation route; use the hosted HTTPS PWA for the real install experience.
 
 ## Make a video
 
@@ -116,3 +133,10 @@ Motion has Off / Low / Medium levels. No preset owns its own timing detector; th
 Production builds use `vite-plugin-pwa`/Workbox to generate the manifest and service worker. After the app shell has been visited and cached, the editor can reopen without a network connection. Imported media is never cached by the app.
 
 Style choices such as preset, motion amount, title styling and producer/wordmark defaults are stored in versioned `localStorage`. The Style panel can reset those preferences to defaults.
+
+
+## Deployment
+
+Production deploys use GitHub Pages from `main`. The Pages build sets the Vite project base to `/beat-video-maker/`, validates that compiled asset URLs stay inside that project path, uploads only `dist/`, and deploys through the `github-pages` environment.
+
+The repository must have **Settings → Pages → Source: GitHub Actions** enabled once. After that, every successful `main` deployment updates the hosted app automatically.

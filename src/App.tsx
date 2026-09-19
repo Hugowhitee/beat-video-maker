@@ -49,6 +49,11 @@ const PRESET_LABELS: Record<VisualPreset, string> = {
   visualizer: 'Minimal visualizer',
 };
 
+type BeforeInstallPromptEvent = Event & {
+  prompt: () => Promise<void>;
+  userChoice: Promise<{ outcome: 'accepted' | 'dismissed'; platform: string }>;
+};
+
 type EditorSnapshot = {
   title: string;
   titleSize: number;
@@ -161,6 +166,12 @@ function App() {
   const [preset, setPreset] = useState<VisualPreset>(storedSettings.preset);
   const [motion, setMotion] = useState<MotionAmount>(storedSettings.motion);
   const [historyState, setHistoryState] = useState({ canUndo: false, canRedo: false });
+  const [installPrompt, setInstallPrompt] = useState<BeforeInstallPromptEvent | null>(null);
+  const [installHelpOpen, setInstallHelpOpen] = useState(false);
+  const [isInstalled, setIsInstalled] = useState(() =>
+    window.matchMedia('(display-mode: standalone)').matches
+    || Boolean((navigator as Navigator & { standalone?: boolean }).standalone),
+  );
   const historyRef = useRef<{
     present: EditorSnapshot | null;
     undo: EditorSnapshot[];
@@ -266,6 +277,37 @@ function App() {
     motion,
     showGuides,
   ]);
+
+  useEffect(() => {
+    const onBeforeInstall = (event: Event) => {
+      event.preventDefault();
+      setInstallPrompt(event as BeforeInstallPromptEvent);
+    };
+    const onInstalled = () => {
+      setIsInstalled(true);
+      setInstallPrompt(null);
+      setInstallHelpOpen(false);
+    };
+
+    window.addEventListener('beforeinstallprompt', onBeforeInstall);
+    window.addEventListener('appinstalled', onInstalled);
+    return () => {
+      window.removeEventListener('beforeinstallprompt', onBeforeInstall);
+      window.removeEventListener('appinstalled', onInstalled);
+    };
+  }, []);
+
+  const handleInstall = useCallback(async () => {
+    if (!installPrompt) {
+      setInstallHelpOpen((open) => !open);
+      return;
+    }
+
+    await installPrompt.prompt();
+    const choice = await installPrompt.userChoice;
+    setInstallPrompt(null);
+    if (choice.outcome === 'accepted') setInstallHelpOpen(false);
+  }, [installPrompt]);
 
   useEffect(() => {
     if (fixtureMode) return;
@@ -625,6 +667,28 @@ function App() {
           </div>
         </div>
         <div className="topbar-actions">
+          {!isInstalled && (
+            <div className="install-control">
+              <button
+                data-testid="install-button"
+                className="install-button"
+                type="button"
+                aria-expanded={installHelpOpen}
+                aria-haspopup="dialog"
+                onClick={() => void handleInstall()}
+              >
+                Install app
+              </button>
+              {installHelpOpen && (
+                <div className="install-popover" role="dialog" aria-label="Install Beatvideo Maker" data-testid="install-help">
+                  <strong>Install Beatvideo Maker</strong>
+                  <p>In Chrome or Edge, use the install icon in the address bar. If it is not shown, open the browser menu and choose the install-app option; wording can vary by browser.</p>
+                  <p>Use the hosted HTTPS version; do not download the GitHub ZIP or run npm for normal use. After the first successful load, the installed app shell can reopen offline; imported media still stays on this device.</p>
+                  <button type="button" className="link-button" onClick={() => setInstallHelpOpen(false)}>Close</button>
+                </div>
+              )}
+            </div>
+          )}
           <div className="history-actions" aria-label="Edit history">
             <button data-testid="undo-button" className="history-button" type="button" disabled={!historyState.canUndo} onClick={undoEditor}>Undo</button>
             <button data-testid="redo-button" className="history-button" type="button" disabled={!historyState.canRedo} onClick={redoEditor}>Redo</button>

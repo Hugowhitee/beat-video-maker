@@ -14,7 +14,7 @@ The intended fast path is:
 6. preview;
 7. export a clean 16:9 video.
 
-Source media remains on-device. The v1 browser target is current Chromium on Windows. A static secure host/PWA can come later; a backend is not required for the core workflow.
+Source media remains on-device. The v1 browser target is current Chromium on Windows. The production PWA is hosted as a static GitHub Pages project site; a backend is not required for the core workflow.
 
 ## Product principles
 
@@ -111,9 +111,19 @@ All presets are configurations of the same compositor and use the shared musical
 
 Motion is Off / Low / Medium. Presets must never invent tempo/phase logic or fake spectrum data.
 
-## Local persistence and offline shell
+## Hosting, installation and offline shell
 
-Production builds generate a web app manifest and Workbox service worker through `vite-plugin-pwa`. The cached app shell can reopen offline after first use. Imported audio/images are runtime user media and are never persisted or added to the application cache.
+Production builds generate a web app manifest and Workbox service worker through `vite-plugin-pwa`. The canonical hosted surface is the GitHub Pages project site at `https://hugowhitee.github.io/beat-video-maker/`.
+
+The app owns a small install affordance in its top bar:
+- **Install app** is always the visible user action while the app is not installed;
+- when Chromium exposes `beforeinstallprompt`, that action invokes the browser-native install flow;
+- otherwise the same action opens concise fallback guidance instead of pretending installability was detected;
+- when `appinstalled` fires or the app already runs in standalone display mode, the install control is hidden.
+
+The Pages build uses the project base `/beat-video-maker/`; local dev/test stays rooted at `/`. A deploy-path check must fail if the production HTML falls back to root-level `/assets` paths. The manifest keeps a stable relative `id: './'` so the installed PWA identity is not coupled to a future `start_url` change. The existing scalable app icon is explicitly declared for 192×192, 512×512 and scalable `any` install sizes.
+
+The cached app shell can reopen offline after first use. Imported audio/images are runtime user media and are never persisted or added to the application cache.
 
 Versioned local settings persist only low-risk editor preferences: title styling, producer/wordmark text, brand placement/opacity, preset and motion amount. Invalid/old values fall back to conservative defaults and the user can reset the settings.
 

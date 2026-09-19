@@ -13,8 +13,15 @@ const manifest = JSON.parse(readFileSync('dist/manifest.webmanifest', 'utf8'));
 const failures = [];
 if (manifest.name !== 'Beatvideo Maker') failures.push('Unexpected manifest name');
 if (manifest.display !== 'standalone') failures.push('Manifest is not standalone');
+if (manifest.id !== './') failures.push('Manifest id must stay stable and relative');
 if (!Array.isArray(manifest.icons) || manifest.icons.length === 0) failures.push('Manifest has no icon');
-if (!manifest.start_url) failures.push('Manifest has no start_url');
+if (manifest.start_url !== './') failures.push('Manifest start_url must stay relative');
+if (manifest.scope !== './') failures.push('Manifest scope must stay relative');
+for (const size of ['192x192', '512x512', 'any']) {
+  if (!manifest.icons.some((icon) => icon.src === 'icon.svg' && icon.sizes === size)) {
+    failures.push('Manifest is missing the icon declaration for ' + size);
+  }
+}
 
 if (failures.length) {
   console.error('PWA build check failed:');
