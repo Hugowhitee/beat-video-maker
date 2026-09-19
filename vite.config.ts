@@ -2,7 +2,10 @@ import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import { VitePWA } from 'vite-plugin-pwa';
 
+const githubPages = process.env.GITHUB_PAGES === 'true';
+
 export default defineConfig({
+  base: githubPages ? '/beat-video-maker/' : '/',
   plugins: [
     react(),
     VitePWA({
