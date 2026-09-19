@@ -37,6 +37,6 @@ test('does not invent a confident BPM for a steady tone', async ({ page }, testI
   });
 
   await expect(page.getByTestId('analysis-card')).toBeVisible();
-  await expect(page.getByText(/Tempo uncertain|LOW confidence|No reliable/i)).toBeVisible({ timeout: 30_000 });
+  await expect(page.getByTestId('bpm-input')).toHaveValue('', { timeout: 30_000 });
   await expect(page.getByTestId('bar-offset')).toHaveText('Unverified');
 });

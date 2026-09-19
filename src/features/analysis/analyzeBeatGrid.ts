@@ -52,6 +52,13 @@ function offsetDistance(first: number, second: number, period: number) {
   return Math.min(raw, period - raw);
 }
 
+function preferCanonicalTempo(primary: number, crossCheck: number) {
+  const inMiddleBand = (value: number) => value >= 80 && value <= 180;
+  if (inMiddleBand(crossCheck) && !inMiddleBand(primary)) return crossCheck;
+  if (inMiddleBand(primary) && !inMiddleBand(crossCheck)) return primary;
+  return primary;
+}
+
 function confidenceLevel(
   tempoConfidence: number,
   phaseConfidence: number,
@@ -125,14 +132,37 @@ export async function analyzeBeatGrid(buffer: AudioBuffer): Promise<BeatGridAnal
 
   let tempoConfidence = primary.tempoConfidence;
   let phaseConfidence = primary.phaseConfidence;
+  let bpm = primary.bpm;
+  let beatOffset = primary.beatOffset;
+  let barOffset = primary.barOffset;
+  let barConfidence = primary.barConfidence;
 
-  if (agreement === 'agree' || agreement === 'half-double') {
+  if (agreement === 'agree') {
     tempoConfidence = Math.min(1, tempoConfidence + 0.18);
     const period = 60 / primary.bpm;
     const alignedOffset = crossCheck.offset % period;
     const distance = offsetDistance(primary.beatOffset, alignedOffset, period);
     if (distance <= Math.min(0.065, period * 0.12)) {
       phaseConfidence = Math.min(1, phaseConfidence + 0.14);
+    }
+  } else if (agreement === 'half-double') {
+    const canonical = preferCanonicalTempo(primary.bpm, crossCheck.bpm);
+    tempoConfidence = Math.min(0.72, tempoConfidence + 0.08);
+
+    if (canonical !== primary.bpm) {
+      bpm = canonical;
+      beatOffset = crossCheck.offset % (60 / canonical);
+      phaseConfidence = Math.max(0.38, Math.min(0.68, phaseConfidence));
+      barOffset = null;
+      barConfidence = 0;
+      notes.push(
+        'Half/double-time ambiguity resolved to '
+        + canonical.toFixed(1)
+        + ' BPM; verify bar 1 before phrase-synchronised motion.',
+      );
+    } else {
+      notes.push('Half/double-time ambiguity detected; verify BPM and bar 1.');
+      barConfidence = Math.min(barConfidence, 0.3);
     }
   } else {
     tempoConfidence *= 0.7;
@@ -141,12 +171,16 @@ export async function analyzeBeatGrid(buffer: AudioBuffer): Promise<BeatGridAnal
     );
   }
 
-  if (primary.barConfidence < 0.35) {
+  if (barConfidence < 0.35) {
     notes.push('Bar 1 is weakly inferred; check it before using bar-synchronised motion.');
   }
 
   return {
     ...primary,
+    bpm,
+    beatOffset,
+    barOffset,
+    barConfidence,
     tempoConfidence,
     phaseConfidence,
     confidence: confidenceLevel(tempoConfidence, phaseConfidence, agreement),
