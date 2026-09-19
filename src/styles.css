@@ -655,3 +655,14 @@ button.preset-card:hover {
   font-size: 9px;
   line-height: 1.4;
 }
+
+
+.tempo-adjust {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+
+.tempo-adjust .nudge-button {
+  min-height: 26px;
+}

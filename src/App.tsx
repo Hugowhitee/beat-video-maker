@@ -41,6 +41,14 @@ import {
 const fixtureMode = new URLSearchParams(window.location.search).has('fixture');
 const storedSettings = fixtureMode ? DEFAULT_USER_SETTINGS : loadUserSettings();
 
+const PRESET_LABELS: Record<VisualPreset, string> = {
+  clean: 'Clean',
+  ambient: 'Ambient',
+  reactive: 'Reactive',
+  pulse: 'Pulse',
+  visualizer: 'Minimal visualizer',
+};
+
 function FileControl(props: {
   label: string;
   detail: string;
@@ -356,7 +364,7 @@ function App() {
     }
   };
 
-  const togglePlayback = async () => {
+  const togglePlayback = useCallback(async () => {
     const audio = audioRef.current;
     if (!audio || !audioUrl) return;
     if (audio.paused) {
@@ -370,25 +378,64 @@ function App() {
       audio.pause();
       setIsPlaying(false);
     }
-  };
+  }, [audioUrl]);
+
+  const seekTo = useCallback((value: number) => {
+    const maxTime = audioBuffer?.duration || 0;
+    const nextTime = Math.max(0, Math.min(value, maxTime));
+    const audio = audioRef.current;
+    if (audio) audio.currentTime = nextTime;
+    setCurrentTime(nextTime);
+    renderPreview(nextTime);
+  }, [audioBuffer, renderPreview]);
 
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
       const target = event.target as HTMLElement | null;
-      if (event.code !== 'Space' || target?.matches('input, textarea, select, button')) return;
-      event.preventDefault();
-      void togglePlayback();
+      if (target?.matches('input, textarea, select, button, [contenteditable="true"]')) return;
+
+      if (event.code === 'Space') {
+        event.preventDefault();
+        void togglePlayback();
+        return;
+      }
+
+      if (event.key === 'Home' && audioBuffer) {
+        event.preventDefault();
+        seekTo(0);
+        return;
+      }
+
+      if ((event.key === 'ArrowLeft' || event.key === 'ArrowRight') && audioBuffer) {
+        event.preventDefault();
+        const grid = resolveGrid();
+        const step = event.shiftKey && grid ? 240 / grid.bpm : 1;
+        seekTo(currentTime + (event.key === 'ArrowRight' ? step : -step));
+        return;
+      }
+
+      if (event.key.toLowerCase() === 'b' && audioBuffer) {
+        event.preventDefault();
+        setManualBarOffset(currentTime);
+        setAnalysisMessage('Manual bar 1 · ' + currentTime.toFixed(3) + ' s');
+      }
     };
+
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  });
+  }, [audioBuffer, currentTime, resolveGrid, seekTo, togglePlayback]);
 
   const seek = (event: ChangeEvent<HTMLInputElement>) => {
-    const value = Number(event.target.value);
-    const audio = audioRef.current;
-    if (audio) audio.currentTime = value;
-    setCurrentTime(value);
-    renderPreview(value);
+    seekTo(Number(event.target.value));
+  };
+
+  const adjustTempo = (factor: number) => {
+    const detected = analysis?.bpm ?? Number.NaN;
+    const current = manualBpm.trim() ? Number(manualBpm) : detected;
+    const next = Math.round(current * factor * 10) / 10;
+    if (!Number.isFinite(next) || next < 40 || next > 260) return;
+    setManualBpm(String(next));
+    setAnalysisMessage('Manual tempo · ' + next.toFixed(1) + ' BPM');
   };
 
   const cancelExport = () => {
@@ -544,7 +591,7 @@ function App() {
         <section className="preview-column" aria-label="Preview">
           <div className="preview-header">
             <div>
-              <span className="eyebrow">CLEAN</span>
+              <span className="eyebrow">{PRESET_LABELS[preset].toUpperCase()}</span>
               <h1>{title.trim() || 'Untitled beat'}</h1>
             </div>
             <button
@@ -585,6 +632,7 @@ function App() {
             <span className="timecode">{formatTime(currentTime)} / {formatTime(duration)}</span>
             <input
               className="seek"
+              data-testid="seek-input"
               aria-label="Playback position"
               type="range"
               min={0}
@@ -637,7 +685,33 @@ function App() {
                     value={manualBpm}
                     placeholder="—"
                     onChange={(event) => setManualBpm(event.target.value)}
+                    onKeyDown={(event) => {
+                      if (event.key !== 'Enter') return;
+                      const bpm = Number(event.currentTarget.value);
+                      if (Number.isFinite(bpm) && bpm >= 40 && bpm <= 260) {
+                        setAnalysisMessage('Manual tempo · ' + bpm.toFixed(1) + ' BPM');
+                      }
+                      event.currentTarget.blur();
+                    }}
                   />
+                  <div className="tempo-adjust" aria-label="Tempo correction">
+                    <button
+                      data-testid="bpm-half"
+                      className="nudge-button"
+                      type="button"
+                      onClick={() => adjustTempo(0.5)}
+                    >
+                      Half
+                    </button>
+                    <button
+                      data-testid="bpm-double"
+                      className="nudge-button"
+                      type="button"
+                      onClick={() => adjustTempo(2)}
+                    >
+                      Double
+                    </button>
+                  </div>
                 </label>
                 <div className="bar-control">
                   <span>Bar 1</span>

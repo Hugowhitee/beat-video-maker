@@ -12,7 +12,7 @@ const historicalName = /(^|\/)[^/]*(copy|backup|old|final|v2)[^/]*(\/|$)/i;
 for (const path of tracked) if (historicalName.test(path)) failures.push('History-style duplicate path: ' + path);
 
 const required = [
-  'AGENTS.md', 'README.md', 'docs/product.md', 'docs/visual-qa.md', 'package.json',
+  'AGENTS.md', 'README.md', 'docs/product.md', 'docs/visual-qa.md', 'package.json', 'package-lock.json',
   'src/features/compositor/renderComposition.ts', 'src/features/export/exportVideo.ts',
   'src/features/export/outputTarget.ts',
   'src/features/analysis/analyzeBeatGrid.ts',
