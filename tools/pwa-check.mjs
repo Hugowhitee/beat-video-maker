@@ -17,8 +17,10 @@ if (manifest.id !== './') failures.push('Manifest id must stay stable and relati
 if (!Array.isArray(manifest.icons) || manifest.icons.length === 0) failures.push('Manifest has no icon');
 if (manifest.start_url !== './') failures.push('Manifest start_url must stay relative');
 if (manifest.scope !== './') failures.push('Manifest scope must stay relative');
-if (!manifest.icons.some((icon) => icon.src === 'icon.svg' && icon.sizes === 'any')) {
-  failures.push('Manifest is missing the scalable install icon');
+for (const size of ['192x192', '512x512', 'any']) {
+  if (!manifest.icons.some((icon) => icon.src === 'icon.svg' && icon.sizes === size)) {
+    failures.push('Manifest is missing the icon declaration for ' + size);
+  }
 }
 
 if (failures.length) {
