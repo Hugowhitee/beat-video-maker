@@ -121,7 +121,7 @@ The app owns a small install affordance in its top bar:
 - otherwise the same action opens concise fallback guidance instead of pretending installability was detected;
 - when `appinstalled` fires or the app already runs in standalone display mode, the install control is hidden.
 
-The Pages build uses the project base `/beat-video-maker/`; local dev/test stays rooted at `/`. A deploy-path check must fail if the production HTML falls back to root-level `/assets` paths. The manifest keeps a stable relative `id: './'` so the installed PWA identity is not coupled to a future `start_url` change.
+The Pages build uses the project base `/beat-video-maker/`; local dev/test stays rooted at `/`. A deploy-path check must fail if the production HTML falls back to root-level `/assets` paths. The manifest keeps a stable relative `id: './'` so the installed PWA identity is not coupled to a future `start_url` change. The existing scalable app icon is explicitly declared for 192×192, 512×512 and scalable `any` install sizes.
 
 The cached app shell can reopen offline after first use. Imported audio/images are runtime user media and are never persisted or added to the application cache.
 
