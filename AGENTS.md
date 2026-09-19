@@ -72,6 +72,11 @@ For export changes verify a real encoded file, not only that an encoder call ret
 
 ## Current baseline and release gate
 
-The v0.1 baseline is: image + audio import → preview/playback/waveform → configurable title/watermark → confidence-aware musical grid with direct correction → five shared-clock presets → deterministic 1080p export with audio. PWA shell, versioned local preferences, keyboard transport/history, a committed npm lockfile, real encoded-file smoke tests and inspected minimum/normal/wide screenshots are part of that baseline.
+The v0.1 baseline is: image + audio import → preview/playback/waveform → configurable title/watermark → confidence-aware musical grid with direct correction → five shared-clock presets → deterministic 1080p export with audio. Hosted GitHub Pages PWA/install UX, versioned local preferences, keyboard transport/history, a committed npm lockfile, real encoded-file smoke tests and inspected minimum/normal/wide screenshots are part of that baseline.
 
 Normal CI stays bounded. Before a tagged release, run the manual **Full export smoke** workflow on current `main` with a representative duration and require its OPFS/disk-backed assertion to pass. Do not let presets invent their own tempo/phase logic or turn release-only duration tests into a polling loop.
+
+
+## Hosted app
+
+The production install surface is the GitHub Pages project site. Keep Pages-specific base-path logic explicit and tested; do not make local development depend on the repository subpath. The README must keep a normal user's **open hosted app → install** path above developer/npm setup.
