@@ -53,3 +53,32 @@ test('install control explains the fallback path when no native prompt is availa
   await expect(help).toContainText('Chrome or Edge');
   await expect(help).toContainText('hosted HTTPS version');
 });
+
+
+test('install control uses the native prompt and hides after app installation', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'desktop-normal', 'Install prompt behavior is viewport-independent.');
+
+  await page.goto('/?fixture=1');
+  await page.evaluate(() => {
+    const browserWindow = window as Window & { __installPromptCalled?: boolean };
+    const event = new Event('beforeinstallprompt') as Event & {
+      prompt: () => Promise<void>;
+      userChoice: Promise<{ outcome: 'accepted'; platform: string }>;
+    };
+    event.prompt = async () => {
+      browserWindow.__installPromptCalled = true;
+    };
+    event.userChoice = Promise.resolve({ outcome: 'accepted', platform: 'web' });
+    window.dispatchEvent(event);
+  });
+
+  const install = page.getByTestId('install-button');
+  await expect(install).toHaveText('Install app');
+  await install.click();
+  await expect.poll(() => page.evaluate(() =>
+    Boolean((window as Window & { __installPromptCalled?: boolean }).__installPromptCalled),
+  )).toBe(true);
+
+  await page.evaluate(() => window.dispatchEvent(new Event('appinstalled')));
+  await expect(page.getByTestId('install-button')).toHaveCount(0);
+});
