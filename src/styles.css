@@ -687,16 +687,16 @@ button.preset-card:hover {
 .install-control { position: relative; }
 .install-button {
   min-height: 30px;
-  border: 1px solid var(--line);
+  border: 1px solid #485022;
   border-radius: 6px;
-  background: #151719;
-  color: var(--soft);
+  background: #12160f;
+  color: var(--accent);
   padding: 5px 9px;
   font-size: 9px;
   font-weight: 700;
   cursor: pointer;
 }
-.install-button:hover { border-color: #454b4f; color: #f1f2ee; }
+.install-button:hover { border-color: #677132; color: #efffb0; }
 .install-popover {
   position: absolute;
   top: calc(100% + 9px);
