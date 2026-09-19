@@ -14,7 +14,11 @@ const failures = [];
 if (manifest.name !== 'Beatvideo Maker') failures.push('Unexpected manifest name');
 if (manifest.display !== 'standalone') failures.push('Manifest is not standalone');
 if (!Array.isArray(manifest.icons) || manifest.icons.length === 0) failures.push('Manifest has no icon');
-if (!manifest.start_url) failures.push('Manifest has no start_url');
+if (manifest.start_url !== './') failures.push('Manifest start_url must stay relative');
+if (manifest.scope !== './') failures.push('Manifest scope must stay relative');
+if (!manifest.icons.some((icon) => icon.src === 'icon.svg' && icon.sizes === 'any')) {
+  failures.push('Manifest is missing the scalable install icon');
+}
 
 if (failures.length) {
   console.error('PWA build check failed:');
