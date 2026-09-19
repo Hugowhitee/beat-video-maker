@@ -682,3 +682,36 @@ button.preset-card:hover {
 }
 .history-button:disabled { opacity: 0.38; cursor: default; }
 @media (max-width: 760px) { .history-button { padding-inline: 6px; } }
+
+
+.install-control { position: relative; }
+.install-button {
+  min-height: 30px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: #151719;
+  color: var(--soft);
+  padding: 5px 9px;
+  font-size: 9px;
+  font-weight: 700;
+  cursor: pointer;
+}
+.install-button:hover { border-color: #454b4f; color: #f1f2ee; }
+.install-popover {
+  position: absolute;
+  top: calc(100% + 9px);
+  right: 0;
+  width: min(320px, calc(100vw - 24px));
+  padding: 13px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: #111315;
+  box-shadow: 0 18px 42px rgba(0,0,0,0.38);
+  z-index: 40;
+}
+.install-popover strong { font-size: 11px; }
+.install-popover p { margin: 7px 0 0; color: var(--muted); font-size: 9px; line-height: 1.5; }
+@media (max-width: 760px) {
+  .topbar-actions { gap: 6px; }
+  .install-button { padding-inline: 7px; }
+}
