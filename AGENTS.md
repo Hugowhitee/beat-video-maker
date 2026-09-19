@@ -79,4 +79,4 @@ Normal CI stays bounded. Before a tagged release, run the manual **Full export s
 
 ## Hosted app
 
-The production install surface is the GitHub Pages project site. Keep Pages-specific base-path logic explicit and tested; do not make local development depend on the repository subpath. The README must keep a normal user's **open hosted app → install** path above developer/npm setup.
+The production install surface is the GitHub Pages project site. Keep Pages-specific base-path logic explicit and tested; do not make local development depend on the repository subpath. The README must put a normal user's **open hosted app → install** path immediately after the intro, before status/architecture and developer/npm setup.
