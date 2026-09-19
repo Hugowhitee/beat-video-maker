@@ -10,10 +10,19 @@ function makeWave(seconds = 1.1, sampleRate = 44_100) {
   const sampleCount = Math.floor(seconds * sampleRate);
   const dataSize = sampleCount * 2;
   const buffer = Buffer.alloc(44 + dataSize);
-  buffer.write('RIFF', 0); buffer.writeUInt32LE(36 + dataSize, 4); buffer.write('WAVE', 8);
-  buffer.write('fmt ', 12); buffer.writeUInt32LE(16, 16); buffer.writeUInt16LE(1, 20);
-  buffer.writeUInt16LE(1, 22); buffer.writeUInt32LE(sampleRate, 24); buffer.writeUInt32LE(sampleRate * 2, 28);
-  buffer.writeUInt16LE(2, 32); buffer.writeUInt16LE(16, 34); buffer.write('data', 36); buffer.writeUInt32LE(dataSize, 40);
+  buffer.write('RIFF', 0);
+  buffer.writeUInt32LE(36 + dataSize, 4);
+  buffer.write('WAVE', 8);
+  buffer.write('fmt ', 12);
+  buffer.writeUInt32LE(16, 16);
+  buffer.writeUInt16LE(1, 20);
+  buffer.writeUInt16LE(1, 22);
+  buffer.writeUInt32LE(sampleRate, 24);
+  buffer.writeUInt32LE(sampleRate * 2, 28);
+  buffer.writeUInt16LE(2, 32);
+  buffer.writeUInt16LE(16, 34);
+  buffer.write('data', 36);
+  buffer.writeUInt32LE(dataSize, 40);
 
   for (let i = 0; i < sampleCount; i += 1) {
     const t = i / sampleRate;
@@ -24,20 +33,34 @@ function makeWave(seconds = 1.1, sampleRate = 44_100) {
   return buffer;
 }
 
-test('imports local media and either exports a real MP4 or reports an honest codec gate', async ({ page }) => {
-  await page.goto('/');
-  await page.getByTestId('cover-input').setInputFiles({ name: 'cover.png', mimeType: 'image/png', buffer: PNG });
-  await page.getByTestId('audio-input').setInputFiles({ name: 'beat.wav', mimeType: 'audio/wav', buffer: makeWave() });
-
+async function loadFixtures(page: import('@playwright/test').Page, seconds = 1.1) {
+  await page.getByTestId('cover-input').setInputFiles({
+    name: 'cover.png',
+    mimeType: 'image/png',
+    buffer: PNG,
+  });
+  await page.getByTestId('audio-input').setInputFiles({
+    name: 'beat.wav',
+    mimeType: 'audio/wav',
+    buffer: makeWave(seconds),
+  });
   await expect(page.getByText(/Audio ready/)).toBeVisible();
+}
+
+test('imports local media and encodes a real browser-supported video', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'desktop-normal', 'Media export is viewport-independent.');
+
+  await page.goto('/');
+  await loadFixtures(page);
   await page.getByTestId('title-input').fill('CI export smoke');
   await page.getByTestId('brand-input').fill('local only');
 
   const exportButton = page.getByTestId('export-button');
   const disabled = await exportButton.isDisabled();
+
   if (disabled) {
     console.log('[media-smoke] result=codec-gated');
-    await expect(page.getByTestId('export-status')).toContainText(/unavailable|No MP4 video encoder/i);
+    await expect(page.getByTestId('export-status')).toContainText(/unavailable|No supported/i);
     return;
   }
 
@@ -50,7 +73,34 @@ test('imports local media and either exports a real MP4 or reports an honest cod
   const file = await stat(path!);
   expect(file.size).toBeGreaterThan(1_000);
   const bytes = await readFile(path!);
-  expect(bytes.subarray(4, 8).toString('ascii')).toBe('ftyp');
-  console.log('[media-smoke] result=encoded-mp4 bytes=' + file.size);
-  await expect(page.getByTestId('export-status')).toContainText('MP4 encoded and downloaded');
+  const name = download.suggestedFilename();
+
+  if (name.endsWith('.mp4')) {
+    expect(bytes.subarray(4, 8).toString('ascii')).toBe('ftyp');
+    console.log('[media-smoke] result=encoded-mp4 bytes=' + file.size);
+  } else {
+    expect([...bytes.subarray(0, 4)]).toEqual([0x1a, 0x45, 0xdf, 0xa3]);
+    console.log('[media-smoke] result=encoded-webm bytes=' + file.size);
+  }
+
+  await expect(page.getByTestId('export-status')).toContainText(/encoded and downloaded/);
+});
+
+test('an in-progress export can be cancelled without keeping a partial file', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'desktop-normal', 'Media export is viewport-independent.');
+
+  await page.goto('/');
+  await loadFixtures(page, 5);
+
+  const exportButton = page.getByTestId('export-button');
+  if (await exportButton.isDisabled()) {
+    test.skip(true, 'No supported encoder on this runner.');
+  }
+
+  await exportButton.click();
+  await expect(exportButton).toContainText('Cancel');
+  await exportButton.click();
+
+  await expect(page.getByTestId('export-status')).toContainText('Export cancelled');
+  await expect(exportButton).not.toContainText('Cancel');
 });

@@ -70,8 +70,8 @@ For export changes verify a real encoded file, not only that an encoder call ret
 
 **CI is evidence, not a waiting state.** Check a newly triggered run once. If it is queued or in progress, continue another useful task that cannot invalidate the run: code/doc review, residue scan, comparison research, preparing the visual-QA review, or inspecting already available evidence. Recheck only at a natural checkpoint or after a new commit. Never create a loop whose only action is polling CI.
 
-## Current milestone
+## Current baseline and next milestone
 
-Vertical slice: image + audio import → Clean preview → playback/waveform → configurable title/watermark → deterministic 1080p MP4 export with audio.
+The vertical slice is now a regression floor: image + audio import → Clean preview → playback/waveform → configurable title/watermark → deterministic 1080p export with audio, with a real encoded-file smoke test and inspected minimum/normal/wide screenshots.
 
-Do not expand into advanced beat particles or automatic tempo/bar effects until export is reliable and preview/export parity passes.
+Next milestone: BPM + beat-grid + bar-1 analysis with confidence and manual correction. Add musical timing as one canonical feature module before building extra presets; do not let presets invent their own tempo/phase logic.

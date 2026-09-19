@@ -98,6 +98,12 @@ select:focus-visible {
   font-size: 12px;
 }
 
+.primary-button.is-cancel {
+  background: #2d3134;
+  color: #f0f1ed;
+  box-shadow: inset 0 0 0 1px #43484c;
+}
+
 .primary-button:not(:disabled):active,
 .small-button:active,
 .play-button:not(:disabled):active { transform: translateY(1px); }

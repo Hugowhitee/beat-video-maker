@@ -17,10 +17,10 @@ import {
 import {
   detectExportCapability,
   downloadBlob,
-  exportMp4,
+  exportVideo,
   safeExportName,
-} from './features/export/exportMp4';
-import type { ExportCapability } from './features/export/exportMp4';
+} from './features/export/exportVideo';
+import type { ExportCapability } from './features/export/exportVideo';
 
 const fixtureMode = new URLSearchParams(window.location.search).has('fixture');
 
@@ -80,6 +80,7 @@ function SelectControl<T extends string>(props: {
 function App() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const audioRef = useRef<HTMLAudioElement>(null);
+  const exportAbortRef = useRef<AbortController | null>(null);
 
   const [cover, setCover] = useState<CanvasImageSource | null>(() => fixtureMode ? makeFixtureCover() : null);
   const [coverName, setCoverName] = useState(fixtureMode ? 'visual-qa-fixture' : 'No image');
@@ -103,10 +104,14 @@ function App() {
   const [mediaMessage, setMediaMessage] = useState('');
   const [capability, setCapability] = useState<ExportCapability>({
     supported: false,
+    container: null,
+    extension: null,
+    mimeType: null,
     videoCodec: null,
+    audioCodec: null,
     label: 'Checking browser encoder…',
   });
-  const [exportState, setExportState] = useState<'idle' | 'exporting' | 'done' | 'error'>('idle');
+  const [exportState, setExportState] = useState<'idle' | 'exporting' | 'done' | 'error' | 'cancelled'>('idle');
   const [exportProgress, setExportProgress] = useState(0);
   const [exportMessage, setExportMessage] = useState('');
 
@@ -144,7 +149,11 @@ function App() {
         if (active) {
           setCapability({
             supported: false,
+            container: null,
+            extension: null,
+            mimeType: null,
             videoCodec: null,
+            audioCodec: null,
             label: error instanceof Error ? error.message : 'Encoder check failed',
           });
         }
@@ -265,31 +274,59 @@ function App() {
     renderPreview(value);
   };
 
+  const cancelExport = () => {
+    exportAbortRef.current?.abort();
+    setExportMessage('Stopping export…');
+  };
+
   const handleExport = async () => {
-    if (!cover || !audioBuffer || !capability.videoCodec || exportState === 'exporting') return;
+    if (!cover || !audioBuffer || !capability.supported || exportState === 'exporting') return;
+
+    const controller = new AbortController();
+    exportAbortRef.current = controller;
     setExportState('exporting');
     setExportProgress(0);
     setExportMessage('Rendering 1080p frames locally…');
+
     try {
-      const blob = await exportMp4({
+      const result = await exportVideo({
         source: cover,
         audioBuffer,
         settings,
-        videoCodec: capability.videoCodec,
+        capability,
         title,
+        signal: controller.signal,
         onProgress: setExportProgress,
       });
-      downloadBlob(blob, safeExportName(title));
+
+      downloadBlob(
+        result.blob,
+        safeExportName(title, result.extension),
+        result.release,
+      );
       setExportState('done');
-      setExportMessage('MP4 encoded and downloaded · ' + (blob.size / 1_000_000).toFixed(1) + ' MB');
+      setExportMessage(
+        result.extension.toUpperCase()
+        + ' encoded and downloaded · '
+        + (result.blob.size / 1_000_000).toFixed(1)
+        + ' MB'
+        + (result.targetKind === 'opfs' ? ' · disk-backed render' : ''),
+      );
     } catch (error) {
-      setExportState('error');
-      setExportMessage(error instanceof Error ? error.message : 'Export failed.');
+      if (error instanceof DOMException && error.name === 'AbortError') {
+        setExportState('cancelled');
+        setExportMessage('Export cancelled · no partial file kept.');
+      } else {
+        setExportState('error');
+        setExportMessage(error instanceof Error ? error.message : 'Export failed.');
+      }
+    } finally {
+      exportAbortRef.current = null;
     }
   };
 
   const duration = audioBuffer?.duration || 0;
-  const exportReady = Boolean(cover && audioBuffer && capability.supported && capability.videoCodec);
+  const exportReady = Boolean(cover && audioBuffer && capability.supported);
 
   return (
     <main className="app-shell">
@@ -305,11 +342,18 @@ function App() {
           <span className="output-pill">1080p · 30 fps</span>
           <button
             data-testid="export-button"
-            className="primary-button"
-            disabled={!exportReady || exportState === 'exporting'}
-            onClick={() => void handleExport()}
+            className={'primary-button ' + (exportState === 'exporting' ? 'is-cancel' : '')}
+            disabled={exportState !== 'exporting' && !exportReady}
+            onClick={() => {
+              if (exportState === 'exporting') cancelExport();
+              else void handleExport();
+            }}
           >
-            {exportState === 'exporting' ? Math.round(exportProgress * 100) + '%' : 'Export MP4'}
+            {exportState === 'exporting'
+              ? 'Cancel ' + Math.round(exportProgress * 100) + '%'
+              : capability.container === 'webm'
+                ? 'Export WebM'
+                : 'Export MP4'}
           </button>
         </div>
       </header>
@@ -541,8 +585,8 @@ function App() {
           </div>
 
           <div className="scope-note">
-            <strong>Vertical slice</strong>
-            <p>Beat-grid analysis and extra visual presets stay out until preview/export parity is proven.</p>
+            <strong>Next milestone</strong>
+            <p>Vertical-slice export is proven. Beat/grid analysis and preset motion are next.</p>
           </div>
         </aside>
       </section>

@@ -10,9 +10,9 @@ The intended fast path is:
 2. choose audio;
 3. enter title and optional own wordmark/watermark;
 4. choose a strong visual preset;
-5. verify musical analysis when that later milestone exists;
+5. verify musical analysis;
 6. preview;
-7. export a clean 16:9 MP4.
+7. export a clean 16:9 video.
 
 Source media remains on-device. The v1 browser target is current Chromium on Windows. A static secure host/PWA can come later; a backend is not required for the core workflow.
 
@@ -38,21 +38,21 @@ Presets configure the same primitives rather than owning separate render trees:
 
 `renderComposition` is the canonical visual owner. Export code must call it rather than duplicate drawing logic.
 
-## Current milestone: vertical slice
+## Vertical slice baseline
 
-The vertical slice is complete only when these gates are true:
+The first baseline is considered proven when:
 
 - cover and audio can be imported locally;
 - Clean preview renders a fixed 16:9 frame without stretching the foreground image;
 - title and watermark are visibly configurable;
 - playback and waveform are usable;
 - browser export capability is reported honestly;
-- a supported browser can produce a non-empty 1920×1080 / 30 fps MP4 with audio;
+- a supported browser produces a non-empty encoded 1920×1080 / 30 fps file with audio;
 - preview and export share the same compositor;
 - minimum/normal/wide UI screenshots are generated and visually inspected;
 - README and tests describe behavior that actually exists.
 
-Do not expand into automatic BPM/downbeat analysis, particles or multiple motion presets while a vertical-slice gate is failing.
+These gates are now the regression floor for later milestones.
 
 ## Text and branding
 
@@ -71,18 +71,28 @@ The Brand layer supports either producer/wordmark text or a user-supplied transp
 
 ## Export
 
-Target: MP4, 1920×1080, 30 fps, with the decoded source audio. H.264/AVC is preferred for broad playback compatibility. VP9-in-MP4 is an allowed runtime fallback when Chromium cannot encode AVC. AAC is the audio target; the official Mediabunny AAC encoder extension provides a local fallback.
+Primary target: MP4, 1920×1080, 30 fps, H.264/AVC + AAC, with the decoded source audio unchanged.
 
-Codec support is runtime state. Never mark export ready without an actual encoder capability check, and never report success until the output buffer is non-empty.
+Capability selection is explicit:
 
-## MVP after the vertical slice
+1. prefer MP4/H.264 + AAC;
+2. if that path is unavailable, use WebM/VP9 + Opus when supported and label the fallback in the UI;
+3. otherwise block export with an honest capability message.
 
-Once the vertical-slice gates are green, the remaining v1 scope is:
+Do not put VP9 in MP4 merely because a muxer permits it; container/codec pairings should favor broad playback compatibility.
 
-- five strong presets built from the shared layer model;
-- BPM + beatgrid + bar-1 analysis with confidence;
+For long exports, prefer a Mediabunny `StreamTarget` backed by OPFS so encoded bytes are flushed to browser storage rather than accumulated into one giant `ArrayBuffer`. Keep `BufferTarget` only as the compatibility fallback. Export can be cancelled; cancellation must close encoder/output resources and remove any partial scratch file.
+
+Codec support is runtime state. Never report success until a non-empty finalized file exists.
+
+## Next v1 milestone
+
+With the vertical-slice regression floor green, implement:
+
+- BPM + beat-grid + bar-1 analysis with confidence;
 - manual BPM/bar-1 correction;
-- bar-synchronised preview;
+- a shared musical clock for bar-synchronised preview;
+- the remaining strong presets built from the shared layer model;
 - offline/local-first PWA behavior;
 - autosaved user settings.
 
