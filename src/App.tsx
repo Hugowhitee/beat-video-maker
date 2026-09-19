@@ -4,8 +4,10 @@ import { renderComposition } from './features/compositor/renderComposition';
 import type {
   BrandPosition,
   CompositionSettings,
+  MotionAmount,
   TitleFont,
   TitlePosition,
+  VisualPreset,
 } from './features/compositor/types';
 import {
   buildPeaks,
@@ -24,6 +26,11 @@ import type { ExportCapability } from './features/export/exportVideo';
 import { analyzeBeatGrid } from './features/analysis/analyzeBeatGrid';
 import { markersForDuration } from './features/analysis/musicalClock';
 import type { BeatGridAnalysis, VerifiedGrid } from './features/analysis/types';
+import {
+  amplitudeAt,
+  buildAmplitudeEnvelope,
+} from './features/analysis/audioFeatures';
+import type { AmplitudeEnvelope } from './features/analysis/audioFeatures';
 
 const fixtureMode = new URLSearchParams(window.location.search).has('fixture');
 
@@ -122,6 +129,9 @@ function App() {
   const [manualBpm, setManualBpm] = useState('');
   const [manualBarOffset, setManualBarOffset] = useState<number | null>(null);
   const [analysisMessage, setAnalysisMessage] = useState('');
+  const [amplitudeEnvelope, setAmplitudeEnvelope] = useState<AmplitudeEnvelope | null>(null);
+  const [preset, setPreset] = useState<VisualPreset>('clean');
+  const [motion, setMotion] = useState<MotionAmount>('low');
 
   const settings: CompositionSettings = useMemo(() => ({
     title,
@@ -133,6 +143,8 @@ function App() {
     brandGraphic,
     brandPosition,
     brandOpacity,
+    preset,
+    motion,
     showGuides,
   }), [
     title,
@@ -144,8 +156,32 @@ function App() {
     brandGraphic,
     brandPosition,
     brandOpacity,
+    preset,
+    motion,
     showGuides,
   ]);
+
+  const resolveGrid = useCallback((): VerifiedGrid | null => {
+    const parsedManualBpm = Number(manualBpm);
+    const effectiveBpm =
+      Number.isFinite(parsedManualBpm) && parsedManualBpm >= 40 && parsedManualBpm <= 260
+        ? parsedManualBpm
+        : analysis?.bpm ?? null;
+    const effectiveBeatOffset = manualBarOffset ?? analysis?.beatOffset ?? null;
+
+    if (effectiveBpm === null || effectiveBeatOffset === null) return null;
+
+    return {
+      bpm: effectiveBpm,
+      beatOffset: effectiveBeatOffset,
+      barOffset: manualBarOffset,
+      source:
+        manualBarOffset !== analysis?.barOffset ||
+        (analysis?.bpm !== null && Math.abs(effectiveBpm - analysis.bpm) > 0.01)
+          ? 'manual'
+          : 'auto',
+    };
+  }, [analysis, manualBarOffset, manualBpm]);
 
   useEffect(() => {
     let active = true;
@@ -185,9 +221,11 @@ function App() {
       height: canvas.height,
       time,
       settings,
+      grid: resolveGrid(),
+      audioLevel: amplitudeAt(amplitudeEnvelope, time),
     });
     canvas.dataset.rendered = 'true';
-  }, [cover, currentTime, settings]);
+  }, [amplitudeEnvelope, cover, currentTime, resolveGrid, settings]);
 
   useEffect(() => {
     renderPreview();
@@ -240,6 +278,7 @@ function App() {
       setAudioBuffer(decoded);
       setAudioName(file.name);
       setPeaks(buildPeaks(decoded));
+      setAmplitudeEnvelope(buildAmplitudeEnvelope(decoded));
       setCurrentTime(0);
       setAnalysis(null);
       setManualBpm('');
@@ -327,6 +366,8 @@ function App() {
         settings,
         capability,
         title,
+        grid: resolveGrid(),
+        amplitudeEnvelope,
         signal: controller.signal,
         onProgress: setExportProgress,
       });
@@ -358,23 +399,8 @@ function App() {
   };
 
   const duration = audioBuffer?.duration || 0;
-  const parsedManualBpm = Number(manualBpm);
-  const effectiveBpm = Number.isFinite(parsedManualBpm) && parsedManualBpm >= 40 && parsedManualBpm <= 260
-    ? parsedManualBpm
-    : analysis?.bpm ?? null;
-  const effectiveBeatOffset = manualBarOffset ?? analysis?.beatOffset ?? null;
-  const verifiedGrid: VerifiedGrid | null = effectiveBpm !== null && effectiveBeatOffset !== null
-    ? {
-        bpm: effectiveBpm,
-        beatOffset: effectiveBeatOffset,
-        barOffset: manualBarOffset,
-        source:
-          manualBarOffset !== analysis?.barOffset ||
-          (analysis?.bpm !== null && Math.abs(effectiveBpm - analysis.bpm) > 0.01)
-            ? 'manual'
-            : 'auto',
-      }
-    : null;
+  const verifiedGrid = resolveGrid();
+  const effectiveBpm = verifiedGrid?.bpm ?? null;
   const beatMarkers = verifiedGrid && duration > 0
     ? markersForDuration(duration, verifiedGrid).slice(0, 600)
     : [];
@@ -635,10 +661,44 @@ function App() {
             <div><h2>Style</h2><p>One preset, useful controls.</p></div>
           </div>
 
-          <div className="preset-card is-selected">
-            <div className="preset-swatch" />
-            <div><strong>Clean</strong><span>Photo first · nearly still</span></div>
-            <span className="check">✓</span>
+          <div className="preset-list" data-testid="preset-list">
+            {([
+              ['clean', 'Clean', 'Photo first · nearly still'],
+              ['ambient', 'Ambient', 'Slow background drift'],
+              ['reactive', 'Reactive', 'Real amplitude accent'],
+              ['pulse', 'Pulse', '8-bar phrase curve'],
+              ['visualizer', 'Minimal visualizer', 'Small amplitude line'],
+            ] as Array<[VisualPreset, string, string]>).map(([value, label, description]) => (
+              <button
+                key={value}
+                type="button"
+                data-testid={'preset-' + value}
+                className={'preset-card ' + (preset === value ? 'is-selected' : '')}
+                onClick={() => setPreset(value)}
+              >
+                <div className={'preset-swatch preset-' + value} />
+                <div><strong>{label}</strong><span>{description}</span></div>
+                <span className="check">{preset === value ? '✓' : ''}</span>
+              </button>
+            ))}
+          </div>
+
+          <div className="control-group">
+            <h3>Motion</h3>
+            <SelectControl
+              label="Amount"
+              value={motion}
+              onChange={setMotion}
+              testId="motion-amount"
+              options={[
+                { value: 'off', label: 'Off' },
+                { value: 'low', label: 'Low' },
+                { value: 'medium', label: 'Medium' },
+              ]}
+            />
+            {!verifiedGrid?.barOffset && (preset === 'ambient' || preset === 'pulse') ? (
+              <p className="control-hint">Verify bar 1 to enable bar-synchronised motion.</p>
+            ) : null}
           </div>
 
           <div className="control-group">

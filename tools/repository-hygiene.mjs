@@ -16,7 +16,9 @@ const required = [
   'src/features/compositor/renderComposition.ts', 'src/features/export/exportVideo.ts',
   'src/features/export/outputTarget.ts',
   'src/features/analysis/analyzeBeatGrid.ts',
-  'src/features/analysis/musicalClock.ts', 'tests/visual.spec.ts',
+  'src/features/analysis/musicalClock.ts',
+  'src/features/analysis/audioFeatures.ts',
+  'tests/fixtures/media.ts', 'tests/visual.spec.ts',
 ];
 for (const path of required) if (!existsSync(path)) failures.push('Required project file missing: ' + path);
 

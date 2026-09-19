@@ -30,6 +30,12 @@ export function barIndexAt(time: number, grid: VerifiedGrid) {
   return Math.floor((time - origin) / (period * 4));
 }
 
+export function phrasePhaseAt(time: number, grid: VerifiedGrid, bars = 8) {
+  const period = beatPeriod(grid);
+  const origin = grid.barOffset ?? grid.beatOffset;
+  return positiveModulo(time - origin, period * 4 * bars) / (period * 4 * bars);
+}
+
 export function markersForDuration(duration: number, grid: Pick<VerifiedGrid, 'bpm' | 'beatOffset'>) {
   const period = beatPeriod(grid);
   const markers: number[] = [];
@@ -38,9 +44,6 @@ export function markersForDuration(duration: number, grid: Pick<VerifiedGrid, 'b
   while (time - period >= 0) time -= period;
   while (time < 0) time += period;
 
-  for (; time <= duration + 1e-6; time += period) {
-    markers.push(time);
-  }
-
+  for (; time <= duration + 1e-6; time += period) markers.push(time);
   return markers;
 }

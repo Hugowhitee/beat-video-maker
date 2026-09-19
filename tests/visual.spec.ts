@@ -32,3 +32,21 @@ test('workspace is visually reviewable at the fixed viewport matrix', async ({ p
     fullPage: true,
   });
 });
+
+test('all five presets have a reviewable normal-viewport state', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'desktop-normal', 'Preset gallery uses the normal review viewport.');
+
+  await page.goto('/?fixture=1');
+  await mkdir('artifacts/visual-qa', { recursive: true });
+
+  const presets = ['clean', 'ambient', 'reactive', 'pulse', 'visualizer'] as const;
+  for (const preset of presets) {
+    const button = page.getByTestId('preset-' + preset);
+    await button.click();
+    await expect(button).toHaveClass(/is-selected/);
+    await page.screenshot({
+      path: 'artifacts/visual-qa/preset-' + preset + '.png',
+      fullPage: true,
+    });
+  }
+});

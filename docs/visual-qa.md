@@ -13,7 +13,8 @@ Output is written to ignored `artifacts/visual-qa/` files. CI uploads the folder
 
 - 1024×768 — minimum supported desktop review;
 - 1440×900 — normal working layout;
-- 1920×1080 — wide layout.
+- 1920×1080 — wide layout;
+- all five preset selections at 1440×900.
 
 The fixture route `/?fixture=1` supplies a synthetic portrait cover plus representative title and wordmark. It exists only to make layout/compositor screenshots deterministic; it is not user media and it does not prove media decoding.
 
@@ -30,6 +31,7 @@ For material UI changes, inspect all current screenshots and check:
 7. controls have consistent spacing, focus states and usable labels;
 8. capability/error states are understandable and do not look successful when blocked;
 9. safe guides are preview-only;
-10. no accidental timeline/layer-editor complexity has entered the main flow.
+10. no accidental timeline/layer-editor complexity has entered the main flow;
+11. each preset is visually distinct without making the foreground photo secondary.
 
 Generated PNGs, reports and media fixtures are workflow artifacts. Do not commit screenshot dumps or export samples to source.

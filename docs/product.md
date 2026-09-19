@@ -99,13 +99,25 @@ The first grid implementation now has one canonical analysis path:
 
 Unknown remains unknown: analysis must never use a convincing-looking default BPM or bar offset merely because an estimator failed.
 
+## Visual presets v1
+
+All presets are configurations of the same compositor and use the shared musical clock/audio envelope:
+
+1. **Clean** — sharp foreground, near-black/subtle blurred background and almost no motion.
+2. **Ambient** — stable foreground with slow 8-bar background pan/scale; bar-synchronised motion only activates when bar 1 is verified.
+3. **Reactive** — Ambient-style base plus a restrained glow driven by the real decoded amplitude envelope. The foreground never pumps on every kick.
+4. **Pulse** — static foreground with a subtle 8-bar brightness/title curve that returns exactly to its start value; disabled when bar 1 is unverified.
+5. **Minimal visualizer** — photo remains hero; a small lower-edge line responds to real amplitude and is visually subordinate.
+
+Motion is Off / Low / Medium. Presets must never invent tempo/phase logic or fake spectrum data.
+
 ## Next v1 milestone
 
-With the vertical-slice regression floor and first musical grid in place, implement:
+With export, musical grid and the five compositor presets in place, implement:
 
-- the remaining strong presets built from the shared layer model and musical clock;
 - offline/local-first PWA behavior;
 - autosaved user settings;
-- a real full-beat duration/memory smoke test.
+- a real full-beat duration/memory smoke test;
+- reproducible dependency installation with a committed lockfile.
 
-New presets must extend the compositor rather than create parallel render or timing paths.
+New work must preserve the single compositor, analysis and export owners.

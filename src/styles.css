@@ -607,3 +607,51 @@ select:focus-visible {
     display: none;
   }
 }
+
+
+.preset-list {
+  display: grid;
+  gap: 6px;
+}
+
+button.preset-card {
+  width: 100%;
+  min-height: 48px;
+  text-align: left;
+  color: inherit;
+  cursor: pointer;
+}
+
+button.preset-card:hover {
+  background: #141719;
+  border-color: #393f42;
+}
+
+.preset-card.is-selected {
+  background: #12160f;
+}
+
+.preset-swatch.preset-ambient {
+  background: radial-gradient(circle at 70% 25%, rgba(170,196,210,0.34), transparent 52%), #22272b;
+}
+
+.preset-swatch.preset-reactive {
+  background: radial-gradient(circle at 70% 25%, rgba(202,220,255,0.52), transparent 42%), #1f2428;
+}
+
+.preset-swatch.preset-pulse {
+  background: linear-gradient(135deg, #1f2225 0 42%, #42433a 43% 56%, #1f2225 57%);
+}
+
+.preset-swatch.preset-visualizer {
+  background:
+    linear-gradient(to top, transparent 0 54%, rgba(255,255,255,0.32) 55% 59%, transparent 60%),
+    #222629;
+}
+
+.control-hint {
+  margin: 8px 0 0;
+  color: var(--muted);
+  font-size: 9px;
+  line-height: 1.4;
+}

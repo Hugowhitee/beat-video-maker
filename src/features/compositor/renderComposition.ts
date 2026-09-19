@@ -1,3 +1,4 @@
+import { phrasePhaseAt } from '../analysis/musicalClock';
 import type { CompositionFrame, TitleFont } from './types';
 
 type Context2D = CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D;
@@ -68,6 +69,47 @@ function drawPlaceholder(ctx: Context2D, width: number, height: number) {
     ctx.lineTo(x + height, height);
     ctx.stroke();
   }
+  ctx.restore();
+}
+
+function motionStrength(frame: CompositionFrame) {
+  if (frame.settings.motion === 'off') return 0;
+  return frame.settings.motion === 'medium' ? 1 : 0.55;
+}
+
+function phraseMotion(frame: CompositionFrame) {
+  if (frame.grid?.barOffset == null) return 0;
+  const phase = phrasePhaseAt(frame.time, frame.grid, 8);
+  return Math.sin(phase * Math.PI * 2);
+}
+
+function drawBackground(ctx: Context2D, frame: CompositionFrame) {
+  if (!frame.source) return;
+
+  const { width, height, source, settings } = frame;
+  const strength = motionStrength(frame);
+  const musicalMotion = phraseMotion(frame);
+  const presetAmount =
+    settings.preset === 'clean' ? 0.35
+      : settings.preset === 'ambient' || settings.preset === 'reactive' ? 1
+        : settings.preset === 'pulse' ? 0.6
+          : 0.35;
+
+  const panX = width * 0.009 * strength * presetAmount * musicalMotion;
+  const panY = height * 0.005 * strength * presetAmount * Math.cos(frame.time * 0.15 + musicalMotion);
+  const scale = 1 + 0.012 * strength * presetAmount * (0.5 + 0.5 * musicalMotion);
+
+  ctx.save();
+  ctx.filter =
+    'blur(' + Math.max(18, width * 0.022) + 'px) '
+    + 'brightness(' + (settings.preset === 'ambient' ? 0.46 : 0.42) + ') '
+    + 'saturate(' + (settings.preset === 'reactive' ? 0.9 : 0.76) + ')';
+  ctx.globalAlpha = 0.92;
+  ctx.translate(width / 2 + panX, height / 2 + panY);
+  ctx.scale(scale, scale);
+  ctx.translate(-width / 2, -height / 2);
+  ctx.translate(-width * 0.025, -height * 0.045);
+  drawFitted(ctx, source, width * 1.05, height * 1.09, 'cover');
   ctx.restore();
 }
 
@@ -146,12 +188,20 @@ function drawTitle(ctx: Context2D, frame: CompositionFrame) {
     tracking,
   );
 
+  let phraseAccent = 0;
+  if (frame.settings.preset === 'pulse' && frame.grid?.barOffset != null && frame.settings.motion !== 'off') {
+    const phase = phrasePhaseAt(frame.time, frame.grid, 8);
+    const distance = Math.min(phase, 1 - phase);
+    phraseAccent = Math.max(0, 1 - distance / 0.035);
+  }
+
   ctx.save();
   ctx.font = titleFont(frame.settings.titleFont, size);
   ctx.fillStyle = '#f5f4ef';
+  ctx.globalAlpha = 0.94 + phraseAccent * 0.06;
   ctx.textBaseline = 'alphabetic';
   ctx.shadowColor = 'rgba(0,0,0,0.72)';
-  ctx.shadowBlur = size * 0.17;
+  ctx.shadowBlur = size * (0.17 + phraseAccent * 0.06);
   ctx.shadowOffsetY = size * 0.04;
 
   if (frame.settings.titlePosition === 'top-left') {
@@ -209,6 +259,62 @@ function drawBrand(ctx: Context2D, frame: CompositionFrame) {
   ctx.restore();
 }
 
+function drawReactiveAccent(ctx: Context2D, frame: CompositionFrame) {
+  if (frame.settings.preset !== 'reactive' || frame.settings.motion === 'off') return;
+  const amount = Math.max(0, Math.min(1, frame.audioLevel ?? 0)) * motionStrength(frame);
+  if (amount <= 0.01) return;
+
+  const { width, height } = frame;
+  const gradient = ctx.createRadialGradient(
+    width * 0.78,
+    height * 0.2,
+    0,
+    width * 0.78,
+    height * 0.2,
+    width * 0.62,
+  );
+  gradient.addColorStop(0, 'rgba(210,226,255,' + (0.08 * amount) + ')');
+  gradient.addColorStop(1, 'rgba(210,226,255,0)');
+  ctx.fillStyle = gradient;
+  ctx.fillRect(0, 0, width, height);
+}
+
+function drawPulseAccent(ctx: Context2D, frame: CompositionFrame) {
+  if (frame.settings.preset !== 'pulse' || frame.grid?.barOffset == null || frame.settings.motion === 'off') return;
+  const phase = phrasePhaseAt(frame.time, frame.grid, 8);
+  const curve = 0.5 - 0.5 * Math.cos(phase * Math.PI * 2);
+  const alpha = curve * 0.045 * motionStrength(frame);
+  ctx.fillStyle = 'rgba(255,248,228,' + alpha + ')';
+  ctx.fillRect(0, 0, frame.width, frame.height);
+}
+
+function drawMinimalVisualizer(ctx: Context2D, frame: CompositionFrame) {
+  if (frame.settings.preset !== 'visualizer') return;
+
+  const level = Math.max(0, Math.min(1, frame.audioLevel ?? 0));
+  const { width, height } = frame;
+  const lineWidth = width * 0.18;
+  const x = width * (1 - SAFE_X) - lineWidth;
+  const y = height * (1 - SAFE_Y);
+  const activeWidth = Math.max(width * 0.012, lineWidth * level);
+
+  ctx.save();
+  ctx.lineCap = 'round';
+  ctx.lineWidth = Math.max(2, height * 0.003);
+  ctx.strokeStyle = 'rgba(255,255,255,0.24)';
+  ctx.beginPath();
+  ctx.moveTo(x, y);
+  ctx.lineTo(x + lineWidth, y);
+  ctx.stroke();
+
+  ctx.strokeStyle = 'rgba(245,244,239,0.8)';
+  ctx.beginPath();
+  ctx.moveTo(x, y);
+  ctx.lineTo(x + activeWidth, y);
+  ctx.stroke();
+  ctx.restore();
+}
+
 function drawGuides(ctx: Context2D, width: number, height: number) {
   ctx.save();
   ctx.strokeStyle = 'rgba(255,255,255,0.26)';
@@ -230,12 +336,7 @@ export function renderComposition(ctx: Context2D, frame: CompositionFrame) {
   ctx.fillRect(0, 0, width, height);
 
   if (source) {
-    ctx.save();
-    ctx.filter = 'blur(' + Math.max(18, width * 0.022) + 'px) brightness(0.42) saturate(0.76)';
-    ctx.globalAlpha = 0.92;
-    ctx.translate(-width * 0.025, -height * 0.045);
-    drawFitted(ctx, source, width * 1.05, height * 1.09, 'cover');
-    ctx.restore();
+    drawBackground(ctx, frame);
 
     const veil = ctx.createLinearGradient(0, 0, 0, height);
     veil.addColorStop(0, 'rgba(4,5,6,0.18)');
@@ -252,6 +353,9 @@ export function renderComposition(ctx: Context2D, frame: CompositionFrame) {
     drawPlaceholder(ctx, width, height);
   }
 
+  drawReactiveAccent(ctx, frame);
+  drawPulseAccent(ctx, frame);
+
   const vignette = ctx.createRadialGradient(
     width / 2,
     height / 2,
@@ -261,11 +365,12 @@ export function renderComposition(ctx: Context2D, frame: CompositionFrame) {
     Math.max(width, height) * 0.72,
   );
   vignette.addColorStop(0, 'rgba(0,0,0,0)');
-  vignette.addColorStop(1, 'rgba(0,0,0,0.34)');
+  vignette.addColorStop(1, frame.settings.preset === 'ambient' ? 'rgba(0,0,0,0.27)' : 'rgba(0,0,0,0.34)');
   ctx.fillStyle = vignette;
   ctx.fillRect(0, 0, width, height);
 
   drawTitle(ctx, frame);
   drawBrand(ctx, frame);
+  drawMinimalVisualizer(ctx, frame);
   if (frame.settings.showGuides) drawGuides(ctx, width, height);
 }

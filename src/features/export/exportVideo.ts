@@ -11,6 +11,9 @@ import {
 } from 'mediabunny';
 import { renderComposition } from '../compositor/renderComposition';
 import type { CompositionSettings } from '../compositor/types';
+import { amplitudeAt } from '../analysis/audioFeatures';
+import type { AmplitudeEnvelope } from '../analysis/audioFeatures';
+import type { VerifiedGrid } from '../analysis/types';
 import { createExportTarget } from './outputTarget';
 
 const WIDTH = 1920;
@@ -117,6 +120,8 @@ type ExportOptions = {
   settings: CompositionSettings;
   capability: ExportCapability;
   title: string;
+  grid: VerifiedGrid | null;
+  amplitudeEnvelope: AmplitudeEnvelope | null;
   signal?: AbortSignal;
   onProgress?: (progress: number) => void;
 };
@@ -133,7 +138,17 @@ function abortError() {
 }
 
 export async function exportVideo(options: ExportOptions): Promise<EncodedVideo> {
-  const { source, audioBuffer, settings, capability, title, signal, onProgress } = options;
+  const {
+    source,
+    audioBuffer,
+    settings,
+    capability,
+    title,
+    grid,
+    amplitudeEnvelope,
+    signal,
+    onProgress,
+  } = options;
 
   if (
     !capability.supported ||
@@ -202,6 +217,8 @@ export async function exportVideo(options: ExportOptions): Promise<EncodedVideo>
           height: HEIGHT,
           time,
           settings: exportSettings,
+          grid,
+          audioLevel: amplitudeAt(amplitudeEnvelope, time),
         });
         await videoSource.add(
           time,

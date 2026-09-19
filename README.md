@@ -17,10 +17,11 @@ The first vertical slice is implemented and validated:
 - disk-backed OPFS streaming for long browser exports where available, with an in-memory compatibility fallback;
 - cancellable export with partial-output cleanup;
 - BPM + beat-phase analysis with explicit confidence, independent cross-check and manual BPM/bar-1 correction;
-- a shared musical-clock module that future presets must use;
+- a shared musical-clock module used by all presets;
+- five presets: Clean, Ambient, Reactive, Pulse and Minimal visualizer;
 - fixed-viewport Playwright visual QA and a real encoded-file smoke test.
 
-Musical analysis is now implemented as a first usable pass: an in-worker onset/tempo/phase analyzer is reconciled with `web-audio-beat-detector` as an independent cross-check. BPM and bar 1 remain manually correctable, and low-confidence bar inference is shown as unverified instead of being silently accepted. The next milestone is wiring this shared grid into the remaining visual presets.
+Musical analysis is now implemented as a first usable pass: an in-worker onset/tempo/phase analyzer is reconciled with `web-audio-beat-detector` as an independent cross-check. BPM and bar 1 remain manually correctable, and low-confidence bar inference is shown as unverified instead of being silently accepted. All five v1 presets now share the same compositor, real amplitude envelope and musical clock.
 
 ## Run locally
 
@@ -80,3 +81,14 @@ There is no account, media upload, API key or render server in the core workflow
 Mediabunny is used for browser-native media output instead of the deprecated `mp4-muxer` package. It provides maintained container muxing, WebCodecs sources, codec capability checks, streaming targets and an official AAC fallback while keeping the compositor under this project's control.
 
 See [AGENTS.md](AGENTS.md) before changing architecture, workflow or validation.
+
+
+## Presets
+
+- **Clean** — sharp foreground, restrained background and almost no motion.
+- **Ambient** — slow 8-bar background pan/scale; it stays static until bar 1 is verified.
+- **Reactive** — Ambient-style base with a small glow driven by the real decoded audio amplitude envelope.
+- **Pulse** — subtle 8-bar brightness/title accent curve; it stays static until bar 1 is verified.
+- **Minimal visualizer** — a small real amplitude line at the lower safe edge, never a fake spectrum.
+
+Motion has Off / Low / Medium levels. No preset owns its own timing detector; they all consume the shared grid.
