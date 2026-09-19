@@ -35,8 +35,8 @@ The normal way to use Beatvideo Maker is the hosted PWA:
 **Do not clone the repository or download a ZIP for normal use. You do not need Node.js or npm.**
 
 1. Open that link in current Chrome or Edge on Windows.
-2. Click **Install app** in Beatvideo Maker's top bar when the browser offers the native install prompt.
-3. If the button only shows **Install**, click it for the fallback instructions. You can also use the install icon in the browser address bar or the browser's install-app menu item; wording varies by browser.
+2. Click **Install app** in Beatvideo Maker's top bar.
+3. If Chromium exposes its native install prompt, the button opens it directly. Otherwise the same button shows concise fallback instructions. You can also use the install icon in the browser address bar or the browser's install-app menu item; wording varies by browser.
 4. Accept the browser install dialog. Beatvideo Maker then opens as a standalone app and can be pinned to Start/taskbar like a normal app.
 
 The first successful visit needs the hosted site so the app shell can be cached. After that, the installed shell can reopen offline. Imported cover images/audio are never uploaded or stored in the app cache.
