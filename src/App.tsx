@@ -683,7 +683,7 @@ function App() {
                 <div className="install-popover" role="dialog" aria-label="Install Beatvideo Maker" data-testid="install-help">
                   <strong>Install Beatvideo Maker</strong>
                   <p>In Chrome or Edge, use the install icon in the address bar. If it is not shown, open the browser menu and choose the install-app option; wording can vary by browser.</p>
-                  <p>Use the hosted HTTPS version. After the first successful load, the installed app shell can reopen offline; imported media still stays on this device.</p>
+                  <p>Use the hosted HTTPS version; do not download the GitHub ZIP or run npm for normal use. After the first successful load, the installed app shell can reopen offline; imported media still stays on this device.</p>
                   <button type="button" className="link-button" onClick={() => setInstallHelpOpen(false)}>Close</button>
                 </div>
               )}
