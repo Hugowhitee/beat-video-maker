@@ -25,9 +25,10 @@ test('release-only sustained export stays finalized and disk-backed', async ({ p
   await expect(page.getByText(/Audio ready/)).toBeVisible();
 
   const exportButton = page.getByTestId('export-button');
-  if (await exportButton.isDisabled()) {
-    test.skip(true, 'No supported encoder on this runner.');
-  }
+  await expect(
+    exportButton,
+    'Release smoke requires a supported browser encoder; an unavailable codec is a failed gate, not a skip.',
+  ).toBeEnabled();
 
   const downloadPromise = page.waitForEvent('download', { timeout: 20 * 60 * 1000 });
   await exportButton.click();
