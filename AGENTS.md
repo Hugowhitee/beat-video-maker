@@ -68,6 +68,8 @@ For UI/media changes also run the actual app and inspect the visible desktop wor
 
 For export changes verify a real encoded file, not only that an encoder call returned. Preview and exported frame composition must match.
 
+**CI is evidence, not a waiting state.** Check a newly triggered run once. If it is queued or in progress, continue another useful task that cannot invalidate the run: code/doc review, residue scan, comparison research, preparing the visual-QA review, or inspecting already available evidence. Recheck only at a natural checkpoint or after a new commit. Never create a loop whose only action is polling CI.
+
 ## Current milestone
 
 Vertical slice: image + audio import → Clean preview → playback/waveform → configurable title/watermark → deterministic 1080p MP4 export with audio.

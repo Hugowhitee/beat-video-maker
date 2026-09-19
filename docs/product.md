@@ -56,7 +56,16 @@ Do not expand into automatic BPM/downbeat analysis, particles or multiple motion
 
 ## Text and branding
 
-Title text must stay readable at small YouTube thumbnail scale. v0.1 intentionally exposes only useful title size/position controls rather than a font catalogue.
+Use a curated set of title directions rather than a huge font browser:
+
+- Clean grotesk — Inter or an equivalent local sans;
+- Condensed — Barlow Condensed or an equivalent local condensed sans;
+- Editorial serif — Instrument Serif or an equivalent local serif;
+- Technical mono — IBM Plex Mono or an equivalent local mono.
+
+The vertical slice uses local/system equivalents so the browser remains offline-first without pulling fonts from a CDN. Exact bundled open font files may replace those stacks later when the repository deliberately takes ownership of their licenses and release size.
+
+Title controls include font direction, size, position and tracking. Text must remain readable at small YouTube thumbnail size and long titles are fitted inside the composition safe width.
 
 The Brand layer supports either producer/wordmark text or a user-supplied transparent PNG/SVG. Placement is corner-based with adjustable opacity. Safe-area guides exist only in preview and never render into export.
 
@@ -66,6 +75,15 @@ Target: MP4, 1920×1080, 30 fps, with the decoded source audio. H.264/AVC is pre
 
 Codec support is runtime state. Never mark export ready without an actual encoder capability check, and never report success until the output buffer is non-empty.
 
-## Later milestones
+## MVP after the vertical slice
 
-After the vertical slice is proven, add musical analysis as separate inferential steps: tempo, beat phase/downbeat and arrangement confidence. Only then add bar-synchronised motion and additional presets. Those additions must extend the compositor/layer model rather than bypass it.
+Once the vertical-slice gates are green, the remaining v1 scope is:
+
+- five strong presets built from the shared layer model;
+- BPM + beatgrid + bar-1 analysis with confidence;
+- manual BPM/bar-1 correction;
+- bar-synchronised preview;
+- offline/local-first PWA behavior;
+- autosaved user settings.
+
+Beat analysis must keep tempo, beat phase/downbeat and arrangement as separate inferences rather than treating one detector as ground truth. New presets must extend the compositor rather than create parallel render paths.

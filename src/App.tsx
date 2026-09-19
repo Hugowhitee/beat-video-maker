@@ -1,9 +1,25 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { ChangeEvent } from 'react';
 import { renderComposition } from './features/compositor/renderComposition';
-import type { BrandPosition, CompositionSettings, TitlePosition } from './features/compositor/types';
-import { buildPeaks, decodeAudioFile, formatTime, loadImageFile, makeFixtureCover } from './features/media/media';
-import { detectExportCapability, downloadBlob, exportMp4, safeExportName } from './features/export/exportMp4';
+import type {
+  BrandPosition,
+  CompositionSettings,
+  TitleFont,
+  TitlePosition,
+} from './features/compositor/types';
+import {
+  buildPeaks,
+  decodeAudioFile,
+  formatTime,
+  loadImageFile,
+  makeFixtureCover,
+} from './features/media/media';
+import {
+  detectExportCapability,
+  downloadBlob,
+  exportMp4,
+  safeExportName,
+} from './features/export/exportMp4';
 import type { ExportCapability } from './features/export/exportMp4';
 
 const fixtureMode = new URLSearchParams(window.location.search).has('fixture');
@@ -43,11 +59,16 @@ function SelectControl<T extends string>(props: {
   value: T;
   onChange: (value: T) => void;
   options: Array<{ value: T; label: string }>;
+  testId?: string;
 }) {
   return (
     <label className="control">
       <span className="field-label">{props.label}</span>
-      <select value={props.value} onChange={(event) => props.onChange(event.target.value as T)}>
+      <select
+        data-testid={props.testId}
+        value={props.value}
+        onChange={(event) => props.onChange(event.target.value as T)}
+      >
         {props.options.map((option) => (
           <option key={option.value} value={option.value}>{option.label}</option>
         ))}
@@ -71,6 +92,8 @@ function App() {
   const [title, setTitle] = useState(fixtureMode ? 'MIDNIGHT STATIC' : '');
   const [titleSize, setTitleSize] = useState(58);
   const [titlePosition, setTitlePosition] = useState<TitlePosition>('bottom-left');
+  const [titleFont, setTitleFont] = useState<TitleFont>('clean');
+  const [titleTracking, setTitleTracking] = useState(1);
   const [brandText, setBrandText] = useState(fixtureMode ? 'prod. usolido' : '');
   const [brandPosition, setBrandPosition] = useState<BrandPosition>('top-right');
   const [brandOpacity, setBrandOpacity] = useState(0.72);
@@ -91,12 +114,25 @@ function App() {
     title,
     titleSize,
     titlePosition,
+    titleFont,
+    titleTracking,
     brandText,
     brandGraphic,
     brandPosition,
     brandOpacity,
     showGuides,
-  }), [title, titleSize, titlePosition, brandText, brandGraphic, brandPosition, brandOpacity, showGuides]);
+  }), [
+    title,
+    titleSize,
+    titlePosition,
+    titleFont,
+    titleTracking,
+    brandText,
+    brandGraphic,
+    brandPosition,
+    brandOpacity,
+    showGuides,
+  ]);
 
   useEffect(() => {
     let active = true;
@@ -431,14 +467,39 @@ function App() {
 
           <div className="control-group">
             <h3>Text</h3>
+            <SelectControl
+              label="Font direction"
+              value={titleFont}
+              onChange={setTitleFont}
+              testId="title-font"
+              options={[
+                { value: 'clean', label: 'Clean grotesk' },
+                { value: 'condensed', label: 'Condensed' },
+                { value: 'serif', label: 'Editorial serif' },
+                { value: 'mono', label: 'Technical mono' },
+              ]}
+            />
             <label className="range-control">
               <span><span>Title size</span><output>{titleSize}px</output></span>
               <input
+                data-testid="title-size"
                 type="range"
                 min={36}
                 max={86}
                 value={titleSize}
                 onChange={(event) => setTitleSize(Number(event.target.value))}
+              />
+            </label>
+            <label className="range-control">
+              <span><span>Tracking</span><output>{titleTracking >= 0 ? '+' : ''}{titleTracking}px</output></span>
+              <input
+                data-testid="title-tracking"
+                type="range"
+                min={-2}
+                max={8}
+                step={1}
+                value={titleTracking}
+                onChange={(event) => setTitleTracking(Number(event.target.value))}
               />
             </label>
             <SelectControl

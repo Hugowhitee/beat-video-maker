@@ -1,9 +1,16 @@
-import type { CompositionFrame } from './types';
+import type { CompositionFrame, TitleFont } from './types';
 
 type Context2D = CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D;
 
 const SAFE_X = 0.055;
 const SAFE_Y = 0.075;
+
+const TITLE_FONTS: Record<TitleFont, string> = {
+  clean: 'Inter, Arial, "Liberation Sans", ui-sans-serif, system-ui, sans-serif',
+  condensed: '"Arial Narrow", "Liberation Sans Narrow", "Roboto Condensed", sans-serif',
+  serif: 'Georgia, "Times New Roman", "Liberation Serif", serif',
+  mono: '"IBM Plex Mono", "Cascadia Mono", Consolas, "Liberation Mono", monospace',
+};
 
 function sourceSize(source: CanvasImageSource) {
   const candidate = source as {
@@ -64,11 +71,57 @@ function drawPlaceholder(ctx: Context2D, width: number, height: number) {
   ctx.restore();
 }
 
-function fitText(ctx: Context2D, text: string, maxWidth: number, preferred: number, minimum: number) {
+function titleFont(font: TitleFont, size: number) {
+  return '700 ' + size + 'px ' + TITLE_FONTS[font];
+}
+
+function measureTrackedText(ctx: Context2D, text: string, tracking: number) {
+  if (!text) return 0;
+  let width = 0;
+  const glyphs = Array.from(text);
+  for (let index = 0; index < glyphs.length; index += 1) {
+    width += ctx.measureText(glyphs[index]).width;
+    if (index < glyphs.length - 1) width += tracking;
+  }
+  return width;
+}
+
+function drawTrackedText(
+  ctx: Context2D,
+  text: string,
+  x: number,
+  y: number,
+  tracking: number,
+  align: CanvasTextAlign,
+) {
+  const glyphs = Array.from(text);
+  const totalWidth = measureTrackedText(ctx, text, tracking);
+  let cursor = x;
+  if (align === 'center') cursor -= totalWidth / 2;
+  if (align === 'right' || align === 'end') cursor -= totalWidth;
+
+  ctx.textAlign = 'left';
+  for (let index = 0; index < glyphs.length; index += 1) {
+    const glyph = glyphs[index];
+    ctx.fillText(glyph, cursor, y);
+    cursor += ctx.measureText(glyph).width;
+    if (index < glyphs.length - 1) cursor += tracking;
+  }
+}
+
+function fitText(
+  ctx: Context2D,
+  text: string,
+  maxWidth: number,
+  preferred: number,
+  minimum: number,
+  font: TitleFont,
+  tracking: number,
+) {
   let size = preferred;
   while (size > minimum) {
-    ctx.font = '700 ' + size + 'px Inter, ui-sans-serif, system-ui, sans-serif';
-    if (ctx.measureText(text).width <= maxWidth) break;
+    ctx.font = titleFont(font, size);
+    if (measureTrackedText(ctx, text, tracking) <= maxWidth) break;
     size -= 2;
   }
   return size;
@@ -82,10 +135,19 @@ function drawTitle(ctx: Context2D, frame: CompositionFrame) {
   const safeX = width * SAFE_X;
   const safeY = height * SAFE_Y;
   const preferred = frame.settings.titleSize * (height / 720);
-  const size = fitText(ctx, text, width * 0.72, preferred, 26 * (height / 720));
+  const tracking = frame.settings.titleTracking * (height / 720);
+  const size = fitText(
+    ctx,
+    text,
+    width * 0.76,
+    preferred,
+    26 * (height / 720),
+    frame.settings.titleFont,
+    tracking,
+  );
 
   ctx.save();
-  ctx.font = '700 ' + size + 'px Inter, ui-sans-serif, system-ui, sans-serif';
+  ctx.font = titleFont(frame.settings.titleFont, size);
   ctx.fillStyle = '#f5f4ef';
   ctx.textBaseline = 'alphabetic';
   ctx.shadowColor = 'rgba(0,0,0,0.72)';
@@ -93,14 +155,11 @@ function drawTitle(ctx: Context2D, frame: CompositionFrame) {
   ctx.shadowOffsetY = size * 0.04;
 
   if (frame.settings.titlePosition === 'top-left') {
-    ctx.textAlign = 'left';
-    ctx.fillText(text, safeX, safeY + size);
+    drawTrackedText(ctx, text, safeX, safeY + size, tracking, 'left');
   } else if (frame.settings.titlePosition === 'bottom-center') {
-    ctx.textAlign = 'center';
-    ctx.fillText(text, width / 2, height - safeY);
+    drawTrackedText(ctx, text, width / 2, height - safeY, tracking, 'center');
   } else {
-    ctx.textAlign = 'left';
-    ctx.fillText(text, safeX, height - safeY);
+    drawTrackedText(ctx, text, safeX, height - safeY, tracking, 'left');
   }
   ctx.restore();
 }
@@ -139,7 +198,7 @@ function drawBrand(ctx: Context2D, frame: CompositionFrame) {
     ctx.drawImage(brandGraphic, x, y, drawWidth, drawHeight);
   } else {
     const fontSize = Math.max(16, height * 0.029);
-    ctx.font = '650 ' + fontSize + 'px Inter, ui-sans-serif, system-ui, sans-serif';
+    ctx.font = '650 ' + fontSize + 'px Inter, Arial, "Liberation Sans", ui-sans-serif, system-ui, sans-serif';
     ctx.fillStyle = '#ffffff';
     ctx.textAlign = anchor.left ? 'left' : 'right';
     ctx.textBaseline = anchor.top ? 'top' : 'bottom';

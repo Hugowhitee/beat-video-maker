@@ -9,7 +9,7 @@ The repository is in its first vertical slice. The implemented scope is delibera
 - local JPG/PNG/WebP cover import;
 - local browser-decodable audio import;
 - a fixed 16:9 Clean compositor with blurred background fill and an unchanged sharp foreground;
-- editable title size and placement;
+- editable title font direction, size, tracking and placement;
 - an optional producer/wordmark watermark as text or PNG/SVG, with corner and opacity controls;
 - playback, seek and a lightweight decoded waveform;
 - deterministic 1920×1080 / 30 fps MP4 export with the same compositor used by preview;
@@ -32,9 +32,10 @@ Open the Vite URL, then choose a cover image and beat. Nothing is uploaded; medi
 1. Choose a cover image and audio file.
 2. Enter a title.
 3. Optionally enter a producer/wordmark, or choose a transparent PNG/SVG watermark.
-4. Adjust title placement/size and watermark corner/opacity.
-5. Play or seek to check the composition. Safe guides are preview-only.
-6. Export. The app renders the same compositor at 1920×1080 and muxes the audio into an MP4 locally.
+4. Choose one of the four curated title directions, then adjust size, tracking and placement.
+5. Adjust watermark corner/opacity.
+6. Play or seek to check the composition. Safe guides are preview-only.
+7. Export. The app renders the same compositor at 1920×1080 and muxes the audio into an MP4 locally.
 
 The Export button stays disabled when required media is missing or when the browser cannot provide a supported MP4 video encoder. The UI reports the capability instead of pretending an export succeeded.
 
@@ -42,9 +43,11 @@ The Export button stays disabled when required media is missing or when the brow
 
 v0.1 targets current Chrome, Edge and Brave on Windows. WebCodecs availability is checked at runtime. H.264 is preferred; VP9 is accepted as an MP4 fallback when H.264 encoding is unavailable. AAC encoding uses the browser when possible and the official Mediabunny AAC extension otherwise.
 
+The title directions currently use local/system font stacks so the app does not fetch font assets from a CDN. Exact bundled open fonts can be added later as an explicit licensed asset decision.
+
 ## Architecture
 
-`src/features/compositor/renderComposition.ts` owns visual composition. Both live preview and export call it; watermark/title rendering must not fork into a second export-only implementation.
+`src/features/compositor/renderComposition.ts` owns visual composition. Both live preview and export call it; title/watermark rendering must not fork into a second export-only implementation.
 
 `src/features/media/media.ts` owns local image/audio loading and waveform peak extraction. `src/features/export/exportMp4.ts` owns capability detection, Mediabunny/WebCodecs encoding and MP4 download. `App.tsx` stays focused on composing the user flow and state.
 
