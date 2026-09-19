@@ -32,6 +32,8 @@ The normal way to use Beatvideo Maker is the hosted PWA:
 
 **https://hugowhitee.github.io/beat-video-maker/**
 
+**Do not clone the repository or download a ZIP for normal use. You do not need Node.js or npm.**
+
 1. Open that link in current Chrome or Edge on Windows.
 2. Click **Install app** in Beatvideo Maker's top bar when the browser offers the native install prompt.
 3. If the button only shows **Install**, click it for the fallback instructions. You can also use the install icon in the browser address bar or the browser's install-app menu item; wording varies by browser.
