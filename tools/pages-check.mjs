@@ -19,8 +19,14 @@ if (html.includes('registerSW.js') && !html.includes('/beat-video-maker/register
 if (manifest.id !== './') failures.push('Manifest id must remain stable and relative.');
 if (manifest.start_url !== './') failures.push('Manifest start_url must remain relative.');
 if (manifest.scope !== './') failures.push('Manifest scope must remain relative.');
-if (!Array.isArray(manifest.icons) || !manifest.icons.some((icon) => icon.src === 'icon.svg')) {
-  failures.push('Manifest must keep the install icon inside the app scope.');
+if (!Array.isArray(manifest.icons)) {
+  failures.push('Manifest icons are missing.');
+} else {
+  for (const size of ['192x192', '512x512', 'any']) {
+    if (!manifest.icons.some((icon) => icon.src === 'icon.svg' && icon.sizes === size)) {
+      failures.push('Manifest is missing the scoped icon declaration for ' + size);
+    }
+  }
 }
 
 if (failures.length) {
