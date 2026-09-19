@@ -102,7 +102,13 @@ select:focus-visible {
 .small-button:active,
 .play-button:not(:disabled):active { transform: translateY(1px); }
 
-.primary-button:disabled,
+.primary-button:disabled {
+  background: #2a2e23;
+  color: #747a70;
+  opacity: 1;
+  cursor: not-allowed;
+}
+
 .play-button:disabled { opacity: 0.38; cursor: not-allowed; }
 
 .workspace {

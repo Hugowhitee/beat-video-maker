@@ -36,6 +36,7 @@ test('imports local media and either exports a real MP4 or reports an honest cod
   const exportButton = page.getByTestId('export-button');
   const disabled = await exportButton.isDisabled();
   if (disabled) {
+    console.log('[media-smoke] result=codec-gated');
     await expect(page.getByTestId('export-status')).toContainText(/unavailable|No MP4 video encoder/i);
     return;
   }
@@ -50,5 +51,6 @@ test('imports local media and either exports a real MP4 or reports an honest cod
   expect(file.size).toBeGreaterThan(1_000);
   const bytes = await readFile(path!);
   expect(bytes.subarray(4, 8).toString('ascii')).toBe('ftyp');
+  console.log('[media-smoke] result=encoded-mp4 bytes=' + file.size);
   await expect(page.getByTestId('export-status')).toContainText('MP4 encoded and downloaded');
 });
