@@ -677,7 +677,7 @@ function App() {
                 aria-haspopup="dialog"
                 onClick={() => void handleInstall()}
               >
-                {installPrompt ? 'Install app' : 'Install'}
+                Install app
               </button>
               {installHelpOpen && (
                 <div className="install-popover" role="dialog" aria-label="Install Beatvideo Maker" data-testid="install-help">
