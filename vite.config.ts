@@ -13,6 +13,7 @@ export default defineConfig({
       injectRegister: 'auto',
       includeAssets: ['icon.svg'],
       manifest: {
+        id: './',
         name: 'Beatvideo Maker',
         short_name: 'Beatvideo',
         description: 'Local-first beat video compositor.',
