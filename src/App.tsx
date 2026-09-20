@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import type { ChangeEvent } from 'react';
+import type { ChangeEvent, PointerEvent as ReactPointerEvent } from 'react';
 import { renderComposition } from './features/compositor/renderComposition';
 import type {
   BrandLayout,
@@ -67,6 +67,8 @@ type EditorSnapshot = {
   brandOpacity: number;
   preset: VisualPreset;
   motion: MotionAmount;
+  bpmOverride: string | null;
+  barOffset: number | null;
 };
 
 function FileControl(props: {
@@ -125,6 +127,8 @@ function SelectControl<T extends string>(props: {
 function App() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const audioRef = useRef<HTMLAudioElement>(null);
+  const waveformRef = useRef<HTMLDivElement>(null);
+  const gridDragPointerRef = useRef<number | null>(null);
   const exportAbortRef = useRef<AbortController | null>(null);
   const audioLoadIdRef = useRef(0);
 
@@ -163,8 +167,9 @@ function App() {
   const [exportMessage, setExportMessage] = useState('');
   const [analysisState, setAnalysisState] = useState<'idle' | 'analyzing' | 'ready' | 'error'>('idle');
   const [analysis, setAnalysis] = useState<BeatGridAnalysis | null>(null);
-  const [manualBpm, setManualBpm] = useState('');
+  const [manualBpm, setManualBpm] = useState<string | null>(null);
   const [manualBarOffset, setManualBarOffset] = useState<number | null>(null);
+  const [gridEditing, setGridEditing] = useState(false);
   const [analysisMessage, setAnalysisMessage] = useState('');
   const [amplitudeEnvelope, setAmplitudeEnvelope] = useState<AmplitudeEnvelope | null>(null);
   const [preset, setPreset] = useState<VisualPreset>(storedSettings.preset);
@@ -195,8 +200,10 @@ function App() {
     brandOpacity,
     preset,
     motion,
+    bpmOverride: manualBpm,
+    barOffset: manualBarOffset,
   }), [
-    brandLayout, brandOpacity, brandPosition, brandText, motion, preset,
+    brandLayout, brandOpacity, brandPosition, brandText, manualBarOffset, manualBpm, motion, preset,
     title, titleFont, titlePosition, titleSize, titleTracking,
   ]);
 
@@ -232,6 +239,8 @@ function App() {
     setBrandOpacity(snapshot.brandOpacity);
     setPreset(snapshot.preset);
     setMotion(snapshot.motion);
+    setManualBpm(snapshot.bpmOverride);
+    setManualBarOffset(snapshot.barOffset);
   }, []);
 
   const undoEditor = useCallback(() => {
@@ -360,9 +369,12 @@ function App() {
   };
 
   const resolveGrid = useCallback((): VerifiedGrid | null => {
-    const parsedManualBpm = Number(manualBpm);
+    const parsedManualBpm = manualBpm === null ? Number.NaN : Number(manualBpm);
     const effectiveBpm =
-      Number.isFinite(parsedManualBpm) && parsedManualBpm >= 40 && parsedManualBpm <= 260
+      manualBpm !== null
+      && Number.isFinite(parsedManualBpm)
+      && parsedManualBpm >= 40
+      && parsedManualBpm <= 260
         ? parsedManualBpm
         : analysis?.bpm ?? null;
     const effectiveBeatOffset = manualBarOffset ?? analysis?.beatOffset ?? null;
@@ -374,8 +386,7 @@ function App() {
       beatOffset: effectiveBeatOffset,
       barOffset: manualBarOffset,
       source:
-        manualBarOffset !== analysis?.barOffset ||
-        (analysis?.bpm !== null && Math.abs(effectiveBpm - analysis.bpm) > 0.01)
+        manualBarOffset !== null || manualBpm !== null
           ? 'manual'
           : 'auto',
     };
@@ -477,8 +488,9 @@ function App() {
     setPeaks([]);
     setAmplitudeEnvelope(null);
     setAnalysis(null);
-    setManualBpm('');
+    setManualBpm(null);
     setManualBarOffset(null);
+    setGridEditing(false);
     setAnalysisState('idle');
     setAnalysisMessage('');
     setCurrentTime(0);
@@ -513,7 +525,7 @@ function App() {
         .then((result) => {
           if (audioLoadIdRef.current !== loadId) return;
           setAnalysis(result);
-          setManualBpm(result.bpm === null ? '' : result.bpm.toFixed(1));
+          setManualBpm(null);
           setManualBarOffset(result.barConfidence >= 0.35 ? result.barOffset : null);
           setAnalysisState('ready');
           setAnalysisMessage(
@@ -597,9 +609,17 @@ function App() {
 
       if ((event.key === 'ArrowLeft' || event.key === 'ArrowRight') && audioBuffer) {
         event.preventDefault();
+        const direction = event.key === 'ArrowRight' ? 1 : -1;
+
+        if (gridEditing && manualBarOffset !== null) {
+          const step = event.shiftKey ? 0.02 : 0.002;
+          setManualBarOffset(Math.max(0, Math.min(audioBuffer.duration, manualBarOffset + direction * step)));
+          return;
+        }
+
         const grid = resolveGrid();
         const step = event.shiftKey && grid ? 240 / grid.bpm : 1;
-        seekTo(currentTime + (event.key === 'ArrowRight' ? step : -step));
+        seekTo(currentTime + direction * step);
         return;
       }
 
@@ -612,7 +632,7 @@ function App() {
 
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [audioBuffer, currentTime, redoEditor, resolveGrid, seekTo, togglePlayback, undoEditor]);
+  }, [audioBuffer, currentTime, gridEditing, manualBarOffset, redoEditor, resolveGrid, seekTo, togglePlayback, undoEditor]);
 
   const seek = (event: ChangeEvent<HTMLInputElement>) => {
     seekTo(Number(event.target.value));
@@ -620,12 +640,71 @@ function App() {
 
   const adjustTempo = (factor: number) => {
     const detected = analysis?.bpm ?? Number.NaN;
-    const current = manualBpm.trim() ? Number(manualBpm) : detected;
+    const current = manualBpm !== null && manualBpm.trim() ? Number(manualBpm) : detected;
     const next = Math.round(current * factor * 10) / 10;
     if (!Number.isFinite(next) || next < 40 || next > 260) return;
     setManualBpm(String(next));
     setAnalysisMessage('Manual tempo · ' + next.toFixed(1) + ' BPM');
   };
+
+  const waveformTimeFromClientX = useCallback((clientX: number) => {
+    const waveform = waveformRef.current;
+    const maxTime = audioBuffer?.duration ?? 0;
+    if (!waveform || maxTime <= 0) return 0;
+    const rect = waveform.getBoundingClientRect();
+    const ratio = rect.width <= 0 ? 0 : (clientX - rect.left) / rect.width;
+    return Math.max(0, Math.min(maxTime, ratio * maxTime));
+  }, [audioBuffer]);
+
+  const setDownbeatAtPlayhead = useCallback(() => {
+    if (!audioBuffer) return;
+    setManualBarOffset(currentTime);
+    setAnalysisMessage('First downbeat set at ' + currentTime.toFixed(3) + ' s');
+  }, [audioBuffer, currentTime]);
+
+  const resetGridCorrection = useCallback(() => {
+    setManualBpm(null);
+    setManualBarOffset(null);
+    setAnalysisMessage(
+      analysis?.bpm === null || analysis?.bpm === undefined
+        ? 'Tempo uncertain · enter BPM manually.'
+        : analysis.confidence + ' confidence · detector ' + analysis.bpm.toFixed(1) + ' BPM',
+    );
+  }, [analysis]);
+
+  const handleWaveformPointerDown = useCallback((event: ReactPointerEvent<HTMLDivElement>) => {
+    if (!audioBuffer) return;
+    const time = waveformTimeFromClientX(event.clientX);
+
+    if (!gridEditing) {
+      seekTo(time);
+      return;
+    }
+
+    event.preventDefault();
+    event.currentTarget.setPointerCapture(event.pointerId);
+    gridDragPointerRef.current = event.pointerId;
+    setManualBarOffset(time);
+  }, [audioBuffer, gridEditing, seekTo, waveformTimeFromClientX]);
+
+  const handleWaveformPointerMove = useCallback((event: ReactPointerEvent<HTMLDivElement>) => {
+    if (
+      !gridEditing
+      || gridDragPointerRef.current !== event.pointerId
+      || !audioBuffer
+    ) return;
+
+    event.preventDefault();
+    setManualBarOffset(waveformTimeFromClientX(event.clientX));
+  }, [audioBuffer, gridEditing, waveformTimeFromClientX]);
+
+  const handleWaveformPointerEnd = useCallback((event: ReactPointerEvent<HTMLDivElement>) => {
+    if (gridDragPointerRef.current !== event.pointerId) return;
+    gridDragPointerRef.current = null;
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId);
+    }
+  }, []);
 
   const cancelExport = () => {
     exportAbortRef.current?.abort();
@@ -693,6 +772,20 @@ function App() {
     return Math.min(remainder, barPeriod - remainder) < 0.02;
   };
   const exportReady = Boolean(cover && audioBuffer && capability.supported);
+  const bpmInputValue = manualBpm
+    ?? (analysis?.bpm === null || analysis?.bpm === undefined ? '' : analysis.bpm.toFixed(1));
+  const gridHasCorrection = manualBpm !== null || manualBarOffset !== null;
+  const gridConfidenceText =
+    analysisState === 'analyzing'
+      ? 'Analyzing…'
+      : analysisState === 'error'
+        ? 'Analysis failed'
+        : analysis?.bpm === null || analysis?.bpm === undefined
+          ? 'Tempo not detected'
+          : analysis.confidence + ' confidence';
+  const downbeatText = manualBarOffset === null
+    ? 'First downbeat not set'
+    : 'Downbeat ' + manualBarOffset.toFixed(3) + ' s';
 
   return (
     <main className="app-shell">
@@ -859,8 +952,17 @@ function App() {
             />
           </div>
 
-          <div className="waveform-shell">
-            <div className="waveform" aria-label="Audio waveform">
+          <div
+            ref={waveformRef}
+            className={'waveform-shell ' + (gridEditing ? 'is-grid-editing' : '')}
+            data-testid="waveform-editor"
+            aria-label={gridEditing ? 'Beat-grid alignment waveform' : 'Audio waveform'}
+            onPointerDown={handleWaveformPointerDown}
+            onPointerMove={handleWaveformPointerMove}
+            onPointerUp={handleWaveformPointerEnd}
+            onPointerCancel={handleWaveformPointerEnd}
+          >
+            <div className="waveform">
               {peaks.length > 0 ? peaks.map((peak, index) => (
                 <span key={index} style={{ height: Math.max(8, peak * 42) }} />
               )) : <p>Waveform appears after audio is decoded.</p>}
@@ -874,93 +976,113 @@ function App() {
                 />
               ))}
             </div>
+            {duration > 0 ? (
+              <span
+                className="waveform-playhead"
+                aria-hidden="true"
+                style={{ left: (currentTime / Math.max(duration, 0.001) * 100) + '%' }}
+              />
+            ) : null}
+            {manualBarOffset !== null && duration > 0 ? (
+              <span
+                className="downbeat-handle"
+                data-testid="downbeat-handle"
+                aria-hidden="true"
+                style={{ left: (manualBarOffset / duration * 100) + '%' }}
+              >
+                <b>1</b>
+              </span>
+            ) : null}
           </div>
 
           {audioBuffer && (
-            <section className="analysis-card" data-testid="analysis-card" aria-label="Beat grid">
-              <div className="analysis-summary">
-                <div>
-                  <span className="eyebrow">GRID</span>
-                  <strong>{analysisMessage || 'Waiting for analysis…'}</strong>
-                </div>
-                <span className={'confidence-badge ' + (analysis?.confidence || 'low')}>
-                  {analysisState === 'analyzing' ? 'ANALYZING' : analysis?.confidence?.toUpperCase() || 'MANUAL'}
-                </span>
-              </div>
-
-              <div className="analysis-controls">
-                <label className="compact-control">
-                  <span>BPM</span>
-                  <input
-                    data-testid="bpm-input"
-                    type="number"
-                    min={40}
-                    max={260}
-                    step={0.1}
-                    value={manualBpm}
-                    placeholder="—"
-                    onChange={(event) => setManualBpm(event.target.value)}
-                    onKeyDown={(event) => {
-                      if (event.key !== 'Enter') return;
-                      const bpm = Number(event.currentTarget.value);
-                      if (Number.isFinite(bpm) && bpm >= 40 && bpm <= 260) {
-                        setAnalysisMessage('Manual tempo · ' + bpm.toFixed(1) + ' BPM');
-                      }
-                      event.currentTarget.blur();
-                    }}
-                  />
-                  <div className="tempo-adjust" aria-label="Tempo correction">
-                    <button
-                      data-testid="bpm-half"
-                      className="nudge-button"
-                      type="button"
-                      onClick={() => adjustTempo(0.5)}
-                    >
-                      Half
-                    </button>
-                    <button
-                      data-testid="bpm-double"
-                      className="nudge-button"
-                      type="button"
-                      onClick={() => adjustTempo(2)}
-                    >
-                      Double
-                    </button>
-                  </div>
+            <section className="grid-strip" data-testid="grid-strip" aria-label="Beat alignment">
+              <div className="grid-readout">
+                <label className="bpm-editor">
+                  <span>Tempo</span>
+                  <span className="bpm-field">
+                    <input
+                      data-testid="bpm-input"
+                      type="number"
+                      min={40}
+                      max={260}
+                      step={0.1}
+                      value={bpmInputValue}
+                      placeholder="—"
+                      onChange={(event) => setManualBpm(event.target.value)}
+                      onKeyDown={(event) => {
+                        if (event.key !== 'Enter') return;
+                        const bpm = Number(event.currentTarget.value);
+                        if (Number.isFinite(bpm) && bpm >= 40 && bpm <= 260) {
+                          setManualBpm(event.currentTarget.value);
+                          setAnalysisMessage('Manual tempo · ' + bpm.toFixed(1) + ' BPM');
+                        }
+                        event.currentTarget.blur();
+                      }}
+                    />
+                    <em>BPM</em>
+                  </span>
                 </label>
-                <div className="bar-control">
-                  <span>Bar 1</span>
-                  <strong data-testid="bar-offset">
-                    {manualBarOffset === null ? 'Unverified' : manualBarOffset.toFixed(3) + ' s'}
-                  </strong>
-                  <button
-                    className="small-button"
-                    type="button"
-                    onClick={() => setManualBarOffset(currentTime)}
-                  >
-                    Set here
-                  </button>
-                  <button
-                    className="nudge-button"
-                    type="button"
-                    disabled={manualBarOffset === null}
-                    onClick={() => setManualBarOffset((value) => value === null ? value : Math.max(0, value - 0.01))}
-                  >
-                    −10 ms
-                  </button>
-                  <button
-                    className="nudge-button"
-                    type="button"
-                    disabled={manualBarOffset === null}
-                    onClick={() => setManualBarOffset((value) => value === null ? value : value + 0.01)}
-                  >
-                    +10 ms
-                  </button>
+                <div className="grid-state">
+                  <strong data-testid="grid-confidence">{gridConfidenceText}</strong>
+                  <span data-testid="bar-offset">{downbeatText}</span>
                 </div>
               </div>
 
-              {analysis?.notes.length ? (
-                <p className="analysis-note">{analysis.notes[0]}</p>
+              <div className="grid-actions">
+                <button
+                  data-testid="grid-edit-toggle"
+                  type="button"
+                  className={'grid-action ' + (gridEditing ? 'is-active' : '')}
+                  aria-pressed={gridEditing}
+                  onClick={(event) => {
+                    setGridEditing((value) => !value);
+                    event.currentTarget.blur();
+                  }}
+                >
+                  {gridEditing ? 'Done' : 'Edit grid'}
+                </button>
+                <button
+                  data-testid="bpm-half"
+                  className="grid-action"
+                  type="button"
+                  onClick={() => adjustTempo(0.5)}
+                >
+                  ½
+                </button>
+                <button
+                  data-testid="bpm-double"
+                  className="grid-action"
+                  type="button"
+                  onClick={() => adjustTempo(2)}
+                >
+                  ×2
+                </button>
+                <button
+                  data-testid="set-downbeat"
+                  className="grid-action"
+                  type="button"
+                  onClick={setDownbeatAtPlayhead}
+                >
+                  Set downbeat
+                </button>
+                <button
+                  data-testid="grid-reset"
+                  className="grid-action is-quiet"
+                  type="button"
+                  disabled={!gridHasCorrection}
+                  onClick={resetGridCorrection}
+                >
+                  Reset
+                </button>
+              </div>
+
+              {gridEditing ? (
+                <p className="grid-help">
+                  Click or drag on the waveform to place the first downbeat. Arrow keys fine-adjust the marker; Shift makes a larger move.
+                </p>
+              ) : analysisState === 'error' ? (
+                <p className="grid-help is-error">{analysisMessage || 'Beat analysis failed.'}</p>
               ) : null}
             </section>
           )}
