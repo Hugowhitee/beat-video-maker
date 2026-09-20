@@ -994,24 +994,41 @@ function App() {
               <span className="eyebrow">{PRESET_LABELS[preset].toUpperCase()}</span>
               <h1>{title.trim() || 'Untitled beat'}</h1>
             </div>
-            <button
-              className={'guide-toggle ' + (showGuides ? 'is-active' : '')}
-              aria-pressed={showGuides}
-              onClick={() => setShowGuides((value) => !value)}
-            >
-              Safe guides
-            </button>
+            <div className="preview-tools" aria-label="Preview overlays">
+              <button
+                data-testid="safe-guides-toggle"
+                className={'guide-toggle ' + (showGuides ? 'is-active' : '')}
+                aria-pressed={showGuides}
+                onClick={() => setShowGuides((value) => !value)}
+              >
+                Safe
+              </button>
+              <button
+                data-testid="grid-guides-toggle"
+                className={'guide-toggle ' + (showGrid ? 'is-active' : '')}
+                aria-pressed={showGrid}
+                onClick={() => setShowGrid((value) => !value)}
+              >
+                Grid
+              </button>
+            </div>
           </div>
 
           <div className="canvas-shell">
             <canvas
               ref={canvasRef}
               data-testid="preview-canvas"
+              className={placingTitle ? 'is-placing-title' : ''}
               width={1280}
               height={720}
-              aria-label="16 by 9 video preview"
-              onClick={() => void togglePlayback()}
+              aria-label={placingTitle ? 'Click to place title' : '16 by 9 video preview'}
+              onClick={handleCanvasClick}
             />
+            {placingTitle ? (
+              <div className="canvas-placement-hint" data-testid="title-placement-hint">
+                Click the preview to place the title
+              </div>
+            ) : null}
             {!cover && (
               <div className="empty-overlay">
                 <span>Add a cover image</span>
