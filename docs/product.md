@@ -229,7 +229,7 @@ Version 1 templates remain importable and migrate to an empty effect stack. Temp
 
 ## Effect stack and modulation
 
-The post-v0.1 visual system replaces exclusive preset branches with one ordered, inspectable effect stack.
+The post-v0.1 visual system is migrating the existing preset branches onto one ordered, inspectable effect stack. This first tranche adds the canonical stack and keeps the legacy preset render behavior for compatibility while later pixel-effect work converges on the shared pipeline.
 
 Canonical data:
 - `VisualEffectInstance[]` — ordered, stable-id effect instances;
