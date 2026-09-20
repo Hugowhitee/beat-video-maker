@@ -785,7 +785,7 @@ function App() {
           : analysis.confidence + ' confidence';
   const downbeatText = manualBarOffset === null
     ? 'First downbeat not set'
-    : 'Downbeat ' + formatTime(manualBarOffset);
+    : 'Downbeat ' + manualBarOffset.toFixed(3) + ' s';
 
   return (
     <main className="app-shell">
