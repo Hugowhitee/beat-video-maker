@@ -94,7 +94,7 @@ The production install surface is the GitHub Pages project site. Keep Pages-spec
 - Provide a compact 3×3 quick-position grid and direct preview placement as convenience controls over the same canonical coordinates.
 - Composition/safe-area guides are editor-only overlays. Export must force guides/grid off so authoring chrome can never leak into rendered video.
 - Editable templates use a versioned local `.beatvideo-template.json` contract. Validate the whole document before mutating editor state.
-- Template files contain editable style/title/brand/preset state only. Do not embed source image/audio/video blobs or uploaded watermark graphics.
+- Template files contain editable title/brand/look state, including the ordered effect stack and modulation records. Do not embed source image/audio/video blobs or uploaded watermark graphics.
 - Opening a template must leave every imported setting editable and must clear an existing uploaded watermark graphic when the template contains text-only brand state.
 
 
