@@ -89,3 +89,25 @@ test('version 1 templates migrate into the version 2 effect contract', () => {
   expect(parsed.visual.effects).toEqual([]);
   expect(parsed.visual.modulations).toEqual([]);
 });
+
+
+test('effect parameters outside registry ranges fail closed', () => {
+  const zoom = createEffectInstance('zoom-punch', { id: 'zoom-bounds' });
+  const template = createTemplate('BOUNDS', {
+    ...DEFAULT_USER_SETTINGS,
+    effects: [zoom],
+    modulations: [],
+  });
+
+  expect(() => parseTemplate(JSON.stringify({
+    ...template,
+    visual: {
+      ...template.visual,
+      effects: template.visual.effects.map((effect) => (
+        effect.id === 'zoom-bounds'
+          ? { ...effect, params: { ...effect.params, scale: 9 } }
+          : effect
+      )),
+    },
+  }))).toThrow(/Effect parameter scale/i);
+});
