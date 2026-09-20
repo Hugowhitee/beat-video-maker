@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { ChangeEvent } from 'react';
 import { renderComposition } from './features/compositor/renderComposition';
 import type {
+  BrandLayout,
   BrandPosition,
   CompositionSettings,
   MotionAmount,
@@ -61,6 +62,7 @@ type EditorSnapshot = {
   titleFont: TitleFont;
   titleTracking: number;
   brandText: string;
+  brandLayout: BrandLayout;
   brandPosition: BrandPosition;
   brandOpacity: number;
   preset: VisualPreset;
@@ -139,6 +141,7 @@ function App() {
   const [titleFont, setTitleFont] = useState<TitleFont>(storedSettings.titleFont);
   const [titleTracking, setTitleTracking] = useState(storedSettings.titleTracking);
   const [brandText, setBrandText] = useState(fixtureMode ? 'prod. usolido' : storedSettings.brandText);
+  const [brandLayout, setBrandLayout] = useState<BrandLayout>(storedSettings.brandLayout);
   const [brandPosition, setBrandPosition] = useState<BrandPosition>(storedSettings.brandPosition);
   const [brandOpacity, setBrandOpacity] = useState(storedSettings.brandOpacity);
   const [showGuides, setShowGuides] = useState(false);
@@ -186,12 +189,13 @@ function App() {
     titleFont,
     titleTracking,
     brandText,
+    brandLayout,
     brandPosition,
     brandOpacity,
     preset,
     motion,
   }), [
-    brandOpacity, brandPosition, brandText, motion, preset,
+    brandLayout, brandOpacity, brandPosition, brandText, motion, preset,
     title, titleFont, titlePosition, titleSize, titleTracking,
   ]);
 
@@ -222,6 +226,7 @@ function App() {
     setTitleFont(snapshot.titleFont);
     setTitleTracking(snapshot.titleTracking);
     setBrandText(snapshot.brandText);
+    setBrandLayout(snapshot.brandLayout);
     setBrandPosition(snapshot.brandPosition);
     setBrandOpacity(snapshot.brandOpacity);
     setPreset(snapshot.preset);
@@ -258,6 +263,7 @@ function App() {
     titleTracking,
     brandText,
     brandGraphic,
+    brandLayout,
     brandPosition,
     brandOpacity,
     preset,
@@ -271,6 +277,7 @@ function App() {
     titleTracking,
     brandText,
     brandGraphic,
+    brandLayout,
     brandPosition,
     brandOpacity,
     preset,
@@ -318,12 +325,14 @@ function App() {
       titleFont,
       titleTracking,
       brandText,
+      brandLayout,
       brandPosition,
       brandOpacity,
       preset,
       motion,
     });
   }, [
+    brandLayout,
     brandOpacity,
     brandPosition,
     brandText,
@@ -342,6 +351,7 @@ function App() {
     setTitleFont(DEFAULT_USER_SETTINGS.titleFont);
     setTitleTracking(DEFAULT_USER_SETTINGS.titleTracking);
     setBrandText(DEFAULT_USER_SETTINGS.brandText);
+    setBrandLayout(DEFAULT_USER_SETTINGS.brandLayout);
     setBrandPosition(DEFAULT_USER_SETTINGS.brandPosition);
     setBrandOpacity(DEFAULT_USER_SETTINGS.brandOpacity);
     setPreset(DEFAULT_USER_SETTINGS.preset);
@@ -741,7 +751,7 @@ function App() {
               value={brandText}
               maxLength={60}
               placeholder="prod. name"
-              disabled={Boolean(brandGraphic)}
+              disabled={Boolean(brandGraphic) && brandLayout === 'corner'}
               onChange={(event) => setBrandText(event.target.value)}
             />
           </label>
@@ -1050,19 +1060,34 @@ function App() {
           <div className="control-group">
             <h3>Brand</h3>
             <SelectControl
-              label="Corner"
-              value={brandPosition}
-              onChange={setBrandPosition}
+              label="Layout"
+              value={brandLayout}
+              onChange={setBrandLayout}
+              testId="brand-layout"
               options={[
-                { value: 'top-right', label: 'Top right' },
-                { value: 'top-left', label: 'Top left' },
-                { value: 'bottom-right', label: 'Bottom right' },
-                { value: 'bottom-left', label: 'Bottom left' },
+                { value: 'corner', label: 'Corner' },
+                { value: 'grid', label: 'Watermark grid' },
               ]}
             />
+            {brandLayout === 'corner' ? (
+              <SelectControl
+                label="Corner"
+                value={brandPosition}
+                onChange={setBrandPosition}
+                options={[
+                  { value: 'top-right', label: 'Top right' },
+                  { value: 'top-left', label: 'Top left' },
+                  { value: 'bottom-right', label: 'Bottom right' },
+                  { value: 'bottom-left', label: 'Bottom left' },
+                ]}
+              />
+            ) : (
+              <p className="control-hint">Grid repeats the text subtly across the sharp cover. Uploaded graphics stay available for Corner.</p>
+            )}
             <label className="range-control">
               <span><span>Opacity</span><output>{Math.round(brandOpacity * 100)}%</output></span>
               <input
+                data-testid="brand-opacity"
                 type="range"
                 min={0.2}
                 max={1}
