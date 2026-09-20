@@ -191,12 +191,15 @@ test('mixed transition profile still uses mostly clean cuts and reserves film bu
     seed: 2,
   });
 
-  const burns = plan.segments.filter((segment) => segment.transitionIn === 'film-burn');
-  const cuts = plan.segments.filter((segment) => segment.transitionIn === 'cut');
+  const burns = plan.transitions.filter((transition) => transition.kind === 'film-burn');
+  const cleanCutCount = Math.max(0, plan.segments.length - 1 - plan.transitions.length);
 
   expect(burns).toHaveLength(1);
-  expect(burns[0]?.timelineStart).toBeCloseTo(8, 5);
-  expect(cuts.length).toBeGreaterThan(burns.length * 3);
+  expect(burns[0]?.cutTime).toBeCloseTo(8, 5);
+  expect(cleanCutCount).toBeGreaterThan(burns.length * 3);
+  expect(burns[0]?.duration).toBeGreaterThanOrEqual(0.22);
+  expect(burns[0]?.duration).toBeLessThanOrEqual(0.42);
+  expect(burns[0]?.alignment).toBe(0.5);
 });
 
 test('loop mode creates one editable motif and repeats the exact cut/source pattern', () => {
@@ -232,6 +235,9 @@ test('loop mode creates one editable motif and repeats the exact cut/source patt
     .toEqual(firstLoop.map((segment) => segment.shotId));
   expect(secondLoop.map((segment) => segment.timelineEnd - segment.timelineStart))
     .toEqual(firstLoop.map((segment) => segment.timelineEnd - segment.timelineStart));
+  expect(plan.motifs[0]?.transitionIds.every(
+    (transitionId) => plan.transitions.some((transition) => transition.id === transitionId),
+  )).toBeTruthy();
 });
 
 test('planned source ranges stay inside detected shots and avoid immediate reuse when alternatives fit', () => {
@@ -306,10 +312,7 @@ test('clean transition profile never inserts an effect transition', () => {
     seed: 3,
   });
 
-  expect(plan.segments.filter((segment) => segment.transitionIn === 'film-burn'))
-    .toHaveLength(0);
-  expect(plan.segments.slice(1).every((segment) => segment.transitionIn === 'cut'))
-    .toBeTruthy();
+  expect(plan.transitions).toHaveLength(0);
 });
 
 
