@@ -124,5 +124,5 @@ test('keeps the interface responsive while preparing a longer beat', async ({ pa
   });
 
   expect(maxLag).toBeLessThan(250);
-  await expect(page.getByTestId('analysis-card')).toBeVisible();
+  await expect(page.getByTestId('grid-strip')).toBeVisible();
 });
