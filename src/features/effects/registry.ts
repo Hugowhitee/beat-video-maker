@@ -15,6 +15,7 @@ const DEFINITIONS: Record<EffectType, EffectDefinition> = {
     defaultTarget: 'foreground',
     defaultStrength: 0.62,
     defaultParams: { scale: 0.075 },
+    paramRanges: { scale: { min: 0, max: 0.25 } },
     defaultDriver: 'beat',
     drivers: ['beat', 'downbeat', 'amplitude'],
   },
@@ -26,6 +27,12 @@ const DEFINITIONS: Record<EffectType, EffectDefinition> = {
     defaultTarget: 'foreground',
     defaultStrength: 0.5,
     defaultParams: { x: 0.012, y: 0.012, rotation: 1.1, seed: 1 },
+    paramRanges: {
+      x: { min: 0, max: 0.05 },
+      y: { min: 0, max: 0.05 },
+      rotation: { min: 0, max: 6 },
+      seed: { min: 0, max: 10000 },
+    },
     defaultDriver: 'beat',
     drivers: ['beat', 'downbeat', 'amplitude'],
   },
@@ -37,6 +44,11 @@ const DEFINITIONS: Record<EffectType, EffectDefinition> = {
     defaultTarget: 'background',
     defaultStrength: 0.55,
     defaultParams: { x: 0.014, y: 0.01, scale: 0.025 },
+    paramRanges: {
+      x: { min: 0, max: 0.06 },
+      y: { min: 0, max: 0.06 },
+      scale: { min: 0, max: 0.12 },
+    },
     defaultDriver: 'phrase',
     drivers: ['phrase'],
   },
@@ -48,6 +60,7 @@ const DEFINITIONS: Record<EffectType, EffectDefinition> = {
     defaultTarget: 'composite',
     defaultStrength: 0.42,
     defaultParams: { amount: 0.12 },
+    paramRanges: { amount: { min: 0, max: 0.5 } },
     defaultDriver: 'amplitude',
     drivers: ['beat', 'downbeat', 'phrase', 'amplitude'],
   },
@@ -59,6 +72,7 @@ const DEFINITIONS: Record<EffectType, EffectDefinition> = {
     defaultTarget: 'background',
     defaultStrength: 0.35,
     defaultParams: { radius: 24 },
+    paramRanges: { radius: { min: 0, max: 80 } },
     defaultDriver: null,
     drivers: ['beat', 'downbeat', 'phrase', 'amplitude'],
   },
@@ -68,6 +82,10 @@ export const EFFECT_TYPES = Object.keys(DEFINITIONS) as EffectType[];
 
 export function effectDefinition(type: EffectType) {
   return DEFINITIONS[type];
+}
+
+export function effectParamRange(type: EffectType, key: string) {
+  return effectDefinition(type).paramRanges[key] ?? null;
 }
 
 function makeId(prefix: string) {
