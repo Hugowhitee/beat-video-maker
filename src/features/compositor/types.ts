@@ -2,7 +2,7 @@ import type { VerifiedGrid } from '../analysis/types';
 
 export type BrandPosition = 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right';
 export type BrandLayout = 'corner' | 'grid';
-export type TitlePosition = 'top-left' | 'bottom-left' | 'bottom-center';
+export type TitleAlign = 'left' | 'center' | 'right';
 export type TitleFont = 'clean' | 'condensed' | 'serif' | 'mono';
 export type VisualPreset = 'clean' | 'ambient' | 'reactive' | 'pulse' | 'visualizer';
 export type MotionAmount = 'off' | 'low' | 'medium';
@@ -10,7 +10,9 @@ export type MotionAmount = 'off' | 'low' | 'medium';
 export type CompositionSettings = {
   title: string;
   titleSize: number;
-  titlePosition: TitlePosition;
+  titleX: number;
+  titleY: number;
+  titleAlign: TitleAlign;
   titleFont: TitleFont;
   titleTracking: number;
   brandText: string;
@@ -21,6 +23,7 @@ export type CompositionSettings = {
   preset: VisualPreset;
   motion: MotionAmount;
   showGuides: boolean;
+  showGrid: boolean;
 };
 
 export type CompositionFrame = {
