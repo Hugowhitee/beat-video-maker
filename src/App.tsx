@@ -1304,16 +1304,100 @@ function App() {
                 onChange={(event) => setTitleTracking(Number(event.target.value))}
               />
             </label>
-            <SelectControl
-              label="Title position"
-              value={titlePosition}
-              onChange={setTitlePosition}
-              options={[
-                { value: 'bottom-left', label: 'Bottom left' },
-                { value: 'bottom-center', label: 'Bottom center' },
-                { value: 'top-left', label: 'Top left' },
-              ]}
-            />
+            <div className="title-placement-control">
+              <span className="field-label">Quick position</span>
+              <div className="title-position-grid" data-testid="title-position-grid">
+                {TITLE_PLACEMENT_KEYS.map((key) => {
+                  const placement = placementPreset(key);
+                  const active =
+                    Math.abs(titleX - placement.x) < 0.001
+                    && Math.abs(titleY - placement.y) < 0.001
+                    && titleAlign === placement.align;
+                  return (
+                    <button
+                      key={key}
+                      type="button"
+                      className={active ? 'is-active' : ''}
+                      data-testid={'title-position-' + key}
+                      aria-label={key.replace('-', ' ')}
+                      aria-pressed={active}
+                      onClick={() => applyTitlePlacement(key)}
+                    >
+                      <span />
+                    </button>
+                  );
+                })}
+              </div>
+              <button
+                type="button"
+                className={'small-button place-title-button ' + (placingTitle ? 'is-active' : '')}
+                data-testid="place-title"
+                aria-pressed={placingTitle}
+                onClick={() => {
+                  const nextPlacing = !placingTitle;
+                  setPlacingTitle(nextPlacing);
+                  if (nextPlacing) {
+                    setShowGuides(true);
+                    setShowGrid(true);
+                  }
+                }}
+              >
+                {placingTitle ? 'Cancel placement' : 'Place on canvas'}
+              </button>
+            </div>
+
+            <div className="title-align-control">
+              <span className="field-label">Alignment</span>
+              <div className="segmented-control" aria-label="Title alignment">
+                {(['left', 'center', 'right'] as TitleAlign[]).map((align) => (
+                  <button
+                    key={align}
+                    type="button"
+                    data-testid={'title-align-' + align}
+                    className={titleAlign === align ? 'is-active' : ''}
+                    aria-pressed={titleAlign === align}
+                    onClick={() => setTitleAlign(align)}
+                  >
+                    {align === 'left' ? 'L' : align === 'center' ? 'C' : 'R'}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="coordinate-controls">
+              <label className="compact-coordinate">
+                <span>X</span>
+                <input
+                  data-testid="title-x"
+                  type="number"
+                  min={2}
+                  max={98}
+                  step={0.1}
+                  value={Math.round(titleX * 1000) / 10}
+                  onChange={(event) => {
+                    const value = Number(event.target.value);
+                    if (Number.isFinite(value)) setTitleX(Math.max(0.02, Math.min(0.98, value / 100)));
+                  }}
+                />
+                <em>%</em>
+              </label>
+              <label className="compact-coordinate">
+                <span>Y</span>
+                <input
+                  data-testid="title-y"
+                  type="number"
+                  min={6}
+                  max={94}
+                  step={0.1}
+                  value={Math.round(titleY * 1000) / 10}
+                  onChange={(event) => {
+                    const value = Number(event.target.value);
+                    if (Number.isFinite(value)) setTitleY(Math.max(0.06, Math.min(0.94, value / 100)));
+                  }}
+                />
+                <em>%</em>
+              </label>
+            </div>
           </div>
 
           <div className="control-group">
@@ -1358,8 +1442,35 @@ function App() {
           </div>
 
           <div className="scope-note">
-            <strong>Local preferences</strong>
-            <p>Style and producer settings are saved on this device. Media files are never persisted.</p>
+            <strong>Templates</strong>
+            <p>Save this look as an editable local template. Source media is never embedded.</p>
+            <div className="template-actions">
+              <button
+                type="button"
+                className="small-button"
+                data-testid="save-template"
+                onClick={saveTemplateFile}
+              >
+                Save template
+              </button>
+              <label className="small-button">
+                Open template
+                <input
+                  data-testid="template-input"
+                  className="visually-hidden"
+                  type="file"
+                  accept=".json,application/json"
+                  onChange={(event) => {
+                    const file = event.currentTarget.files?.[0];
+                    if (file) void handleTemplate(file);
+                    event.currentTarget.value = '';
+                  }}
+                />
+              </label>
+            </div>
+            {templateMessage ? (
+              <p className="template-message" role="status">{templateMessage}</p>
+            ) : null}
             <button type="button" className="link-button" data-testid="reset-settings" onClick={resetStyle}>
               Reset style defaults
             </button>
