@@ -323,10 +323,9 @@ function slotsToSegments(
 function loopEndTime(music: MusicMap, loopBars: number) {
   const beatsToLoop = Math.max(1, Math.round(loopBars * music.beatsPerBar));
   const firstBeatIndex = nextBeatIndexAtOrAfter(music, 0);
-  const target = beatTime(music, firstBeatIndex + beatsToLoop);
-
-  if (target > EPSILON && target <= music.duration + EPSILON) {
-    return Math.min(target, music.duration);
+  const targetBeat = music.beats[firstBeatIndex + beatsToLoop];
+  if (targetBeat && targetBeat.time > EPSILON) {
+    return Math.min(targetBeat.time, music.duration);
   }
 
   if (music.bpm && music.bpm > 0) {
@@ -372,11 +371,9 @@ function buildLoopPlan(context: PlannerContext): EditPlan {
         ),
         transitionIn: segments.length === 0
           ? 'none'
-          : motifSegment.transitionIn === 'film-burn'
+          : motifSegment.transitionIn === 'none'
             ? 'cut'
-            : motifSegment.transitionIn === 'none'
-              ? 'cut'
-              : motifSegment.transitionIn,
+            : motifSegment.transitionIn,
         reason: `${motifSegment.reason} · loop ${repeatIndex + 1}`,
       });
     }
