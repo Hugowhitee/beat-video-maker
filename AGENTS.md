@@ -25,7 +25,11 @@ Before coding, inspect `main`, open PRs and existing branches. Reuse an active b
 - Do not add a generic timeline, layers panel, asset browser or dozens of effects unless scope explicitly changes.
 - No automatic `Parental Advisory`, badges or third-party-style watermarks. Branding is user-supplied only.
 - React + TypeScript + Vite. Keep `App` composition-focused; media/compositor/export logic lives in feature modules.
-- Avoid heavy dependencies. A dependency must own a real capability better than a small local implementation.
+- **Upstream-first for complex primitives.** Do not hand-roll codecs, container parsing/muxing, general media decoding, resampling, beat/tempo engines, waveform engines or other specialist DSP when a maintained browser-native capability or mature open-source implementation fits. Local code should mainly adapt, compose and validate those primitives for this product.
+- Before adopting upstream code, verify license, maintenance/activity, browser support, bundle/runtime cost and testability. Prefer a pinned package/API over copying large source trees; if code is adapted directly, preserve the required attribution/license notices.
+- Simple product-specific math and glue may remain local when it is easier to verify than an added dependency (for example layout geometry, small amplitude summaries or timing transforms).
+- UI may reuse/adapt proven permissively licensed component patterns and icon sets, but never reuse another product's logo, name, trademark or distinctive brand assets as Beatvideo Maker branding.
+- Avoid heavy dependencies that do not own a real specialist capability better than a small local implementation.
 - Browser media capability and analysis confidence are runtime state. Never fake codec support, BPM, bar phase or export success.
 - For watermarking, keep one compositor implementation. Preview and export must render the exact same pattern/placement.
 
