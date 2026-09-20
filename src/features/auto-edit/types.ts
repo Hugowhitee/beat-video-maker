@@ -1,6 +1,6 @@
 export type EditMode = 'loop' | 'guided' | 'auto';
 export type TransitionProfile = 'clean' | 'mixed';
-export type EditTransition = 'none' | 'cut' | 'film-burn';
+export type EditTransitionKind = 'film-burn';
 
 export type MusicSectionKind =
   | 'intro'
@@ -69,7 +69,18 @@ export type EditSegment = {
   shotId: string;
   sourceStart: number;
   sourceEnd: number;
-  transitionIn: EditTransition;
+  reason: string;
+  motifId?: string;
+};
+
+export type EditTransition = {
+  id: string;
+  kind: EditTransitionKind;
+  leftSegmentId: string;
+  rightSegmentId: string;
+  cutTime: number;
+  duration: number;
+  alignment: number;
   reason: string;
   motifId?: string;
 };
@@ -80,12 +91,14 @@ export type EditMotif = {
   duration: number;
   bars: number;
   segmentIds: string[];
+  transitionIds: string[];
 };
 
 export type EditPlan = {
   mode: EditMode;
   duration: number;
   segments: EditSegment[];
+  transitions: EditTransition[];
   motifs: EditMotif[];
   warnings: string[];
 };
