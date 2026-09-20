@@ -61,3 +61,40 @@ export function setEffectTarget(
     return { ...effect, target };
   });
 }
+
+
+export function moveEffectWithinTarget(
+  effects: readonly VisualEffectInstance[],
+  effectId: string,
+  direction: -1 | 1,
+): VisualEffectInstance[] {
+  const fromIndex = effects.findIndex((effect) => effect.id === effectId);
+  if (fromIndex < 0) return [...effects];
+
+  const effect = effects[fromIndex];
+  const step = direction < 0 ? -1 : 1;
+  for (
+    let candidateIndex = fromIndex + step;
+    candidateIndex >= 0 && candidateIndex < effects.length;
+    candidateIndex += step
+  ) {
+    if (effects[candidateIndex]?.target !== effect.target) continue;
+    return moveEffect(effects, effectId, candidateIndex);
+  }
+
+  return [...effects];
+}
+
+export function canMoveEffectWithinTarget(
+  effects: readonly VisualEffectInstance[],
+  effectId: string,
+  direction: -1 | 1,
+) {
+  const index = effects.findIndex((effect) => effect.id === effectId);
+  if (index < 0) return false;
+  const target = effects[index]?.target;
+  const candidates = direction < 0
+    ? effects.slice(0, index)
+    : effects.slice(index + 1);
+  return candidates.some((effect) => effect.target === target);
+}
