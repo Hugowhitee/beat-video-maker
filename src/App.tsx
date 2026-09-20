@@ -1076,140 +1076,146 @@ function App() {
             />
           </div>
 
-          <div
-            ref={waveformRef}
-            className={'waveform-shell ' + (gridEditing ? 'is-grid-editing' : '')}
-            data-testid="waveform-editor"
-            aria-label={gridEditing ? 'Beat-grid alignment waveform' : 'Audio waveform'}
-            onPointerDown={handleWaveformPointerDown}
-            onPointerMove={handleWaveformPointerMove}
-            onPointerUp={handleWaveformPointerEnd}
-            onPointerCancel={handleWaveformPointerEnd}
-          >
-            <div className="waveform">
-              {peaks.length > 0 ? peaks.map((peak, index) => (
-                <span key={index} style={{ height: Math.max(8, peak * 42) }} />
-              )) : <p>Waveform appears after audio is decoded.</p>}
+          <section className="edit-dock" aria-label="Beat edit">
+            <div className="edit-dock-header">
+              <strong>Beat</strong>
+              <span>{audioBuffer ? audioName : 'Add audio to reveal the musical grid'}</span>
             </div>
-            <div className="beat-markers" aria-hidden="true">
-              {beatMarkers.map((time, index) => (
+            <div
+              ref={waveformRef}
+              className={'waveform-shell ' + (gridEditing ? 'is-grid-editing' : '')}
+              data-testid="waveform-editor"
+              aria-label={gridEditing ? 'Beat-grid alignment waveform' : 'Audio waveform'}
+              onPointerDown={handleWaveformPointerDown}
+              onPointerMove={handleWaveformPointerMove}
+              onPointerUp={handleWaveformPointerEnd}
+              onPointerCancel={handleWaveformPointerEnd}
+            >
+              <div className="waveform">
+                {peaks.length > 0 ? peaks.map((peak, index) => (
+                  <span key={index} style={{ height: Math.max(8, peak * 42) }} />
+                )) : <p>Waveform appears after audio is decoded.</p>}
+              </div>
+              <div className="beat-markers" aria-hidden="true">
+                {beatMarkers.map((time, index) => (
+                  <span
+                    key={index}
+                    className={isBarMarker(time) ? 'is-bar' : ''}
+                    style={{ left: (time / Math.max(duration, 0.001) * 100) + '%' }}
+                  />
+                ))}
+              </div>
+              {duration > 0 ? (
                 <span
-                  key={index}
-                  className={isBarMarker(time) ? 'is-bar' : ''}
-                  style={{ left: (time / Math.max(duration, 0.001) * 100) + '%' }}
+                  className="waveform-playhead"
+                  aria-hidden="true"
+                  style={{ left: (currentTime / Math.max(duration, 0.001) * 100) + '%' }}
                 />
-              ))}
-            </div>
-            {duration > 0 ? (
-              <span
-                className="waveform-playhead"
-                aria-hidden="true"
-                style={{ left: (currentTime / Math.max(duration, 0.001) * 100) + '%' }}
-              />
-            ) : null}
-            {manualBarOffset !== null && duration > 0 ? (
-              <span
-                className="downbeat-handle"
-                data-testid="downbeat-handle"
-                aria-hidden="true"
-                style={{ left: (manualBarOffset / duration * 100) + '%' }}
-              >
-                <b>1</b>
-              </span>
-            ) : null}
-          </div>
-
-          {audioBuffer && (
-            <section className="grid-strip" data-testid="grid-strip" aria-label="Beat alignment">
-              <div className="grid-readout">
-                <label className="bpm-editor">
-                  <span>Tempo</span>
-                  <span className="bpm-field">
-                    <input
-                      data-testid="bpm-input"
-                      type="number"
-                      min={40}
-                      max={260}
-                      step={0.1}
-                      value={bpmInputValue}
-                      placeholder="—"
-                      onChange={(event) => setManualBpm(event.target.value)}
-                      onKeyDown={(event) => {
-                        if (event.key !== 'Enter') return;
-                        const bpm = Number(event.currentTarget.value);
-                        if (Number.isFinite(bpm) && bpm >= 40 && bpm <= 260) {
-                          setManualBpm(event.currentTarget.value);
-                          setAnalysisMessage('Manual tempo · ' + bpm.toFixed(1) + ' BPM');
-                        }
-                        event.currentTarget.blur();
-                      }}
-                    />
-                    <em>BPM</em>
-                  </span>
-                </label>
-                <div className="grid-state">
-                  <strong data-testid="grid-confidence">{gridConfidenceText}</strong>
-                  <span data-testid="bar-offset">{downbeatText}</span>
-                </div>
-              </div>
-
-              <div className="grid-actions">
-                <button
-                  data-testid="grid-edit-toggle"
-                  type="button"
-                  className={'grid-action ' + (gridEditing ? 'is-active' : '')}
-                  aria-pressed={gridEditing}
-                  onClick={(event) => {
-                    setGridEditing((value) => !value);
-                    event.currentTarget.blur();
-                  }}
-                >
-                  {gridEditing ? 'Done' : 'Edit grid'}
-                </button>
-                <button
-                  data-testid="bpm-half"
-                  className="grid-action"
-                  type="button"
-                  onClick={() => adjustTempo(0.5)}
-                >
-                  ½
-                </button>
-                <button
-                  data-testid="bpm-double"
-                  className="grid-action"
-                  type="button"
-                  onClick={() => adjustTempo(2)}
-                >
-                  ×2
-                </button>
-                <button
-                  data-testid="set-downbeat"
-                  className="grid-action"
-                  type="button"
-                  onClick={setDownbeatAtPlayhead}
-                >
-                  Set downbeat
-                </button>
-                <button
-                  data-testid="grid-reset"
-                  className="grid-action is-quiet"
-                  type="button"
-                  disabled={!gridHasCorrection}
-                  onClick={resetGridCorrection}
-                >
-                  Reset
-                </button>
-              </div>
-
-              {gridEditing ? (
-                <p className="grid-help">
-                  Click or drag on the waveform to place the first downbeat. Arrow keys fine-adjust the marker; Shift makes a larger move.
-                </p>
-              ) : analysisState === 'error' ? (
-                <p className="grid-help is-error">{analysisMessage || 'Beat analysis failed.'}</p>
               ) : null}
-            </section>
-          )}
+              {manualBarOffset !== null && duration > 0 ? (
+                <span
+                  className="downbeat-handle"
+                  data-testid="downbeat-handle"
+                  aria-hidden="true"
+                  style={{ left: (manualBarOffset / duration * 100) + '%' }}
+                >
+                  <b>1</b>
+                </span>
+              ) : null}
+            </div>
+  
+            {audioBuffer && (
+              <section className="grid-strip" data-testid="grid-strip" aria-label="Beat alignment">
+                <div className="grid-readout">
+                  <label className="bpm-editor">
+                    <span>Tempo</span>
+                    <span className="bpm-field">
+                      <input
+                        data-testid="bpm-input"
+                        type="number"
+                        min={40}
+                        max={260}
+                        step={0.1}
+                        value={bpmInputValue}
+                        placeholder="—"
+                        onChange={(event) => setManualBpm(event.target.value)}
+                        onKeyDown={(event) => {
+                          if (event.key !== 'Enter') return;
+                          const bpm = Number(event.currentTarget.value);
+                          if (Number.isFinite(bpm) && bpm >= 40 && bpm <= 260) {
+                            setManualBpm(event.currentTarget.value);
+                            setAnalysisMessage('Manual tempo · ' + bpm.toFixed(1) + ' BPM');
+                          }
+                          event.currentTarget.blur();
+                        }}
+                      />
+                      <em>BPM</em>
+                    </span>
+                  </label>
+                  <div className="grid-state">
+                    <strong data-testid="grid-confidence">{gridConfidenceText}</strong>
+                    <span data-testid="bar-offset">{downbeatText}</span>
+                  </div>
+                </div>
+  
+                <div className="grid-actions">
+                  <button
+                    data-testid="grid-edit-toggle"
+                    type="button"
+                    className={'grid-action ' + (gridEditing ? 'is-active' : '')}
+                    aria-pressed={gridEditing}
+                    onClick={(event) => {
+                      setGridEditing((value) => !value);
+                      event.currentTarget.blur();
+                    }}
+                  >
+                    {gridEditing ? 'Done' : 'Edit grid'}
+                  </button>
+                  <button
+                    data-testid="bpm-half"
+                    className="grid-action"
+                    type="button"
+                    onClick={() => adjustTempo(0.5)}
+                  >
+                    ½
+                  </button>
+                  <button
+                    data-testid="bpm-double"
+                    className="grid-action"
+                    type="button"
+                    onClick={() => adjustTempo(2)}
+                  >
+                    ×2
+                  </button>
+                  <button
+                    data-testid="set-downbeat"
+                    className="grid-action"
+                    type="button"
+                    onClick={setDownbeatAtPlayhead}
+                  >
+                    Set downbeat
+                  </button>
+                  <button
+                    data-testid="grid-reset"
+                    className="grid-action is-quiet"
+                    type="button"
+                    disabled={!gridHasCorrection}
+                    onClick={resetGridCorrection}
+                  >
+                    Reset
+                  </button>
+                </div>
+  
+                {gridEditing ? (
+                  <p className="grid-help">
+                    Click or drag on the waveform to place the first downbeat. Arrow keys fine-adjust the marker; Shift makes a larger move.
+                  </p>
+                ) : analysisState === 'error' ? (
+                  <p className="grid-help is-error">{analysisMessage || 'Beat analysis failed.'}</p>
+                ) : null}
+              </section>
+            )}
+          </section>
 
           <div className="export-status" data-testid="export-status">
             <span className={'status-dot ' + (capability.supported ? 'ok' : '')} />
