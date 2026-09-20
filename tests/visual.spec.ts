@@ -36,7 +36,7 @@ test('workspace is visually reviewable at the fixed viewport matrix', async ({ p
   await mkdir('artifacts/visual-qa', { recursive: true });
   await page.screenshot({
     path: 'artifacts/visual-qa/' + testInfo.project.name + '.png',
-    fullPage: true,
+    fullPage: false,
   });
 });
 
@@ -53,7 +53,7 @@ test('all five presets have a reviewable normal-viewport state', async ({ page }
     await expect(button).toHaveClass(/is-selected/);
     await page.screenshot({
       path: 'artifacts/visual-qa/preset-' + preset + '.png',
-      fullPage: true,
+      fullPage: false,
     });
   }
 });
@@ -75,7 +75,7 @@ test('watermark grid stays subtle and clipped to the cover', async ({ page }, te
   await mkdir('artifacts/visual-qa', { recursive: true });
   await page.screenshot({
     path: 'artifacts/visual-qa/watermark-grid.png',
-    fullPage: true,
+    fullPage: false,
   });
 });
 
@@ -90,7 +90,7 @@ test('install help is visually reviewable', async ({ page }, testInfo) => {
   await mkdir('artifacts/visual-qa', { recursive: true });
   await page.screenshot({
     path: 'artifacts/visual-qa/install-help.png',
-    fullPage: true,
+    fullPage: false,
   });
 });
 
@@ -107,6 +107,6 @@ test('centered title and composition grid are visually reviewable', async ({ pag
   await mkdir('artifacts/visual-qa', { recursive: true });
   await page.screenshot({
     path: 'artifacts/visual-qa/title-center-grid.png',
-    fullPage: true,
+    fullPage: false,
   });
 });
