@@ -1403,7 +1403,7 @@ function App() {
             </div>
 
             {effects.length === 0 ? (
-              <p className="control-hint">Add stackable source or composite effects. Order runs top to bottom.</p>
+              <p className="control-hint">Add effects by target. Order matters within the same target.</p>
             ) : (
               <div className="effect-stack" data-testid="effect-stack">
                 {effects.map((effect, index) => {
