@@ -9,6 +9,7 @@ import type {
 import {
   EFFECT_TYPES,
   effectDefinition,
+  effectParamRange,
   supportsTarget,
 } from '../effects/registry';
 import type {
@@ -152,10 +153,14 @@ function parseEffects(value: unknown): VisualEffectInstance[] {
     const params = requireObject(effect.params, 'Effect params');
     const defaults = effectDefinition(type).defaultParams;
     const parsedParams = Object.fromEntries(
-      Object.keys(defaults).map((key) => [
-        key,
-        requireNumber(params[key], 'Effect parameter ' + key, -10000, 10000),
-      ]),
+      Object.keys(defaults).map((key) => {
+        const range = effectParamRange(type, key);
+        if (!range) throw new Error('Effect parameter ' + key + ' has no registry range.');
+        return [
+          key,
+          requireNumber(params[key], 'Effect parameter ' + key, range.min, range.max),
+        ];
+      }),
     );
 
     return {
