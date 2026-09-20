@@ -447,10 +447,7 @@ function App() {
   };
 
   const handleCanvasClick = (event: ReactMouseEvent<HTMLCanvasElement>) => {
-    if (!placingTitle) {
-      void togglePlayback();
-      return;
-    }
+    if (!placingTitle) return;
 
     const rect = event.currentTarget.getBoundingClientRect();
     const placement = placementFromPoint(event.clientX, event.clientY, rect);
@@ -1022,7 +1019,10 @@ function App() {
               width={1280}
               height={720}
               aria-label={placingTitle ? 'Click to place title' : '16 by 9 video preview'}
-              onClick={handleCanvasClick}
+              onClick={(event) => {
+                if (placingTitle) handleCanvasClick(event);
+                else void togglePlayback();
+              }}
             />
             {placingTitle ? (
               <div className="canvas-placement-hint" data-testid="title-placement-hint">
