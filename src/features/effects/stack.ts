@@ -1,3 +1,4 @@
+import { supportsTarget } from './registry';
 import type { VisualEffectInstance } from './types';
 
 export function moveEffect(
@@ -54,7 +55,9 @@ export function setEffectTarget(
   effectId: string,
   target: VisualEffectInstance['target'],
 ): VisualEffectInstance[] {
-  return effects.map((effect) => (
-    effect.id === effectId ? { ...effect, target } : effect
-  ));
+  return effects.map((effect) => {
+    if (effect.id !== effectId) return effect;
+    if (!supportsTarget(effect.type, target)) return effect;
+    return { ...effect, target };
+  });
 }
