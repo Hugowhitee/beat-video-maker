@@ -9,6 +9,7 @@ import type {
 import {
   EFFECT_TYPES,
   effectDefinition,
+  effectParamRange,
   supportsTarget,
 } from '../effects/registry';
 import type {
@@ -84,21 +85,24 @@ function legacyPlacement(position: unknown) {
 }
 
 function sanitizeParams(
+  type: EffectType,
   value: unknown,
-  defaults: Record<string, number>,
 ) {
+  const defaults = effectDefinition(type).defaultParams;
   if (!value || typeof value !== 'object' || Array.isArray(value)) {
     return { ...defaults };
   }
 
   const candidate = value as Record<string, unknown>;
   return Object.fromEntries(
-    Object.entries(defaults).map(([key, fallback]) => [
-      key,
-      typeof candidate[key] === 'number' && Number.isFinite(candidate[key])
-        ? candidate[key]
-        : fallback,
-    ]),
+    Object.entries(defaults).map(([key, fallback]) => {
+      const range = effectParamRange(type, key);
+      if (!range) return [key, fallback];
+      return [
+        key,
+        numberInRange(candidate[key], range.min, range.max, fallback),
+      ];
+    }),
   );
 }
 
@@ -129,7 +133,7 @@ function sanitizeEffects(value: unknown): VisualEffectInstance[] {
       target,
       enabled: candidate.enabled !== false,
       strength: numberInRange(candidate.strength, 0, 1, definition.defaultStrength),
-      params: sanitizeParams(candidate.params, definition.defaultParams),
+      params: sanitizeParams(type, candidate.params),
     });
     ids.add(candidate.id);
   }
