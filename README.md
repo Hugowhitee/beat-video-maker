@@ -41,7 +41,7 @@ The first vertical slice is implemented and validated:
 - keyboard transport plus session Undo/Redo for relevant editor state;
 - fixed-viewport Playwright visual QA and a real encoded-file smoke test.
 
-Musical analysis is now implemented as a first usable pass: an in-worker onset/tempo/phase analyzer is reconciled with `web-audio-beat-detector` as an independent cross-check. BPM and bar 1 remain manually correctable, and low-confidence bar inference is shown as unverified instead of being silently accepted. All five v1 presets now share the same compositor, real amplitude envelope and musical clock. Style/brand preferences are saved locally, and production builds generate an installable offline PWA shell.
+Musical analysis uses the maintained `web-audio-beat-detector` worker stack for BPM and first-beat offset. Beatvideo Maker checks the same detector across several track windows only to keep confidence conservative; it does not maintain a second home-grown beat engine. Bar 1 is intentionally manual and stays unverified until you set it, so phrase-synchronised motion never starts from a guessed downbeat. All five v1 presets share the same compositor, real amplitude envelope and musical clock. Style/brand preferences are saved locally, and production builds generate an installable offline PWA shell.
 
 ## Development only
 
