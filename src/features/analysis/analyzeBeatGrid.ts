@@ -9,21 +9,37 @@ type WorkerResponse =
   | { ok: true; result: PrimaryBeatEstimate }
   | { ok: false; error: string };
 
-function monoCopy(buffer: AudioBuffer) {
+function yieldToMainThread() {
+  return new Promise<void>((resolve) => setTimeout(resolve, 0));
+}
+
+async function monoCopy(buffer: AudioBuffer) {
   const mono = new Float32Array(buffer.length);
-  for (let channel = 0; channel < buffer.numberOfChannels; channel += 1) {
-    const data = buffer.getChannelData(channel);
-    for (let index = 0; index < data.length; index += 1) {
-      mono[index] += data[index] / buffer.numberOfChannels;
+  const channelCount = Math.max(1, buffer.numberOfChannels);
+  const channels = Array.from(
+    { length: buffer.numberOfChannels },
+    (_, channel) => buffer.getChannelData(channel),
+  );
+  const chunkSize = 262_144;
+
+  for (let start = 0; start < buffer.length; start += chunkSize) {
+    const end = Math.min(buffer.length, start + chunkSize);
+    for (const data of channels) {
+      for (let index = start; index < end; index += 1) {
+        mono[index] += data[index] / channelCount;
+      }
     }
+    await yieldToMainThread();
   }
+
   return mono;
 }
 
-function primaryAnalysis(buffer: AudioBuffer) {
+async function primaryAnalysis(buffer: AudioBuffer) {
+  const samples = await monoCopy(buffer);
+
   return new Promise<PrimaryBeatEstimate>((resolve, reject) => {
     const worker = new Worker(new URL('./beatAnalyzer.worker.ts', import.meta.url), { type: 'module' });
-    const samples = monoCopy(buffer);
 
     const cleanup = () => worker.terminate();
     worker.onerror = (event) => {

@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 import { readFile, stat } from 'node:fs/promises';
-import { PNG, sineWave } from './fixtures/media';
+import { clickTrack, PNG, sineWave } from './fixtures/media';
 
 async function loadFixtures(page: import('@playwright/test').Page, seconds = 1.1) {
   await page.getByTestId('cover-input').setInputFiles({
@@ -72,4 +72,57 @@ test('an in-progress export can be cancelled without keeping a partial file', as
 
   await expect(page.getByTestId('export-status')).toContainText('Export cancelled');
   await expect(exportButton).not.toContainText('Cancel');
+});
+
+
+test('keeps the interface responsive while preparing a longer beat', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'desktop-normal', 'Audio responsiveness is viewport-independent.');
+
+  await page.goto('/');
+  await page.evaluate(() => {
+    const state = {
+      last: performance.now(),
+      maxLag: 0,
+      timer: 0,
+    };
+    state.timer = window.setInterval(() => {
+      const now = performance.now();
+      state.maxLag = Math.max(state.maxLag, now - state.last - 20);
+      state.last = now;
+    }, 20);
+    (window as Window & { __audioLagState?: typeof state }).__audioLagState = state;
+  });
+
+  await page.getByTestId('audio-input').setInputFiles({
+    name: 'long-beat.wav',
+    mimeType: 'audio/wav',
+    buffer: clickTrack(120, 120),
+  });
+
+  await expect(page.getByText(/Audio ready/)).toBeVisible({ timeout: 30_000 });
+
+  // setInputFiles has to copy the generated 10 MB fixture into the browser and
+  // can itself stall the CI runner. Reset the heartbeat after decode so this
+  // assertion measures our JavaScript waveform/envelope/beat preparation.
+  await page.evaluate(() => {
+    const state = (window as Window & {
+      __audioLagState?: { last: number; maxLag: number; timer: number };
+    }).__audioLagState;
+    if (!state) return;
+    state.last = performance.now();
+    state.maxLag = 0;
+  });
+  await page.waitForTimeout(1_200);
+
+  const maxLag = await page.evaluate(() => {
+    const state = (window as Window & {
+      __audioLagState?: { maxLag: number; timer: number };
+    }).__audioLagState;
+    if (!state) return Number.POSITIVE_INFINITY;
+    window.clearInterval(state.timer);
+    return state.maxLag;
+  });
+
+  expect(maxLag).toBeLessThan(250);
+  await expect(page.getByTestId('analysis-card')).toBeVisible();
 });

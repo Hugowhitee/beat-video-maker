@@ -11,7 +11,7 @@ import type {
   VisualPreset,
 } from './features/compositor/types';
 import {
-  buildPeaks,
+  buildPeaksAsync,
   decodeAudioFile,
   formatTime,
   loadImageFile,
@@ -29,7 +29,7 @@ import { markersForDuration } from './features/analysis/musicalClock';
 import type { BeatGridAnalysis, VerifiedGrid } from './features/analysis/types';
 import {
   amplitudeAt,
-  buildAmplitudeEnvelope,
+  buildAmplitudeEnvelopeAsync,
 } from './features/analysis/audioFeatures';
 import type { AmplitudeEnvelope } from './features/analysis/audioFeatures';
 import {
@@ -126,6 +126,7 @@ function App() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const audioRef = useRef<HTMLAudioElement>(null);
   const exportAbortRef = useRef<AbortController | null>(null);
+  const audioLoadIdRef = useRef(0);
 
   const [cover, setCover] = useState<CanvasImageSource | null>(() => fixtureMode ? makeFixtureCover() : null);
   const [coverName, setCoverName] = useState(fixtureMode ? 'visual-qa-fixture' : 'No image');
@@ -466,26 +467,51 @@ function App() {
   };
 
   const handleAudio = async (file: File) => {
-    setMediaMessage('Decoding audio…');
+    const loadId = audioLoadIdRef.current + 1;
+    audioLoadIdRef.current = loadId;
+
+    audioRef.current?.pause();
+    setIsPlaying(false);
+    setAudioUrl('');
     setAudioBuffer(null);
+    setPeaks([]);
+    setAmplitudeEnvelope(null);
+    setAnalysis(null);
+    setManualBpm('');
+    setManualBarOffset(null);
+    setAnalysisState('idle');
+    setAnalysisMessage('');
+    setCurrentTime(0);
+    setMediaMessage('Decoding audio…');
+
     try {
       const decoded = await decodeAudioFile(file);
+      if (audioLoadIdRef.current !== loadId) return;
+
       const nextUrl = URL.createObjectURL(file);
       setAudioUrl(nextUrl);
       setAudioBuffer(decoded);
       setAudioName(file.name);
-      setPeaks(buildPeaks(decoded));
-      setAmplitudeEnvelope(buildAmplitudeEnvelope(decoded));
-      setCurrentTime(0);
-      setAnalysis(null);
-      setManualBpm('');
-      setManualBarOffset(null);
       setAnalysisState('analyzing');
       setAnalysisMessage('Analyzing tempo and beat phase…');
       setMediaMessage('Audio ready · ' + decoded.duration.toFixed(1) + ' s');
 
+      void Promise.all([
+        buildPeaksAsync(decoded),
+        buildAmplitudeEnvelopeAsync(decoded),
+      ])
+        .then(([nextPeaks, nextEnvelope]) => {
+          if (audioLoadIdRef.current !== loadId) return;
+          setPeaks(nextPeaks);
+          setAmplitudeEnvelope(nextEnvelope);
+        })
+        .catch(() => {
+          // Playback/export can continue even if non-essential preview features fail.
+        });
+
       void analyzeBeatGrid(decoded)
         .then((result) => {
+          if (audioLoadIdRef.current !== loadId) return;
           setAnalysis(result);
           setManualBpm(result.bpm === null ? '' : result.bpm.toFixed(1));
           setManualBarOffset(result.barConfidence >= 0.35 ? result.barOffset : null);
@@ -497,12 +523,14 @@ function App() {
           );
         })
         .catch((analysisError: unknown) => {
+          if (audioLoadIdRef.current !== loadId) return;
           setAnalysisState('error');
           setAnalysisMessage(
             analysisError instanceof Error ? analysisError.message : 'Beat analysis failed.',
           );
         });
     } catch (error) {
+      if (audioLoadIdRef.current !== loadId) return;
       setMediaMessage(error instanceof Error ? error.message : 'Could not load audio.');
     }
   };
