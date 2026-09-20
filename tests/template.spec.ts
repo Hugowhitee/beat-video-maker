@@ -7,8 +7,15 @@ import {
   settingsFromTemplate,
 } from '../src/features/project/template';
 import { DEFAULT_USER_SETTINGS } from '../src/features/project/settings';
+import {
+  createDefaultModulation,
+  createEffectInstance,
+} from '../src/features/effects/registry';
 
 test('editable template round-trips authoring settings without media', () => {
+  const zoom = createEffectInstance('zoom-punch', { id: 'zoom-template' });
+  const zoomModulation = createDefaultModulation(zoom, 'mod-template')!;
+
   const settings = {
     ...DEFAULT_USER_SETTINGS,
     titleSize: 72,
@@ -22,6 +29,8 @@ test('editable template round-trips authoring settings without media', () => {
     brandOpacity: 0.45,
     preset: 'reactive' as const,
     motion: 'medium' as const,
+    effects: [zoom],
+    modulations: [zoomModulation],
   };
 
   const template = createTemplate('CENTERED TITLE', settings);
@@ -61,4 +70,22 @@ test('template filenames remain local-file friendly', () => {
   expect(safeTemplateName('  Night / Drive: 01  '))
     .toBe('Night Drive 01.beatvideo-template.json');
   expect(safeTemplateName('')).toBe('beatvideo.beatvideo-template.json');
+});
+
+
+test('version 1 templates migrate into the version 2 effect contract', () => {
+  const current = createTemplate('LEGACY', DEFAULT_USER_SETTINGS);
+  const legacy = {
+    ...current,
+    version: 1,
+    visual: {
+      preset: current.visual.preset,
+      motion: current.visual.motion,
+    },
+  };
+
+  const parsed = parseTemplate(JSON.stringify(legacy));
+  expect(parsed.version).toBe(2);
+  expect(parsed.visual.effects).toEqual([]);
+  expect(parsed.visual.modulations).toEqual([]);
 });
