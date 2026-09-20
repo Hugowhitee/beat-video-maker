@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test';
 import { clickTrack, steadyTone } from './fixtures/media';
 
-test('detects a synthetic 120 BPM grid and keeps manual correction available', async ({ page }, testInfo) => {
+test('uses the upstream detector for 120 BPM and keeps bar 1 manual', async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== 'desktop-normal', 'Analysis is viewport-independent.');
 
   await page.goto('/');
@@ -18,6 +18,8 @@ test('detects a synthetic 120 BPM grid and keeps manual correction available', a
   const bpm = Number(await page.getByTestId('bpm-input').inputValue());
   expect(bpm).toBeGreaterThanOrEqual(118);
   expect(bpm).toBeLessThanOrEqual(122);
+  await expect(page.getByTestId('bar-offset')).toHaveText('Unverified');
+  await expect(card).not.toContainText('HIGH');
 
   await page.getByTestId('bpm-half').click();
   const halfBpm = Number(await page.getByTestId('bpm-input').inputValue());

@@ -1,208 +1,124 @@
 import { guess } from 'web-audio-beat-detector';
-import type {
-  AnalysisConfidence,
-  BeatGridAnalysis,
-  PrimaryBeatEstimate,
-} from './types';
+import type { BeatGridAnalysis } from './types';
 
-type WorkerResponse =
-  | { ok: true; result: PrimaryBeatEstimate }
-  | { ok: false; error: string };
+const TEMPO_SETTINGS = {
+  // Keep the detector in the musical grid band used by the editor. Very low
+  // half-time candidates are folded upward by the upstream detector, which
+  // preserves beat-aligned edit points for modern hip-hop/electronic material.
+  minTempo: 75,
+  maxTempo: 200,
+};
 
-function yieldToMainThread() {
-  return new Promise<void>((resolve) => setTimeout(resolve, 0));
-}
+type UpstreamGuess = {
+  bpm: number;
+  offset: number;
+};
 
-async function monoCopy(buffer: AudioBuffer) {
-  const mono = new Float32Array(buffer.length);
-  const channelCount = Math.max(1, buffer.numberOfChannels);
-  const channels = Array.from(
-    { length: buffer.numberOfChannels },
-    (_, channel) => buffer.getChannelData(channel),
-  );
-  const chunkSize = 262_144;
+async function guessRange(
+  buffer: AudioBuffer,
+  offset?: number,
+  duration?: number,
+): Promise<UpstreamGuess | null> {
+  try {
+    const result = offset === undefined || duration === undefined
+      ? await guess(buffer, TEMPO_SETTINGS)
+      : await guess(buffer, offset, duration, TEMPO_SETTINGS);
 
-  for (let start = 0; start < buffer.length; start += chunkSize) {
-    const end = Math.min(buffer.length, start + chunkSize);
-    for (const data of channels) {
-      for (let index = start; index < end; index += 1) {
-        mono[index] += data[index] / channelCount;
-      }
+    if (
+      !Number.isFinite(result.bpm)
+      || !Number.isFinite(result.offset)
+       || result.bpm < TEMPO_SETTINGS.minTempo
+      || result.bpm > TEMPO_SETTINGS.maxTempo
+    ) {
+      return null;
     }
-    await yieldToMainThread();
+
+    return result;
+  } catch {
+    return null;
   }
-
-  return mono;
-}
-
-async function primaryAnalysis(buffer: AudioBuffer) {
-  const samples = await monoCopy(buffer);
-
-  return new Promise<PrimaryBeatEstimate>((resolve, reject) => {
-    const worker = new Worker(new URL('./beatAnalyzer.worker.ts', import.meta.url), { type: 'module' });
-
-    const cleanup = () => worker.terminate();
-    worker.onerror = (event) => {
-      cleanup();
-      reject(new Error(event.message || 'Beat analysis worker failed.'));
-    };
-    worker.onmessage = (event: MessageEvent<WorkerResponse>) => {
-      cleanup();
-      if (event.data.ok) resolve(event.data.result);
-      else reject(new Error(event.data.error));
-    };
-    worker.postMessage({ samples, sampleRate: buffer.sampleRate }, [samples.buffer]);
-  });
 }
 
 function closestTempo(reference: number, candidate: number) {
   const options = [candidate / 2, candidate, candidate * 2]
-    .filter((value) => value >= 55 && value <= 220);
+    .filter((value) => value >= TEMPO_SETTINGS.minTempo && value <= TEMPO_SETTINGS.maxTempo);
+
   return options.sort(
     (left, right) => Math.abs(left - reference) - Math.abs(right - reference),
   )[0] ?? candidate;
 }
 
-function offsetDistance(first: number, second: number, period: number) {
-  const raw = Math.abs(first - second) % period;
-  return Math.min(raw, period - raw);
+function tempoAgrees(reference: number, candidate: number) {
+  const aligned = closestTempo(reference, candidate);
+  return Math.abs(aligned - reference) / reference <= 0.025;
 }
 
-function preferCanonicalTempo(primary: number, crossCheck: number) {
-  const inMiddleBand = (value: number) => value >= 80 && value <= 180;
-  if (inMiddleBand(crossCheck) && !inMiddleBand(primary)) return crossCheck;
-  if (inMiddleBand(primary) && !inMiddleBand(crossCheck)) return primary;
-  return primary;
-}
+function segmentRanges(duration: number) {
+  if (!Number.isFinite(duration) || duration < 8) return [];
 
-function confidenceLevel(
-  tempoConfidence: number,
-  phaseConfidence: number,
-  agreement: BeatGridAnalysis['agreement'],
-): AnalysisConfidence {
-  const score = tempoConfidence * 0.6 + phaseConfidence * 0.4;
-  if (agreement === 'agree' && score >= 0.68) return 'high';
-  if ((agreement === 'agree' || agreement === 'half-double') && score >= 0.46) return 'medium';
-  if (score >= 0.6) return 'medium';
-  return 'low';
+  const windowDuration = Math.min(30, Math.max(8, duration * 0.45));
+  const latestStart = Math.max(0, duration - windowDuration);
+  const starts = [0, latestStart / 2, latestStart];
+
+  const uniqueStarts = starts.filter(
+    (start, index) => starts.findIndex((candidate) => Math.abs(candidate - start) < 0.25) === index,
+  );
+
+  return uniqueStarts
+    .slice(0, 3)
+    .map((offset) => ({
+      offset,
+      duration: Math.min(windowDuration, duration - offset),
+    }))
+    .filter((range) => range.duration >= 6);
 }
 
 export async function analyzeBeatGrid(buffer: AudioBuffer): Promise<BeatGridAnalysis> {
-  const notes: string[] = [];
-  const primaryPromise = primaryAnalysis(buffer);
-  const crossCheckPromise = guess(buffer, { minTempo: 55, maxTempo: 220 })
-    .then((result) => ({
-      bpm: result.bpm,
-      offset: result.offset,
-    }))
-    .catch(() => null);
+  const primary = await guessRange(buffer);
 
-  const [primary, crossCheck] = await Promise.all([primaryPromise, crossCheckPromise]);
-
-  if (primary.bpm === null || primary.beatOffset === null) {
-    if (!crossCheck) {
-      return {
-        ...primary,
-        confidence: 'low',
-        crossCheckBpm: null,
-        crossCheckOffset: null,
-        agreement: 'unavailable',
-        notes: ['No reliable tempo candidate was found.'],
-      };
-    }
-
-    notes.push('Only the independent tempo detector returned a candidate; verify it manually.');
+  if (!primary) {
     return {
-      ...primary,
-      bpm: crossCheck.bpm,
-      beatOffset: crossCheck.offset,
-      tempoConfidence: Math.max(primary.tempoConfidence, 0.35),
-      phaseConfidence: Math.max(primary.phaseConfidence, 0.3),
+      bpm: null,
+      beatOffset: null,
+      barOffset: null,
+      barConfidence: 0,
       confidence: 'low',
-      crossCheckBpm: crossCheck.bpm,
-      crossCheckOffset: crossCheck.offset,
-      agreement: 'unavailable',
-      notes,
+      detector: 'web-audio-beat-detector',
+      segmentBpms: [],
+      notes: ['No reliable tempo candidate was found. Enter BPM and bar 1 manually.'],
     };
   }
 
-  if (!crossCheck) {
-    notes.push('Independent tempo cross-check was unavailable.');
-    return {
-      ...primary,
-      confidence: confidenceLevel(primary.tempoConfidence, primary.phaseConfidence, 'unavailable'),
-      crossCheckBpm: null,
-      crossCheckOffset: null,
-      agreement: 'unavailable',
-      notes,
-    };
-  }
+  const ranges = segmentRanges(buffer.duration);
+  const segmentResults = await Promise.all(
+    ranges.map((range) => guessRange(buffer, range.offset, range.duration)),
+  );
+  const segmentBpms = segmentResults
+    .filter((result): result is UpstreamGuess => result !== null)
+    .map((result) => result.bpm);
 
-  const alignedCross = closestTempo(primary.bpm, crossCheck.bpm);
-  const relativeDifference = Math.abs(alignedCross - primary.bpm) / primary.bpm;
-  const directDifference = Math.abs(crossCheck.bpm - primary.bpm) / primary.bpm;
-  const agreement: BeatGridAnalysis['agreement'] =
-    directDifference <= 0.025 ? 'agree'
-      : relativeDifference <= 0.025 ? 'half-double'
-        : 'disagree';
+  const stableSegments = segmentBpms.filter((bpm) => tempoAgrees(primary.bpm, bpm)).length;
+  const allAvailableSegmentsAgree =
+    segmentBpms.length >= 2 && stableSegments === segmentBpms.length;
 
-  let tempoConfidence = primary.tempoConfidence;
-  let phaseConfidence = primary.phaseConfidence;
-  let bpm = primary.bpm;
-  let beatOffset = primary.beatOffset;
-  let barOffset = primary.barOffset;
-  let barConfidence = primary.barConfidence;
-
-  if (agreement === 'agree') {
-    tempoConfidence = Math.min(1, tempoConfidence + 0.18);
-    const period = 60 / primary.bpm;
-    const alignedOffset = crossCheck.offset % period;
-    const distance = offsetDistance(primary.beatOffset, alignedOffset, period);
-    if (distance <= Math.min(0.065, period * 0.12)) {
-      phaseConfidence = Math.min(1, phaseConfidence + 0.14);
-    }
-  } else if (agreement === 'half-double') {
-    const canonical = preferCanonicalTempo(primary.bpm, crossCheck.bpm);
-    tempoConfidence = Math.min(0.72, tempoConfidence + 0.08);
-
-    if (canonical !== primary.bpm) {
-      bpm = canonical;
-      beatOffset = crossCheck.offset % (60 / canonical);
-      phaseConfidence = Math.max(0.38, Math.min(0.68, phaseConfidence));
-      barOffset = null;
-      barConfidence = 0;
-      notes.push(
-        'Half/double-time ambiguity resolved to '
-        + canonical.toFixed(1)
-        + ' BPM; verify bar 1 before phrase-synchronised motion.',
-      );
-    } else {
-      notes.push('Half/double-time ambiguity detected; verify BPM and bar 1.');
-      barConfidence = Math.min(barConfidence, 0.3);
-    }
+  const notes: string[] = [];
+  if (allAvailableSegmentsAgree) {
+    notes.push('Tempo is consistent across multiple parts of the beat.');
+  } else if (segmentBpms.length > 0) {
+    notes.push('Tempo varies across detector windows; verify BPM manually.');
   } else {
-    tempoConfidence *= 0.7;
-    notes.push(
-      'Tempo estimators disagree (' + primary.bpm.toFixed(1) + ' vs ' + crossCheck.bpm.toFixed(1) + ' BPM).',
-    );
+    notes.push('Tempo was detected from the full beat; verify BPM manually.');
   }
-
-  if (barConfidence < 0.35) {
-    notes.push('Bar 1 is weakly inferred; check it before using bar-synchronised motion.');
-  }
+  notes.push('Bar 1 is intentionally manual; set it before phrase-synchronised motion.');
 
   return {
-    ...primary,
-    bpm,
-    beatOffset,
-    barOffset,
-    barConfidence,
-    tempoConfidence,
-    phaseConfidence,
-    confidence: confidenceLevel(tempoConfidence, phaseConfidence, agreement),
-    crossCheckBpm: crossCheck.bpm,
-    crossCheckOffset: crossCheck.offset,
-    agreement,
+    bpm: primary.bpm,
+    beatOffset: Math.max(0, primary.offset),
+    barOffset: null,
+    barConfidence: 0,
+    confidence: allAvailableSegmentsAgree ? 'medium' : 'low',
+    detector: 'web-audio-beat-detector',
+    segmentBpms,
     notes,
   };
 }

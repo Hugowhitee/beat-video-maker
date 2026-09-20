@@ -93,17 +93,15 @@ Imported audio is parsed/decoded through the existing Mediabunny media stack fir
 
 Musical analysis is specialist DSP and follows the upstream-first rule. A bespoke estimator is acceptable only as temporary, clearly bounded glue while a suitable maintained upstream implementation is being evaluated; do not let a hand-built prototype quietly become the permanent analysis engine.
 
-The first grid implementation now has one canonical analysis path:
+The grid has one upstream-owned analysis path:
 
-- a Web Worker derives onset strength, tempo candidates and beat phase from decoded audio;
-- `web-audio-beat-detector` is used only as an independent tempo/offset cross-check;
-- half/double-time agreement is reconciled explicitly;
-- tempo, beat phase and bar-1 confidence remain separate;
-- low-confidence bar-1 inference is not promoted to a verified bar position;
-- BPM and bar 1 remain directly correctable by the user;
-- `musicalClock.ts` owns beat/bar phase math for every future preset.
+- `web-audio-beat-detector` is the tempo/first-beat detector and already runs its detector work through its maintained worker/broker stack;
+- Beatvideo Maker compares the detector's tempo across several track windows only to decide whether the displayed confidence may rise from low to medium; this is orchestration, not a second home-grown DSP engine;
+- because those window checks use the same detector, analysis never labels itself high-confidence from that agreement alone;
+- bar 1/downbeat is intentionally **not guessed**. It remains unverified until the user sets it, so phrase-synchronised motion cannot be enabled from an invented downbeat;
+- BPM remains directly correctable and `musicalClock.ts` owns the small beat/bar timing math consumed by presets.
 
-Unknown remains unknown: analysis must never use a convincing-looking default BPM or bar offset merely because an estimator failed.
+Unknown remains unknown: a detector failure produces no BPM, and no default BPM or bar offset is synthesized merely to make the UI look complete.
 
 ## Visual presets v1
 
