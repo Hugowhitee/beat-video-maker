@@ -115,7 +115,9 @@ function sanitizeEffects(value: unknown): VisualEffectInstance[] {
   for (const raw of value.slice(0, 16)) {
     if (!raw || typeof raw !== 'object' || Array.isArray(raw)) continue;
     const candidate = raw as Record<string, unknown>;
-    if (typeof candidate.id !== 'string' || !candidate.id || ids.has(candidate.id)) continue;
+    if (typeof candidate.id !== 'string' || !candidate.id) continue;
+    const id = candidate.id.slice(0, 120);
+    if (!id || ids.has(id)) continue;
     if (typeof candidate.type !== 'string' || !effectTypes.has(candidate.type as EffectType)) continue;
 
     const type = candidate.type as EffectType;
@@ -128,14 +130,14 @@ function sanitizeEffects(value: unknown): VisualEffectInstance[] {
       : definition.defaultTarget;
 
     output.push({
-      id: candidate.id.slice(0, 120),
+      id,
       type,
       target,
       enabled: candidate.enabled !== false,
       strength: numberInRange(candidate.strength, 0, 1, definition.defaultStrength),
       params: sanitizeParams(type, candidate.params),
     });
-    ids.add(candidate.id);
+    ids.add(id);
   }
 
   return output;
@@ -153,9 +155,12 @@ function sanitizeModulations(
   for (const raw of value.slice(0, 16)) {
     if (!raw || typeof raw !== 'object' || Array.isArray(raw)) continue;
     const candidate = raw as Record<string, unknown>;
-    if (typeof candidate.id !== 'string' || !candidate.id || ids.has(candidate.id)) continue;
+    if (typeof candidate.id !== 'string' || !candidate.id) continue;
+    const id = candidate.id.slice(0, 120);
+    if (!id || ids.has(id)) continue;
     if (typeof candidate.effectId !== 'string') continue;
-    const effect = effectById.get(candidate.effectId);
+    const effectId = candidate.effectId.slice(0, 120);
+    const effect = effectById.get(effectId);
     if (!effect) continue;
     if (candidate.parameter !== 'strength') continue;
     if (typeof candidate.driver !== 'string' || !drivers.has(candidate.driver as ModulationDriver)) continue;
@@ -164,14 +169,14 @@ function sanitizeModulations(
     if (!effectDefinition(effect.type).drivers.includes(driver)) continue;
 
     output.push({
-      id: candidate.id.slice(0, 120),
+      id,
       effectId: effect.id,
       parameter: 'strength',
       driver,
       amount: numberInRange(candidate.amount, 0, 1, 1),
       enabled: candidate.enabled !== false,
     });
-    ids.add(candidate.id);
+    ids.add(id);
   }
 
   return output;
