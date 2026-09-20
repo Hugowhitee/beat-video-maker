@@ -98,3 +98,52 @@ test('install control uses the native prompt and hides after app installation', 
   await page.evaluate(() => window.dispatchEvent(new Event('appinstalled')));
   await expect(page.getByTestId('install-button')).toHaveCount(0);
 });
+
+
+test('persisted effect ids are normalized before deduplication', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'desktop-normal', 'Settings normalization is viewport-independent.');
+
+  const prefix = 'e'.repeat(120);
+  await page.addInitScript(({ storageKey, firstId, secondId }) => {
+    localStorage.setItem(storageKey, JSON.stringify({
+      effects: [
+        {
+          id: firstId,
+          type: 'zoom-punch',
+          target: 'foreground',
+          enabled: true,
+          strength: 0.6,
+          params: { scale: 0.075 },
+        },
+        {
+          id: secondId,
+          type: 'zoom-punch',
+          target: 'foreground',
+          enabled: true,
+          strength: 0.4,
+          params: { scale: 0.05 },
+        },
+      ],
+      modulations: [
+        {
+          id: 'm'.repeat(121),
+          effectId: firstId,
+          parameter: 'strength',
+          driver: 'beat',
+          amount: 1,
+          enabled: true,
+        },
+      ],
+    }));
+  }, {
+    storageKey: 'beatvideo-maker:settings:v1',
+    firstId: prefix + 'a',
+    secondId: prefix + 'b',
+  });
+
+  await page.goto('/');
+
+  const effects = page.locator('[data-effect-type="zoom-punch"]');
+  await expect(effects).toHaveCount(1);
+  await expect(effects.getByLabel('Zoom punch driver')).toHaveValue('beat');
+});
