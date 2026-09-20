@@ -42,9 +42,7 @@ function clamp01(value: number) {
 function sectionAt(music: MusicMap, time: number) {
   return music.sections.find(
     (section) => time >= section.start - EPSILON && time < section.end - EPSILON,
-  ) ?? music.sections.find(
-    (section) => Math.abs(time - section.end) <= EPSILON,
-  ) ?? { ...FALLBACK_SECTION, end: music.duration };
+  ) ?? { ...FALLBACK_SECTION, start: time, end: music.duration };
 }
 
 function sectionIntensity(section: MusicSection) {
