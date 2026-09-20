@@ -150,6 +150,7 @@ function sanitizeModulations(
   if (!Array.isArray(value)) return [];
   const effectById = new Map(effects.map((effect) => [effect.id, effect]));
   const ids = new Set<string>();
+  const effectParameters = new Set<string>();
   const output: EffectModulation[] = [];
 
   for (const raw of value.slice(0, 16)) {
@@ -168,6 +169,9 @@ function sanitizeModulations(
     const driver = candidate.driver as ModulationDriver;
     if (!effectDefinition(effect.type).drivers.includes(driver)) continue;
 
+    const effectParameter = effect.id + ':strength';
+    if (effectParameters.has(effectParameter)) continue;
+
     output.push({
       id,
       effectId: effect.id,
@@ -177,6 +181,7 @@ function sanitizeModulations(
       enabled: candidate.enabled !== false,
     });
     ids.add(id);
+    effectParameters.add(effectParameter);
   }
 
   return output;
