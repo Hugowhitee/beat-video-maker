@@ -311,3 +311,45 @@ test('clean transition profile never inserts an effect transition', () => {
   expect(plan.segments.slice(1).every((segment) => segment.transitionIn === 'cut'))
     .toBeTruthy();
 });
+
+
+test('intro and outro assets stay out of automatic footage selection', () => {
+  const music = musicMap([
+    {
+      id: 'verse',
+      start: 0,
+      end: 32,
+      kind: 'verse',
+      energy: 0.55,
+      confidence: 0.9,
+    },
+  ]);
+  const clips = clipMap();
+  clips.sources.push({
+    id: 'intro-stinger',
+    name: 'intro.mp4',
+    duration: 4,
+    role: 'intro',
+    shots: [
+      {
+        id: 'intro-1',
+        sourceId: 'intro-stinger',
+        start: 0,
+        end: 4,
+        motion: 0.95,
+        quality: 1,
+        boundaryKind: 'source-start',
+        boundaryConfidence: 1,
+      },
+    ],
+  });
+
+  const plan = createEditPlan(music, clips, {
+    mode: 'auto',
+    transitionProfile: 'mixed',
+    seed: 6,
+  });
+
+  expect(plan.segments.some((segment) => segment.sourceId === 'intro-stinger'))
+    .toBeFalsy();
+});
