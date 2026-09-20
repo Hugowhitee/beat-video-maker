@@ -54,7 +54,7 @@ The planner varies cadence with the music. A calm intro/break should generally b
 
 ### Transition language and intro assets
 
-Most edit points are **clean hard cuts**.
+Most edit points are **clean hard cuts**. In the edit-plan model, no transition object at a boundary means a normal hard cut. Effect transitions are separate cut-centered objects that reference the adjacent left/right segments, carry duration/alignment, and require enough hidden source handles on both sides. This follows the proven handle-based approach used by mature editors and avoids shortening/overlapping the visible segment timeline just to show an effect.
 
 The first curated effect transition is **Film Burn**, used only as an optional accent at selected strong events such as a drop or deliberate section change. Do not reimplement this visual from scratch: the preferred source is Anastasia Dunbar's MIT-licensed `FilmBurn` shader from GL Transitions. Remotion's WebGL2 implementation is a useful modern reference, but Beatvideo Maker should take code/provenance from the MIT GL Transitions source and retain attribution in `THIRD_PARTY_NOTICES.md` if adapted.
 
