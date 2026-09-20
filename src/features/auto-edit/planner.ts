@@ -186,7 +186,7 @@ function chooseShot(
   const candidates = eligible.length > 0 ? eligible : shots;
 
   if (candidates.length === 0) {
-    throw new Error('Auto edit requires at least one analyzed source-video shot.');
+    throw new Error('Auto edit requires at least one analyzed footage shot.');
   }
 
   const targetMotion = clamp01(sectionIntensity(slot.section));
@@ -445,7 +445,9 @@ export function createEditPlan(
 ): EditPlan {
   validateInputs(music, clips);
 
-  const shots = clips.sources.flatMap((source) => source.shots);
+  const shots = clips.sources
+    .filter((source) => (source.role ?? 'footage') === 'footage')
+    .flatMap((source) => source.shots);
   if (shots.length === 0) {
     throw new Error('Auto edit requires at least one analyzed source-video shot.');
   }
