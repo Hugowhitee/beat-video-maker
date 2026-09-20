@@ -31,21 +31,24 @@ export type EffectEvaluationContext = {
   audioLevel?: number;
 };
 
-function driverValue(driver: ModulationDriver, context: EffectEvaluationContext) {
+function driverValue(
+  driver: ModulationDriver,
+  context: EffectEvaluationContext,
+): number | null {
   const { grid, time } = context;
 
   if (driver === 'amplitude') {
-    return clamp(context.audioLevel ?? 0);
+    return context.audioLevel == null ? null : clamp(context.audioLevel);
   }
 
-  if (!grid) return 0;
+  if (!grid) return null;
 
   if (driver === 'beat') {
     return pulseEnvelope(beatPhaseAt(time, grid));
   }
 
   if (driver === 'downbeat') {
-    if (grid.barOffset == null) return 0;
+    if (grid.barOffset == null) return null;
     const progress = barPhaseAt(time, grid) * 4;
     return progress < 1 ? pulseEnvelope(progress) : 0;
   }
@@ -78,7 +81,9 @@ export function evaluateEffectStack(
       const amount = clamp(modulation.amount);
       const driven = driverValue(modulation.driver, context);
       const baseline = modulation.driver === 'phrase' ? 0 : 1;
-      const signal = baseline * (1 - amount) + driven * amount;
+      const signal = driven === null
+        ? 1
+        : baseline * (1 - amount) + driven * amount;
 
       return {
         ...effect,
