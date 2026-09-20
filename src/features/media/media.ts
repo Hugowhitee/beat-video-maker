@@ -43,6 +43,31 @@ export function buildPeaks(buffer: AudioBuffer, count = 120) {
   return peaks.map((peak) => peak / ceiling);
 }
 
+function yieldToMainThread() {
+  return new Promise<void>((resolve) => setTimeout(resolve, 0));
+}
+
+export async function buildPeaksAsync(buffer: AudioBuffer, count = 120) {
+  const channel = buffer.getChannelData(0);
+  const block = Math.max(1, Math.floor(channel.length / count));
+  const peaks: number[] = [];
+
+  for (let index = 0; index < count; index += 1) {
+    const start = index * block;
+    const end = Math.min(channel.length, start + block);
+    let max = 0;
+    for (let sample = start; sample < end; sample += 1) {
+      max = Math.max(max, Math.abs(channel[sample] || 0));
+    }
+    peaks.push(Math.max(0.03, max));
+
+    if ((index + 1) % 8 === 0) await yieldToMainThread();
+  }
+
+  const ceiling = Math.max(...peaks, 0.01);
+  return peaks.map((peak) => peak / ceiling);
+}
+
 export function formatTime(seconds: number) {
   if (!Number.isFinite(seconds) || seconds < 0) return '0:00';
   const rounded = Math.floor(seconds);
