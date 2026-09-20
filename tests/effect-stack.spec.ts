@@ -1,7 +1,9 @@
 import { expect, test } from '@playwright/test';
 import { createEffectInstance } from '../src/features/effects/registry';
 import {
+  canMoveEffectWithinTarget,
   moveEffect,
+  moveEffectWithinTarget,
   removeEffect,
   setEffectEnabled,
   setEffectStrength,
@@ -55,4 +57,20 @@ test('effect target edits preserve order and reject unsupported targets', () => 
 
   const invalidGlow = setEffectTarget(original, 'glow', 'background');
   expect(invalidGlow[2]?.target).toBe('composite');
+});
+
+
+test('target-local reordering skips unrelated target rows', () => {
+  const foregroundA = createEffectInstance('zoom-punch', { id: 'fg-a' });
+  const composite = createEffectInstance('glow', { id: 'composite' });
+  const foregroundB = createEffectInstance('shake', { id: 'fg-b' });
+  const original = [foregroundA, composite, foregroundB];
+
+  expect(canMoveEffectWithinTarget(original, 'fg-b', -1)).toBe(true);
+  expect(canMoveEffectWithinTarget(original, 'fg-a', -1)).toBe(false);
+  expect(canMoveEffectWithinTarget(original, 'composite', -1)).toBe(false);
+
+  const next = moveEffectWithinTarget(original, 'fg-b', -1);
+  expect(next.map((effect) => effect.id)).toEqual(['fg-b', 'fg-a', 'composite']);
+  expect(original.map((effect) => effect.id)).toEqual(['fg-a', 'composite', 'fg-b']);
 });
