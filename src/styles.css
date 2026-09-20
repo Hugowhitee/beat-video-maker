@@ -1444,3 +1444,39 @@ button.preset-card.is-selected {
   .inputs-panel { border-right: 0; }
   .preview-column { order: -1; }
 }
+
+
+.edit-dock {
+  margin-top: 10px;
+  border-top: 1px solid #454c4f;
+  padding-top: 7px;
+}
+
+.edit-dock-header {
+  min-height: 23px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 0 2px 5px;
+}
+
+.edit-dock-header strong {
+  color: #dfe2de;
+  font-size: 8px;
+  font-weight: 760;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+}
+
+.edit-dock-header span {
+  min-width: 0;
+  max-width: 60%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: #8e9799;
+  font-size: 8px;
+}
+
+.edit-dock .waveform-shell { margin-top: 0; }
