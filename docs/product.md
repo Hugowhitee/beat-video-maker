@@ -218,12 +218,13 @@ Guide overlays are preview-only. Video export must explicitly render with guides
 
 Editable authoring presets are real local files: `.beatvideo-template.json`.
 
-The v1 template schema contains:
+Template v2 contains:
 - title text and title layout/style;
 - producer/watermark text settings;
-- visual preset and motion amount.
+- visual preset and motion amount;
+- the ordered visual effect stack plus analytic modulation records.
 
-It intentionally does **not** contain source image/audio/video data or binary watermark graphics. Template import validates the full versioned schema before applying anything; invalid or future-version files fail without partially changing the project. Once opened, every template value remains normal editable state.
+Version 1 templates remain importable and migrate to an empty effect stack. Templates intentionally do **not** contain source image/audio/video data or binary watermark graphics. Template import validates the full versioned schema before applying anything; invalid or future-version files fail without partially changing the project. Once opened, every template value remains normal editable state.
 
 
 ## Effect stack and modulation
