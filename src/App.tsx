@@ -1385,6 +1385,133 @@ function App() {
             ) : null}
           </div>
 
+          <div className="control-group effects-control" data-testid="effects-control">
+            <h3>Effects</h3>
+            <div className="effect-add-row">
+              <select
+                data-testid="effect-add-type"
+                value={effectToAdd}
+                onChange={(event) => setEffectToAdd(event.target.value as EffectType)}
+              >
+                {EFFECT_TYPES.map((type) => (
+                  <option key={type} value={type}>{effectDefinition(type).name}</option>
+                ))}
+              </select>
+              <button
+                type="button"
+                className="small-button"
+                data-testid="effect-add"
+                onClick={addEffect}
+              >
+                Add
+              </button>
+            </div>
+
+            {effects.length === 0 ? (
+              <p className="control-hint">Add stackable source or composite effects. Order runs top to bottom.</p>
+            ) : (
+              <div className="effect-stack" data-testid="effect-stack">
+                {effects.map((effect, index) => {
+                  const definition = effectDefinition(effect.type);
+                  const modulation = modulations.find((candidate) => candidate.effectId === effect.id) ?? null;
+                  return (
+                    <article
+                      key={effect.id}
+                      className={'effect-row ' + (effect.enabled ? '' : 'is-disabled')}
+                      data-effect-type={effect.type}
+                    >
+                      <div className="effect-row-header">
+                        <label className="effect-enable">
+                          <input
+                            type="checkbox"
+                            checked={effect.enabled}
+                            aria-label={'Enable ' + definition.name}
+                            onChange={(event) => updateEffect(effect.id, { enabled: event.target.checked })}
+                          />
+                          <span>{definition.name}</span>
+                        </label>
+                        <div className="effect-order-actions">
+                          <button
+                            type="button"
+                            aria-label={'Move ' + definition.name + ' up'}
+                            disabled={index === 0}
+                            onClick={() => moveEffect(effect.id, -1)}
+                          >↑</button>
+                          <button
+                            type="button"
+                            aria-label={'Move ' + definition.name + ' down'}
+                            disabled={index === effects.length - 1}
+                            onClick={() => moveEffect(effect.id, 1)}
+                          >↓</button>
+                          <button
+                            type="button"
+                            aria-label={'Remove ' + definition.name}
+                            onClick={() => removeEffect(effect.id)}
+                          >×</button>
+                        </div>
+                      </div>
+
+                      <p>{definition.description}</p>
+
+                      <div className="effect-row-controls">
+                        <label>
+                          <span>Target</span>
+                          <select
+                            aria-label={definition.name + ' target'}
+                            value={effect.target}
+                            disabled={definition.targets.length === 1}
+                            onChange={(event) => updateEffect(effect.id, {
+                              target: event.target.value as VisualTarget,
+                            })}
+                          >
+                            {definition.targets.map((target) => (
+                              <option key={target} value={target}>{target}</option>
+                            ))}
+                          </select>
+                        </label>
+
+                        <label>
+                          <span>Driver</span>
+                          <select
+                            aria-label={definition.name + ' driver'}
+                            value={modulation?.driver ?? 'static'}
+                            onChange={(event) => setEffectDriver(
+                              effect,
+                              event.target.value as ModulationDriver | 'static',
+                            )}
+                          >
+                            <option value="static">Static</option>
+                            {definition.drivers.map((driver) => (
+                              <option key={driver} value={driver}>{driver}</option>
+                            ))}
+                          </select>
+                        </label>
+                      </div>
+
+                      <label className="range-control effect-strength">
+                        <span>
+                          <span>Strength</span>
+                          <output>{Math.round(effect.strength * 100)}%</output>
+                        </span>
+                        <input
+                          aria-label={definition.name + ' strength'}
+                          type="range"
+                          min={0}
+                          max={1}
+                          step={0.05}
+                          value={effect.strength}
+                          onChange={(event) => updateEffect(effect.id, {
+                            strength: Number(event.target.value),
+                          })}
+                        />
+                      </label>
+                    </article>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
           <div className="control-group">
             <h3>Text</h3>
             <SelectControl
