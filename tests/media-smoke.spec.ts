@@ -100,7 +100,19 @@ test('keeps the interface responsive while preparing a longer beat', async ({ pa
   });
 
   await expect(page.getByText(/Audio ready/)).toBeVisible({ timeout: 30_000 });
-  await page.waitForTimeout(750);
+
+  // setInputFiles has to copy the generated 10 MB fixture into the browser and
+  // can itself stall the CI runner. Reset the heartbeat after decode so this
+  // assertion measures our JavaScript waveform/envelope/beat preparation.
+  await page.evaluate(() => {
+    const state = (window as Window & {
+      __audioLagState?: { last: number; maxLag: number; timer: number };
+    }).__audioLagState;
+    if (!state) return;
+    state.last = performance.now();
+    state.maxLag = 0;
+  });
+  await page.waitForTimeout(1_200);
 
   const maxLag = await page.evaluate(() => {
     const state = (window as Window & {
@@ -111,6 +123,6 @@ test('keeps the interface responsive while preparing a longer beat', async ({ pa
     return state.maxLag;
   });
 
-  expect(maxLag).toBeLessThan(500);
+  expect(maxLag).toBeLessThan(250);
   await expect(page.getByTestId('analysis-card')).toBeVisible();
 });
