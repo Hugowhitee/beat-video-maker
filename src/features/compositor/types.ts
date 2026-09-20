@@ -1,6 +1,7 @@
 import type { VerifiedGrid } from '../analysis/types';
 
 export type BrandPosition = 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right';
+export type BrandLayout = 'corner' | 'grid';
 export type TitlePosition = 'top-left' | 'bottom-left' | 'bottom-center';
 export type TitleFont = 'clean' | 'condensed' | 'serif' | 'mono';
 export type VisualPreset = 'clean' | 'ambient' | 'reactive' | 'pulse' | 'visualizer';
@@ -14,6 +15,7 @@ export type CompositionSettings = {
   titleTracking: number;
   brandText: string;
   brandGraphic: CanvasImageSource | null;
+  brandLayout: BrandLayout;
   brandPosition: BrandPosition;
   brandOpacity: number;
   preset: VisualPreset;
