@@ -1403,7 +1403,7 @@ function App() {
               <p className="control-hint">Add effects by target. Order matters within the same target.</p>
             ) : (
               <div className="effect-stack" data-testid="effect-stack">
-                {effects.map((effect, index) => {
+                {effects.map((effect) => {
                   const definition = effectDefinition(effect.type);
                   const modulation = modulations.find((candidate) => candidate.effectId === effect.id) ?? null;
                   return (
