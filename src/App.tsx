@@ -1,13 +1,17 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import type { ChangeEvent, PointerEvent as ReactPointerEvent } from 'react';
+import type {
+  ChangeEvent,
+  MouseEvent as ReactMouseEvent,
+  PointerEvent as ReactPointerEvent,
+} from 'react';
 import { renderComposition } from './features/compositor/renderComposition';
 import type {
   BrandLayout,
   BrandPosition,
   CompositionSettings,
   MotionAmount,
+  TitleAlign,
   TitleFont,
-  TitlePosition,
   VisualPreset,
 } from './features/compositor/types';
 import {
@@ -38,6 +42,20 @@ import {
   loadUserSettings,
   saveUserSettings,
 } from './features/project/settings';
+import type { UserSettings } from './features/project/settings';
+import {
+  createTemplate,
+  parseTemplate,
+  safeTemplateName,
+  serializeTemplate,
+  settingsFromTemplate,
+} from './features/project/template';
+import {
+  placementFromPoint,
+  placementPreset,
+  TITLE_PLACEMENT_KEYS,
+} from './features/project/titlePlacement';
+import type { TitlePlacementKey } from './features/project/titlePlacement';
 
 const fixtureMode = new URLSearchParams(window.location.search).has('fixture');
 const storedSettings = fixtureMode ? DEFAULT_USER_SETTINGS : loadUserSettings();
@@ -58,7 +76,9 @@ type BeforeInstallPromptEvent = Event & {
 type EditorSnapshot = {
   title: string;
   titleSize: number;
-  titlePosition: TitlePosition;
+  titleX: number;
+  titleY: number;
+  titleAlign: TitleAlign;
   titleFont: TitleFont;
   titleTracking: number;
   brandText: string;
@@ -142,7 +162,9 @@ function App() {
   const [peaks, setPeaks] = useState<number[]>([]);
   const [title, setTitle] = useState(fixtureMode ? 'MIDNIGHT STATIC' : '');
   const [titleSize, setTitleSize] = useState(storedSettings.titleSize);
-  const [titlePosition, setTitlePosition] = useState<TitlePosition>(storedSettings.titlePosition);
+  const [titleX, setTitleX] = useState(storedSettings.titleX);
+  const [titleY, setTitleY] = useState(storedSettings.titleY);
+  const [titleAlign, setTitleAlign] = useState<TitleAlign>(storedSettings.titleAlign);
   const [titleFont, setTitleFont] = useState<TitleFont>(storedSettings.titleFont);
   const [titleTracking, setTitleTracking] = useState(storedSettings.titleTracking);
   const [brandText, setBrandText] = useState(fixtureMode ? 'prod. usolido' : storedSettings.brandText);
@@ -150,6 +172,9 @@ function App() {
   const [brandPosition, setBrandPosition] = useState<BrandPosition>(storedSettings.brandPosition);
   const [brandOpacity, setBrandOpacity] = useState(storedSettings.brandOpacity);
   const [showGuides, setShowGuides] = useState(false);
+  const [showGrid, setShowGrid] = useState(false);
+  const [placingTitle, setPlacingTitle] = useState(false);
+  const [templateMessage, setTemplateMessage] = useState('');
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [mediaMessage, setMediaMessage] = useState('');
@@ -191,7 +216,9 @@ function App() {
   const editorSnapshot = useMemo<EditorSnapshot>(() => ({
     title,
     titleSize,
-    titlePosition,
+    titleX,
+    titleY,
+    titleAlign,
     titleFont,
     titleTracking,
     brandText,
@@ -204,7 +231,7 @@ function App() {
     barOffset: manualBarOffset,
   }), [
     brandLayout, brandOpacity, brandPosition, brandText, manualBarOffset, manualBpm, motion, preset,
-    title, titleFont, titlePosition, titleSize, titleTracking,
+    title, titleAlign, titleFont, titleSize, titleTracking, titleX, titleY,
   ]);
 
   useEffect(() => {
@@ -230,7 +257,9 @@ function App() {
   const applyEditorSnapshot = useCallback((snapshot: EditorSnapshot) => {
     setTitle(snapshot.title);
     setTitleSize(snapshot.titleSize);
-    setTitlePosition(snapshot.titlePosition);
+    setTitleX(snapshot.titleX);
+    setTitleY(snapshot.titleY);
+    setTitleAlign(snapshot.titleAlign);
     setTitleFont(snapshot.titleFont);
     setTitleTracking(snapshot.titleTracking);
     setBrandText(snapshot.brandText);
@@ -265,10 +294,30 @@ function App() {
     setHistoryState({ canUndo: true, canRedo: history.redo.length > 0 });
   }, [applyEditorSnapshot, editorSnapshot]);
 
+  const authoringSettings: UserSettings = useMemo(() => ({
+    titleSize,
+    titleX,
+    titleY,
+    titleAlign,
+    titleFont,
+    titleTracking,
+    brandText,
+    brandLayout,
+    brandPosition,
+    brandOpacity,
+    preset,
+    motion,
+  }), [
+    brandLayout, brandOpacity, brandPosition, brandText, motion, preset,
+    titleAlign, titleFont, titleSize, titleTracking, titleX, titleY,
+  ]);
+
   const settings: CompositionSettings = useMemo(() => ({
     title,
     titleSize,
-    titlePosition,
+    titleX,
+    titleY,
+    titleAlign,
     titleFont,
     titleTracking,
     brandText,
@@ -279,10 +328,13 @@ function App() {
     preset,
     motion,
     showGuides,
+    showGrid,
   }), [
     title,
     titleSize,
-    titlePosition,
+    titleX,
+    titleY,
+    titleAlign,
     titleFont,
     titleTracking,
     brandText,
@@ -293,6 +345,7 @@ function App() {
     preset,
     motion,
     showGuides,
+    showGrid,
   ]);
 
   useEffect(() => {
@@ -328,36 +381,15 @@ function App() {
 
   useEffect(() => {
     if (fixtureMode) return;
-
-    saveUserSettings({
-      titleSize,
-      titlePosition,
-      titleFont,
-      titleTracking,
-      brandText,
-      brandLayout,
-      brandPosition,
-      brandOpacity,
-      preset,
-      motion,
-    });
-  }, [
-    brandLayout,
-    brandOpacity,
-    brandPosition,
-    brandText,
-    motion,
-    preset,
-    titleFont,
-    titlePosition,
-    titleSize,
-    titleTracking,
-  ]);
+    saveUserSettings(authoringSettings);
+  }, [authoringSettings]);
 
   const resetStyle = () => {
     clearUserSettings();
     setTitleSize(DEFAULT_USER_SETTINGS.titleSize);
-    setTitlePosition(DEFAULT_USER_SETTINGS.titlePosition);
+    setTitleX(DEFAULT_USER_SETTINGS.titleX);
+    setTitleY(DEFAULT_USER_SETTINGS.titleY);
+    setTitleAlign(DEFAULT_USER_SETTINGS.titleAlign);
     setTitleFont(DEFAULT_USER_SETTINGS.titleFont);
     setTitleTracking(DEFAULT_USER_SETTINGS.titleTracking);
     setBrandText(DEFAULT_USER_SETTINGS.brandText);
