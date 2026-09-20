@@ -446,10 +446,15 @@ function App() {
     }
   };
 
-  const handleCanvasClick = (event: ReactMouseEvent<HTMLCanvasElement>) => {
-    if (!placingTitle) return;
+  const handlePreviewClick = (event: ReactMouseEvent<HTMLDivElement>) => {
+    if (!placingTitle) {
+      void togglePlayback();
+      return;
+    }
 
-    const rect = event.currentTarget.getBoundingClientRect();
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const rect = canvas.getBoundingClientRect();
     const placement = placementFromPoint(event.clientX, event.clientY, rect);
     setTitleX(placement.x);
     setTitleY(placement.y);
@@ -1011,7 +1016,11 @@ function App() {
             </div>
           </div>
 
-          <div className="canvas-shell">
+          <div
+            className="canvas-shell"
+            data-testid="preview-shell"
+            onClick={handlePreviewClick}
+          >
             <canvas
               ref={canvasRef}
               data-testid="preview-canvas"
@@ -1019,10 +1028,6 @@ function App() {
               width={1280}
               height={720}
               aria-label={placingTitle ? 'Click to place title' : '16 by 9 video preview'}
-              onClick={(event) => {
-                if (placingTitle) handleCanvasClick(event);
-                else void togglePlayback();
-              }}
             />
             {placingTitle ? (
               <div className="canvas-placement-hint" data-testid="title-placement-hint">
@@ -1469,7 +1474,7 @@ function App() {
               </label>
             </div>
             {templateMessage ? (
-              <p className="template-message" role="status">{templateMessage}</p>
+              <p className="template-message" data-testid="template-message" role="status">{templateMessage}</p>
             ) : null}
             <button type="button" className="link-button" data-testid="reset-settings" onClick={resetStyle}>
               Reset style defaults
