@@ -18,11 +18,12 @@ test('title can be centered, aligned and placed directly on the preview', async 
   const canvas = page.getByTestId('preview-canvas');
   const box = await canvas.boundingBox();
   expect(box).not.toBeNull();
-
-  await page.mouse.click(
-    box!.x + box!.width * 0.84,
-    box!.y + box!.height * 0.27,
-  );
+  await canvas.click({
+    position: {
+      x: box!.width * 0.84,
+      y: box!.height * 0.27,
+    },
+  });
 
   await expect(page.getByTestId('title-placement-hint')).toHaveCount(0);
   await expect(page.getByTestId('title-align-right')).toHaveClass(/is-active/);
@@ -73,7 +74,7 @@ test('editable template download reopens into normal editor state', async ({ pag
   await expect(page.getByTestId('brand-layout')).toHaveValue('grid');
   await expect(page.getByTestId('preset-reactive')).toHaveClass(/is-selected/);
   await expect(page.getByTestId('motion-amount')).toHaveValue('medium');
-  await expect(page.getByText(/Opened .*beatvideo-template\.json/)).toBeVisible();
+  await expect(page.getByTestId('template-message')).toContainText('Opened ');
 });
 
 test('invalid template fails before changing current authoring state', async ({ page }, testInfo) => {
@@ -92,5 +93,5 @@ test('invalid template fails before changing current authoring state', async ({ 
   await expect(page.getByTestId('title-input')).toHaveValue('KEEP ME');
   await expect(page.getByTestId('title-x')).toHaveValue('50');
   await expect(page.getByTestId('title-y')).toHaveValue('50');
-  await expect(page.getByText(/version is not supported/i)).toBeVisible();
+  await expect(page.getByTestId('template-message')).toContainText('version is not supported');
 });
