@@ -69,6 +69,13 @@ import type {
   VisualEffectInstance,
   VisualTarget,
 } from './features/effects/types';
+import {
+  moveEffect as moveEffectInStack,
+  removeEffect as removeEffectFromStack,
+  setEffectEnabled,
+  setEffectStrength,
+  setEffectTarget,
+} from './features/effects/stack';
 
 const fixtureMode = new URLSearchParams(window.location.search).has('fixture');
 const storedSettings = fixtureMode ? DEFAULT_USER_SETTINGS : loadUserSettings();
@@ -450,28 +457,16 @@ function App() {
     }
   };
 
-  const updateEffect = (
-    effectId: string,
-    update: Partial<Pick<VisualEffectInstance, 'enabled' | 'strength' | 'target'>>,
-  ) => {
-    setEffects((current) => current.map((effect) =>
-      effect.id === effectId ? { ...effect, ...update } : effect
-    ));
-  };
-
   const removeEffect = (effectId: string) => {
-    setEffects((current) => current.filter((effect) => effect.id !== effectId));
+    setEffects((current) => removeEffectFromStack(current, effectId));
     setModulations((current) => current.filter((modulation) => modulation.effectId !== effectId));
   };
 
   const moveEffect = (effectId: string, direction: -1 | 1) => {
     setEffects((current) => {
       const index = current.findIndex((effect) => effect.id === effectId);
-      const nextIndex = index + direction;
-      if (index < 0 || nextIndex < 0 || nextIndex >= current.length) return current;
-      const next = [...current];
-      [next[index], next[nextIndex]] = [next[nextIndex], next[index]];
-      return next;
+      if (index < 0) return current;
+      return moveEffectInStack(current, effectId, index + direction);
     });
   };
 
@@ -1426,7 +1421,9 @@ function App() {
                             type="checkbox"
                             checked={effect.enabled}
                             aria-label={'Enable ' + definition.name}
-                            onChange={(event) => updateEffect(effect.id, { enabled: event.target.checked })}
+                            onChange={(event) => setEffects((current) =>
+                              setEffectEnabled(current, effect.id, event.target.checked)
+                            )}
                           />
                           <span>{definition.name}</span>
                         </label>
@@ -1460,9 +1457,9 @@ function App() {
                             aria-label={definition.name + ' target'}
                             value={effect.target}
                             disabled={definition.targets.length === 1}
-                            onChange={(event) => updateEffect(effect.id, {
-                              target: event.target.value as VisualTarget,
-                            })}
+                            onChange={(event) => setEffects((current) =>
+                              setEffectTarget(current, effect.id, event.target.value as VisualTarget)
+                            )}
                           >
                             {definition.targets.map((target) => (
                               <option key={target} value={target}>{target}</option>
@@ -1500,9 +1497,9 @@ function App() {
                           max={1}
                           step={0.05}
                           value={effect.strength}
-                          onChange={(event) => updateEffect(effect.id, {
-                            strength: Number(event.target.value),
-                          })}
+                          onChange={(event) => setEffects((current) =>
+                            setEffectStrength(current, effect.id, Number(event.target.value))
+                          )}
                         />
                       </label>
                     </article>
