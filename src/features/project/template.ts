@@ -183,6 +183,7 @@ function parseModulations(
 
   const effectById = new Map(effects.map((effect) => [effect.id, effect]));
   const ids = new Set<string>();
+  const effectParameters = new Set<string>();
 
   return input.map((raw, index) => {
     const modulation = requireObject(raw, 'Modulation ' + (index + 1));
@@ -202,6 +203,12 @@ function parseModulations(
     if (!effectDefinition(effect.type).drivers.includes(driver)) {
       throw new Error(effectDefinition(effect.type).name + ' does not support that modulation.');
     }
+
+    const effectParameter = effect.id + ':strength';
+    if (effectParameters.has(effectParameter)) {
+      throw new Error('Only one strength modulation is supported per effect.');
+    }
+    effectParameters.add(effectParameter);
 
     return {
       id,
