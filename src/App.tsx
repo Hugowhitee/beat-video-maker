@@ -1085,7 +1085,7 @@ function App() {
               <p className="control-hint">Grid repeats the text subtly across the sharp cover. Uploaded graphics stay available for Corner.</p>
             )}
             <label className="range-control">
-              <span><span>Opacity</span><output>{Math.round(brandOpacity * 100)}%</output></span>
+              <span><span>{brandLayout === 'grid' ? 'Grid strength' : 'Opacity'}</span><output>{Math.round(brandOpacity * 100)}%</output></span>
               <input
                 data-testid="brand-opacity"
                 type="range"
