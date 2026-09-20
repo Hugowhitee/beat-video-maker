@@ -178,19 +178,34 @@ function fitText(
   return size;
 }
 
+function titleMaxWidth(frame: CompositionFrame) {
+  const { width } = frame;
+  const x = Math.max(0.02, Math.min(0.98, frame.settings.titleX)) * width;
+  const edge = width * SAFE_X;
+
+  if (frame.settings.titleAlign === 'left') {
+    return Math.max(width * 0.18, width - edge - x);
+  }
+  if (frame.settings.titleAlign === 'right') {
+    return Math.max(width * 0.18, x - edge);
+  }
+  return Math.max(
+    width * 0.18,
+    Math.min(x - edge, width - edge - x) * 2,
+  );
+}
+
 function drawTitle(ctx: Context2D, frame: CompositionFrame) {
   const text = frame.settings.title.trim();
   if (!text) return;
 
   const { width, height } = frame;
-  const safeX = width * SAFE_X;
-  const safeY = height * SAFE_Y;
   const preferred = frame.settings.titleSize * (height / 720);
   const tracking = frame.settings.titleTracking * (height / 720);
   const size = fitText(
     ctx,
     text,
-    width * 0.76,
+    titleMaxWidth(frame),
     preferred,
     26 * (height / 720),
     frame.settings.titleFont,
@@ -204,22 +219,25 @@ function drawTitle(ctx: Context2D, frame: CompositionFrame) {
     phraseAccent = Math.max(0, 1 - distance / 0.035);
   }
 
+  const x = Math.max(0.02, Math.min(0.98, frame.settings.titleX)) * width;
+  const y = Math.max(0.06, Math.min(0.94, frame.settings.titleY)) * height;
+
   ctx.save();
   ctx.font = titleFont(frame.settings.titleFont, size);
   ctx.fillStyle = '#f5f4ef';
   ctx.globalAlpha = 0.94 + phraseAccent * 0.06;
-  ctx.textBaseline = 'alphabetic';
+  ctx.textBaseline = 'middle';
   ctx.shadowColor = 'rgba(0,0,0,0.72)';
   ctx.shadowBlur = size * (0.17 + phraseAccent * 0.06);
   ctx.shadowOffsetY = size * 0.04;
-
-  if (frame.settings.titlePosition === 'top-left') {
-    drawTrackedText(ctx, text, safeX, safeY + size, tracking, 'left');
-  } else if (frame.settings.titlePosition === 'bottom-center') {
-    drawTrackedText(ctx, text, width / 2, height - safeY, tracking, 'center');
-  } else {
-    drawTrackedText(ctx, text, safeX, height - safeY, tracking, 'left');
-  }
+  drawTrackedText(
+    ctx,
+    text,
+    x,
+    y,
+    tracking,
+    frame.settings.titleAlign,
+  );
   ctx.restore();
 }
 
@@ -373,10 +391,16 @@ function drawMinimalVisualizer(ctx: Context2D, frame: CompositionFrame) {
   ctx.restore();
 }
 
-function drawGuides(ctx: Context2D, width: number, height: number) {
+function drawGuides(
+  ctx: Context2D,
+  width: number,
+  height: number,
+  showGrid: boolean,
+) {
   ctx.save();
-  ctx.strokeStyle = 'rgba(255,255,255,0.26)';
   ctx.lineWidth = Math.max(1, width / 1100);
+
+  ctx.strokeStyle = 'rgba(255,255,255,0.34)';
   ctx.setLineDash([width / 160, width / 240]);
   ctx.strokeRect(
     width * SAFE_X,
@@ -384,6 +408,35 @@ function drawGuides(ctx: Context2D, width: number, height: number) {
     width * (1 - SAFE_X * 2),
     height * (1 - SAFE_Y * 2),
   );
+
+  if (showGrid) {
+    ctx.setLineDash([]);
+    ctx.strokeStyle = 'rgba(255,255,255,0.16)';
+
+    for (const fraction of [1 / 3, 2 / 3]) {
+      ctx.beginPath();
+      ctx.moveTo(width * fraction, height * SAFE_Y);
+      ctx.lineTo(width * fraction, height * (1 - SAFE_Y));
+      ctx.stroke();
+
+      ctx.beginPath();
+      ctx.moveTo(width * SAFE_X, height * fraction);
+      ctx.lineTo(width * (1 - SAFE_X), height * fraction);
+      ctx.stroke();
+    }
+
+    ctx.strokeStyle = 'rgba(255,255,255,0.28)';
+    ctx.beginPath();
+    ctx.moveTo(width / 2, height * SAFE_Y);
+    ctx.lineTo(width / 2, height * (1 - SAFE_Y));
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.moveTo(width * SAFE_X, height / 2);
+    ctx.lineTo(width * (1 - SAFE_X), height / 2);
+    ctx.stroke();
+  }
+
   ctx.restore();
 }
 
@@ -431,5 +484,7 @@ export function renderComposition(ctx: Context2D, frame: CompositionFrame) {
   drawTitle(ctx, frame);
   drawBrand(ctx, frame);
   drawMinimalVisualizer(ctx, frame);
-  if (frame.settings.showGuides) drawGuides(ctx, width, height);
+  if (frame.settings.showGuides || frame.settings.showGrid) {
+    drawGuides(ctx, width, height, frame.settings.showGrid);
+  }
 }

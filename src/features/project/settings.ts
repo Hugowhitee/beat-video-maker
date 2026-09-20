@@ -2,16 +2,20 @@ import type {
   BrandLayout,
   BrandPosition,
   MotionAmount,
+  TitleAlign,
   TitleFont,
-  TitlePosition,
   VisualPreset,
 } from '../compositor/types';
 
 const STORAGE_KEY = 'beatvideo-maker:settings:v1';
 
+type LegacyTitlePosition = 'top-left' | 'bottom-left' | 'bottom-center';
+
 export type UserSettings = {
   titleSize: number;
-  titlePosition: TitlePosition;
+  titleX: number;
+  titleY: number;
+  titleAlign: TitleAlign;
   titleFont: TitleFont;
   titleTracking: number;
   brandText: string;
@@ -24,7 +28,9 @@ export type UserSettings = {
 
 export const DEFAULT_USER_SETTINGS: UserSettings = {
   titleSize: 58,
-  titlePosition: 'bottom-left',
+  titleX: 0.055,
+  titleY: 0.88,
+  titleAlign: 'left',
   titleFont: 'clean',
   titleTracking: 1,
   brandText: '',
@@ -35,7 +41,7 @@ export const DEFAULT_USER_SETTINGS: UserSettings = {
   motion: 'low',
 };
 
-const titlePositions = new Set<TitlePosition>(['top-left', 'bottom-left', 'bottom-center']);
+const titleAligns = new Set<TitleAlign>(['left', 'center', 'right']);
 const titleFonts = new Set<TitleFont>(['clean', 'condensed', 'serif', 'mono']);
 const brandLayouts = new Set<BrandLayout>(['corner', 'grid']);
 const brandPositions = new Set<BrandPosition>(['top-left', 'top-right', 'bottom-left', 'bottom-right']);
@@ -48,19 +54,34 @@ function numberInRange(value: unknown, minimum: number, maximum: number, fallbac
     : fallback;
 }
 
+function legacyPlacement(position: unknown) {
+  if (position === 'top-left') {
+    return { titleX: 0.055, titleY: 0.14, titleAlign: 'left' as const };
+  }
+  if (position === 'bottom-center') {
+    return { titleX: 0.5, titleY: 0.88, titleAlign: 'center' as const };
+  }
+  return { titleX: 0.055, titleY: 0.88, titleAlign: 'left' as const };
+}
+
 export function loadUserSettings(): UserSettings {
   if (typeof localStorage === 'undefined') return DEFAULT_USER_SETTINGS;
 
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return DEFAULT_USER_SETTINGS;
-    const parsed = JSON.parse(raw) as Partial<UserSettings>;
+    const parsed = JSON.parse(raw) as Partial<UserSettings> & {
+      titlePosition?: LegacyTitlePosition;
+    };
+    const legacy = legacyPlacement(parsed.titlePosition);
 
     return {
       titleSize: numberInRange(parsed.titleSize, 36, 86, DEFAULT_USER_SETTINGS.titleSize),
-      titlePosition: titlePositions.has(parsed.titlePosition as TitlePosition)
-        ? parsed.titlePosition as TitlePosition
-        : DEFAULT_USER_SETTINGS.titlePosition,
+      titleX: numberInRange(parsed.titleX, 0.02, 0.98, legacy.titleX),
+      titleY: numberInRange(parsed.titleY, 0.06, 0.94, legacy.titleY),
+      titleAlign: titleAligns.has(parsed.titleAlign as TitleAlign)
+        ? parsed.titleAlign as TitleAlign
+        : legacy.titleAlign,
       titleFont: titleFonts.has(parsed.titleFont as TitleFont)
         ? parsed.titleFont as TitleFont
         : DEFAULT_USER_SETTINGS.titleFont,

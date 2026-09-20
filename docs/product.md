@@ -201,3 +201,26 @@ A separate manual **Full export smoke** workflow owns sustained-duration validat
 Real-user beat analysis quality still benefits from a ground-truth FL Studio corpus; do not invent such evidence from synthetic fixtures. Confidence gating and manual BPM/bar-1 correction remain the safety net until that corpus exists.
 
 New work must preserve the single compositor, analysis and export owners.
+
+
+## Title layout and templates
+
+Title layout uses one canonical free-position model:
+
+- normalized X/Y coordinates;
+- left / center / right text alignment;
+- title size/font/tracking;
+- 3×3 quick-position buttons that simply write sensible X/Y/alignment values;
+- a one-shot **Place on canvas** interaction for direct positioning;
+- optional safe-area + rule-of-thirds/center guides while authoring.
+
+Guide overlays are preview-only. Video export must explicitly render with guides/grid disabled.
+
+Editable authoring presets are real local files: `.beatvideo-template.json`.
+
+The v1 template schema contains:
+- title text and title layout/style;
+- producer/watermark text settings;
+- visual preset and motion amount.
+
+It intentionally does **not** contain source image/audio/video data or binary watermark graphics. Template import validates the full versioned schema before applying anything; invalid or future-version files fail without partially changing the project. Once opened, every template value remains normal editable state.

@@ -8,6 +8,7 @@ test('style preferences persist locally and reset cleanly', async ({ page }, tes
   await page.getByTestId('brand-layout').selectOption('grid');
   await page.getByTestId('preset-ambient').click();
   await page.getByTestId('title-font').selectOption('serif');
+  await page.getByTestId('title-position-center').click();
   await page.getByTestId('motion-amount').selectOption('medium');
 
   await page.reload();
@@ -16,6 +17,9 @@ test('style preferences persist locally and reset cleanly', async ({ page }, tes
   await expect(page.getByTestId('brand-layout')).toHaveValue('grid');
   await expect(page.getByTestId('preset-ambient')).toHaveClass(/is-selected/);
   await expect(page.getByTestId('title-font')).toHaveValue('serif');
+  await expect(page.getByTestId('title-x')).toHaveValue('50');
+  await expect(page.getByTestId('title-y')).toHaveValue('50');
+  await expect(page.getByTestId('title-align-center')).toHaveClass(/is-active/);
   await expect(page.getByTestId('motion-amount')).toHaveValue('medium');
 
   await page.getByTestId('reset-settings').click();
@@ -25,6 +29,9 @@ test('style preferences persist locally and reset cleanly', async ({ page }, tes
   await expect(page.getByTestId('brand-layout')).toHaveValue('corner');
   await expect(page.getByTestId('preset-clean')).toHaveClass(/is-selected/);
   await expect(page.getByTestId('title-font')).toHaveValue('clean');
+  await expect(page.getByTestId('title-x')).toHaveValue('5.5');
+  await expect(page.getByTestId('title-y')).toHaveValue('88');
+  await expect(page.getByTestId('title-align-left')).toHaveClass(/is-active/);
   await expect(page.getByTestId('motion-amount')).toHaveValue('low');
 });
 

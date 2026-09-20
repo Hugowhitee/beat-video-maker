@@ -1,13 +1,17 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import type { ChangeEvent, PointerEvent as ReactPointerEvent } from 'react';
+import type {
+  ChangeEvent,
+  MouseEvent as ReactMouseEvent,
+  PointerEvent as ReactPointerEvent,
+} from 'react';
 import { renderComposition } from './features/compositor/renderComposition';
 import type {
   BrandLayout,
   BrandPosition,
   CompositionSettings,
   MotionAmount,
+  TitleAlign,
   TitleFont,
-  TitlePosition,
   VisualPreset,
 } from './features/compositor/types';
 import {
@@ -38,6 +42,20 @@ import {
   loadUserSettings,
   saveUserSettings,
 } from './features/project/settings';
+import type { UserSettings } from './features/project/settings';
+import {
+  createTemplate,
+  parseTemplate,
+  safeTemplateName,
+  serializeTemplate,
+  settingsFromTemplate,
+} from './features/project/template';
+import {
+  placementFromPoint,
+  placementPreset,
+  TITLE_PLACEMENT_KEYS,
+} from './features/project/titlePlacement';
+import type { TitlePlacementKey } from './features/project/titlePlacement';
 
 const fixtureMode = new URLSearchParams(window.location.search).has('fixture');
 const storedSettings = fixtureMode ? DEFAULT_USER_SETTINGS : loadUserSettings();
@@ -58,7 +76,9 @@ type BeforeInstallPromptEvent = Event & {
 type EditorSnapshot = {
   title: string;
   titleSize: number;
-  titlePosition: TitlePosition;
+  titleX: number;
+  titleY: number;
+  titleAlign: TitleAlign;
   titleFont: TitleFont;
   titleTracking: number;
   brandText: string;
@@ -142,7 +162,9 @@ function App() {
   const [peaks, setPeaks] = useState<number[]>([]);
   const [title, setTitle] = useState(fixtureMode ? 'MIDNIGHT STATIC' : '');
   const [titleSize, setTitleSize] = useState(storedSettings.titleSize);
-  const [titlePosition, setTitlePosition] = useState<TitlePosition>(storedSettings.titlePosition);
+  const [titleX, setTitleX] = useState(storedSettings.titleX);
+  const [titleY, setTitleY] = useState(storedSettings.titleY);
+  const [titleAlign, setTitleAlign] = useState<TitleAlign>(storedSettings.titleAlign);
   const [titleFont, setTitleFont] = useState<TitleFont>(storedSettings.titleFont);
   const [titleTracking, setTitleTracking] = useState(storedSettings.titleTracking);
   const [brandText, setBrandText] = useState(fixtureMode ? 'prod. usolido' : storedSettings.brandText);
@@ -150,6 +172,9 @@ function App() {
   const [brandPosition, setBrandPosition] = useState<BrandPosition>(storedSettings.brandPosition);
   const [brandOpacity, setBrandOpacity] = useState(storedSettings.brandOpacity);
   const [showGuides, setShowGuides] = useState(false);
+  const [showGrid, setShowGrid] = useState(false);
+  const [placingTitle, setPlacingTitle] = useState(false);
+  const [templateMessage, setTemplateMessage] = useState('');
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [mediaMessage, setMediaMessage] = useState('');
@@ -191,7 +216,9 @@ function App() {
   const editorSnapshot = useMemo<EditorSnapshot>(() => ({
     title,
     titleSize,
-    titlePosition,
+    titleX,
+    titleY,
+    titleAlign,
     titleFont,
     titleTracking,
     brandText,
@@ -204,7 +231,7 @@ function App() {
     barOffset: manualBarOffset,
   }), [
     brandLayout, brandOpacity, brandPosition, brandText, manualBarOffset, manualBpm, motion, preset,
-    title, titleFont, titlePosition, titleSize, titleTracking,
+    title, titleAlign, titleFont, titleSize, titleTracking, titleX, titleY,
   ]);
 
   useEffect(() => {
@@ -230,7 +257,9 @@ function App() {
   const applyEditorSnapshot = useCallback((snapshot: EditorSnapshot) => {
     setTitle(snapshot.title);
     setTitleSize(snapshot.titleSize);
-    setTitlePosition(snapshot.titlePosition);
+    setTitleX(snapshot.titleX);
+    setTitleY(snapshot.titleY);
+    setTitleAlign(snapshot.titleAlign);
     setTitleFont(snapshot.titleFont);
     setTitleTracking(snapshot.titleTracking);
     setBrandText(snapshot.brandText);
@@ -265,10 +294,30 @@ function App() {
     setHistoryState({ canUndo: true, canRedo: history.redo.length > 0 });
   }, [applyEditorSnapshot, editorSnapshot]);
 
+  const authoringSettings: UserSettings = useMemo(() => ({
+    titleSize,
+    titleX,
+    titleY,
+    titleAlign,
+    titleFont,
+    titleTracking,
+    brandText,
+    brandLayout,
+    brandPosition,
+    brandOpacity,
+    preset,
+    motion,
+  }), [
+    brandLayout, brandOpacity, brandPosition, brandText, motion, preset,
+    titleAlign, titleFont, titleSize, titleTracking, titleX, titleY,
+  ]);
+
   const settings: CompositionSettings = useMemo(() => ({
     title,
     titleSize,
-    titlePosition,
+    titleX,
+    titleY,
+    titleAlign,
     titleFont,
     titleTracking,
     brandText,
@@ -279,10 +328,13 @@ function App() {
     preset,
     motion,
     showGuides,
+    showGrid,
   }), [
     title,
     titleSize,
-    titlePosition,
+    titleX,
+    titleY,
+    titleAlign,
     titleFont,
     titleTracking,
     brandText,
@@ -293,6 +345,7 @@ function App() {
     preset,
     motion,
     showGuides,
+    showGrid,
   ]);
 
   useEffect(() => {
@@ -328,36 +381,15 @@ function App() {
 
   useEffect(() => {
     if (fixtureMode) return;
-
-    saveUserSettings({
-      titleSize,
-      titlePosition,
-      titleFont,
-      titleTracking,
-      brandText,
-      brandLayout,
-      brandPosition,
-      brandOpacity,
-      preset,
-      motion,
-    });
-  }, [
-    brandLayout,
-    brandOpacity,
-    brandPosition,
-    brandText,
-    motion,
-    preset,
-    titleFont,
-    titlePosition,
-    titleSize,
-    titleTracking,
-  ]);
+    saveUserSettings(authoringSettings);
+  }, [authoringSettings]);
 
   const resetStyle = () => {
     clearUserSettings();
     setTitleSize(DEFAULT_USER_SETTINGS.titleSize);
-    setTitlePosition(DEFAULT_USER_SETTINGS.titlePosition);
+    setTitleX(DEFAULT_USER_SETTINGS.titleX);
+    setTitleY(DEFAULT_USER_SETTINGS.titleY);
+    setTitleAlign(DEFAULT_USER_SETTINGS.titleAlign);
     setTitleFont(DEFAULT_USER_SETTINGS.titleFont);
     setTitleTracking(DEFAULT_USER_SETTINGS.titleTracking);
     setBrandText(DEFAULT_USER_SETTINGS.brandText);
@@ -366,6 +398,68 @@ function App() {
     setBrandOpacity(DEFAULT_USER_SETTINGS.brandOpacity);
     setPreset(DEFAULT_USER_SETTINGS.preset);
     setMotion(DEFAULT_USER_SETTINGS.motion);
+  };
+
+  const applyTitlePlacement = (key: TitlePlacementKey) => {
+    const placement = placementPreset(key);
+    setTitleX(placement.x);
+    setTitleY(placement.y);
+    setTitleAlign(placement.align);
+  };
+
+  const saveTemplateFile = () => {
+    const template = createTemplate(title, authoringSettings);
+    downloadBlob(
+      new Blob([serializeTemplate(template)], { type: 'application/json' }),
+      safeTemplateName(title),
+    );
+    setTemplateMessage('Editable template saved.');
+  };
+
+  const handleTemplate = async (file: File) => {
+    setTemplateMessage('');
+    try {
+      const parsed = parseTemplate(await file.text());
+      const next = settingsFromTemplate(parsed);
+
+      setTitle(parsed.title.text);
+      setTitleSize(next.titleSize);
+      setTitleX(next.titleX);
+      setTitleY(next.titleY);
+      setTitleAlign(next.titleAlign);
+      setTitleFont(next.titleFont);
+      setTitleTracking(next.titleTracking);
+      setBrandText(next.brandText);
+      setBrandLayout(next.brandLayout);
+      setBrandPosition(next.brandPosition);
+      setBrandOpacity(next.brandOpacity);
+      setPreset(next.preset);
+      setMotion(next.motion);
+      setBrandGraphic(null);
+      setBrandGraphicName('Text only');
+      setPlacingTitle(false);
+      setTemplateMessage('Opened ' + file.name);
+    } catch (error) {
+      setTemplateMessage(
+        error instanceof Error ? error.message : 'Could not open template.',
+      );
+    }
+  };
+
+  const handlePreviewClick = (event: ReactMouseEvent<HTMLDivElement>) => {
+    if (!placingTitle) {
+      void togglePlayback();
+      return;
+    }
+
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const rect = canvas.getBoundingClientRect();
+    const placement = placementFromPoint(event.clientX, event.clientY, rect);
+    setTitleX(placement.x);
+    setTitleY(placement.y);
+    setTitleAlign(placement.align);
+    setPlacingTitle(false);
   };
 
   const resolveGrid = useCallback((): VerifiedGrid | null => {
@@ -902,24 +996,44 @@ function App() {
               <span className="eyebrow">{PRESET_LABELS[preset].toUpperCase()}</span>
               <h1>{title.trim() || 'Untitled beat'}</h1>
             </div>
-            <button
-              className={'guide-toggle ' + (showGuides ? 'is-active' : '')}
-              aria-pressed={showGuides}
-              onClick={() => setShowGuides((value) => !value)}
-            >
-              Safe guides
-            </button>
+            <div className="preview-tools" aria-label="Preview overlays">
+              <button
+                data-testid="safe-guides-toggle"
+                className={'guide-toggle ' + (showGuides ? 'is-active' : '')}
+                aria-pressed={showGuides}
+                onClick={() => setShowGuides((value) => !value)}
+              >
+                Safe
+              </button>
+              <button
+                data-testid="grid-guides-toggle"
+                className={'guide-toggle ' + (showGrid ? 'is-active' : '')}
+                aria-pressed={showGrid}
+                onClick={() => setShowGrid((value) => !value)}
+              >
+                Grid
+              </button>
+            </div>
           </div>
 
-          <div className="canvas-shell">
+          <div
+            className="canvas-shell"
+            data-testid="preview-shell"
+            onClick={handlePreviewClick}
+          >
             <canvas
               ref={canvasRef}
               data-testid="preview-canvas"
+              className={placingTitle ? 'is-placing-title' : ''}
               width={1280}
               height={720}
-              aria-label="16 by 9 video preview"
-              onClick={() => void togglePlayback()}
+              aria-label={placingTitle ? 'Click to place title' : '16 by 9 video preview'}
             />
+            {placingTitle ? (
+              <div className="canvas-placement-hint" data-testid="title-placement-hint">
+                Click the preview to place the title
+              </div>
+            ) : null}
             {!cover && (
               <div className="empty-overlay">
                 <span>Add a cover image</span>
@@ -1195,16 +1309,100 @@ function App() {
                 onChange={(event) => setTitleTracking(Number(event.target.value))}
               />
             </label>
-            <SelectControl
-              label="Title position"
-              value={titlePosition}
-              onChange={setTitlePosition}
-              options={[
-                { value: 'bottom-left', label: 'Bottom left' },
-                { value: 'bottom-center', label: 'Bottom center' },
-                { value: 'top-left', label: 'Top left' },
-              ]}
-            />
+            <div className="title-placement-control">
+              <span className="field-label">Quick position</span>
+              <div className="title-position-grid" data-testid="title-position-grid">
+                {TITLE_PLACEMENT_KEYS.map((key) => {
+                  const placement = placementPreset(key);
+                  const active =
+                    Math.abs(titleX - placement.x) < 0.001
+                    && Math.abs(titleY - placement.y) < 0.001
+                    && titleAlign === placement.align;
+                  return (
+                    <button
+                      key={key}
+                      type="button"
+                      className={active ? 'is-active' : ''}
+                      data-testid={'title-position-' + key}
+                      aria-label={key.replace('-', ' ')}
+                      aria-pressed={active}
+                      onClick={() => applyTitlePlacement(key)}
+                    >
+                      <span />
+                    </button>
+                  );
+                })}
+              </div>
+              <button
+                type="button"
+                className={'small-button place-title-button ' + (placingTitle ? 'is-active' : '')}
+                data-testid="place-title"
+                aria-pressed={placingTitle}
+                onClick={() => {
+                  const nextPlacing = !placingTitle;
+                  setPlacingTitle(nextPlacing);
+                  if (nextPlacing) {
+                    setShowGuides(true);
+                    setShowGrid(true);
+                  }
+                }}
+              >
+                {placingTitle ? 'Cancel placement' : 'Place on canvas'}
+              </button>
+            </div>
+
+            <div className="title-align-control">
+              <span className="field-label">Alignment</span>
+              <div className="segmented-control" aria-label="Title alignment">
+                {(['left', 'center', 'right'] as TitleAlign[]).map((align) => (
+                  <button
+                    key={align}
+                    type="button"
+                    data-testid={'title-align-' + align}
+                    className={titleAlign === align ? 'is-active' : ''}
+                    aria-pressed={titleAlign === align}
+                    onClick={() => setTitleAlign(align)}
+                  >
+                    {align === 'left' ? 'L' : align === 'center' ? 'C' : 'R'}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="coordinate-controls">
+              <label className="compact-coordinate">
+                <span>X</span>
+                <input
+                  data-testid="title-x"
+                  type="number"
+                  min={2}
+                  max={98}
+                  step={0.1}
+                  value={Math.round(titleX * 1000) / 10}
+                  onChange={(event) => {
+                    const value = Number(event.target.value);
+                    if (Number.isFinite(value)) setTitleX(Math.max(0.02, Math.min(0.98, value / 100)));
+                  }}
+                />
+                <em>%</em>
+              </label>
+              <label className="compact-coordinate">
+                <span>Y</span>
+                <input
+                  data-testid="title-y"
+                  type="number"
+                  min={6}
+                  max={94}
+                  step={0.1}
+                  value={Math.round(titleY * 1000) / 10}
+                  onChange={(event) => {
+                    const value = Number(event.target.value);
+                    if (Number.isFinite(value)) setTitleY(Math.max(0.06, Math.min(0.94, value / 100)));
+                  }}
+                />
+                <em>%</em>
+              </label>
+            </div>
           </div>
 
           <div className="control-group">
@@ -1249,8 +1447,35 @@ function App() {
           </div>
 
           <div className="scope-note">
-            <strong>Local preferences</strong>
-            <p>Style and producer settings are saved on this device. Media files are never persisted.</p>
+            <strong>Templates</strong>
+            <p>Save this look as an editable local template. Source media is never embedded.</p>
+            <div className="template-actions">
+              <button
+                type="button"
+                className="small-button"
+                data-testid="save-template"
+                onClick={saveTemplateFile}
+              >
+                Save template
+              </button>
+              <label className="small-button">
+                Open template
+                <input
+                  data-testid="template-input"
+                  className="visually-hidden"
+                  type="file"
+                  accept=".json,application/json"
+                  onChange={(event) => {
+                    const file = event.currentTarget.files?.[0];
+                    if (file) void handleTemplate(file);
+                    event.currentTarget.value = '';
+                  }}
+                />
+              </label>
+            </div>
+            {templateMessage ? (
+              <p className="template-message" data-testid="template-message" role="status">{templateMessage}</p>
+            ) : null}
             <button type="button" className="link-button" data-testid="reset-settings" onClick={resetStyle}>
               Reset style defaults
             </button>

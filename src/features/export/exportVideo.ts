@@ -204,7 +204,7 @@ export async function exportVideo(options: ExportOptions): Promise<EncodedVideo>
     await output.start();
 
     const frameCount = Math.max(1, Math.ceil(audioBuffer.duration * FPS));
-    const exportSettings = { ...settings, showGuides: false };
+    const exportSettings = { ...settings, showGuides: false, showGrid: false };
 
     const feedVideo = async () => {
       for (let frame = 0; frame < frameCount; frame += 1) {

@@ -86,3 +86,20 @@ test('install help is visually reviewable', async ({ page }, testInfo) => {
     fullPage: true,
   });
 });
+
+
+test('centered title and composition grid are visually reviewable', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'desktop-normal', 'Authoring layout uses the normal review viewport.');
+
+  await page.goto('/?fixture=1');
+  await page.getByTestId('title-position-center').click();
+  await page.getByTestId('grid-guides-toggle').click();
+  await page.getByTestId('safe-guides-toggle').click();
+  await expect(page.getByTestId('title-align-center')).toHaveClass(/is-active/);
+
+  await mkdir('artifacts/visual-qa', { recursive: true });
+  await page.screenshot({
+    path: 'artifacts/visual-qa/title-center-grid.png',
+    fullPage: true,
+  });
+});
