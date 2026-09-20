@@ -47,3 +47,14 @@ export function removeEffect(
 ): VisualEffectInstance[] {
   return effects.filter((effect) => effect.id !== effectId);
 }
+
+
+export function setEffectTarget(
+  effects: readonly VisualEffectInstance[],
+  effectId: string,
+  target: VisualEffectInstance['target'],
+): VisualEffectInstance[] {
+  return effects.map((effect) => (
+    effect.id === effectId ? { ...effect, target } : effect
+  ));
+}
