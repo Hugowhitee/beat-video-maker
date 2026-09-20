@@ -1,20 +1,13 @@
 export type AnalysisConfidence = 'high' | 'medium' | 'low';
 
-export type PrimaryBeatEstimate = {
+export type BeatGridAnalysis = {
   bpm: number | null;
   beatOffset: number | null;
   barOffset: number | null;
-  tempoConfidence: number;
-  phaseConfidence: number;
   barConfidence: number;
-  onsetCount: number;
-};
-
-export type BeatGridAnalysis = PrimaryBeatEstimate & {
   confidence: AnalysisConfidence;
-  crossCheckBpm: number | null;
-  crossCheckOffset: number | null;
-  agreement: 'agree' | 'half-double' | 'disagree' | 'unavailable';
+  detector: 'web-audio-beat-detector';
+  segmentBpms: number[];
   notes: string[];
 };
 
