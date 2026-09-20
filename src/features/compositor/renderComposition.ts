@@ -366,7 +366,7 @@ function applyCompositeBlur(
 ) {
   if (radius <= 0.05) return;
   const scratch = getCompositeScratch(width, height);
-  const scratchCtx = scratch.getContext('2d');
+  const scratchCtx = scratch.getContext('2d') as Context2D | null;
   if (!scratchCtx) return;
 
   scratchCtx.clearRect(0, 0, width, height);
