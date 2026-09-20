@@ -11,11 +11,16 @@ test('workspace is visually reviewable at the fixed viewport matrix', async ({ p
 
   const metrics = await page.evaluate(() => {
     const canvas = document.querySelector('[data-testid="preview-canvas"]');
+    const sources = document.querySelector('[aria-label="Sources"]');
+    const inspector = document.querySelector('[aria-label="Inspector"]');
     const rect = canvas?.getBoundingClientRect();
     return {
       bodyWidth: document.body.scrollWidth,
       viewportWidth: window.innerWidth,
       ratio: rect ? rect.width / rect.height : 0,
+      previewWidth: rect?.width || 0,
+      sourcesWidth: sources?.getBoundingClientRect().width || 0,
+      inspectorWidth: inspector?.getBoundingClientRect().width || 0,
       rendered: (canvas as HTMLCanvasElement | null)?.dataset.rendered || '',
       dataLength: (canvas as HTMLCanvasElement | null)?.toDataURL('image/png').length || 0,
     };
@@ -23,6 +28,8 @@ test('workspace is visually reviewable at the fixed viewport matrix', async ({ p
 
   expect(metrics.bodyWidth).toBeLessThanOrEqual(metrics.viewportWidth + 1);
   expect(Math.abs(metrics.ratio - (16 / 9))).toBeLessThan(0.02);
+  expect(metrics.previewWidth).toBeGreaterThan(metrics.sourcesWidth);
+  expect(metrics.previewWidth).toBeGreaterThan(metrics.inspectorWidth);
   expect(metrics.rendered).toBe('true');
   expect(metrics.dataLength).toBeGreaterThan(10_000);
 
