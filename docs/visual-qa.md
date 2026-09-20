@@ -26,7 +26,7 @@ For material UI changes, inspect all current screenshots and check:
 2. preview remains 16:9 and visually dominant;
 3. portrait cover is not stretched and background fill stays subordinate;
 4. title is readable without overwhelming the cover;
-5. watermark is visibly secondary and inside the safe area;
+5. watermark is visibly secondary: Corner stays inside the safe area; Watermark grid stays clipped to the sharp cover, remains low-contrast and never competes with the title/subject;
 6. minimum/normal/wide layouts preserve hierarchy and reasonable density;
 7. controls have consistent spacing, focus states and usable labels;
 8. capability/error states are understandable and do not look successful when blocked;

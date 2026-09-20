@@ -67,7 +67,7 @@ The vertical slice uses local/system equivalents so the browser remains offline-
 
 Title controls include font direction, size, position and tracking. Text must remain readable at small YouTube thumbnail size and long titles are fitted inside the composition safe width.
 
-The Brand layer supports either producer/wordmark text or a user-supplied transparent PNG/SVG. Placement is corner-based with adjustable opacity. Safe-area guides exist only in preview and never render into export.
+The Brand layer supports channel/producer text or a user-supplied transparent PNG/SVG. The default **Corner** layout preserves the conventional corner mark with adjustable opacity. The optional **Watermark grid** uses text only: it repeats the supplied name in a low-opacity staggered diagonal pattern clipped to the sharp foreground cover, sits below the title, and never spills into the blurred background. Uploaded graphics remain available when the user switches back to Corner. Safe-area guides exist only in preview and never render into export.
 
 ## Export
 
@@ -125,7 +125,7 @@ The Pages build uses the project base `/beat-video-maker/`; local dev/test stays
 
 The cached app shell can reopen offline after first use. Imported audio/images are runtime user media and are never persisted or added to the application cache.
 
-Versioned local settings persist only low-risk editor preferences: title styling, producer/wordmark text, brand placement/opacity, preset and motion amount. Invalid/old values fall back to conservative defaults and the user can reset the settings.
+Versioned local settings persist only low-risk editor preferences: title styling, channel/producer text, brand layout/placement/opacity, preset and motion amount. Invalid/old values fall back to conservative defaults and the user can reset the settings.
 
 ## Keyboard and editor history
 

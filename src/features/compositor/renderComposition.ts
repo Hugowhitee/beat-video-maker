@@ -28,8 +28,7 @@ function sourceSize(source: CanvasImageSource) {
   };
 }
 
-function drawFitted(
-  ctx: Context2D,
+function fittedRect(
   source: CanvasImageSource,
   width: number,
   height: number,
@@ -41,13 +40,23 @@ function drawFitted(
     : Math.min(width / size.width, height / size.height);
   const drawWidth = size.width * scale;
   const drawHeight = size.height * scale;
-  ctx.drawImage(
-    source,
-    (width - drawWidth) / 2,
-    (height - drawHeight) / 2,
-    drawWidth,
-    drawHeight,
-  );
+  return {
+    x: (width - drawWidth) / 2,
+    y: (height - drawHeight) / 2,
+    width: drawWidth,
+    height: drawHeight,
+  };
+}
+
+function drawFitted(
+  ctx: Context2D,
+  source: CanvasImageSource,
+  width: number,
+  height: number,
+  mode: 'contain' | 'cover',
+) {
+  const rect = fittedRect(source, width, height, mode);
+  ctx.drawImage(source, rect.x, rect.y, rect.width, rect.height);
 }
 
 function drawPlaceholder(ctx: Context2D, width: number, height: number) {
@@ -225,7 +234,55 @@ function brandAnchor(position: CompositionFrame['settings']['brandPosition'], wi
   };
 }
 
+function drawWatermarkGrid(ctx: Context2D, frame: CompositionFrame) {
+  if (frame.settings.brandLayout !== 'grid' || !frame.source) return;
+  const text = frame.settings.brandText.trim();
+  if (!text) return;
+
+  const { width, height, source } = frame;
+  const cover = fittedRect(source, width, height, 'contain');
+  const fontSize = Math.max(14, height * 0.022);
+  const angle = -Math.PI / 7;
+  const alpha = Math.min(0.13, 0.035 + frame.settings.brandOpacity * 0.095);
+
+  ctx.save();
+  ctx.beginPath();
+  ctx.rect(cover.x, cover.y, cover.width, cover.height);
+  ctx.clip();
+
+  const centerX = cover.x + cover.width / 2;
+  const centerY = cover.y + cover.height / 2;
+  ctx.translate(centerX, centerY);
+  ctx.rotate(angle);
+  ctx.translate(-centerX, -centerY);
+
+  ctx.font = '650 ' + fontSize + 'px Inter, Arial, "Liberation Sans", ui-sans-serif, system-ui, sans-serif';
+  ctx.textAlign = 'left';
+  ctx.textBaseline = 'middle';
+  ctx.fillStyle = '#ffffff';
+  ctx.strokeStyle = 'rgba(0,0,0,0.72)';
+  ctx.lineWidth = Math.max(1, fontSize * 0.055);
+  ctx.globalAlpha = alpha;
+
+  const textWidth = Math.max(ctx.measureText(text).width, fontSize * 4);
+  const stepX = Math.max(textWidth + width * 0.07, width * 0.17);
+  const stepY = Math.max(fontSize * 3.4, height * 0.105);
+  let row = 0;
+
+  for (let y = cover.y - height; y <= cover.y + cover.height + height; y += stepY) {
+    const offset = row % 2 === 0 ? 0 : stepX / 2;
+    for (let x = cover.x - width; x <= cover.x + cover.width + width; x += stepX) {
+      ctx.strokeText(text, x + offset, y);
+      ctx.fillText(text, x + offset, y);
+    }
+    row += 1;
+  }
+
+  ctx.restore();
+}
+
 function drawBrand(ctx: Context2D, frame: CompositionFrame) {
+  if (frame.settings.brandLayout !== 'corner') return;
   const { brandGraphic, brandText, brandOpacity, brandPosition } = frame.settings;
   if (!brandGraphic && !brandText.trim()) return;
 
@@ -369,6 +426,7 @@ export function renderComposition(ctx: Context2D, frame: CompositionFrame) {
   ctx.fillStyle = vignette;
   ctx.fillRect(0, 0, width, height);
 
+  drawWatermarkGrid(ctx, frame);
   drawTitle(ctx, frame);
   drawBrand(ctx, frame);
   drawMinimalVisualizer(ctx, frame);

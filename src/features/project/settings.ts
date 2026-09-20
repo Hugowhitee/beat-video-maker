@@ -1,4 +1,5 @@
 import type {
+  BrandLayout,
   BrandPosition,
   MotionAmount,
   TitleFont,
@@ -14,6 +15,7 @@ export type UserSettings = {
   titleFont: TitleFont;
   titleTracking: number;
   brandText: string;
+  brandLayout: BrandLayout;
   brandPosition: BrandPosition;
   brandOpacity: number;
   preset: VisualPreset;
@@ -26,6 +28,7 @@ export const DEFAULT_USER_SETTINGS: UserSettings = {
   titleFont: 'clean',
   titleTracking: 1,
   brandText: '',
+  brandLayout: 'corner',
   brandPosition: 'top-right',
   brandOpacity: 0.72,
   preset: 'clean',
@@ -34,6 +37,7 @@ export const DEFAULT_USER_SETTINGS: UserSettings = {
 
 const titlePositions = new Set<TitlePosition>(['top-left', 'bottom-left', 'bottom-center']);
 const titleFonts = new Set<TitleFont>(['clean', 'condensed', 'serif', 'mono']);
+const brandLayouts = new Set<BrandLayout>(['corner', 'grid']);
 const brandPositions = new Set<BrandPosition>(['top-left', 'top-right', 'bottom-left', 'bottom-right']);
 const presets = new Set<VisualPreset>(['clean', 'ambient', 'reactive', 'pulse', 'visualizer']);
 const motions = new Set<MotionAmount>(['off', 'low', 'medium']);
@@ -64,6 +68,9 @@ export function loadUserSettings(): UserSettings {
       brandText: typeof parsed.brandText === 'string'
         ? parsed.brandText.slice(0, 60)
         : DEFAULT_USER_SETTINGS.brandText,
+      brandLayout: brandLayouts.has(parsed.brandLayout as BrandLayout)
+        ? parsed.brandLayout as BrandLayout
+        : DEFAULT_USER_SETTINGS.brandLayout,
       brandPosition: brandPositions.has(parsed.brandPosition as BrandPosition)
         ? parsed.brandPosition as BrandPosition
         : DEFAULT_USER_SETTINGS.brandPosition,
