@@ -356,3 +356,58 @@ test('intro and outro assets stay out of automatic footage selection', () => {
   expect(plan.segments.some((segment) => segment.sourceId === 'intro-stinger'))
     .toBeFalsy();
 });
+
+
+test('effect transitions are omitted when adjacent source shots have no hidden handles', () => {
+  const music = musicMap([
+    {
+      id: 'intro',
+      start: 0,
+      end: 8,
+      kind: 'intro',
+      energy: 0.18,
+      confidence: 0.95,
+    },
+    {
+      id: 'drop',
+      start: 8,
+      end: 16,
+      kind: 'drop',
+      energy: 0.96,
+      confidence: 0.98,
+    },
+  ], 16);
+
+  const clips: ClipMap = {
+    sources: [
+      {
+        id: 'tight-source',
+        name: 'tight.mp4',
+        duration: 24,
+        shots: Array.from({ length: 6 }, (_, index) => ({
+          id: `tight-${index + 1}`,
+          sourceId: 'tight-source',
+          start: index * 4,
+          end: index * 4 + 4,
+          motion: index < 2 ? 0.2 : 0.9,
+          quality: 0.95,
+          boundaryKind: index === 0 ? 'source-start' as const : 'hard-cut' as const,
+          boundaryConfidence: 1,
+        })),
+      },
+    ],
+  };
+
+  const plan = createEditPlan(music, clips, {
+    mode: 'auto',
+    transitionProfile: 'mixed',
+    seed: 1,
+  });
+
+  // The cut itself remains valid. We simply decline the Film Burn because a
+  // transition needs hidden media on both sides of the cut.
+  expect(plan.segments.some((segment) => Math.abs(segment.timelineStart - 8) < 1e-6))
+    .toBeTruthy();
+  expect(plan.transitions.filter((transition) => transition.kind === 'film-burn'))
+    .toHaveLength(0);
+});
