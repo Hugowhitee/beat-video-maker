@@ -6,6 +6,18 @@ import type {
   TitleFont,
   VisualPreset,
 } from '../compositor/types';
+import {
+  EFFECT_TYPES,
+  effectDefinition,
+  supportsTarget,
+} from '../effects/registry';
+import type {
+  EffectModulation,
+  EffectType,
+  ModulationDriver,
+  VisualEffectInstance,
+  VisualTarget,
+} from '../effects/types';
 
 const STORAGE_KEY = 'beatvideo-maker:settings:v1';
 
@@ -24,6 +36,8 @@ export type UserSettings = {
   brandOpacity: number;
   preset: VisualPreset;
   motion: MotionAmount;
+  effects: VisualEffectInstance[];
+  modulations: EffectModulation[];
 };
 
 export const DEFAULT_USER_SETTINGS: UserSettings = {
@@ -39,6 +53,8 @@ export const DEFAULT_USER_SETTINGS: UserSettings = {
   brandOpacity: 0.72,
   preset: 'clean',
   motion: 'low',
+  effects: [],
+  modulations: [],
 };
 
 const titleAligns = new Set<TitleAlign>(['left', 'center', 'right']);
@@ -47,6 +63,9 @@ const brandLayouts = new Set<BrandLayout>(['corner', 'grid']);
 const brandPositions = new Set<BrandPosition>(['top-left', 'top-right', 'bottom-left', 'bottom-right']);
 const presets = new Set<VisualPreset>(['clean', 'ambient', 'reactive', 'pulse', 'visualizer']);
 const motions = new Set<MotionAmount>(['off', 'low', 'medium']);
+const effectTypes = new Set<EffectType>(EFFECT_TYPES);
+const targets = new Set<VisualTarget>(['background', 'foreground', 'composite']);
+const drivers = new Set<ModulationDriver>(['beat', 'downbeat', 'phrase', 'amplitude']);
 
 function numberInRange(value: unknown, minimum: number, maximum: number, fallback: number) {
   return typeof value === 'number' && Number.isFinite(value)
@@ -64,6 +83,96 @@ function legacyPlacement(position: unknown) {
   return { titleX: 0.055, titleY: 0.88, titleAlign: 'left' as const };
 }
 
+function sanitizeParams(
+  value: unknown,
+  defaults: Record<string, number>,
+) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    return { ...defaults };
+  }
+
+  const candidate = value as Record<string, unknown>;
+  return Object.fromEntries(
+    Object.entries(defaults).map(([key, fallback]) => [
+      key,
+      typeof candidate[key] === 'number' && Number.isFinite(candidate[key])
+        ? candidate[key]
+        : fallback,
+    ]),
+  );
+}
+
+function sanitizeEffects(value: unknown): VisualEffectInstance[] {
+  if (!Array.isArray(value)) return [];
+
+  const output: VisualEffectInstance[] = [];
+  const ids = new Set<string>();
+
+  for (const raw of value.slice(0, 16)) {
+    if (!raw || typeof raw !== 'object' || Array.isArray(raw)) continue;
+    const candidate = raw as Record<string, unknown>;
+    if (typeof candidate.id !== 'string' || !candidate.id || ids.has(candidate.id)) continue;
+    if (typeof candidate.type !== 'string' || !effectTypes.has(candidate.type as EffectType)) continue;
+
+    const type = candidate.type as EffectType;
+    const definition = effectDefinition(type);
+    const requestedTarget = targets.has(candidate.target as VisualTarget)
+      ? candidate.target as VisualTarget
+      : definition.defaultTarget;
+    const target = supportsTarget(type, requestedTarget)
+      ? requestedTarget
+      : definition.defaultTarget;
+
+    output.push({
+      id: candidate.id.slice(0, 120),
+      type,
+      target,
+      enabled: candidate.enabled !== false,
+      strength: numberInRange(candidate.strength, 0, 1, definition.defaultStrength),
+      params: sanitizeParams(candidate.params, definition.defaultParams),
+    });
+    ids.add(candidate.id);
+  }
+
+  return output;
+}
+
+function sanitizeModulations(
+  value: unknown,
+  effects: readonly VisualEffectInstance[],
+): EffectModulation[] {
+  if (!Array.isArray(value)) return [];
+  const effectById = new Map(effects.map((effect) => [effect.id, effect]));
+  const ids = new Set<string>();
+  const output: EffectModulation[] = [];
+
+  for (const raw of value.slice(0, 16)) {
+    if (!raw || typeof raw !== 'object' || Array.isArray(raw)) continue;
+    const candidate = raw as Record<string, unknown>;
+    if (typeof candidate.id !== 'string' || !candidate.id || ids.has(candidate.id)) continue;
+    if (typeof candidate.effectId !== 'string') continue;
+    const effect = effectById.get(candidate.effectId);
+    if (!effect) continue;
+    if (candidate.parameter !== 'strength') continue;
+    if (typeof candidate.driver !== 'string' || !drivers.has(candidate.driver as ModulationDriver)) continue;
+
+    const driver = candidate.driver as ModulationDriver;
+    if (!effectDefinition(effect.type).drivers.includes(driver)) continue;
+
+    output.push({
+      id: candidate.id.slice(0, 120),
+      effectId: effect.id,
+      parameter: 'strength',
+      driver,
+      amount: numberInRange(candidate.amount, 0, 1, 1),
+      enabled: candidate.enabled !== false,
+    });
+    ids.add(candidate.id);
+  }
+
+  return output;
+}
+
 export function loadUserSettings(): UserSettings {
   if (typeof localStorage === 'undefined') return DEFAULT_USER_SETTINGS;
 
@@ -74,6 +183,7 @@ export function loadUserSettings(): UserSettings {
       titlePosition?: LegacyTitlePosition;
     };
     const legacy = legacyPlacement(parsed.titlePosition);
+    const effects = sanitizeEffects(parsed.effects);
 
     return {
       titleSize: numberInRange(parsed.titleSize, 36, 86, DEFAULT_USER_SETTINGS.titleSize),
@@ -102,6 +212,8 @@ export function loadUserSettings(): UserSettings {
       motion: motions.has(parsed.motion as MotionAmount)
         ? parsed.motion as MotionAmount
         : DEFAULT_USER_SETTINGS.motion,
+      effects,
+      modulations: sanitizeModulations(parsed.modulations, effects),
     };
   } catch {
     return DEFAULT_USER_SETTINGS;
