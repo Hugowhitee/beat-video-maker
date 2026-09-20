@@ -56,6 +56,19 @@ import {
   TITLE_PLACEMENT_KEYS,
 } from './features/project/titlePlacement';
 import type { TitlePlacementKey } from './features/project/titlePlacement';
+import {
+  createDefaultModulation,
+  createEffectInstance,
+  effectDefinition,
+  EFFECT_TYPES,
+} from './features/effects/registry';
+import type {
+  EffectModulation,
+  EffectType,
+  ModulationDriver,
+  VisualEffectInstance,
+  VisualTarget,
+} from './features/effects/types';
 
 const fixtureMode = new URLSearchParams(window.location.search).has('fixture');
 const storedSettings = fixtureMode ? DEFAULT_USER_SETTINGS : loadUserSettings();
@@ -87,6 +100,8 @@ type EditorSnapshot = {
   brandOpacity: number;
   preset: VisualPreset;
   motion: MotionAmount;
+  effects: VisualEffectInstance[];
+  modulations: EffectModulation[];
   bpmOverride: string | null;
   barOffset: number | null;
 };
@@ -210,6 +225,9 @@ function App() {
   const [amplitudeEnvelope, setAmplitudeEnvelope] = useState<AmplitudeEnvelope | null>(null);
   const [preset, setPreset] = useState<VisualPreset>(storedSettings.preset);
   const [motion, setMotion] = useState<MotionAmount>(storedSettings.motion);
+  const [effects, setEffects] = useState<VisualEffectInstance[]>(storedSettings.effects);
+  const [modulations, setModulations] = useState<EffectModulation[]>(storedSettings.modulations);
+  const [effectToAdd, setEffectToAdd] = useState<EffectType>('zoom-punch');
   const [historyState, setHistoryState] = useState({ canUndo: false, canRedo: false });
   const [installPrompt, setInstallPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [installHelpOpen, setInstallHelpOpen] = useState(false);
@@ -238,11 +256,13 @@ function App() {
     brandOpacity,
     preset,
     motion,
+    effects,
+    modulations,
     bpmOverride: manualBpm,
     barOffset: manualBarOffset,
   }), [
-    brandLayout, brandOpacity, brandPosition, brandText, manualBarOffset, manualBpm, motion, preset,
-    title, titleAlign, titleFont, titleSize, titleTracking, titleX, titleY,
+    brandLayout, brandOpacity, brandPosition, brandText, effects, manualBarOffset, manualBpm,
+    modulations, motion, preset, title, titleAlign, titleFont, titleSize, titleTracking, titleX, titleY,
   ]);
 
   useEffect(() => {
@@ -279,6 +299,8 @@ function App() {
     setBrandOpacity(snapshot.brandOpacity);
     setPreset(snapshot.preset);
     setMotion(snapshot.motion);
+    setEffects(snapshot.effects);
+    setModulations(snapshot.modulations);
     setManualBpm(snapshot.bpmOverride);
     setManualBarOffset(snapshot.barOffset);
   }, []);
@@ -318,8 +340,10 @@ function App() {
     brandOpacity,
     preset,
     motion,
+    effects,
+    modulations,
   }), [
-    brandLayout, brandOpacity, brandPosition, brandText, motion, preset,
+    brandLayout, brandOpacity, brandPosition, brandText, effects, modulations, motion, preset,
     titleAlign, titleFont, titleSize, titleTracking, titleX, titleY,
   ]);
 
@@ -338,6 +362,8 @@ function App() {
     brandOpacity,
     preset,
     motion,
+    effects,
+    modulations,
     showGuides,
     showGrid,
   }), [
@@ -355,6 +381,8 @@ function App() {
     brandOpacity,
     preset,
     motion,
+    effects,
+    modulations,
     showGuides,
     showGrid,
   ]);
@@ -409,6 +437,8 @@ function App() {
     setBrandOpacity(DEFAULT_USER_SETTINGS.brandOpacity);
     setPreset(DEFAULT_USER_SETTINGS.preset);
     setMotion(DEFAULT_USER_SETTINGS.motion);
+    setEffects(DEFAULT_USER_SETTINGS.effects);
+    setModulations(DEFAULT_USER_SETTINGS.modulations);
   };
 
   const applyTitlePlacement = (key: TitlePlacementKey) => {
@@ -446,6 +476,8 @@ function App() {
       setBrandOpacity(next.brandOpacity);
       setPreset(next.preset);
       setMotion(next.motion);
+      setEffects(next.effects);
+      setModulations(next.modulations);
       setBrandGraphic(null);
       setBrandGraphicName('Text only');
       setPlacingTitle(false);
