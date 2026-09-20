@@ -56,7 +56,12 @@ test('blur can target background or composite without leaving the curated effect
 
   const before = await page.getByTestId('preview-canvas')
     .evaluate((node) => (node as HTMLCanvasElement).toDataURL('image/png'));
-  await blur.getByLabel('Blur strength').fill('0.8');
+  await blur.getByLabel('Blur strength').evaluate((node) => {
+    const input = node as HTMLInputElement;
+    input.value = '0.8';
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+    input.dispatchEvent(new Event('change', { bubbles: true }));
+  });
   const after = await page.getByTestId('preview-canvas')
     .evaluate((node) => (node as HTMLCanvasElement).toDataURL('image/png'));
   expect(after).not.toBe(before);
