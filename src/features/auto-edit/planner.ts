@@ -374,7 +374,9 @@ function buildLoopPlan(context: PlannerContext): EditPlan {
           ? 'none'
           : motifSegment.transitionIn === 'film-burn'
             ? 'cut'
-            : motifSegment.transitionIn,
+            : motifSegment.transitionIn === 'none'
+              ? 'cut'
+              : motifSegment.transitionIn,
         reason: `${motifSegment.reason} · loop ${repeatIndex + 1}`,
       });
     }
