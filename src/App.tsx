@@ -400,6 +400,66 @@ function App() {
     setMotion(DEFAULT_USER_SETTINGS.motion);
   };
 
+  const applyTitlePlacement = (key: TitlePlacementKey) => {
+    const placement = placementPreset(key);
+    setTitleX(placement.x);
+    setTitleY(placement.y);
+    setTitleAlign(placement.align);
+  };
+
+  const saveTemplateFile = () => {
+    const template = createTemplate(title, authoringSettings);
+    downloadBlob(
+      new Blob([serializeTemplate(template)], { type: 'application/json' }),
+      safeTemplateName(title),
+    );
+    setTemplateMessage('Editable template saved.');
+  };
+
+  const handleTemplate = async (file: File) => {
+    setTemplateMessage('');
+    try {
+      const parsed = parseTemplate(await file.text());
+      const next = settingsFromTemplate(parsed);
+
+      setTitle(parsed.title.text);
+      setTitleSize(next.titleSize);
+      setTitleX(next.titleX);
+      setTitleY(next.titleY);
+      setTitleAlign(next.titleAlign);
+      setTitleFont(next.titleFont);
+      setTitleTracking(next.titleTracking);
+      setBrandText(next.brandText);
+      setBrandLayout(next.brandLayout);
+      setBrandPosition(next.brandPosition);
+      setBrandOpacity(next.brandOpacity);
+      setPreset(next.preset);
+      setMotion(next.motion);
+      setBrandGraphic(null);
+      setBrandGraphicName('Text only');
+      setPlacingTitle(false);
+      setTemplateMessage('Opened ' + file.name);
+    } catch (error) {
+      setTemplateMessage(
+        error instanceof Error ? error.message : 'Could not open template.',
+      );
+    }
+  };
+
+  const handleCanvasClick = (event: ReactMouseEvent<HTMLCanvasElement>) => {
+    if (!placingTitle) {
+      void togglePlayback();
+      return;
+    }
+
+    const rect = event.currentTarget.getBoundingClientRect();
+    const placement = placementFromPoint(event.clientX, event.clientY, rect);
+    setTitleX(placement.x);
+    setTitleY(placement.y);
+    setTitleAlign(placement.align);
+    setPlacingTitle(false);
+  };
+
   const resolveGrid = useCallback((): VerifiedGrid | null => {
     const parsedManualBpm = manualBpm === null ? Number.NaN : Number(manualBpm);
     const effectiveBpm =
