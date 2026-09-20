@@ -69,7 +69,7 @@ test('phrase modulation is signed so drift can travel in both directions', () =>
     grid,
   })[0];
   const negative = evaluateEffectStack([drift], [modulation], {
-    time: 6,
+    time: 10,
     grid,
   })[0];
 
