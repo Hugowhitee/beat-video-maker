@@ -270,3 +270,44 @@ test('planned source ranges stay inside detected shots and avoid immediate reuse
     }
   });
 });
+
+
+test('clean transition profile never inserts an effect transition', () => {
+  const music = musicMap([
+    {
+      id: 'intro',
+      start: 0,
+      end: 8,
+      kind: 'intro',
+      energy: 0.15,
+      confidence: 0.9,
+    },
+    {
+      id: 'drop',
+      start: 8,
+      end: 20,
+      kind: 'drop',
+      energy: 0.96,
+      confidence: 0.96,
+    },
+    {
+      id: 'chorus',
+      start: 20,
+      end: 32,
+      kind: 'chorus',
+      energy: 0.82,
+      confidence: 0.92,
+    },
+  ]);
+
+  const plan = createEditPlan(music, clipMap(), {
+    mode: 'auto',
+    transitionProfile: 'clean',
+    seed: 3,
+  });
+
+  expect(plan.segments.filter((segment) => segment.transitionIn === 'film-burn'))
+    .toHaveLength(0);
+  expect(plan.segments.slice(1).every((segment) => segment.transitionIn === 'cut'))
+    .toBeTruthy();
+});
