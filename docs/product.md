@@ -2,9 +2,9 @@
 
 ## Product boundary
 
-Beatvideo Maker is a small local-first, preset-first browser compositor for publishing a still cover image with a beat. It is not a general non-linear editor.
+Beatvideo Maker is a small local-first, preset-first browser compositor for beat-synchronised publishing videos. The proven v0.1 path is still cover image + beat; the post-v0.1 direction adds source-video assembly without turning the product into a general non-linear editor.
 
-The intended fast path is:
+The intended v0.1 fast path is:
 
 1. choose image;
 2. choose audio;
@@ -26,6 +26,53 @@ Source media remains on-device. The v1 browser target is current Chromium on Win
 - User branding is optional. Never inject Parental Advisory, third-party badges or a default watermark.
 - Complex infrastructure is **upstream-first**: prefer maintained browser/platform APIs or mature open-source libraries for decoding, codecs, muxing, DSP/beat analysis, waveform infrastructure and comparable specialist code. Product code should wrap and validate those systems rather than recreate simplified versions.
 - Reusing UI work is encouraged when licensing permits it, but reuse design primitives/components/icons rather than another app's identity. Third-party logos, names and distinctive brand assets are never Beatvideo Maker assets.
+- Automatic editing should expose a compact plan the user can correct. Do not hide clip selection, beat placement or transition decisions behind an irreversible black box.
+- Hard cuts are the normal transition. Effects such as film burn are sparse accents for musically important moments, never the default between every clip.
+
+## Post-v0.1 editing modes
+
+Video work is organized as levels of automation that share one evidence model and one final edit plan:
+
+1. **Still** — the existing image + beat workflow. Fastest path and always available.
+2. **Loop** — create or auto-suggest one 4/8/16-bar edit motif, correct its cuts/transitions once, then repeat it. This is useful when a beat video only needs a strong repeating visual loop.
+3. **Guided** — analyze the beat and source videos, expose detected beat/downbeat/section and shot evidence, then propose cut points and clip candidates. The user accepts/replaces/regenerates selected regions.
+4. **Auto** — analyze the whole beat plus the source pool and build a complete section-aware edit. Repeated musical sections may reuse a motif with controlled variation instead of choosing unrelated random shots every time.
+
+These are not separate editors. They all consume the same `MusicMap` and `ClipMap`, produce `EditMotif` / `EditPlan`, and are rendered/exported through the same compositor contract.
+
+### Evidence maps and planner
+
+Automatic video editing has three owners:
+
+- `MusicMap` — beat/downbeat timing, musical sections, energy/intensity and confidence from maintained upstream analysis.
+- `ClipMap` — source-video shots/usable ranges, boundary confidence and later motion/quality evidence from maintained media/vision tooling.
+- `EditPlan` — deterministic product orchestration that decides which analyzed shot is used at which musical interval. This planner may be local code because it is Beatvideo Maker's product taste; it must not reimplement codec, shot-boundary or music-DSP primitives.
+
+The planner varies cadence with the music. A calm intro/break should generally breathe; builds may tighten; drops/high-energy sections may mix 1/2/4-beat cuts with longer holds. It must not mechanically change video every four bars.
+
+`EditMotif` is a reusable cut/source pattern over a musical loop or phrase. Loop mode repeats one motif exactly until the user changes it; Auto mode may reuse or vary motifs by section.
+
+### Transition language and intro assets
+
+Most edit points are **clean hard cuts**. In the edit-plan model, no transition object at a boundary means a normal hard cut. Effect transitions are separate cut-centered objects that reference the adjacent left/right segments, carry duration/alignment, and require enough hidden source handles on both sides. This follows the proven handle-based approach used by mature editors and avoids shortening/overlapping the visible segment timeline just to show an effect.
+
+The first curated effect transition is **Film Burn**, used only as an optional accent at selected strong events such as a drop or deliberate section change. Do not reimplement this visual from scratch: the preferred source is Anastasia Dunbar's MIT-licensed `FilmBurn` shader from GL Transitions. Remotion's WebGL2 implementation is a useful modern reference, but Beatvideo Maker should take code/provenance from the MIT GL Transitions source and retain attribution in `THIRD_PARTY_NOTICES.md` if adapted.
+
+A fixed intro/outro/stinger that the user drags into every video is modeled as a normal pinned media asset/segment. It should pass through the same source decode, preview and export path rather than gaining a separate renderer.
+
+Heavy analysis models must be optional/lazy. The Still workflow must remain quick and must not download video-analysis models merely to open the app.
+
+### Reuse map
+
+Do not rebuild mature editor/media infrastructure merely to keep the repository small:
+
+- **Mediabunny** stays the media container/decode/sample/export foundation, including source-video frame access.
+- **Beat This!** is the preferred future beat/downbeat model; its code and published weights are MIT. The MIT musetric browser implementation is useful prior art for ONNX Runtime Web packaging and preprocessing, but numerical parity must be measured before choosing WebGPU or WASM execution.
+- **TransNetV2** is the preferred shot-boundary model. Use the official MIT model contract with a thin browser adapter; do not adopt an otherwise-convenient wrapper that has no usable license.
+- **FreeCut** (MIT) is prior art for a cut-centered transition model with hidden source handles and a GPU transition registry. Adapt that contract when transition rendering lands rather than inventing incompatible transition semantics.
+- **Editly** (MIT) is prior art for a declarative structured edit specification. `EditPlan` should remain data, not hidden React state.
+- **OpenCut** (MIT) is UI/editor prior art. Reuse selected interaction/component patterns where they fit the compact Beatvideo workflow; do not import its branding or full-NLE scope.
+- GPL/AGPL tools such as Mixxx, Essentia and LosslessCut may inform research/behavior but are not default source-code dependencies under the current licensing direction.
 
 ## Composition model
 
