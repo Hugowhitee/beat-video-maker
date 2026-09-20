@@ -11,11 +11,16 @@ test('workspace is visually reviewable at the fixed viewport matrix', async ({ p
 
   const metrics = await page.evaluate(() => {
     const canvas = document.querySelector('[data-testid="preview-canvas"]');
+    const sources = document.querySelector('[aria-label="Sources"]');
+    const inspector = document.querySelector('[aria-label="Inspector"]');
     const rect = canvas?.getBoundingClientRect();
     return {
       bodyWidth: document.body.scrollWidth,
       viewportWidth: window.innerWidth,
       ratio: rect ? rect.width / rect.height : 0,
+      previewWidth: rect?.width || 0,
+      sourcesWidth: sources?.getBoundingClientRect().width || 0,
+      inspectorWidth: inspector?.getBoundingClientRect().width || 0,
       rendered: (canvas as HTMLCanvasElement | null)?.dataset.rendered || '',
       dataLength: (canvas as HTMLCanvasElement | null)?.toDataURL('image/png').length || 0,
     };
@@ -23,13 +28,15 @@ test('workspace is visually reviewable at the fixed viewport matrix', async ({ p
 
   expect(metrics.bodyWidth).toBeLessThanOrEqual(metrics.viewportWidth + 1);
   expect(Math.abs(metrics.ratio - (16 / 9))).toBeLessThan(0.02);
+  expect(metrics.previewWidth).toBeGreaterThan(metrics.sourcesWidth);
+  expect(metrics.previewWidth).toBeGreaterThan(metrics.inspectorWidth);
   expect(metrics.rendered).toBe('true');
   expect(metrics.dataLength).toBeGreaterThan(10_000);
 
   await mkdir('artifacts/visual-qa', { recursive: true });
   await page.screenshot({
     path: 'artifacts/visual-qa/' + testInfo.project.name + '.png',
-    fullPage: true,
+    fullPage: false,
   });
 });
 
@@ -46,7 +53,7 @@ test('all five presets have a reviewable normal-viewport state', async ({ page }
     await expect(button).toHaveClass(/is-selected/);
     await page.screenshot({
       path: 'artifacts/visual-qa/preset-' + preset + '.png',
-      fullPage: true,
+      fullPage: false,
     });
   }
 });
@@ -68,7 +75,7 @@ test('watermark grid stays subtle and clipped to the cover', async ({ page }, te
   await mkdir('artifacts/visual-qa', { recursive: true });
   await page.screenshot({
     path: 'artifacts/visual-qa/watermark-grid.png',
-    fullPage: true,
+    fullPage: false,
   });
 });
 
@@ -83,7 +90,7 @@ test('install help is visually reviewable', async ({ page }, testInfo) => {
   await mkdir('artifacts/visual-qa', { recursive: true });
   await page.screenshot({
     path: 'artifacts/visual-qa/install-help.png',
-    fullPage: true,
+    fullPage: false,
   });
 });
 
@@ -100,6 +107,6 @@ test('centered title and composition grid are visually reviewable', async ({ pag
   await mkdir('artifacts/visual-qa', { recursive: true });
   await page.screenshot({
     path: 'artifacts/visual-qa/title-center-grid.png',
-    fullPage: true,
+    fullPage: false,
   });
 });
