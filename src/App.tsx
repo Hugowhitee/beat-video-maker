@@ -1035,7 +1035,10 @@ function App() {
                   type="button"
                   className={'grid-action ' + (gridEditing ? 'is-active' : '')}
                   aria-pressed={gridEditing}
-                  onClick={() => setGridEditing((value) => !value)}
+                  onClick={(event) => {
+                    setGridEditing((value) => !value);
+                    event.currentTarget.blur();
+                  }}
                 >
                   {gridEditing ? 'Done' : 'Edit grid'}
                 </button>
