@@ -24,6 +24,8 @@ Source media remains on-device. The v1 browser target is current Chromium on Win
 - Automation must be overridable and must expose confidence rather than fake certainty.
 - Prefer a few strong presets and controls over a timeline, layer tree or effect catalogue.
 - User branding is optional. Never inject Parental Advisory, third-party badges or a default watermark.
+- Complex infrastructure is **upstream-first**: prefer maintained browser/platform APIs or mature open-source libraries for decoding, codecs, muxing, DSP/beat analysis, waveform infrastructure and comparable specialist code. Product code should wrap and validate those systems rather than recreate simplified versions.
+- Reusing UI work is encouraged when licensing permits it, but reuse design primitives/components/icons rather than another app's identity. Third-party logos, names and distinctive brand assets are never Beatvideo Maker assets.
 
 ## Composition model
 
@@ -85,7 +87,11 @@ For long exports, prefer a Mediabunny `StreamTarget` backed by OPFS so encoded b
 
 Codec support is runtime state. Never report success until a non-empty finalized file exists.
 
+Imported audio is parsed/decoded through the existing Mediabunny media stack first, with the browser's native Web Audio decoder only as a compatibility fallback. Beatvideo Maker must not maintain its own compressed-audio codec/parser implementation.
+
 ## Musical grid
+
+Musical analysis is specialist DSP and follows the upstream-first rule. A bespoke estimator is acceptable only as temporary, clearly bounded glue while a suitable maintained upstream implementation is being evaluated; do not let a hand-built prototype quietly become the permanent analysis engine.
 
 The first grid implementation now has one canonical analysis path:
 
