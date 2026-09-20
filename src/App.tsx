@@ -70,7 +70,8 @@ import type {
   VisualTarget,
 } from './features/effects/types';
 import {
-  moveEffect as moveEffectInStack,
+  canMoveEffectWithinTarget,
+  moveEffectWithinTarget,
   removeEffect as removeEffectFromStack,
   setEffectEnabled,
   setEffectStrength,
@@ -463,11 +464,7 @@ function App() {
   };
 
   const moveEffect = (effectId: string, direction: -1 | 1) => {
-    setEffects((current) => {
-      const index = current.findIndex((effect) => effect.id === effectId);
-      if (index < 0) return current;
-      return moveEffectInStack(current, effectId, index + direction);
-    });
+    setEffects((current) => moveEffectWithinTarget(current, effectId, direction));
   };
 
   const setEffectDriver = (
@@ -1431,13 +1428,13 @@ function App() {
                           <button
                             type="button"
                             aria-label={'Move ' + definition.name + ' up'}
-                            disabled={index === 0}
+                            disabled={!canMoveEffectWithinTarget(effects, effect.id, -1)}
                             onClick={() => moveEffect(effect.id, -1)}
                           >↑</button>
                           <button
                             type="button"
                             aria-label={'Move ' + definition.name + ' down'}
-                            disabled={index === effects.length - 1}
+                            disabled={!canMoveEffectWithinTarget(effects, effect.id, 1)}
                             onClick={() => moveEffect(effect.id, 1)}
                           >↓</button>
                           <button
