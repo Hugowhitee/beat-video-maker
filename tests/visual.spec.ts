@@ -52,6 +52,27 @@ test('all five presets have a reviewable normal-viewport state', async ({ page }
 });
 
 
+test('watermark grid stays subtle and clipped to the cover', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'desktop-normal', 'Watermark grid uses the normal review viewport.');
+
+  await page.goto('/?fixture=1');
+  const canvas = page.getByTestId('preview-canvas');
+  const before = await canvas.evaluate((node) => (node as HTMLCanvasElement).toDataURL('image/png'));
+
+  await page.getByTestId('brand-layout').selectOption('grid');
+  await expect(page.getByTestId('brand-layout')).toHaveValue('grid');
+  await expect.poll(async () =>
+    canvas.evaluate((node) => (node as HTMLCanvasElement).toDataURL('image/png')),
+  ).not.toBe(before);
+
+  await mkdir('artifacts/visual-qa', { recursive: true });
+  await page.screenshot({
+    path: 'artifacts/visual-qa/watermark-grid.png',
+    fullPage: true,
+  });
+});
+
+
 test('install help is visually reviewable', async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== 'desktop-normal', 'Install help uses the normal review viewport.');
 
