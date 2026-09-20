@@ -111,3 +111,18 @@ test('effect parameters outside registry ranges fail closed', () => {
     },
   }))).toThrow(/Effect parameter scale/i);
 });
+
+
+test('template parser rejects duplicate strength modulation for one effect', () => {
+  const effect = createEffectInstance('zoom-punch', { id: 'zoom-duplicate-mod' });
+  const first = createDefaultModulation(effect, 'mod-a')!;
+  const second = { ...first, id: 'mod-b', driver: 'amplitude' as const };
+  const template = createTemplate('DUPLICATE MOD', {
+    ...DEFAULT_USER_SETTINGS,
+    effects: [effect],
+    modulations: [first, second],
+  });
+
+  expect(() => parseTemplate(JSON.stringify(template)))
+    .toThrow(/one strength modulation/i);
+});
