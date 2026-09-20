@@ -1,4 +1,6 @@
 import { phrasePhaseAt } from '../analysis/musicalClock';
+import { effectStrength, evaluateEffectStack } from '../effects/evaluate';
+import type { EvaluatedEffect } from '../effects/evaluate';
 import type { CompositionFrame, TitleFont } from './types';
 
 type Context2D = CanvasRenderingContext2D | OffscreenCanvasRenderingContext2D;
@@ -92,7 +94,11 @@ function phraseMotion(frame: CompositionFrame) {
   return Math.sin(phase * Math.PI * 2);
 }
 
-function drawBackground(ctx: Context2D, frame: CompositionFrame) {
+function drawBackground(
+  ctx: Context2D,
+  frame: CompositionFrame,
+  effects: readonly EvaluatedEffect[],
+) {
   if (!frame.source) return;
 
   const { width, height, source, settings } = frame;
@@ -104,13 +110,29 @@ function drawBackground(ctx: Context2D, frame: CompositionFrame) {
         : settings.preset === 'pulse' ? 0.6
           : 0.35;
 
-  const panX = width * 0.009 * strength * presetAmount * musicalMotion;
-  const panY = height * 0.005 * strength * presetAmount * Math.cos(frame.time * 0.15 + musicalMotion);
-  const scale = 1 + 0.012 * strength * presetAmount * (0.5 + 0.5 * musicalMotion);
+  let panX = width * 0.009 * strength * presetAmount * musicalMotion;
+  let panY = height * 0.005 * strength * presetAmount * Math.cos(frame.time * 0.15 + musicalMotion);
+  let scale = 1 + 0.012 * strength * presetAmount * (0.5 + 0.5 * musicalMotion);
+  let blur = Math.max(18, width * 0.022);
+
+  for (const effect of effects) {
+    if (effect.target !== 'background') continue;
+
+    if (effect.type === 'background-drift') {
+      const signed = effect.strength * effect.signal;
+      panX += width * (effect.params.x ?? 0.014) * signed;
+      panY += height * (effect.params.y ?? 0.01) * Math.sin(frame.time * 0.21 + signed * Math.PI);
+      scale *= 1 + (effect.params.scale ?? 0.025) * Math.abs(signed);
+    }
+
+    if (effect.type === 'blur') {
+      blur += (effect.params.radius ?? 24) * Math.max(0, effectStrength(effect));
+    }
+  }
 
   ctx.save();
   ctx.filter =
-    'blur(' + Math.max(18, width * 0.022) + 'px) '
+    'blur(' + blur + 'px) '
     + 'brightness(' + (settings.preset === 'ambient' ? 0.46 : 0.42) + ') '
     + 'saturate(' + (settings.preset === 'reactive' ? 0.9 : 0.76) + ')';
   ctx.globalAlpha = 0.92;
@@ -250,6 +272,152 @@ function brandAnchor(position: CompositionFrame['settings']['brandPosition'], wi
     x: position.endsWith('left') ? x : width - x,
     y: position.startsWith('top') ? y : height - y,
   };
+}
+
+function hashNoise(seed: number) {
+  const value = Math.sin(seed * 12.9898) * 43758.5453;
+  return (value - Math.floor(value)) * 2 - 1;
+}
+
+function noiseSmoothstep(value: number) {
+  return value * value * (3 - 2 * value);
+}
+
+function valueNoise(seed: number, sample: number) {
+  const index = Math.floor(sample);
+  const fraction = sample - index;
+  const left = hashNoise(seed + index);
+  const right = hashNoise(seed + index + 1);
+  return left + (right - left) * noiseSmoothstep(fraction);
+}
+
+function applyForegroundEffects(
+  ctx: Context2D,
+  frame: CompositionFrame,
+  effects: readonly EvaluatedEffect[],
+) {
+  const { width, height, time } = frame;
+  const centerX = width / 2;
+  const centerY = height / 2;
+
+  for (const effect of effects) {
+    if (effect.target !== 'foreground') continue;
+    const strength = Math.max(0, effectStrength(effect));
+    if (strength <= 0.0001) continue;
+
+    if (effect.type === 'zoom-punch') {
+      const scale = 1 + (effect.params.scale ?? 0.075) * strength;
+      ctx.translate(centerX, centerY);
+      ctx.scale(scale, scale);
+      ctx.translate(-centerX, -centerY);
+    }
+
+    if (effect.type === 'shake') {
+      const seed = effect.params.seed ?? 1;
+      const sample = time * 12;
+      const dx = valueNoise(seed * 97 + 11, sample) * width * (effect.params.x ?? 0.012) * strength;
+      const dy = valueNoise(seed * 97 + 23, sample) * height * (effect.params.y ?? 0.012) * strength;
+      const rotation = valueNoise(seed * 97 + 37, sample)
+        * (effect.params.rotation ?? 1.1)
+        * strength
+        * Math.PI / 180;
+
+      ctx.translate(dx, dy);
+      ctx.translate(centerX, centerY);
+      ctx.rotate(rotation);
+      ctx.translate(-centerX, -centerY);
+    }
+  }
+}
+
+function drawForeground(
+  ctx: Context2D,
+  frame: CompositionFrame,
+  effects: readonly EvaluatedEffect[],
+) {
+  if (!frame.source) return;
+
+  ctx.save();
+  ctx.shadowColor = 'rgba(0,0,0,0.48)';
+  ctx.shadowBlur = frame.width * 0.018;
+  applyForegroundEffects(ctx, frame, effects);
+  drawFitted(ctx, frame.source, frame.width, frame.height, 'contain');
+  ctx.restore();
+}
+
+let compositeScratch: OffscreenCanvas | HTMLCanvasElement | null = null;
+
+function getCompositeScratch(width: number, height: number) {
+  if (!compositeScratch) {
+    compositeScratch = typeof OffscreenCanvas !== 'undefined'
+      ? new OffscreenCanvas(width, height)
+      : document.createElement('canvas');
+  }
+  if (compositeScratch.width !== width) compositeScratch.width = width;
+  if (compositeScratch.height !== height) compositeScratch.height = height;
+  return compositeScratch;
+}
+
+function applyCompositeBlur(
+  ctx: Context2D,
+  width: number,
+  height: number,
+  radius: number,
+) {
+  if (radius <= 0.05) return;
+  const scratch = getCompositeScratch(width, height);
+  const scratchCtx = scratch.getContext('2d');
+  if (!scratchCtx) return;
+
+  scratchCtx.clearRect(0, 0, width, height);
+  scratchCtx.drawImage(ctx.canvas as CanvasImageSource, 0, 0, width, height);
+
+  ctx.save();
+  ctx.clearRect(0, 0, width, height);
+  ctx.fillStyle = '#08090a';
+  ctx.fillRect(0, 0, width, height);
+  ctx.filter = 'blur(' + radius + 'px)';
+  ctx.drawImage(scratch as CanvasImageSource, 0, 0, width, height);
+  ctx.restore();
+}
+
+function applyCompositeEffects(
+  ctx: Context2D,
+  frame: CompositionFrame,
+  effects: readonly EvaluatedEffect[],
+) {
+  const { width, height } = frame;
+
+  for (const effect of effects) {
+    if (effect.target !== 'composite') continue;
+    const strength = Math.max(0, effectStrength(effect));
+    if (strength <= 0.0001) continue;
+
+    if (effect.type === 'glow') {
+      const amount = (effect.params.amount ?? 0.12) * strength;
+      const gradient = ctx.createRadialGradient(
+        width * 0.5,
+        height * 0.42,
+        0,
+        width * 0.5,
+        height * 0.42,
+        Math.max(width, height) * 0.72,
+      );
+      gradient.addColorStop(0, 'rgba(229,238,255,' + Math.min(0.24, amount) + ')');
+      gradient.addColorStop(1, 'rgba(229,238,255,0)');
+      ctx.fillStyle = gradient;
+      ctx.fillRect(0, 0, width, height);
+    }
+
+    if (effect.type === 'blur') {
+      applyCompositeBlur(
+        ctx,
+        width,
+        height,
+        (effect.params.radius ?? 24) * strength * 0.45,
+      );
+    }
+  }
 }
 
 function drawWatermarkGrid(ctx: Context2D, frame: CompositionFrame) {
@@ -442,12 +610,21 @@ function drawGuides(
 
 export function renderComposition(ctx: Context2D, frame: CompositionFrame) {
   const { width, height, source } = frame;
+  const effects = evaluateEffectStack(
+    frame.settings.effects ?? [],
+    frame.settings.modulations ?? [],
+    {
+      time: frame.time,
+      grid: frame.grid,
+      audioLevel: frame.audioLevel,
+    },
+  );
   ctx.clearRect(0, 0, width, height);
   ctx.fillStyle = '#08090a';
   ctx.fillRect(0, 0, width, height);
 
   if (source) {
-    drawBackground(ctx, frame);
+    drawBackground(ctx, frame, effects);
 
     const veil = ctx.createLinearGradient(0, 0, 0, height);
     veil.addColorStop(0, 'rgba(4,5,6,0.18)');
@@ -455,11 +632,7 @@ export function renderComposition(ctx: Context2D, frame: CompositionFrame) {
     ctx.fillStyle = veil;
     ctx.fillRect(0, 0, width, height);
 
-    ctx.save();
-    ctx.shadowColor = 'rgba(0,0,0,0.48)';
-    ctx.shadowBlur = width * 0.018;
-    drawFitted(ctx, source, width, height, 'contain');
-    ctx.restore();
+    drawForeground(ctx, frame, effects);
   } else {
     drawPlaceholder(ctx, width, height);
   }
@@ -480,6 +653,7 @@ export function renderComposition(ctx: Context2D, frame: CompositionFrame) {
   ctx.fillStyle = vignette;
   ctx.fillRect(0, 0, width, height);
 
+  applyCompositeEffects(ctx, frame, effects);
   drawWatermarkGrid(ctx, frame);
   drawTitle(ctx, frame);
   drawBrand(ctx, frame);
