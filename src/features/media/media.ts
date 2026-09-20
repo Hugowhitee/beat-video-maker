@@ -14,15 +14,116 @@ export async function loadImageFile(file: File): Promise<HTMLImageElement> {
   }
 }
 
-export async function decodeAudioFile(file: File): Promise<AudioBuffer> {
+async function decodeWithMediabunny(file: File): Promise<AudioBuffer> {
+  const {
+    ALL_FORMATS,
+    AudioSampleSink,
+    BlobSource,
+    Input,
+  } = await import('mediabunny');
+
+  const input = new Input({
+    source: new BlobSource(file),
+    formats: ALL_FORMATS,
+  });
+
+  try {
+    const track = await input.getPrimaryAudioTrack();
+    if (!track) throw new Error('No audio track found.');
+    if (!(await track.canDecode())) throw new Error('Audio codec is not decodable.');
+
+    const sampleRate = await track.getSampleRate();
+    const numberOfChannels = await track.getNumberOfChannels();
+    const duration = await track.computeDuration();
+
+    if (
+      !Number.isFinite(sampleRate) || sampleRate <= 0
+      || !Number.isInteger(numberOfChannels) || numberOfChannels <= 0
+      || !Number.isFinite(duration) || duration <= 0
+    ) {
+      throw new Error('Invalid audio stream metadata.');
+    }
+
+    const length = Math.max(1, Math.ceil(duration * sampleRate));
+    const output = new AudioBuffer({
+      length,
+      numberOfChannels,
+      sampleRate,
+    });
+    const outputChannels = Array.from(
+      { length: numberOfChannels },
+      (_, channel) => output.getChannelData(channel),
+    );
+
+    let wroteSamples = false;
+    let lastYield = performance.now();
+    const sink = new AudioSampleSink(track);
+
+    for await (const sample of sink.samples()) {
+      try {
+        const frameCount = sample.numberOfFrames;
+        const sourceChannels = sample.numberOfChannels;
+        const interleaved = new Float32Array(frameCount * sourceChannels);
+        sample.copyTo(interleaved, { format: 'f32', planeIndex: 0 });
+
+        let outputStart = Math.round(sample.timestamp * sampleRate);
+        let sourceStart = 0;
+        if (outputStart < 0) {
+          sourceStart = Math.min(frameCount, -outputStart);
+          outputStart = 0;
+        }
+
+        const writableFrames = Math.min(
+          frameCount - sourceStart,
+          Math.max(0, length - outputStart),
+        );
+
+        for (let channel = 0; channel < numberOfChannels; channel += 1) {
+          const sourceChannel = Math.min(channel, sourceChannels - 1);
+          const destination = outputChannels[channel];
+          for (let frame = 0; frame < writableFrames; frame += 1) {
+            destination[outputStart + frame] =
+              interleaved[(sourceStart + frame) * sourceChannels + sourceChannel] || 0;
+          }
+        }
+
+        wroteSamples ||= writableFrames > 0;
+      } finally {
+        sample.close();
+      }
+
+      if (performance.now() - lastYield >= 8) {
+        await new Promise<void>((resolve) => setTimeout(resolve, 0));
+        lastYield = performance.now();
+      }
+    }
+
+    if (!wroteSamples) throw new Error('Audio stream contained no decodable samples.');
+    return output;
+  } finally {
+    input.dispose();
+  }
+}
+
+async function decodeWithWebAudio(file: File): Promise<AudioBuffer> {
   const bytes = await file.arrayBuffer();
   const context = new AudioContext();
   try {
     return await context.decodeAudioData(bytes.slice(0));
-  } catch {
-    throw new Error('The selected audio file is not supported by this browser.');
   } finally {
     await context.close();
+  }
+}
+
+export async function decodeAudioFile(file: File): Promise<AudioBuffer> {
+  try {
+    return await decodeWithMediabunny(file);
+  } catch {
+    try {
+      return await decodeWithWebAudio(file);
+    } catch {
+      throw new Error('The selected audio file is not supported by this browser.');
+    }
   }
 }
 
