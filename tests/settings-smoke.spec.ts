@@ -10,6 +10,9 @@ test('style preferences persist locally and reset cleanly', async ({ page }, tes
   await page.getByTestId('title-font').selectOption('serif');
   await page.getByTestId('title-position-center').click();
   await page.getByTestId('motion-amount').selectOption('medium');
+  await page.getByTestId('effect-add-type').selectOption('glow');
+  await page.getByTestId('effect-add').click();
+  await page.locator('[data-effect-type="glow"]').getByLabel('Glow driver').selectOption('static');
 
   await page.reload();
 
@@ -21,6 +24,8 @@ test('style preferences persist locally and reset cleanly', async ({ page }, tes
   await expect(page.getByTestId('title-y')).toHaveValue('50');
   await expect(page.getByTestId('title-align-center')).toHaveClass(/is-active/);
   await expect(page.getByTestId('motion-amount')).toHaveValue('medium');
+  await expect(page.locator('[data-effect-type="glow"]')).toHaveCount(1);
+  await expect(page.locator('[data-effect-type="glow"]').getByLabel('Glow driver')).toHaveValue('static');
 
   await page.getByTestId('reset-settings').click();
   await page.reload();
@@ -33,6 +38,7 @@ test('style preferences persist locally and reset cleanly', async ({ page }, tes
   await expect(page.getByTestId('title-y')).toHaveValue('88');
   await expect(page.getByTestId('title-align-left')).toHaveClass(/is-active/);
   await expect(page.getByTestId('motion-amount')).toHaveValue('low');
+  await expect(page.getByTestId('effect-stack')).toHaveCount(0);
 });
 
 
