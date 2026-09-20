@@ -2,8 +2,11 @@ import { guess } from 'web-audio-beat-detector';
 import type { BeatGridAnalysis } from './types';
 
 const TEMPO_SETTINGS = {
-  minTempo: 55,
-  maxTempo: 220,
+  // Keep the detector in the musical grid band used by the editor. Very low
+  // half-time candidates are folded upward by the upstream detector, which
+  // preserves beat-aligned edit points for modern hip-hop/electronic material.
+  minTempo: 75,
+  maxTempo: 200,
 };
 
 type UpstreamGuess = {
