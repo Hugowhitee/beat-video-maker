@@ -267,11 +267,12 @@ function drawWatermarkGrid(ctx: Context2D, frame: CompositionFrame) {
   const textWidth = Math.max(ctx.measureText(text).width, fontSize * 4);
   const stepX = Math.max(textWidth + width * 0.07, width * 0.17);
   const stepY = Math.max(fontSize * 3.4, height * 0.105);
+  const extent = Math.hypot(cover.width, cover.height) / 2 + Math.max(stepX, stepY);
   let row = 0;
 
-  for (let y = cover.y - height; y <= cover.y + cover.height + height; y += stepY) {
+  for (let y = centerY - extent; y <= centerY + extent; y += stepY) {
     const offset = row % 2 === 0 ? 0 : stepX / 2;
-    for (let x = cover.x - width; x <= cover.x + cover.width + width; x += stepX) {
+    for (let x = centerX - extent - stepX; x <= centerX + extent; x += stepX) {
       ctx.strokeText(text, x + offset, y);
       ctx.fillText(text, x + offset, y);
     }
