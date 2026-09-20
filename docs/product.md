@@ -62,6 +62,18 @@ A fixed intro/outro/stinger that the user drags into every video is modeled as a
 
 Heavy analysis models must be optional/lazy. The Still workflow must remain quick and must not download video-analysis models merely to open the app.
 
+### Reuse map
+
+Do not rebuild mature editor/media infrastructure merely to keep the repository small:
+
+- **Mediabunny** stays the media container/decode/sample/export foundation, including source-video frame access.
+- **Beat This!** is the preferred future beat/downbeat model; its code and published weights are MIT. The MIT musetric browser implementation is useful prior art for ONNX Runtime Web packaging and preprocessing, but numerical parity must be measured before choosing WebGPU or WASM execution.
+- **TransNetV2** is the preferred shot-boundary model. Use the official MIT model contract with a thin browser adapter; do not adopt an otherwise-convenient wrapper that has no usable license.
+- **FreeCut** (MIT) is prior art for a cut-centered transition model with hidden source handles and a GPU transition registry. Adapt that contract when transition rendering lands rather than inventing incompatible transition semantics.
+- **Editly** (MIT) is prior art for a declarative structured edit specification. `EditPlan` should remain data, not hidden React state.
+- **OpenCut** (MIT) is UI/editor prior art. Reuse selected interaction/component patterns where they fit the compact Beatvideo workflow; do not import its branding or full-NLE scope.
+- GPL/AGPL tools such as Mixxx, Essentia and LosslessCut may inform research/behavior but are not default source-code dependencies under the current licensing direction.
+
 ## Composition model
 
 Presets configure the same primitives rather than owning separate render trees:
