@@ -5,6 +5,7 @@ import {
   removeEffect,
   setEffectEnabled,
   setEffectStrength,
+  setEffectTarget,
 } from '../src/features/effects/stack';
 
 function effects() {
@@ -40,4 +41,14 @@ test('effect removal leaves unrelated instances untouched', () => {
   expect(next.map((effect) => effect.id)).toEqual(['zoom', 'glow']);
   expect(next[0]).toBe(original[0]);
   expect(next[1]).toBe(original[2]);
+});
+
+
+test('effect target edits preserve stack identity and order', () => {
+  const original = effects();
+  const next = setEffectTarget(original, 'glow', 'background');
+
+  expect(next.map((effect) => effect.id)).toEqual(['zoom', 'shake', 'glow']);
+  expect(next[2]?.target).toBe('background');
+  expect(original[2]?.target).toBe('composite');
 });
