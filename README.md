@@ -27,7 +27,7 @@ The first vertical slice is implemented and validated:
 - local browser-decodable audio import;
 - a fixed 16:9 Clean compositor with blurred background fill and an unchanged sharp foreground;
 - editable title font direction, size, tracking and placement;
-- an optional producer/wordmark watermark as text or PNG/SVG, with corner and opacity controls;
+- an optional channel/producer watermark as text or PNG/SVG, with a normal corner layout or a subtle repeated text grid clipped to the sharp cover;
 - playback, seek and a lightweight decoded waveform;
 - deterministic 1920×1080 / 30 fps export with the same compositor used by preview;
 - MP4/H.264 + AAC when available, with an explicit WebM/VP9 + Opus fallback instead of putting VP9 in an MP4 container;
@@ -56,12 +56,13 @@ Open the local Vite URL. Local development is not the recommended installation r
 
 1. Choose a cover image and audio file.
 2. Enter a title.
-3. Optionally enter a producer/wordmark, or choose a transparent PNG/SVG watermark.
-4. Choose one of the four curated title directions, then adjust size, tracking and placement.
-5. Adjust watermark corner/opacity.
-6. Play or seek to check the composition. Safe guides are preview-only.
-7. Export. Current Chromium normally uses MP4/H.264 + AAC; a clearly labeled WebM fallback is used only when that MP4 path is unavailable.
-8. During a long render, the Export button becomes a Cancel action.
+3. Optionally enter a channel/producer watermark, or choose a transparent PNG/SVG mark.
+4. Choose **Corner** for a conventional mark, or **Watermark grid** to repeat the text subtly across only the sharp cover image.
+5. Choose one of the four curated title directions, then adjust size, tracking and placement.
+6. Adjust watermark placement/strength.
+7. Play or seek to check the composition. Safe guides are preview-only.
+8. Export. Current Chromium normally uses MP4/H.264 + AAC; a clearly labeled WebM fallback is used only when that MP4 path is unavailable.
+9. During a long render, the Export button becomes a Cancel action.
 
 The app checks codec support at runtime and never reports an export as successful until a real non-empty encoded file exists.
 
