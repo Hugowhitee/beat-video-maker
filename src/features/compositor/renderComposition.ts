@@ -653,11 +653,11 @@ export function renderComposition(ctx: Context2D, frame: CompositionFrame) {
   ctx.fillStyle = vignette;
   ctx.fillRect(0, 0, width, height);
 
-  applyCompositeEffects(ctx, frame, effects);
   drawWatermarkGrid(ctx, frame);
   drawTitle(ctx, frame);
   drawBrand(ctx, frame);
   drawMinimalVisualizer(ctx, frame);
+  applyCompositeEffects(ctx, frame, effects);
   if (frame.settings.showGuides || frame.settings.showGrid) {
     drawGuides(ctx, width, height, frame.settings.showGrid);
   }
