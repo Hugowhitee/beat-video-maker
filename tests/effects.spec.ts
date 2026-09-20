@@ -1,5 +1,11 @@
 import { expect, test } from '@playwright/test';
-import { createDefaultModulation, createEffectInstance, effectDefinition } from '../src/features/effects/registry';
+import {
+  createDefaultModulation,
+  createEffectInstance,
+  effectDefinition,
+  effectParamRange,
+  EFFECT_TYPES,
+} from '../src/features/effects/registry';
 import { effectStrength, evaluateEffectStack, pulseEnvelope } from '../src/features/effects/evaluate';
 import type { VerifiedGrid } from '../src/features/analysis/types';
 
@@ -75,4 +81,17 @@ test('phrase modulation is signed so drift can travel in both directions', () =>
 
   expect(positive.signal).toBeGreaterThan(0);
   expect(negative.signal).toBeLessThan(0);
+});
+
+
+test('registry defaults stay inside their declared parameter ranges', () => {
+  for (const type of EFFECT_TYPES) {
+    const definition = effectDefinition(type);
+    for (const [key, value] of Object.entries(definition.defaultParams)) {
+      const range = effectParamRange(type, key);
+      expect(range, type + '.' + key + ' range').not.toBeNull();
+      expect(value).toBeGreaterThanOrEqual(range!.min);
+      expect(value).toBeLessThanOrEqual(range!.max);
+    }
+  }
 });
