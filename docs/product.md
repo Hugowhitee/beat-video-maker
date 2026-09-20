@@ -224,3 +224,28 @@ The v1 template schema contains:
 - visual preset and motion amount.
 
 It intentionally does **not** contain source image/audio/video data or binary watermark graphics. Template import validates the full versioned schema before applying anything; invalid or future-version files fail without partially changing the project. Once opened, every template value remains normal editable state.
+
+
+## Effect stack and modulation
+
+The post-v0.1 visual system replaces exclusive preset branches with one ordered, inspectable effect stack.
+
+Canonical data:
+- `VisualEffectInstance[]` — ordered, stable-id effect instances;
+- target = background / foreground / composite;
+- enabled + strength + typed params per instance;
+- `EffectModulation[]` — separate analytic drivers attached to effect properties/strength;
+- deterministic immutable stack operations for reorder, enable/disable, strength and removal.
+
+The first curated registry is deliberately small:
+- Zoom punch — foreground transform accent;
+- Shake — foreground deterministic transform noise;
+- Background drift — slow background transform;
+- Glow — composite light accent;
+- Blur — background/composite blur.
+
+This foundation adapts the effect-instance/registry and analytic modulation ideas from MIT FreeCut rather than inventing a second generic effects architecture. The full NLE is not imported.
+
+Beat/downbeat/amplitude/phrase modulation is evaluated at render time from the shared musical grid/audio envelope. Beat pulses use a short analytic attack/decay envelope rather than thousands of generated keyframes. Phrase modulation is signed so drift can travel naturally in both directions.
+
+The data contract is intentionally independent of the rendering backend. Transform effects may be resolved as small compositor math; pixel effects should converge on one shared GPU pipeline. Presets become authored stack recipes instead of separate compositor implementations.
