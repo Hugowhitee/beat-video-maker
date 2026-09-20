@@ -37,6 +37,7 @@ export type EffectDefinition = {
   defaultTarget: VisualTarget;
   defaultStrength: number;
   defaultParams: EffectParams;
+  paramRanges: Record<string, { min: number; max: number }>;
   defaultDriver: ModulationDriver | null;
   drivers: readonly ModulationDriver[];
 };
