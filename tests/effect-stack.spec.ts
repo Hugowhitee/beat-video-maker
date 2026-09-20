@@ -44,11 +44,15 @@ test('effect removal leaves unrelated instances untouched', () => {
 });
 
 
-test('effect target edits preserve stack identity and order', () => {
-  const original = effects();
-  const next = setEffectTarget(original, 'glow', 'background');
+test('effect target edits preserve order and reject unsupported targets', () => {
+  const blur = createEffectInstance('blur', { id: 'blur' });
+  const original = [...effects(), blur];
 
-  expect(next.map((effect) => effect.id)).toEqual(['zoom', 'shake', 'glow']);
-  expect(next[2]?.target).toBe('background');
-  expect(original[2]?.target).toBe('composite');
+  const movedBlur = setEffectTarget(original, 'blur', 'composite');
+  expect(movedBlur.map((effect) => effect.id)).toEqual(['zoom', 'shake', 'glow', 'blur']);
+  expect(movedBlur[3]?.target).toBe('composite');
+  expect(original[3]?.target).toBe('background');
+
+  const invalidGlow = setEffectTarget(original, 'glow', 'background');
+  expect(invalidGlow[2]?.target).toBe('composite');
 });
