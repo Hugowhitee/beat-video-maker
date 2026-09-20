@@ -9,7 +9,6 @@ const TEMPO_SETTINGS = {
 type UpstreamGuess = {
   bpm: number;
   offset: number;
-  tempo: number;
 };
 
 async function guessRange(
@@ -25,8 +24,7 @@ async function guessRange(
     if (
       !Number.isFinite(result.bpm)
       || !Number.isFinite(result.offset)
-      || !Number.isFinite(result.tempo)
-      || result.bpm < TEMPO_SETTINGS.minTempo
+       || result.bpm < TEMPO_SETTINGS.minTempo
       || result.bpm > TEMPO_SETTINGS.maxTempo
     ) {
       return null;
