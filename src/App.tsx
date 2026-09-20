@@ -441,6 +441,72 @@ function App() {
     setModulations(DEFAULT_USER_SETTINGS.modulations);
   };
 
+  const addEffect = () => {
+    const effect = createEffectInstance(effectToAdd);
+    const modulation = createDefaultModulation(effect);
+    setEffects((current) => [...current, effect]);
+    if (modulation) {
+      setModulations((current) => [...current, modulation]);
+    }
+  };
+
+  const updateEffect = (
+    effectId: string,
+    update: Partial<Pick<VisualEffectInstance, 'enabled' | 'strength' | 'target'>>,
+  ) => {
+    setEffects((current) => current.map((effect) =>
+      effect.id === effectId ? { ...effect, ...update } : effect
+    ));
+  };
+
+  const removeEffect = (effectId: string) => {
+    setEffects((current) => current.filter((effect) => effect.id !== effectId));
+    setModulations((current) => current.filter((modulation) => modulation.effectId !== effectId));
+  };
+
+  const moveEffect = (effectId: string, direction: -1 | 1) => {
+    setEffects((current) => {
+      const index = current.findIndex((effect) => effect.id === effectId);
+      const nextIndex = index + direction;
+      if (index < 0 || nextIndex < 0 || nextIndex >= current.length) return current;
+      const next = [...current];
+      [next[index], next[nextIndex]] = [next[nextIndex], next[index]];
+      return next;
+    });
+  };
+
+  const setEffectDriver = (
+    effect: VisualEffectInstance,
+    driver: ModulationDriver | 'static',
+  ) => {
+    setModulations((current) => {
+      const existing = current.find((modulation) => modulation.effectId === effect.id);
+      if (driver === 'static') {
+        return current.filter((modulation) => modulation.effectId !== effect.id);
+      }
+      if (existing) {
+        return current.map((modulation) =>
+          modulation.id === existing.id ? { ...modulation, driver, enabled: true } : modulation
+        );
+      }
+      const next = createDefaultModulation(effect);
+      if (!next) {
+        return [
+          ...current,
+          {
+            id: 'mod-' + effect.id,
+            effectId: effect.id,
+            parameter: 'strength',
+            driver,
+            amount: 1,
+            enabled: true,
+          },
+        ];
+      }
+      return [...current, { ...next, driver }];
+    });
+  };
+
   const applyTitlePlacement = (key: TitlePlacementKey) => {
     const placement = placementPreset(key);
     setTitleX(placement.x);
