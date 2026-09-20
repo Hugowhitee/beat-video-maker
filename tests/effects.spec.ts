@@ -95,3 +95,28 @@ test('registry defaults stay inside their declared parameter ranges', () => {
     }
   }
 });
+
+
+test('missing analysis keeps modulated effects visible as static fallbacks', () => {
+  const zoom = createEffectInstance('zoom-punch', { id: 'zoom-fallback' });
+  const beatModulation = createDefaultModulation(zoom, 'mod-fallback')!;
+  const [withoutGrid] = evaluateEffectStack(
+    [zoom],
+    [beatModulation],
+    { time: 2, grid: null },
+  );
+
+  expect(withoutGrid?.signal).toBe(1);
+  expect(effectStrength(withoutGrid!)).toBeCloseTo(zoom.strength, 6);
+
+  const glow = createEffectInstance('glow', { id: 'glow-fallback' });
+  const amplitudeModulation = createDefaultModulation(glow, 'glow-mod')!;
+  const [withoutAudio] = evaluateEffectStack(
+    [glow],
+    [amplitudeModulation],
+    { time: 2, grid: null },
+  );
+
+  expect(withoutAudio?.signal).toBe(1);
+  expect(effectStrength(withoutAudio!)).toBeCloseTo(glow.strength, 6);
+});
