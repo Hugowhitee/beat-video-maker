@@ -11,7 +11,7 @@ export type VideoSourceMetadata = {
   duration: number;
   width: number;
   height: number;
-  codec: string;
+  codec: string | null;
   firstTimestamp: number;
 };
 
