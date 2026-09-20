@@ -41,7 +41,8 @@ test('opens and samples a real local video through Mediabunny', async ({ page },
     stream.getTracks().forEach((track) => track.stop());
 
     const file = new File(chunks, 'source.webm', { type: mimeType });
-    const module = await import('/src/features/media/videoSource.ts');
+    const modulePath = '/src/features/media/videoSource.ts';
+    const module = await import(modulePath);
     const session = await module.openVideoSource(file, 'source-1');
 
     try {
