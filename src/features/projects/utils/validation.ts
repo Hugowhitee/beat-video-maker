@@ -26,6 +26,8 @@ export function createProjectFormSchema(t: (key: string) => string) {
       .optional()
       .or(z.literal('')),
 
+    beatvideoMode: z.enum(['photo', 'video']),
+
     width: z
       .number()
       .int(t('projects.validation.widthInteger'))
@@ -141,6 +143,7 @@ export const PROJECT_TEMPLATES: readonly ProjectTemplate[] = [
 export const DEFAULT_PROJECT_VALUES: ProjectFormData = {
   name: '',
   description: '',
+  beatvideoMode: 'photo',
   width: DEFAULT_PROJECT_WIDTH,
   height: DEFAULT_PROJECT_HEIGHT,
   fps: DEFAULT_PROJECT_FPS,
