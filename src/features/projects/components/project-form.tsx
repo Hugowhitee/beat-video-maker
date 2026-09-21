@@ -12,6 +12,7 @@ import {
 } from '@/components/ui/select'
 import { Separator } from '@/components/ui/separator'
 import { Link } from '@tanstack/react-router'
+import { Image, Video } from 'lucide-react'
 import {
   createProjectFormSchema,
   type ProjectFormData,
@@ -92,6 +93,7 @@ function ProjectFormBase({
   }, [resolvedDefaultValues.height, resolvedDefaultValues.width])
 
   const fps = watch('fps')
+  const beatvideoMode = watch('beatvideoMode')
   const fpsOptions = useMemo(() => getProjectFpsOptions(fps), [fps])
 
   const handleSelectTemplate = (template: ProjectTemplate) => {
@@ -137,6 +139,51 @@ function ProjectFormBase({
               </div>
 
               <div className="space-y-5">
+                <div>
+                  <span className="block text-sm font-medium text-foreground mb-2">
+                    Editor mode
+                  </span>
+                  <div
+                    role="tablist"
+                    aria-label="Editor mode"
+                    className="grid grid-cols-2 gap-2"
+                  >
+                    {([
+                      ['photo', Image, 'Photo', 'Still image + beat'],
+                      ['video', Video, 'Video', 'Footage + beat'],
+                    ] as const).map(([value, Icon, label, description]) => {
+                      const active = beatvideoMode === value
+                      return (
+                        <button
+                          key={value}
+                          type="button"
+                          role="tab"
+                          aria-selected={active}
+                          onClick={() =>
+                            setValue('beatvideoMode', value, {
+                              shouldValidate: true,
+                              shouldDirty: true,
+                            })
+                          }
+                          className={`flex min-h-16 items-center gap-3 rounded-md border p-3 text-left transition-colors ${
+                            active
+                              ? 'border-primary bg-primary/10 text-foreground'
+                              : 'border-border bg-secondary/30 text-muted-foreground hover:bg-secondary/50 hover:text-foreground'
+                          }`}
+                        >
+                          <Icon className="h-4 w-4 shrink-0" />
+                          <span className="min-w-0">
+                            <strong className="block text-sm font-medium">{label}</strong>
+                            <span className="block text-xs text-muted-foreground">
+                              {description}
+                            </span>
+                          </span>
+                        </button>
+                      )
+                    })}
+                  </div>
+                </div>
+
                 {/* Project Name */}
                 <div>
                   <label htmlFor="name" className="block text-sm font-medium text-foreground mb-2">
