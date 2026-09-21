@@ -188,6 +188,7 @@ export const useProjectStore = create<ProjectState & ProjectActions>()(
             ...existingProject,
             name: data.name ?? existingProject.name,
             description: data.description ?? existingProject.description,
+            beatvideoMode: data.beatvideoMode ?? existingProject.beatvideoMode,
             metadata: {
               width: data.width ?? existingProject.metadata.width,
               height: data.height ?? existingProject.metadata.height,
