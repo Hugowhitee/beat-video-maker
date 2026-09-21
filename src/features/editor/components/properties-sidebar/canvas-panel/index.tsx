@@ -20,6 +20,7 @@ import { MarkerList } from '../marker-panel/marker-list'
 import { formatTimecodeDotFrames } from '@/shared/utils/time-utils'
 import { commitProjectMetadataChange } from '@/features/editor/utils/project-metadata-history'
 import { CompositionControlsAuthoringSection } from './composition-controls-authoring-section'
+import { normalizeBeatvideoProjectMode } from '@/shared/beatvideo/product-mode'
 
 /**
  * Isolated color picker using react-colorful.
@@ -110,6 +111,7 @@ export const CanvasPanel = memo(function CanvasPanel() {
   const { t } = useTranslation()
   // Granular selectors
   const currentProject = useProjectStore((s) => s.currentProject)
+  const beatvideoMode = normalizeBeatvideoProjectMode(currentProject?.beatvideoMode)
   const updateProject = useProjectStore((s) => s.updateProject)
   const fps = useTimelineStore((s) => s.fps)
   const markDirty = useTimelineStore((s) => s.markDirty)
@@ -452,7 +454,7 @@ export const CanvasPanel = memo(function CanvasPanel() {
         )}
       </PropertySection>
 
-      {(!isLayerComposition || markerCount > 0) && (
+      {beatvideoMode === 'video' && (!isLayerComposition || markerCount > 0) && (
         <>
           <Separator />
           <MarkerList defaultOpen={!isLayerComposition} />
