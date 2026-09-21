@@ -94,5 +94,16 @@ The production install surface is the GitHub Pages project site. Keep Pages-spec
 - Provide a compact 3×3 quick-position grid and direct preview placement as convenience controls over the same canonical coordinates.
 - Composition/safe-area guides are editor-only overlays. Export must force guides/grid off so authoring chrome can never leak into rendered video.
 - Editable templates use a versioned local `.beatvideo-template.json` contract. Validate the whole document before mutating editor state.
-- Template files contain editable style/title/brand/preset state only. Do not embed source image/audio/video blobs or uploaded watermark graphics.
+- Template files contain editable title/brand/look state, including the ordered effect stack and modulation records. Do not embed source image/audio/video blobs or uploaded watermark graphics.
 - Opening a template must leave every imported setting editable and must clear an existing uploaded watermark graphic when the template contains text-only brand state.
+
+
+## Effects and modulation
+
+- The canonical model is an ordered `VisualEffectInstance[]` plus separate modulation records. Do not encode stack order in React component order or preset-specific branches.
+- Effect targets stay explicit: background, foreground or final composite. The same effect type must not silently change target semantics by preset.
+- Keep modulation analytic at render time rather than baking dense per-beat keyframes. The current pulse envelope and registry structure adapt permissively licensed FreeCut patterns.
+- Presets may insert/update an effect stack, but they must not own separate render trees.
+- Pixel effects should eventually run through one shared GPU pipeline adapted from a mature permissively licensed implementation. Do not add one-off shader canvases per effect.
+- Transform/product glue such as deterministic scale/shake/drift evaluation may remain local when it is small, testable and consumed by the canonical compositor.
+- Preview and export must evaluate the exact same ordered effect stack and modulation inputs.

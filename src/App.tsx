@@ -56,6 +56,27 @@ import {
   TITLE_PLACEMENT_KEYS,
 } from './features/project/titlePlacement';
 import type { TitlePlacementKey } from './features/project/titlePlacement';
+import {
+  createDefaultModulation,
+  createEffectInstance,
+  effectDefinition,
+  EFFECT_TYPES,
+} from './features/effects/registry';
+import type {
+  EffectModulation,
+  EffectType,
+  ModulationDriver,
+  VisualEffectInstance,
+  VisualTarget,
+} from './features/effects/types';
+import {
+  canMoveEffectWithinTarget,
+  moveEffectWithinTarget,
+  removeEffect as removeEffectFromStack,
+  setEffectEnabled,
+  setEffectStrength,
+  setEffectTarget,
+} from './features/effects/stack';
 
 const fixtureMode = new URLSearchParams(window.location.search).has('fixture');
 const storedSettings = fixtureMode ? DEFAULT_USER_SETTINGS : loadUserSettings();
@@ -87,6 +108,8 @@ type EditorSnapshot = {
   brandOpacity: number;
   preset: VisualPreset;
   motion: MotionAmount;
+  effects: VisualEffectInstance[];
+  modulations: EffectModulation[];
   bpmOverride: string | null;
   barOffset: number | null;
 };
@@ -210,6 +233,9 @@ function App() {
   const [amplitudeEnvelope, setAmplitudeEnvelope] = useState<AmplitudeEnvelope | null>(null);
   const [preset, setPreset] = useState<VisualPreset>(storedSettings.preset);
   const [motion, setMotion] = useState<MotionAmount>(storedSettings.motion);
+  const [effects, setEffects] = useState<VisualEffectInstance[]>(storedSettings.effects);
+  const [modulations, setModulations] = useState<EffectModulation[]>(storedSettings.modulations);
+  const [effectToAdd, setEffectToAdd] = useState<EffectType>('zoom-punch');
   const [historyState, setHistoryState] = useState({ canUndo: false, canRedo: false });
   const [installPrompt, setInstallPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [installHelpOpen, setInstallHelpOpen] = useState(false);
@@ -238,11 +264,13 @@ function App() {
     brandOpacity,
     preset,
     motion,
+    effects,
+    modulations,
     bpmOverride: manualBpm,
     barOffset: manualBarOffset,
   }), [
-    brandLayout, brandOpacity, brandPosition, brandText, manualBarOffset, manualBpm, motion, preset,
-    title, titleAlign, titleFont, titleSize, titleTracking, titleX, titleY,
+    brandLayout, brandOpacity, brandPosition, brandText, effects, manualBarOffset, manualBpm,
+    modulations, motion, preset, title, titleAlign, titleFont, titleSize, titleTracking, titleX, titleY,
   ]);
 
   useEffect(() => {
@@ -279,6 +307,8 @@ function App() {
     setBrandOpacity(snapshot.brandOpacity);
     setPreset(snapshot.preset);
     setMotion(snapshot.motion);
+    setEffects(snapshot.effects);
+    setModulations(snapshot.modulations);
     setManualBpm(snapshot.bpmOverride);
     setManualBarOffset(snapshot.barOffset);
   }, []);
@@ -318,8 +348,10 @@ function App() {
     brandOpacity,
     preset,
     motion,
+    effects,
+    modulations,
   }), [
-    brandLayout, brandOpacity, brandPosition, brandText, motion, preset,
+    brandLayout, brandOpacity, brandPosition, brandText, effects, modulations, motion, preset,
     titleAlign, titleFont, titleSize, titleTracking, titleX, titleY,
   ]);
 
@@ -338,6 +370,8 @@ function App() {
     brandOpacity,
     preset,
     motion,
+    effects,
+    modulations,
     showGuides,
     showGrid,
   }), [
@@ -355,6 +389,8 @@ function App() {
     brandOpacity,
     preset,
     motion,
+    effects,
+    modulations,
     showGuides,
     showGrid,
   ]);
@@ -409,6 +445,58 @@ function App() {
     setBrandOpacity(DEFAULT_USER_SETTINGS.brandOpacity);
     setPreset(DEFAULT_USER_SETTINGS.preset);
     setMotion(DEFAULT_USER_SETTINGS.motion);
+    setEffects(DEFAULT_USER_SETTINGS.effects);
+    setModulations(DEFAULT_USER_SETTINGS.modulations);
+  };
+
+  const addEffect = () => {
+    const effect = createEffectInstance(effectToAdd);
+    const modulation = createDefaultModulation(effect);
+    setEffects((current) => [...current, effect]);
+    if (modulation) {
+      setModulations((current) => [...current, modulation]);
+    }
+  };
+
+  const removeEffect = (effectId: string) => {
+    setEffects((current) => removeEffectFromStack(current, effectId));
+    setModulations((current) => current.filter((modulation) => modulation.effectId !== effectId));
+  };
+
+  const moveEffect = (effectId: string, direction: -1 | 1) => {
+    setEffects((current) => moveEffectWithinTarget(current, effectId, direction));
+  };
+
+  const setEffectDriver = (
+    effect: VisualEffectInstance,
+    driver: ModulationDriver | 'static',
+  ) => {
+    setModulations((current) => {
+      const existing = current.find((modulation) => modulation.effectId === effect.id);
+      if (driver === 'static') {
+        return current.filter((modulation) => modulation.effectId !== effect.id);
+      }
+      if (existing) {
+        return current.map((modulation) =>
+          modulation.id === existing.id ? { ...modulation, driver, enabled: true } : modulation
+        );
+      }
+      const next = createDefaultModulation(effect);
+      if (!next) {
+        return [
+          ...current,
+          {
+            id: 'mod-' + effect.id,
+            effectId: effect.id,
+            parameter: 'strength',
+            driver,
+            amount: 1,
+            enabled: true,
+          },
+        ];
+      }
+      return [...current, { ...next, driver }];
+    });
   };
 
   const applyTitlePlacement = (key: TitlePlacementKey) => {
@@ -446,6 +534,8 @@ function App() {
       setBrandOpacity(next.brandOpacity);
       setPreset(next.preset);
       setMotion(next.motion);
+      setEffects(next.effects);
+      setModulations(next.modulations);
       setBrandGraphic(null);
       setBrandGraphicName('Text only');
       setPlacingTitle(false);
@@ -1285,6 +1375,135 @@ function App() {
             {verifiedGrid?.barOffset == null && (preset === 'ambient' || preset === 'pulse') ? (
               <p className="control-hint">Verify bar 1 to enable bar-synchronised motion.</p>
             ) : null}
+          </div>
+
+          <div className="control-group effects-control" data-testid="effects-control">
+            <h3>Effects</h3>
+            <div className="effect-add-row">
+              <select
+                data-testid="effect-add-type"
+                value={effectToAdd}
+                onChange={(event) => setEffectToAdd(event.target.value as EffectType)}
+              >
+                {EFFECT_TYPES.map((type) => (
+                  <option key={type} value={type}>{effectDefinition(type).name}</option>
+                ))}
+              </select>
+              <button
+                type="button"
+                className="small-button"
+                data-testid="effect-add"
+                onClick={addEffect}
+              >
+                Add
+              </button>
+            </div>
+
+            {effects.length === 0 ? (
+              <p className="control-hint">Add effects by target. Order matters within the same target.</p>
+            ) : (
+              <div className="effect-stack" data-testid="effect-stack">
+                {effects.map((effect) => {
+                  const definition = effectDefinition(effect.type);
+                  const modulation = modulations.find((candidate) => candidate.effectId === effect.id) ?? null;
+                  return (
+                    <article
+                      key={effect.id}
+                      className={'effect-row ' + (effect.enabled ? '' : 'is-disabled')}
+                      data-effect-type={effect.type}
+                    >
+                      <div className="effect-row-header">
+                        <label className="effect-enable">
+                          <input
+                            type="checkbox"
+                            checked={effect.enabled}
+                            aria-label={'Enable ' + definition.name}
+                            onChange={(event) => setEffects((current) =>
+                              setEffectEnabled(current, effect.id, event.target.checked)
+                            )}
+                          />
+                          <span>{definition.name}</span>
+                        </label>
+                        <div className="effect-order-actions">
+                          <button
+                            type="button"
+                            aria-label={'Move ' + definition.name + ' up'}
+                            disabled={!canMoveEffectWithinTarget(effects, effect.id, -1)}
+                            onClick={() => moveEffect(effect.id, -1)}
+                          >↑</button>
+                          <button
+                            type="button"
+                            aria-label={'Move ' + definition.name + ' down'}
+                            disabled={!canMoveEffectWithinTarget(effects, effect.id, 1)}
+                            onClick={() => moveEffect(effect.id, 1)}
+                          >↓</button>
+                          <button
+                            type="button"
+                            aria-label={'Remove ' + definition.name}
+                            onClick={() => removeEffect(effect.id)}
+                          >×</button>
+                        </div>
+                      </div>
+
+                      <p>{definition.description}</p>
+
+                      <div className="effect-row-controls">
+                        <label>
+                          <span>Target</span>
+                          <select
+                            aria-label={definition.name + ' target'}
+                            value={effect.target}
+                            disabled={definition.targets.length === 1}
+                            onChange={(event) => setEffects((current) =>
+                              setEffectTarget(current, effect.id, event.target.value as VisualTarget)
+                            )}
+                          >
+                            {definition.targets.map((target) => (
+                              <option key={target} value={target}>{target}</option>
+                            ))}
+                          </select>
+                        </label>
+
+                        <label>
+                          <span>Driver</span>
+                          <select
+                            aria-label={definition.name + ' driver'}
+                            value={modulation?.driver ?? 'static'}
+                            onChange={(event) => setEffectDriver(
+                              effect,
+                              event.target.value as ModulationDriver | 'static',
+                            )}
+                          >
+                            <option value="static">Static</option>
+                            {definition.drivers.map((driver) => (
+                              <option key={driver} value={driver}>{driver}</option>
+                            ))}
+                          </select>
+                        </label>
+                      </div>
+
+                      <label className="range-control effect-strength">
+                        <span>
+                          <span>Strength</span>
+                          <output>{Math.round(effect.strength * 100)}%</output>
+                        </span>
+                        <input
+                          aria-label={definition.name + ' strength'}
+                          type="range"
+                          min={0}
+                          max={1}
+                          step={0.05}
+                          value={effect.strength}
+                          onChange={(event) => setEffects((current) =>
+                            setEffectStrength(current, effect.id, Number(event.target.value))
+                          )}
+                        />
+                      </label>
+                    </article>
+                  );
+                })}
+              </div>
+            )}
           </div>
 
           <div className="control-group">

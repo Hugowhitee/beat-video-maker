@@ -10,6 +10,9 @@ test('style preferences persist locally and reset cleanly', async ({ page }, tes
   await page.getByTestId('title-font').selectOption('serif');
   await page.getByTestId('title-position-center').click();
   await page.getByTestId('motion-amount').selectOption('medium');
+  await page.getByTestId('effect-add-type').selectOption('glow');
+  await page.getByTestId('effect-add').click();
+  await page.locator('[data-effect-type="glow"]').getByLabel('Glow driver').selectOption('static');
 
   await page.reload();
 
@@ -21,6 +24,8 @@ test('style preferences persist locally and reset cleanly', async ({ page }, tes
   await expect(page.getByTestId('title-y')).toHaveValue('50');
   await expect(page.getByTestId('title-align-center')).toHaveClass(/is-active/);
   await expect(page.getByTestId('motion-amount')).toHaveValue('medium');
+  await expect(page.locator('[data-effect-type="glow"]')).toHaveCount(1);
+  await expect(page.locator('[data-effect-type="glow"]').getByLabel('Glow driver')).toHaveValue('static');
 
   await page.getByTestId('reset-settings').click();
   await page.reload();
@@ -33,6 +38,7 @@ test('style preferences persist locally and reset cleanly', async ({ page }, tes
   await expect(page.getByTestId('title-y')).toHaveValue('88');
   await expect(page.getByTestId('title-align-left')).toHaveClass(/is-active/);
   await expect(page.getByTestId('motion-amount')).toHaveValue('low');
+  await expect(page.getByTestId('effect-stack')).toHaveCount(0);
 });
 
 
@@ -91,4 +97,53 @@ test('install control uses the native prompt and hides after app installation', 
 
   await page.evaluate(() => window.dispatchEvent(new Event('appinstalled')));
   await expect(page.getByTestId('install-button')).toHaveCount(0);
+});
+
+
+test('persisted effect ids are normalized before deduplication', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'desktop-normal', 'Settings normalization is viewport-independent.');
+
+  const prefix = 'e'.repeat(120);
+  await page.addInitScript(({ storageKey, firstId, secondId }) => {
+    localStorage.setItem(storageKey, JSON.stringify({
+      effects: [
+        {
+          id: firstId,
+          type: 'zoom-punch',
+          target: 'foreground',
+          enabled: true,
+          strength: 0.6,
+          params: { scale: 0.075 },
+        },
+        {
+          id: secondId,
+          type: 'zoom-punch',
+          target: 'foreground',
+          enabled: true,
+          strength: 0.4,
+          params: { scale: 0.05 },
+        },
+      ],
+      modulations: [
+        {
+          id: 'm'.repeat(121),
+          effectId: firstId,
+          parameter: 'strength',
+          driver: 'beat',
+          amount: 1,
+          enabled: true,
+        },
+      ],
+    }));
+  }, {
+    storageKey: 'beatvideo-maker:settings:v1',
+    firstId: prefix + 'a',
+    secondId: prefix + 'b',
+  });
+
+  await page.goto('/');
+
+  const effects = page.locator('[data-effect-type="zoom-punch"]');
+  await expect(effects).toHaveCount(1);
+  await expect(effects.getByLabel('Zoom punch driver')).toHaveValue('beat');
 });

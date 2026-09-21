@@ -110,3 +110,28 @@ test('centered title and composition grid are visually reviewable', async ({ pag
     fullPage: false,
   });
 });
+
+
+test('stacked beat-video effects are visually reviewable', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'desktop-normal', 'Effect stack uses the normal review viewport.');
+
+  await page.goto('/?fixture=1');
+  for (const [type, name] of [
+    ['zoom-punch', 'Zoom punch'],
+    ['shake', 'Shake'],
+    ['glow', 'Glow'],
+  ] as const) {
+    await page.getByTestId('effect-add-type').selectOption(type);
+    await page.getByTestId('effect-add').click();
+    await page.locator('[data-effect-type="' + type + '"]').last()
+      .getByLabel(name + ' driver')
+      .selectOption('static');
+  }
+
+  await expect(page.locator('[data-testid="effect-stack"] .effect-row')).toHaveCount(3);
+  await mkdir('artifacts/visual-qa', { recursive: true });
+  await page.screenshot({
+    path: 'artifacts/visual-qa/effect-stack.png',
+    fullPage: false,
+  });
+});

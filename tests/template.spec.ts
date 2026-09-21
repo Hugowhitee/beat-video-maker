@@ -7,8 +7,15 @@ import {
   settingsFromTemplate,
 } from '../src/features/project/template';
 import { DEFAULT_USER_SETTINGS } from '../src/features/project/settings';
+import {
+  createDefaultModulation,
+  createEffectInstance,
+} from '../src/features/effects/registry';
 
 test('editable template round-trips authoring settings without media', () => {
+  const zoom = createEffectInstance('zoom-punch', { id: 'zoom-template' });
+  const zoomModulation = createDefaultModulation(zoom, 'mod-template')!;
+
   const settings = {
     ...DEFAULT_USER_SETTINGS,
     titleSize: 72,
@@ -22,6 +29,8 @@ test('editable template round-trips authoring settings without media', () => {
     brandOpacity: 0.45,
     preset: 'reactive' as const,
     motion: 'medium' as const,
+    effects: [zoom],
+    modulations: [zoomModulation],
   };
 
   const template = createTemplate('CENTERED TITLE', settings);
@@ -61,4 +70,59 @@ test('template filenames remain local-file friendly', () => {
   expect(safeTemplateName('  Night / Drive: 01  '))
     .toBe('Night Drive 01.beatvideo-template.json');
   expect(safeTemplateName('')).toBe('beatvideo.beatvideo-template.json');
+});
+
+
+test('version 1 templates migrate into the version 2 effect contract', () => {
+  const current = createTemplate('LEGACY', DEFAULT_USER_SETTINGS);
+  const legacy = {
+    ...current,
+    version: 1,
+    visual: {
+      preset: current.visual.preset,
+      motion: current.visual.motion,
+    },
+  };
+
+  const parsed = parseTemplate(JSON.stringify(legacy));
+  expect(parsed.version).toBe(2);
+  expect(parsed.visual.effects).toEqual([]);
+  expect(parsed.visual.modulations).toEqual([]);
+});
+
+
+test('effect parameters outside registry ranges fail closed', () => {
+  const zoom = createEffectInstance('zoom-punch', { id: 'zoom-bounds' });
+  const template = createTemplate('BOUNDS', {
+    ...DEFAULT_USER_SETTINGS,
+    effects: [zoom],
+    modulations: [],
+  });
+
+  expect(() => parseTemplate(JSON.stringify({
+    ...template,
+    visual: {
+      ...template.visual,
+      effects: template.visual.effects.map((effect) => (
+        effect.id === 'zoom-bounds'
+          ? { ...effect, params: { ...effect.params, scale: 9 } }
+          : effect
+      )),
+    },
+  }))).toThrow(/Effect parameter scale/i);
+});
+
+
+test('template parser rejects duplicate strength modulation for one effect', () => {
+  const effect = createEffectInstance('zoom-punch', { id: 'zoom-duplicate-mod' });
+  const first = createDefaultModulation(effect, 'mod-a')!;
+  const second = { ...first, id: 'mod-b', driver: 'amplitude' as const };
+  const template = createTemplate('DUPLICATE MOD', {
+    ...DEFAULT_USER_SETTINGS,
+    effects: [effect],
+    modulations: [first, second],
+  });
+
+  expect(() => parseTemplate(JSON.stringify(template)))
+    .toThrow(/one strength modulation/i);
 });

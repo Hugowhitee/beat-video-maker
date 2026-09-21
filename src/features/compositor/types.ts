@@ -1,4 +1,5 @@
 import type { VerifiedGrid } from '../analysis/types';
+import type { EffectModulation, VisualEffectInstance } from '../effects/types';
 
 export type BrandPosition = 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right';
 export type BrandLayout = 'corner' | 'grid';
@@ -22,6 +23,8 @@ export type CompositionSettings = {
   brandOpacity: number;
   preset: VisualPreset;
   motion: MotionAmount;
+  effects?: VisualEffectInstance[];
+  modulations?: EffectModulation[];
   showGuides: boolean;
   showGrid: boolean;
 };

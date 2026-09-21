@@ -8,6 +8,7 @@ Beatvideo Maker currently relies on the following direct runtime libraries.
 - @mediabunny/aac-encoder — Mozilla Public License 2.0. The package contains its documented FFmpeg-based AAC WebAssembly encoder.
 - web-audio-beat-detector — MIT License.
 - TransNetV2 — MIT License, Copyright (c) 2020 Tomáš Souček. Beatvideo Maker currently adapts only the upstream prediction-to-scene post-processing contract for future local shot-boundary detection; no TransNetV2 model binary or ONNX runtime is shipped in this change.
+- FreeCut — MIT License, Copyright (c) 2025 FreeCut. Beatvideo Maker adapts its effect-instance/registry concepts and analytic pulse/modifier approach for a smaller beat-video effect stack; the full FreeCut NLE or GPU pipeline is not vendored here.
 - vite-plugin-pwa / Workbox runtime and build tooling — MIT License.
 
 Development tooling includes Vite, TypeScript and Playwright under their respective upstream licenses.

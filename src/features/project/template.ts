@@ -6,32 +6,51 @@ import type {
   TitleFont,
   VisualPreset,
 } from '../compositor/types';
+import {
+  EFFECT_TYPES,
+  effectDefinition,
+  effectParamRange,
+  supportsTarget,
+} from '../effects/registry';
+import type {
+  EffectModulation,
+  EffectType,
+  ModulationDriver,
+  VisualEffectInstance,
+  VisualTarget,
+} from '../effects/types';
 import type { UserSettings } from './settings';
 
 const FORMAT = 'beatvideo-template';
-const VERSION = 1;
+const VERSION = 2;
 
-export type BeatvideoTemplateV1 = {
+type TemplateTitle = {
+  text: string;
+  size: number;
+  x: number;
+  y: number;
+  align: TitleAlign;
+  font: TitleFont;
+  tracking: number;
+};
+
+type TemplateBrand = {
+  text: string;
+  layout: BrandLayout;
+  position: BrandPosition;
+  opacity: number;
+};
+
+export type BeatvideoTemplateV2 = {
   format: typeof FORMAT;
   version: typeof VERSION;
-  title: {
-    text: string;
-    size: number;
-    x: number;
-    y: number;
-    align: TitleAlign;
-    font: TitleFont;
-    tracking: number;
-  };
-  brand: {
-    text: string;
-    layout: BrandLayout;
-    position: BrandPosition;
-    opacity: number;
-  };
+  title: TemplateTitle;
+  brand: TemplateBrand;
   visual: {
     preset: VisualPreset;
     motion: MotionAmount;
+    effects: VisualEffectInstance[];
+    modulations: EffectModulation[];
   };
 };
 
@@ -41,12 +60,20 @@ const brandLayouts = new Set<BrandLayout>(['corner', 'grid']);
 const brandPositions = new Set<BrandPosition>(['top-left', 'top-right', 'bottom-left', 'bottom-right']);
 const presets = new Set<VisualPreset>(['clean', 'ambient', 'reactive', 'pulse', 'visualizer']);
 const motions = new Set<MotionAmount>(['off', 'low', 'medium']);
+const effectTypes = new Set<EffectType>(EFFECT_TYPES);
+const targets = new Set<VisualTarget>(['background', 'foreground', 'composite']);
+const drivers = new Set<ModulationDriver>(['beat', 'downbeat', 'phrase', 'amplitude']);
 
 function requireObject(value: unknown, label: string): Record<string, unknown> {
   if (!value || typeof value !== 'object' || Array.isArray(value)) {
     throw new Error(label + ' must be an object.');
   }
   return value as Record<string, unknown>;
+}
+
+function requireArray(value: unknown, label: string) {
+  if (!Array.isArray(value)) throw new Error(label + ' must be a list.');
+  return value;
 }
 
 function requireNumber(
@@ -58,6 +85,11 @@ function requireNumber(
   if (typeof value !== 'number' || !Number.isFinite(value) || value < minimum || value > maximum) {
     throw new Error(label + ' is outside the supported range.');
   }
+  return value;
+}
+
+function requireBoolean(value: unknown, label: string) {
+  if (typeof value !== 'boolean') throw new Error(label + ' must be true or false.');
   return value;
 }
 
@@ -78,10 +110,143 @@ function requireEnum<T extends string>(
   return value as T;
 }
 
+function parseTitle(value: unknown): TemplateTitle {
+  const title = requireObject(value, 'Title');
+  return {
+    text: requireString(title.text, 'Title text', 80),
+    size: requireNumber(title.size, 'Title size', 36, 86),
+    x: requireNumber(title.x, 'Title X', 0.02, 0.98),
+    y: requireNumber(title.y, 'Title Y', 0.06, 0.94),
+    align: requireEnum(title.align, 'Title alignment', titleAligns),
+    font: requireEnum(title.font, 'Title font', titleFonts),
+    tracking: requireNumber(title.tracking, 'Title tracking', -2, 8),
+  };
+}
+
+function parseBrand(value: unknown): TemplateBrand {
+  const brand = requireObject(value, 'Brand');
+  return {
+    text: requireString(brand.text, 'Brand text', 60),
+    layout: requireEnum(brand.layout, 'Brand layout', brandLayouts),
+    position: requireEnum(brand.position, 'Brand position', brandPositions),
+    opacity: requireNumber(brand.opacity, 'Brand opacity', 0.2, 1),
+  };
+}
+
+function parseEffects(value: unknown): VisualEffectInstance[] {
+  const input = requireArray(value, 'Effects');
+  if (input.length > 16) throw new Error('Effects contains too many entries.');
+
+  const ids = new Set<string>();
+  return input.map((raw, index) => {
+    const effect = requireObject(raw, 'Effect ' + (index + 1));
+    const id = requireString(effect.id, 'Effect id', 120);
+    if (!id || ids.has(id)) throw new Error('Effect ids must be unique.');
+    ids.add(id);
+
+    const type = requireEnum(effect.type, 'Effect type', effectTypes);
+    const target = requireEnum(effect.target, 'Effect target', targets);
+    if (!supportsTarget(type, target)) {
+      throw new Error(effectDefinition(type).name + ' does not support that target.');
+    }
+
+    const params = requireObject(effect.params, 'Effect params');
+    const defaults = effectDefinition(type).defaultParams;
+    const parsedParams = Object.fromEntries(
+      Object.keys(defaults).map((key) => {
+        const range = effectParamRange(type, key);
+        if (!range) throw new Error('Effect parameter ' + key + ' has no registry range.');
+        return [
+          key,
+          requireNumber(params[key], 'Effect parameter ' + key, range.min, range.max),
+        ];
+      }),
+    );
+
+    return {
+      id,
+      type,
+      target,
+      enabled: requireBoolean(effect.enabled, 'Effect enabled'),
+      strength: requireNumber(effect.strength, 'Effect strength', 0, 1),
+      params: parsedParams,
+    };
+  });
+}
+
+function parseModulations(
+  value: unknown,
+  effects: readonly VisualEffectInstance[],
+): EffectModulation[] {
+  const input = requireArray(value, 'Modulations');
+  if (input.length > 16) throw new Error('Modulations contains too many entries.');
+
+  const effectById = new Map(effects.map((effect) => [effect.id, effect]));
+  const ids = new Set<string>();
+  const effectParameters = new Set<string>();
+
+  return input.map((raw, index) => {
+    const modulation = requireObject(raw, 'Modulation ' + (index + 1));
+    const id = requireString(modulation.id, 'Modulation id', 120);
+    if (!id || ids.has(id)) throw new Error('Modulation ids must be unique.');
+    ids.add(id);
+
+    const effectId = requireString(modulation.effectId, 'Modulation effect id', 120);
+    const effect = effectById.get(effectId);
+    if (!effect) throw new Error('Modulation references an unknown effect.');
+
+    if (modulation.parameter !== 'strength') {
+      throw new Error('Modulation parameter is not supported.');
+    }
+
+    const driver = requireEnum(modulation.driver, 'Modulation driver', drivers);
+    if (!effectDefinition(effect.type).drivers.includes(driver)) {
+      throw new Error(effectDefinition(effect.type).name + ' does not support that modulation.');
+    }
+
+    const effectParameter = effect.id + ':strength';
+    if (effectParameters.has(effectParameter)) {
+      throw new Error('Only one strength modulation is supported per effect.');
+    }
+    effectParameters.add(effectParameter);
+
+    return {
+      id,
+      effectId,
+      parameter: 'strength',
+      driver,
+      amount: requireNumber(modulation.amount, 'Modulation amount', 0, 1),
+      enabled: requireBoolean(modulation.enabled, 'Modulation enabled'),
+    };
+  });
+}
+
+function parseVisual(
+  value: unknown,
+  version: 1 | 2,
+): BeatvideoTemplateV2['visual'] {
+  const visual = requireObject(value, 'Visual');
+  const base = {
+    preset: requireEnum(visual.preset, 'Visual preset', presets),
+    motion: requireEnum(visual.motion, 'Motion amount', motions),
+  };
+
+  if (version === 1) {
+    return { ...base, effects: [], modulations: [] };
+  }
+
+  const effects = parseEffects(visual.effects);
+  return {
+    ...base,
+    effects,
+    modulations: parseModulations(visual.modulations, effects),
+  };
+}
+
 export function createTemplate(
   title: string,
   settings: UserSettings,
-): BeatvideoTemplateV1 {
+): BeatvideoTemplateV2 {
   return {
     format: FORMAT,
     version: VERSION,
@@ -103,11 +268,16 @@ export function createTemplate(
     visual: {
       preset: settings.preset,
       motion: settings.motion,
+      effects: settings.effects.map((effect) => ({
+        ...effect,
+        params: { ...effect.params },
+      })),
+      modulations: settings.modulations.map((modulation) => ({ ...modulation })),
     },
   };
 }
 
-export function parseTemplate(text: string): BeatvideoTemplateV1 {
+export function parseTemplate(text: string): BeatvideoTemplateV2 {
   let parsed: unknown;
   try {
     parsed = JSON.parse(text);
@@ -119,44 +289,25 @@ export function parseTemplate(text: string): BeatvideoTemplateV1 {
   if (root.format !== FORMAT) {
     throw new Error('This is not a Beatvideo Maker template.');
   }
-  if (root.version !== VERSION) {
+  if (root.version !== 1 && root.version !== VERSION) {
     throw new Error('This template version is not supported.');
   }
 
-  const title = requireObject(root.title, 'Title');
-  const brand = requireObject(root.brand, 'Brand');
-  const visual = requireObject(root.visual, 'Visual');
-
+  const version = root.version as 1 | 2;
   return {
     format: FORMAT,
     version: VERSION,
-    title: {
-      text: requireString(title.text, 'Title text', 80),
-      size: requireNumber(title.size, 'Title size', 36, 86),
-      x: requireNumber(title.x, 'Title X', 0.02, 0.98),
-      y: requireNumber(title.y, 'Title Y', 0.06, 0.94),
-      align: requireEnum(title.align, 'Title alignment', titleAligns),
-      font: requireEnum(title.font, 'Title font', titleFonts),
-      tracking: requireNumber(title.tracking, 'Title tracking', -2, 8),
-    },
-    brand: {
-      text: requireString(brand.text, 'Brand text', 60),
-      layout: requireEnum(brand.layout, 'Brand layout', brandLayouts),
-      position: requireEnum(brand.position, 'Brand position', brandPositions),
-      opacity: requireNumber(brand.opacity, 'Brand opacity', 0.2, 1),
-    },
-    visual: {
-      preset: requireEnum(visual.preset, 'Visual preset', presets),
-      motion: requireEnum(visual.motion, 'Motion amount', motions),
-    },
+    title: parseTitle(root.title),
+    brand: parseBrand(root.brand),
+    visual: parseVisual(root.visual, version),
   };
 }
 
-export function serializeTemplate(template: BeatvideoTemplateV1) {
+export function serializeTemplate(template: BeatvideoTemplateV2) {
   return JSON.stringify(template, null, 2) + '\n';
 }
 
-export function settingsFromTemplate(template: BeatvideoTemplateV1): UserSettings {
+export function settingsFromTemplate(template: BeatvideoTemplateV2): UserSettings {
   return {
     titleSize: template.title.size,
     titleX: template.title.x,
@@ -170,6 +321,11 @@ export function settingsFromTemplate(template: BeatvideoTemplateV1): UserSetting
     brandOpacity: template.brand.opacity,
     preset: template.visual.preset,
     motion: template.visual.motion,
+    effects: template.visual.effects.map((effect) => ({
+      ...effect,
+      params: { ...effect.params },
+    })),
+    modulations: template.visual.modulations.map((modulation) => ({ ...modulation })),
   };
 }
 
