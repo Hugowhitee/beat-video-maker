@@ -1,3 +1,5 @@
+import { useEffect, useRef } from 'react';
+import { CrossIcon } from '../../components/EditorIcons';
 import type {
   OutputFormatPreset,
   OutputFrameRate,
@@ -22,9 +24,29 @@ export function ProjectSettingsDialog(props: {
   onChange: (settings: ProjectOutputSettings) => void;
   onClose: () => void;
 }) {
+  const dialogRef = useRef<HTMLElement>(null);
   const resolved = resolveProjectOutput(props.settings);
   const patch = (next: Partial<ProjectOutputSettings>) =>
     props.onChange({ ...props.settings, ...next });
+
+  useEffect(() => {
+    const previousFocus = document.activeElement instanceof HTMLElement
+      ? document.activeElement
+      : null;
+    dialogRef.current?.focus();
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape') return;
+      event.preventDefault();
+      props.onClose();
+    };
+    window.addEventListener('keydown', onKeyDown);
+
+    return () => {
+      window.removeEventListener('keydown', onKeyDown);
+      previousFocus?.focus();
+    };
+  }, [props.onClose]);
 
   return (
     <div
@@ -35,8 +57,10 @@ export function ProjectSettingsDialog(props: {
       }}
     >
       <section
+        ref={dialogRef}
         className="project-settings-dialog"
         role="dialog"
+        tabIndex={-1}
         aria-modal="true"
         aria-labelledby="project-settings-title"
         data-testid="project-settings-dialog"
@@ -49,11 +73,12 @@ export function ProjectSettingsDialog(props: {
           </div>
           <button
             type="button"
-            className="dialog-close"
+            className="dialog-close editor-icon-button"
             aria-label="Close project settings"
+            title="Close project settings"
             onClick={props.onClose}
           >
-            ×
+            <CrossIcon className="editor-icon" />
           </button>
         </header>
 
