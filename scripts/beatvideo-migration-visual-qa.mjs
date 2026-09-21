@@ -88,15 +88,19 @@ async function main() {
       await page.locator('form button[type="submit"]').click()
       await page.waitForURL(/\/editor\//, { timeout: 30_000 })
       await page.getByRole('application').waitFor({ state: 'visible' })
-      await page.waitForTimeout(800)
+      await page.waitForTimeout(1_200)
 
-      await page.getByRole('tab', { name: 'Photo' }).waitFor({ state: 'visible' })
+      const photoEditorTab = page.getByRole('tab', { name: 'Photo' })
+      await photoEditorTab.waitFor({ state: 'visible' })
+      await page.waitForFunction(() =>
+        document.querySelector('[data-beatvideo-mode="photo"]') !== null,
+      )
       await assertHidden(
         page.getByRole('button', { name: /razor/i }),
         'Photo mode exposed the Razor tool.',
       )
       await assertHidden(
-        page.getByText('Transitions', { exact: true }),
+        page.locator('button[data-tooltip="Transitions"]'),
         'Photo mode exposed the Transitions family.',
       )
 
@@ -119,10 +123,18 @@ async function main() {
         fullPage: false,
       })
 
-      await page.getByRole('tab', { name: 'Video' }).click()
-      await page.waitForTimeout(600)
-      await page.getByText('Transitions', { exact: true }).waitFor({ state: 'visible' })
+      const videoEditorTab = page.getByRole('tab', { name: 'Video' })
+      await videoEditorTab.click()
+      await page.waitForFunction(() => {
+        const selected = document.querySelector('[role="tab"][aria-selected="true"]')
+        return selected?.textContent?.trim() === 'Video'
+      })
+      await page.waitForFunction(() =>
+        document.querySelector('[data-beatvideo-mode="video"]') !== null,
+      )
+      await page.locator('button[data-tooltip="Transitions"]').waitFor({ state: 'visible' })
       await page.getByRole('button', { name: /razor/i }).waitFor({ state: 'visible' })
+      await page.waitForTimeout(600)
 
       await page.screenshot({
         path: path.join(OUT_DIR, 'video-editor-1440.png'),
