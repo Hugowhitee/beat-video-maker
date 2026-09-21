@@ -830,7 +830,7 @@ export const LoadedEditor = memo(function LoadedEditor({
                         </Suspense>
                       )}
                     </div>
-                    <AudioMeterPanel />
+                    {beatvideoMode === 'video' ? <AudioMeterPanel /> : null}
                   </div>
                 </ErrorBoundary>
               </InteractionLockRegion>
