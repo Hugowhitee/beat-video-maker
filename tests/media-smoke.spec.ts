@@ -21,7 +21,9 @@ test('imports local media and encodes a real browser-supported video', async ({ 
 
   await page.goto('/');
   await loadFixtures(page);
+  await page.getByTestId('inspector-tab-text').click();
   await page.getByTestId('title-input').fill('CI export smoke');
+  await page.getByTestId('brand-disclosure').locator('summary').click();
   await page.getByTestId('brand-input').fill('local only');
 
   const exportButton = page.getByTestId('export-button');
