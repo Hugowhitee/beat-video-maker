@@ -32,7 +32,6 @@ import { ProjectDebugPanel } from './project-debug-panel'
 import { SettingsDialog } from './settings-dialog'
 import { ShortcutsDialog } from './shortcuts-dialog'
 import { UnsavedChangesDialog } from './unsaved-changes-dialog'
-import { WorkspaceSwitcher } from './workspace-switcher'
 import { WhatsNewDialog } from './whats-new-dialog'
 import { hasUnseenChangelog } from './whats-new-seen'
 import { EDITOR_LAYOUT_CSS_VALUES } from '@/config/editor-layout'
@@ -41,6 +40,8 @@ import { LanguageSwitcher } from '@/shared/ui/language-switcher'
 import { useDebugStore } from '@/features/editor/stores/debug-store'
 import { useItemsStore, useTimelineStore } from '@/features/editor/deps/timeline-store'
 import { useMediaLibraryStore } from '@/features/editor/deps/media-library'
+import { BeatvideoModeSwitcher } from '@/features/beatvideo/components/product-mode-switcher'
+import type { BeatvideoProjectMode } from '@/features/beatvideo/product-mode'
 
 const SAVE_ANIMATION_MIN_MS = 1800
 
@@ -66,6 +67,7 @@ interface ToolbarProps {
     width: number
     height: number
     fps: number
+    beatvideoMode: BeatvideoProjectMode
   }
   onSave?: () => Promise<void>
   onExport?: () => void
@@ -213,7 +215,7 @@ export const Toolbar = memo(function Toolbar({
       </div>
 
       <div className="flex flex-1 items-center justify-center">
-        <WorkspaceSwitcher />
+        <BeatvideoModeSwitcher projectId={projectId} fallbackMode={project.beatvideoMode} />
       </div>
 
       <LocalInferenceStatusPill />
