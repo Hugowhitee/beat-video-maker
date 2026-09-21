@@ -687,51 +687,53 @@ export const MediaLibrary = memo(function MediaLibrary({ onMediaSelect }: MediaL
             ref={headerToolbarRef}
             className="flex flex-nowrap items-center gap-2 text-xs min-w-0 overflow-hidden"
           >
-            {/* Import action */}
-            <div className="flex shrink-0">
-              <HeaderActionTooltip label={t('media.library.importMediaFiles')}>
-                <button
-                  onClick={handleImport}
-                  disabled={!currentProjectId}
-                  className="flex items-center gap-1.5 h-7 px-2.5 rounded-l-md
-                    bg-primary text-primary-foreground
-                    hover:bg-primary/90
-                    disabled:opacity-40 disabled:cursor-not-allowed
-                    transition-colors duration-150"
-                >
-                  <FolderOpen className="w-3.5 h-3.5" />
-                  <span className={headerCompactLevel >= 4 ? 'hidden' : 'hidden @[260px]:inline'}>
-                    {t('media.library.import')}
-                  </span>
-                </button>
-              </HeaderActionTooltip>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
+            {/* Photo has one focused import action in the editor shell. */}
+            {beatvideoMode === 'video' ? (
+              <div className="flex shrink-0">
+                <HeaderActionTooltip label={t('media.library.importMediaFiles')}>
                   <button
+                    onClick={handleImport}
                     disabled={!currentProjectId}
-                    className="flex h-7 w-7 items-center justify-center rounded-r-md border-l border-primary-foreground/20
+                    className="flex items-center gap-1.5 h-7 px-2.5 rounded-l-md
                       bg-primary text-primary-foreground
                       hover:bg-primary/90
                       disabled:opacity-40 disabled:cursor-not-allowed
                       transition-colors duration-150"
-                    aria-label={t('media.library.importMoreOptions')}
-                    title={t('media.library.importMoreOptions')}
                   >
-                    <ChevronDown className="w-3.5 h-3.5" />
+                    <FolderOpen className="w-3.5 h-3.5" />
+                    <span className={headerCompactLevel >= 4 ? 'hidden' : 'hidden @[260px]:inline'}>
+                      {t('media.library.import')}
+                    </span>
                   </button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="start" className="w-56">
-                  <DropdownMenuItem onSelect={handleImport}>
-                    <FolderOpen className="w-4 h-4 mr-2" />
-                    {t('media.library.importCopyToWorkspace')}
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onSelect={handleLinkImport}>
-                    <Link className="w-4 h-4 mr-2" />
-                    {t('media.library.importLinkOriginal')}
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
+                </HeaderActionTooltip>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <button
+                      disabled={!currentProjectId}
+                      className="flex h-7 w-7 items-center justify-center rounded-r-md border-l border-primary-foreground/20
+                        bg-primary text-primary-foreground
+                        hover:bg-primary/90
+                        disabled:opacity-40 disabled:cursor-not-allowed
+                        transition-colors duration-150"
+                      aria-label={t('media.library.importMoreOptions')}
+                      title={t('media.library.importMoreOptions')}
+                    >
+                      <ChevronDown className="w-3.5 h-3.5" />
+                    </button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="start" className="w-56">
+                    <DropdownMenuItem onSelect={handleImport}>
+                      <FolderOpen className="w-4 h-4 mr-2" />
+                      {t('media.library.importCopyToWorkspace')}
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onSelect={handleLinkImport}>
+                      <Link className="w-4 h-4 mr-2" />
+                      {t('media.library.importLinkOriginal')}
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+            ) : null}
 
 {beatvideoMode === 'video' ? (
                         <HeaderActionTooltip label={t('media.library.importMediaFromUrl')}>
@@ -1290,22 +1292,10 @@ export const MediaLibrary = memo(function MediaLibrary({ onMediaSelect }: MediaL
             />
           ))}
 
-          {/* Photo keeps the media panel secondary to the Preview. */}
+          {/* Photo's focused import action lives above this library. */}
           {mediaGroups.length === 0 && beatvideoMode === 'photo' ? (
-            <div className="flex min-h-40 flex-col items-center justify-center gap-3 px-4 text-center">
-              <div className="flex h-9 w-9 items-center justify-center rounded-md border border-border bg-secondary/40">
-                <ImageIcon className="h-4 w-4 text-muted-foreground" />
-              </div>
-              <div className="space-y-1">
-                <p className="text-xs font-medium text-foreground">Image + beat</p>
-                <p className="text-[11px] leading-relaxed text-muted-foreground">
-                  Drop files here or choose them once. The Preview is the main canvas.
-                </p>
-              </div>
-              <Button size="sm" variant="outline" className="h-7 text-xs" onClick={handleImport}>
-                <Upload className="mr-1.5 h-3.5 w-3.5" />
-                Choose files
-              </Button>
+            <div className="flex min-h-28 items-center justify-center px-4 text-center">
+              <p className="text-[11px] text-muted-foreground">Added images and audio appear here.</p>
             </div>
           ) : mediaGroups.length === 0 ? (
             <EmptyMediaGrid
