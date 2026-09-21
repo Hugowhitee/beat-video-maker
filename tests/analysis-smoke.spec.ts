@@ -188,6 +188,17 @@ test('detail waveform follows the playhead and exposes bounded zoom windows', as
   expect(firstStart).toBeGreaterThan(0);
   expect(firstEnd - firstStart).toBeCloseTo(2, 1);
 
+  const overview = page.getByTestId('waveform-editor');
+  const overviewBox = await overview.boundingBox();
+  expect(overviewBox).not.toBeNull();
+  await page.mouse.click(
+    overviewBox!.x + overviewBox!.width * 0.75,
+    overviewBox!.y + overviewBox!.height * 0.5,
+  );
+  await expect(page.getByTestId('bar-offset')).toContainText('not set');
+  const movedStart = Number(await detail.getAttribute('data-window-start'));
+  expect(movedStart).toBeGreaterThan(firstStart);
+
   await page.getByTestId('waveform-zoom-out').click();
   await expect(page.getByTestId('waveform-zoom-label')).toHaveText('4 s');
   const zoomedStart = Number(await detail.getAttribute('data-window-start'));
