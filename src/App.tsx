@@ -185,6 +185,21 @@ function SelectControl<T extends string>(props: {
   );
 }
 
+function AddMediaIcon() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <path
+        d="M12 15.5V5.5m0 0L8.5 9M12 5.5 15.5 9M5.5 14.5v3.25c0 .97.78 1.75 1.75 1.75h9.5c.97 0 1.75-.78 1.75-1.75V14.5"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.7"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
 function AppMark() {
   return (
     <svg viewBox="0 0 15 15" aria-hidden="true">
@@ -1167,7 +1182,7 @@ function App() {
       <section className="workspace">
         <aside className="panel inputs-panel" aria-label="Sources">
           <div className="panel-heading">
-            <div><h2>Sources</h2><p>Local media · nothing uploaded.</p></div>
+            <div><h2>Sources</h2><p>Image · beat · videos · local only.</p></div>
           </div>
 
           <input
@@ -1200,9 +1215,12 @@ function App() {
             onDragLeave={handleMediaDragLeave}
             onDrop={handleMediaDrop}
           >
-            <strong>Drop media here</strong>
-            <span>Image · beat · one or more videos</span>
-            <small>or click to browse · files stay on this device</small>
+            <span className="media-intake-icon"><AddMediaIcon /></span>
+            <div className="media-intake-copy">
+              <strong>Add media</strong>
+              <span>Drop image · beat · one or more videos</span>
+              <small>or click to browse · files stay on this device</small>
+            </div>
           </div>
 
           <FileControl label="Still image" detail={coverName} accept="image/png,image/jpeg,image/webp" testId="cover-input" onChange={handleCover} />
@@ -1217,46 +1235,6 @@ function App() {
             onRemove={videoSources.remove}
             onRole={videoSources.setRole}
           />
-
-          <label className="control">
-            <span className="field-label">Title</span>
-            <input
-              name="title"
-              data-testid="title-input"
-              value={title}
-              maxLength={80}
-              placeholder="Beat title"
-              onChange={(event) => setTitle(event.target.value)}
-            />
-          </label>
-
-          <label className="control">
-            <span className="field-label">Producer / watermark</span>
-            <input
-              data-testid="brand-input"
-              value={brandText}
-              maxLength={60}
-              placeholder="prod. name"
-              disabled={Boolean(brandGraphic) && brandLayout === 'corner'}
-              onChange={(event) => setBrandText(event.target.value)}
-            />
-          </label>
-
-          <FileControl
-            label="Watermark graphic"
-            detail={brandGraphicName}
-            accept="image/png,image/svg+xml"
-            testId="brand-graphic-input"
-            onChange={handleBrandGraphic}
-          />
-          {brandGraphic && (
-            <button className="link-button" onClick={() => {
-              setBrandGraphic(null);
-              setBrandGraphicName('Text only');
-            }}>
-              Use text watermark instead
-            </button>
-          )}
 
           {mediaMessage && <p className="status-message" role="status">{mediaMessage}</p>}
         </aside>
@@ -1326,8 +1304,9 @@ function App() {
                   mediaInputRef.current?.click();
                 }}
               >
-                <span>Add a cover image</span>
-                <small>Click or drop image · audio · video</small>
+                <span className="empty-media-icon"><AddMediaIcon /></span>
+                <span>Add media</span>
+                <small>Drop here or click to browse image · beat · video</small>
               </button>
             )}
             {(analysisState === 'decoding'
@@ -1572,7 +1551,7 @@ function App() {
 
         <aside className="panel style-panel" aria-label="Inspector">
           <div className="panel-heading">
-            <div><h2>Inspector</h2><p>Visual, title and brand.</p></div>
+            <div><h2>Inspector</h2><p>Look · effects · text · brand.</p></div>
           </div>
 
           <div className="preset-list" data-testid="preset-list">
@@ -1746,6 +1725,17 @@ function App() {
 
           <div className="control-group">
             <h3>Text</h3>
+            <label className="control inspector-primary-field">
+              <span className="field-label">Title</span>
+              <input
+                name="title"
+                data-testid="title-input"
+                value={title}
+                maxLength={80}
+                placeholder="Beat title"
+                onChange={(event) => setTitle(event.target.value)}
+              />
+            </label>
             <SelectControl
               label="Font direction"
               value={titleFont}
@@ -1879,6 +1869,32 @@ function App() {
 
           <div className="control-group">
             <h3>Brand</h3>
+            <label className="control inspector-primary-field">
+              <span className="field-label">Producer / watermark</span>
+              <input
+                data-testid="brand-input"
+                value={brandText}
+                maxLength={60}
+                placeholder="prod. name"
+                disabled={Boolean(brandGraphic) && brandLayout === 'corner'}
+                onChange={(event) => setBrandText(event.target.value)}
+              />
+            </label>
+            <FileControl
+              label="Watermark graphic"
+              detail={brandGraphicName}
+              accept="image/png,image/svg+xml"
+              testId="brand-graphic-input"
+              onChange={handleBrandGraphic}
+            />
+            {brandGraphic && (
+              <button className="link-button" onClick={() => {
+                setBrandGraphic(null);
+                setBrandGraphicName('Text only');
+              }}>
+                Use text watermark instead
+              </button>
+            )}
             <SelectControl
               label="Layout"
               value={brandLayout}
