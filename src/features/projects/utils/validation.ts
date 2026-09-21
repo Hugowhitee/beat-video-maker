@@ -6,12 +6,15 @@ import {
   DEFAULT_PROJECT_WIDTH,
 } from '@/shared/projects/defaults'
 import { isAllowedProjectFps } from './project-fps'
+import { DEFAULT_BEATVIDEO_PROJECT_MODE } from '@/features/beatvideo/product-mode'
 
 /**
  * Validation schema for project creation/update form
  */
 export function createProjectFormSchema(t: (key: string) => string) {
   return z.object({
+    beatvideoMode: z.enum(['photo', 'video']),
+
     name: z
       .string()
       .min(1, t('projects.validation.nameRequired'))
@@ -139,6 +142,7 @@ export const PROJECT_TEMPLATES: readonly ProjectTemplate[] = [
  * Default form values
  */
 export const DEFAULT_PROJECT_VALUES: ProjectFormData = {
+  beatvideoMode: DEFAULT_BEATVIDEO_PROJECT_MODE,
   name: '',
   description: '',
   width: DEFAULT_PROJECT_WIDTH,
