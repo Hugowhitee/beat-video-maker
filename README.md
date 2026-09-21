@@ -1,144 +1,281 @@
-# Beatvideo Maker
+# FreeCut
 
-A small local-first browser tool for turning a still cover image and a beat into a clean YouTube-ready video. It is preset-first on purpose: the common workflow should take minutes without becoming a miniature Premiere or CapCut.
+**[freecut.net](http://freecut.net/)**
 
-## Install the app
+**Edit videos. In your browser.**
 
-The normal way to use Beatvideo Maker is the hosted PWA:
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![Discord](https://img.shields.io/badge/Discord-Join%20community-5865F2?logo=discord&logoColor=white)](https://discord.gg/aQtQ7NyUBd)
 
-**https://hugowhitee.github.io/beat-video-maker/**
+![FreeCut editor workspace](./public/assets/landing/main.png)
 
-**Do not clone the repository or download a ZIP for normal use. You do not need Node.js or npm.**
+FreeCut is a browser-based, multi-track video editor. No install, no uploads:
+projects and media stay local, while editing, preview, analysis, transcription,
+AI generation, and export run in the browser through WebGPU, WebCodecs, Web
+Workers, OPFS, and the File System Access API.
 
-1. Open that link in current Chrome or Edge on Windows.
-2. Click **Install app** in Beatvideo Maker's top bar.
-3. If Chromium exposes its native install prompt, the button opens it directly. Otherwise the same button shows concise fallback instructions. You can also use the install icon in the browser address bar or the browser's install-app menu item; wording varies by browser.
-4. Accept the browser install dialog. Beatvideo Maker then opens as a standalone app and can be pinned to Start/taskbar like a normal app.
+FreeCut writes projects, linked media metadata, thumbnails, waveforms, generated
+AI assets, transcripts, scene cuts, and caches as plain files inside a workspace
+folder you choose on disk.
 
-The first successful visit needs the hosted site so the app shell can be cached. After that, the installed shell can reopen offline. Imported cover images/audio are never uploaded or stored in the app cache.
+## User Guide
 
-If the hosted URL is not available yet, the repository owner must do the one-time GitHub setup: **Settings → Pages → Build and deployment → Source → GitHub Actions**. Normal users do not need Node.js or npm.
+New to FreeCut? Start with the [user guide](https://freecut.net/docs).
 
-## Current state
+## Community
 
-The first vertical slice is implemented and validated:
+Join the [FreeCut Discord](https://discord.gg/aQtQ7NyUBd) to share edits,
+request features, report bugs, and give feedback on browser-based editing workflows.
 
-- local JPG/PNG/WebP cover import;
-- local browser-decodable audio import;
-- editable YouTube 16:9, Shorts 9:16, Square 1:1 or custom project frames, with blur or black fill behind unchanged sharp foreground media;
-- editable title font direction, size, tracking and placement;
-- an optional channel/producer watermark as text or PNG/SVG, with a normal corner layout or a subtle repeated text grid clipped to the sharp cover;
-- playback, seek and a lightweight decoded waveform;
-- project-driven local export at the selected frame size and 24/25/30/50/60 fps, with the same compositor used by preview;
-- MP4/H.264 + AAC when available, with an explicit WebM/VP9 + Opus fallback instead of putting VP9 in an MP4 container;
-- disk-backed OPFS streaming for long browser exports where available, with an in-memory compatibility fallback;
-- cancellable export with partial-output cleanup;
-- BPM + beat-phase analysis with explicit confidence, independent cross-check, half/double tempo correction and manual bar-1 correction;
-- a shared musical-clock module used by all presets;
-- five presets: Clean, Ambient, Reactive, Pulse and Minimal visualizer;
-- versioned local style/brand preferences (media is never persisted);
-- generated Workbox service worker + web app manifest, hosted through GitHub Pages for a normal install/offline app-shell flow;
-- keyboard transport plus session Undo/Redo for relevant editor state;
-- fixed-viewport Playwright visual QA and a real encoded-file smoke test.
+## Screenshots
 
-Musical analysis uses the maintained `web-audio-beat-detector` worker stack for BPM and first-beat offset. Beatvideo Maker checks the same detector across several track windows only to keep confidence conservative; it does not maintain a second home-grown beat engine. Bar 1 is intentionally manual and stays unverified until you set it, so phrase-synchronised motion never starts from a guessed downbeat. All five v1 presets share the same compositor, real amplitude envelope and musical clock. Style/brand preferences are saved locally, and production builds generate an installable offline PWA shell.
+<table>
+  <tr>
+    <td width="50%">
+      <strong>Timeline</strong><br />
+      <img src="./public/assets/landing/timeline.png" alt="FreeCut multi-track timeline" width="100%" />
+    </td>
+    <td width="50%">
+      <strong>Keyframes</strong><br />
+      <img src="./public/assets/landing/dopesheet.png" alt="FreeCut dopesheet keyframe editor" width="100%" />
+    </td>
+  </tr>
+  <tr>
+    <td width="50%">
+      <strong>Semantic scene search</strong><br />
+      <img src="./public/assets/landing/semantic.png" alt="FreeCut semantic scene browser" width="100%" />
+    </td>
+    <td width="50%">
+      <strong>Export</strong><br />
+      <img src="./public/assets/landing/export.png" alt="FreeCut export dialog" width="100%" />
+    </td>
+  </tr>
+  <tr>
+    <td width="50%">
+      <strong>Audio EQ</strong><br />
+      <img src="./public/assets/landing/eq.png" alt="FreeCut audio EQ controls" width="100%" />
+    </td>
+    <td width="50%">
+      <strong>Hotkeys</strong><br />
+      <img src="./public/assets/landing/hotkeys.png" alt="FreeCut hotkey editor" width="100%" />
+    </td>
+  </tr>
+</table>
 
-## Development only
+## Features
 
-Requirements: Node.js 22.12 or newer and a current Chromium browser.
+### Timeline & Editing
 
-    npm ci
-    npm run dev
+- Multi-track timeline with video, audio, text, image, shape, mask, Lottie, and compound clip items
+- Multiple timelines per project as Sequences with tabs, unified with compound clips (open a compound clip as its own sequence)
+- Linked audio/video editing with split, join, ripple, rolling, slip, slide, and rate-stretch tools
+- Cut-centered transitions with live resize, alignment, source-time anchoring, and preview overlays
+- Track mute/visibility/lock controls, linked sync badges, track push/pull, and close-gap workflows
+- Filmstrip thumbnails, stereo waveforms, snap guides, markers, timecode, and undo/redo
+- Source monitor with mark in/out, patch destinations, insert edits, and overwrite edits
+- Project templates, auto-match canvas/FPS from first media, and configurable keyboard shortcuts
 
-Open the local Vite URL. Local development is not the recommended installation route; use the hosted HTTPS PWA for the real install experience.
+### Preview & Playback
 
-## Make a video
+- Real-time preview with transform, crop, corner-pin, mask, and group gizmos
+- Frame-accurate playback through FreeCut's custom `Clock` and composition runtime
+- Fast scrub overlays, decoder prewarming, adaptive preview quality, and source warming
+- Two-up and four-up edit panels for ripple, rolling, slip, and slide operations
+- GPU color scopes: waveform, vectorscope, and histogram
+- Separate project master bus and monitor/device volume
 
-1. Open **Project settings** from the output control and choose format, resolution, FPS and media fill.
-2. Drop image/audio/video media into **Sources**, or click the empty preview / specific source controls.
-3. Enter a title.
-4. Optionally enter a channel/producer watermark, or choose a transparent PNG/SVG mark.
-5. Choose **Corner** for a conventional mark, or **Watermark grid** to repeat the text subtly across only the sharp cover image.
-6. Adjust title, effects, motion and brand settings.
-7. Play or seek to check the composition. Safe/grid guides are preview-only.
-8. If musical analysis needs confirmation, use the beat-grid correction flow before relying on phrase-synchronised motion or auto-edit.
-9. Export. Current Chromium normally uses MP4/H.264 + AAC; a clearly labeled WebM fallback is used only when that MP4 path is unavailable.
-10. During a long render, the Export button remains cancellable.
+### Audio
 
-The app checks codec support at runtime and never reports an export as successful until a real non-empty encoded file exists.
+- Clip volume, audio fades, track faders, master bus fader, and stereo LED meters
+- Per-clip pitch shift in semitones/cents with SoundTouch preview playback
+- Clip EQ and track EQ stages, including a compact six-band floating EQ panel
+- Pitch, EQ, fades, volume, and transition audio paths are preserved in preview and export
 
-### Keyboard
+### Effects, Masks & Compositing
 
-- Space — play/pause.
-- Left / Right — seek one second.
-- Shift + Left / Right — seek one verified bar.
-- Home — jump to the start.
-- B — set bar 1 at the current playhead when audio is loaded.
-- Ctrl/Cmd+Z and Ctrl/Cmd+Y (or Shift+Ctrl/Cmd+Z) — undo/redo relevant title/style state when a form control is not focused.
-- Enter in the BPM field — apply the manual tempo and regrid immediately.
+All visual effects and compositing paths are WebGPU-first, with fallbacks where practical.
 
-Focused form controls keep their normal browser keyboard behavior.
+- **Blur:** gaussian, box, motion, radial, zoom
+- **Color:** brightness, contrast, exposure, hue shift, saturation, vibrance, temperature/tint, levels, curves, color wheels, gradient map, LUT (`.cube`), grayscale, sepia, invert
+- **Distortion:** pixelate, RGB split, twirl, wave, bulge/pinch, kaleidoscope, mirror, fluted glass, ripple glass, glass mosaic, droste
+- **Stylize:** vignette, film grain, sharpen, posterize, glow, edge detect, scanlines, halftone, ASCII art, color glitch, block glitch, VHS, CRT, ink, pixel sort
+- **Keying:** chroma key with tolerance, softness, and spill suppression
+- 25 blend modes, including multiply, screen, overlay, soft light, difference, hue, saturation, color, and luminosity
+- Clip masks and pen paths with keyframeable geometry transforms
+- Color picker with hex and alpha input, plus an in-app eyedropper with loupe
 
-## Browser support
+### Transitions
 
-v0.1 targets current Chrome, Edge and Brave on Windows. WebCodecs availability is checked at runtime.
+- Fade, wipe, slide, 3D flip, clock wipe, and iris transitions with directional variants
+- Dissolve, sparkles, glitch, light leak, pixelate, chromatic aberration, and radial blur
+- Adjustable duration, alignment, source anchoring, and Canvas 2D fallback for non-WebGPU paths
 
-The title directions currently use local/system font stacks so the app does not fetch font assets from a CDN. Exact bundled open fonts can be added later as an explicit licensed asset decision.
+### Keyframe Animation
 
-Long exports prefer an Origin Private File System (OPFS) backed Mediabunny `StreamTarget`, which avoids growing one giant renderer-process `ArrayBuffer`. Browsers without OPFS fall back to `BufferTarget`.
+- Bezier graph editor, dopesheet, split view, and multi-curve overlays
+- Easing presets (linear, ease-in/out, cubic-bezier, spring) with a live-preview editor and saved custom presets
+- Procedural motion modifiers (drift, sway, breath, spin, shake) evaluated at render time, with one-click bake to keyframes
+- Motion text: per-character, per-word, and per-line text animation
+- Auto-keyframe mode, tangent mirroring, property accordions, and marquee selection
+- Animated transform, crop, mask, text, effect, and color properties
 
-## Architecture
+### Media & Import
 
-`src/features/compositor/renderComposition.ts` owns visual composition. Both live preview and export call it; title/watermark rendering must not fork into a second export-only implementation.
+- Import videos, audio, images, GIFs, SVGs, Lottie animations, and generated assets without copying originals
+- Edit imported Lottie animations (`.json` and `.lottie`): remap colors and themes, edit text, and adjust value slots with live preview
+- Apple ProRes decode for import, preview, and thumbnails, including variants browsers cannot natively decode
+- Proxy generation, thumbnail extraction, waveform caching, and media relinking
 
-`src/features/media/media.ts` owns local image/audio loading and waveform peak extraction. `src/features/analysis/` owns tempo/phase inference and the shared musical clock; bar inference is confidence-gated and can remain unverified. `src/features/export/exportVideo.ts` owns capability selection, Mediabunny/WebCodecs encoding and download. `src/features/export/outputTarget.ts` owns disk-backed versus in-memory output. `App.tsx` stays focused on the user flow and state.
+### Local AI & Analysis
 
-Stable product boundaries and the layer model live in [docs/product.md](docs/product.md). Visual review rules live in [docs/visual-qa.md](docs/visual-qa.md).
+Runs on-device in the browser — nothing is uploaded.
 
-## Validation
+- On-device transcription with the Parakeet engine (Whisper fallback) and generated caption text items
+- AI captioning with local vision-language providers and configurable sample cadence
+- Scene detection with fast histogram or frame-accurate adaptive content analysis and optional model verification
+- Scene Browser for searching captioned media and reusing detected moments
+- Local Kokoro text-to-speech voiceovers
+- Local MusicGen music generation with presets, progress, and cancellation
+- Local model cache controls and unload controls in settings
 
-Install Playwright's Chromium once, then run:
+### Projects & Storage
 
-    npx playwright install chromium
-    npm run check
+- Workspace folder persistence via the File System Access API
+- Multi-workspace switcher with known workspace management
+- Projects stored as plain files on disk, with legacy browser-storage migration
+- Project soft-delete, restore, empty-trash, and permanent delete flows
+- Project ZIP bundle export/import with Zod-validated schemas
+- Auto-save, project thumbnails, workspace cache mirroring, and orphan cleanup
 
-`npm run check` runs repository hygiene, TypeScript, the production Vite build, a PWA-output gate and Playwright tests. The visual test writes ignored screenshots to `artifacts/visual-qa/` at 1024×768, 1440×900 and 1920×1080. CI uploads those screenshots as an artifact; generating them is not considered a visual review by itself.
+### Export
 
-The media smoke test runs once at the normal desktop project because encoding is viewport-independent. It uploads generated local PNG/WAV fixtures, downloads an actual encoded file, validates the MP4/WebM container signature and separately verifies cancellation behavior.
+- In-browser rendering through WebCodecs and worker-backed render paths
+- Export any sequence, not just the main timeline
+- **Video containers:** MP4, WebM, MOV, MKV
+- **Video codecs:** H.264, H.265, VP8, VP9, AV1 (where the browser provides an encoder)
+- **Audio export formats:** MP3, AAC, WAV/PCM
+- **Subtitles:** off, burn-in, sidecar file, or embedded soft track (container-dependent)
+- Quality presets from low to ultra, with runtime capability checks and fallbacks
 
-A separate **Full export smoke** GitHub Actions workflow is intentionally release-only rather than part of every commit. It runs the same 1080p production export path for a configurable sustained duration (120 seconds by default) and fails unless the browser reports the OPFS/disk-backed target. Locally, set `FULL_EXPORT_SECONDS` and run `npm run test:full-export`.
+## Quick Start
 
-## Privacy and scope
+**Prerequisites:** Node.js 22+ recommended, npm 11+, and a modern Chromium browser.
 
-There is no account, media upload, API key or render server in the core workflow. Source media and generated output stay local to the browser. Do not add a generic timeline, asset library or cloud backend unless the product boundary is explicitly changed.
+```bash
+git clone https://github.com/walterlow/freecut.git
+cd freecut
+npm install
+npm run dev
+```
 
-## Dependency choice
+Open [http://localhost:5173](http://localhost:5173) in Chrome, Edge, Brave, or Arc.
 
-Mediabunny is used for browser-native media output instead of the deprecated `mp4-muxer` package. It provides maintained container muxing, WebCodecs sources, codec capability checks, streaming targets and an official AAC fallback while keeping the compositor under this project's control.
+### Workflow
 
-See [AGENTS.md](AGENTS.md) before changing architecture, workflow or validation.
+1. Pick a workspace folder when prompted.
+2. Create a project from the projects page.
+3. Import media by dragging files into the media library.
+4. Drag clips to the timeline, then trim, arrange, add effects, transitions, masks, captions, and audio work.
+5. Use the source monitor, keyframe editor, scene browser, AI tools, and preview overlays as needed.
+6. Export directly from the browser.
 
+## Browser Support
 
-## Presets
+Chrome or Edge 113+ is recommended. FreeCut depends on WebGPU, WebCodecs, OPFS,
+and the File System Access API, so a modern Chromium browser is required for the
+full workflow.
 
-- **Clean** — sharp foreground, restrained background and almost no motion.
-- **Ambient** — slow 8-bar background pan/scale; it stays static until bar 1 is verified.
-- **Reactive** — Ambient-style base with a small glow driven by the real decoded audio amplitude envelope.
-- **Pulse** — subtle 8-bar brightness/title accent curve; it stays static until bar 1 is verified.
-- **Minimal visualizer** — a small real amplitude line at the lower safe edge, never a fake spectrum.
+### Brave
 
-Motion has Off / Low / Medium levels. No preset owns its own timing detector; they all consume the shared grid.
+Brave may disable the File System Access API. To enable it:
 
+1. Navigate to `brave://flags/#file-system-access-api`
+2. Change the setting from **Disabled** to **Enabled**
+3. Click **Relaunch** to restart the browser
 
-## Offline and saved preferences
+## Tech Stack
 
-Production builds use `vite-plugin-pwa`/Workbox to generate the manifest and service worker. After the app shell has been visited and cached, the editor can reopen without a network connection. Imported media is never cached by the app.
+- [React 19](https://react.dev/) + [TypeScript](https://www.typescriptlang.org/)
+- [Vite+](https://github.com/voidzero-dev/vite-plus) for dev, build, lint, format, check, and tests
+- [Vite](https://vite.dev/) + [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react)
+- [WebGPU](https://developer.mozilla.org/en-US/docs/Web/API/WebGPU_API) for effects, compositing, transitions, masks, scopes, and AI acceleration
+- [WebCodecs](https://developer.mozilla.org/en-US/docs/Web/API/WebCodecs_API) for preview and export pipelines
+- [File System Access API](https://developer.mozilla.org/en-US/docs/Web/API/File_System_API) + OPFS for workspace-backed persistence and caches
+- [Zustand](https://github.com/pmndrs/zustand) + [Zundo](https://github.com/charkour/zundo) for state management and undo/redo
+- [TanStack Router](https://tanstack.com/router) for file-based, type-safe routing
+- [Tailwind CSS 4](https://tailwindcss.com/) + [Radix UI](https://www.radix-ui.com/) + shadcn-style components
+- [Mediabunny](https://mediabunny.dev/) for media decoding, metadata, and audio encoding support
+- [Transformers.js](https://huggingface.co/docs/transformers.js) for local browser AI models
+- [Kokoro.js](https://www.npmjs.com/package/kokoro-js) for WebGPU text-to-speech
+- Web Workers and AudioWorklets for heavy media processing off the main thread
 
-Style choices such as preset, motion amount, title styling and producer/wordmark defaults are stored in versioned `localStorage`. The Style panel can reset those preferences to defaults.
+## Development
 
+Most commands are npm scripts backed by `vite-plus` (`vp`).
 
-## Deployment
+```bash
+npm run dev                 # Dev server on port 5173
+npm run build               # Production build
+npm run preview             # Preview the production build
+npm run perf                # Build + serve a production-like perf target
 
-Production deploys use GitHub Pages from `main`. The Pages build sets the Vite project base to `/beat-video-maker/`, validates that compiled asset URLs stay inside that project path, uploads only `dist/`, and deploys through the `github-pages` environment.
+npm run lint                # Oxlint through Vite+
+npm run format              # Oxfmt
+npm run test:run            # Run the test suite once (npm run test to watch)
+npm run verify              # Full gate: static/arch/unit/build + portable headless contracts
+npm run headless:test       # Build once, then run the complete portable headless suite
 
-The repository must have **Settings → Pages → Source: GitHub Actions** enabled once. After that, every successful `main` deployment updates the hosted app automatically.
+npm run routes              # Regenerate the TanStack Router route tree
+```
+
+`npm run verify` runs the complete quality gate, including architecture and
+dead-code checks scoped to the current diff, all Node headless contracts, the
+built-harness Chrome regression, every public edit operation, and generated
+media/audio rendering. Real-GPU effects remain an explicit operator/release
+gate because hosted PR CI does not provide a portable WebGPU adapter.
+
+### Performance Checks
+
+- `npm run dev` is best for correctness and iteration, but includes React/Vite dev overhead, HMR, and debug instrumentation.
+- `npm run perf` is the better check for real playback or rendering performance because it serves a production build locally.
+- `npm run dev:quiet` keeps HMR while hiding the editor debug panel.
+- `npm run dev:compare` starts `http://localhost:5173` and `http://localhost:4173` together for side-by-side dev vs production-like checks.
+
+### Environment
+
+```env
+VITE_SHOW_DEBUG_PANEL=true   # Show debug panel in dev
+```
+
+## Project Structure
+
+The `src/` tree is organized into a few layers:
+
+- **`features/`** — user-facing UI modules (editor, timeline, preview, media library, effects, keyframes, export, projects, settings, scene browser, and more)
+- **`runtime/`** — playback and rendering engines (composition runtime, player, clock) that are not user-facing UI
+- **`infrastructure/`** — platform adapters for GPU (effects, transitions, compositor, masks, text, scopes), analysis, audio, browser, storage, and thumbnails
+- **`shared/`** — framework-agnostic primitives and cross-feature state (transition engine, schema migrations, Zustand stores, utils)
+- **`app/`, `components/`, `config/`, `routes/`, `types/`** — bootstrap, shadcn/ui components, configuration, file-based routes, and shared types
+
+Feature modules use their local `deps/` adapters for cross-feature imports.
+Platform-coupled code (GPU, ML, audio, storage, browser) lives in
+`@/infrastructure/*` and is imported directly; there is no separate `lib/`
+layer.
+
+## Contributing
+
+FreeCut welcomes contributions that match the current priorities.
+
+Current development priorities, in order:
+
+1. Bug fixes across FreeCut.
+2. Performance improvements for the live editor and playback, plus faster exports.
+3. New features that have been discussed first.
+
+- **Report bugs:** [open an issue](https://github.com/walterlow/freecut/issues/new?template=bug_report.yml) with reproducible steps, your browser version, and screenshots or recordings
+- **Report performance problems:** include the editing or export workflow, source media details, project size, and when the slowdown begins
+- **Discuss feature ideas:** join the [FreeCut Discord](https://discord.gg/aQtQ7NyUBd) or [start a GitHub Discussion](https://github.com/walterlow/freecut/discussions) before implementation. New features may be considered, but bug fixes and performance work take priority
+
+## License
+
+[MIT](LICENSE)
