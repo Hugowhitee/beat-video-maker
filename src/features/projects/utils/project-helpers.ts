@@ -1,6 +1,7 @@
 import { CURRENT_SCHEMA_VERSION } from '@/shared/projects/migrations'
 import { i18n } from '@/i18n'
 import type { Project } from '@/types/project'
+import { DEFAULT_BEATVIDEO_PROJECT_MODE } from '@/features/beatvideo/product-mode'
 
 /**
  * Generate a unique project ID (8-character base62 hash)
@@ -138,7 +139,7 @@ export function getUniqueFps(projects: Project[]): number[] {
  */
 export function createProjectObject(
   formData: {
-    beatvideoMode: 'photo' | 'video'
+    beatvideoMode?: 'photo' | 'video'
     name: string
     description?: string
     width: number
@@ -153,7 +154,7 @@ export function createProjectObject(
     id: id || generateProjectId(),
     name: formData.name,
     description: formData.description || '',
-    beatvideoMode: formData.beatvideoMode,
+    beatvideoMode: formData.beatvideoMode ?? DEFAULT_BEATVIDEO_PROJECT_MODE,
     metadata: {
       width: formData.width,
       height: formData.height,
