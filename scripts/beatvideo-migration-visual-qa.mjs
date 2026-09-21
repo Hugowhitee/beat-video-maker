@@ -136,10 +136,44 @@ async function main() {
       await page.getByRole('button', { name: /razor/i }).waitFor({ state: 'visible' })
       await page.waitForTimeout(600)
 
+      await page.setViewportSize({ width: 1440, height: 900 })
+      await page.waitForTimeout(250)
       await page.screenshot({
         path: path.join(OUT_DIR, 'video-editor-1440.png'),
         fullPage: false,
       })
+
+      await page.setViewportSize({ width: 1024, height: 768 })
+      await page.waitForTimeout(250)
+      await page.screenshot({
+        path: path.join(OUT_DIR, 'video-editor-1024.png'),
+        fullPage: false,
+      })
+
+      await page.setViewportSize({ width: 1920, height: 1080 })
+      await page.waitForTimeout(250)
+      await page.screenshot({
+        path: path.join(OUT_DIR, 'video-editor-1920.png'),
+        fullPage: false,
+      })
+
+      // The mode switch is project state, not temporary UI state. A reload must
+      // reopen the same workflow so users never land in the wrong editor.
+      await page.reload({ waitUntil: 'networkidle' })
+      await page.getByRole('application').waitFor({ state: 'visible' })
+      await page.getByRole('tab', { name: 'Video' }).waitFor({ state: 'visible' })
+      await page.waitForFunction(() => {
+        const selected = document.querySelector('[role="tab"][aria-selected="true"]')
+        return selected?.textContent?.trim() === 'Video'
+      })
+      await page.waitForFunction(() =>
+        document.querySelector('[data-beatvideo-mode="video"]') !== null,
+      )
+
+      const title = await page.title()
+      if (/freecut/i.test(title)) {
+        throw new Error(`Donor branding leaked into the browser title: ${title}`)
+      }
 
       if (pageErrors.length > 0) {
         throw new Error(`Browser errors during migration QA:\n${pageErrors.join('\n')}`)
