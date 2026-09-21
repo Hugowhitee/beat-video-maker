@@ -28,6 +28,7 @@ import { GRID_MIN_SIZE_PX, GRID_GAP_BY_SIZE } from './media-grid-constants'
 import {
   showMediaFilePicker,
   getSupportedMediaFormatLabels,
+  type MediaPickerKind,
 } from '@/features/media-library/utils/media-file-picker'
 
 interface MediaGridProps {
@@ -36,6 +37,8 @@ interface MediaGridProps {
   itemSize?: number
   /** When provided, renders these items instead of pulling from the store */
   items?: MediaMetadata[]
+  /** Limit file-picker media kinds for product-specific workflows. */
+  allowedKinds?: readonly MediaPickerKind[]
 }
 
 interface MediaGridBaseProps extends MediaGridProps {
@@ -55,6 +58,7 @@ const MediaGridBase = memo(function MediaGridBase({
   layout,
   itemSize = 3,
   items,
+  allowedKinds,
 }: MediaGridBaseProps) {
   const { t } = useTranslation()
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
@@ -196,11 +200,11 @@ const MediaGridBase = memo(function MediaGridBase({
   // Handle click on empty state to open file picker
   const handleEmptyStateClick = useCallback(async () => {
     try {
-      await importMedia()
+      await importMedia({ allowedKinds })
     } catch (error) {
       logger.error('Import failed:', error)
     }
-  }, [importMedia])
+  }, [allowedKinds, importMedia])
 
   const cardHandlersById = useMemo(
     () =>
@@ -261,7 +265,7 @@ const MediaGridBase = memo(function MediaGridBase({
               {t('media.grid.importButton')}
             </span>
             <div className="flex flex-wrap justify-center gap-2">
-              {getSupportedMediaFormatLabels().map((label) => (
+              {getSupportedMediaFormatLabels(allowedKinds).map((label) => (
                 <span
                   key={label}
                   className="px-2 py-0.5 bg-secondary border border-border rounded text-xs font-mono text-muted-foreground"
