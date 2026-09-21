@@ -65,7 +65,7 @@ import {
   useSubtitleScanProgressStore,
 } from '@/features/editor/deps/media-library'
 import { IoDragReadout } from '@/shared/timeline/io-range'
-import type { BeatvideoProjectMode } from '@/features/beatvideo/product-mode'
+import type { BeatvideoProjectMode } from '@/shared/beatvideo/product-mode'
 const logger = createLogger('Editor')
 const LazyTimeline = lazy(() => importTimeline().then(({ Timeline }) => ({ default: Timeline })))
 const LazyColorGradingDock = lazy(() =>
