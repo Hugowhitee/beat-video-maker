@@ -2141,7 +2141,7 @@ function App() {
                   </div>
                 </div>
 
-                <details className="property-disclosure">
+                <details className="property-disclosure" data-testid="advanced-position-disclosure">
                   <summary>Advanced position</summary>
                   <div className="coordinate-controls">
                     <label className="compact-coordinate">
@@ -2179,7 +2179,7 @@ function App() {
                   </div>
                 </details>
 
-                <details className="property-disclosure">
+                <details className="property-disclosure" data-testid="brand-disclosure">
                   <summary>Brand / watermark</summary>
                   <div className="disclosure-content">
                     <label className="control inspector-primary-field">
@@ -2246,7 +2246,7 @@ function App() {
                   </div>
                 </details>
 
-                <details className="property-disclosure">
+                <details className="property-disclosure" data-testid="templates-disclosure">
                   <summary>Templates</summary>
                   <div className="disclosure-content">
                     <p className="control-hint">Save this look as an editable local template. Media is not embedded.</p>
