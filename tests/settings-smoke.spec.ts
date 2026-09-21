@@ -1,43 +1,76 @@
 import { expect, test } from '@playwright/test';
 
+async function openInspectorTab(page: import('@playwright/test').Page, tab: string) {
+  await page.getByTestId('inspector-tab-' + tab).click();
+}
+
+async function openBrandControls(page: import('@playwright/test').Page) {
+  await openInspectorTab(page, 'text');
+  const disclosure = page.getByTestId('brand-disclosure');
+  if (!await disclosure.evaluate((node) => (node as HTMLDetailsElement).open)) {
+    await disclosure.locator('summary').click();
+  }
+}
+
+async function openTemplateControls(page: import('@playwright/test').Page) {
+  await openInspectorTab(page, 'text');
+  const disclosure = page.getByTestId('templates-disclosure');
+  if (!await disclosure.evaluate((node) => (node as HTMLDetailsElement).open)) {
+    await disclosure.locator('summary').click();
+  }
+}
+
 test('style preferences persist locally and reset cleanly', async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== 'desktop-normal', 'Preference persistence is viewport-independent.');
 
   await page.goto('/');
+  await openBrandControls(page);
   await page.getByTestId('brand-input').fill('prod. local');
   await page.getByTestId('brand-layout').selectOption('grid');
-  await page.getByTestId('preset-ambient').click();
   await page.getByTestId('title-font').selectOption('serif');
   await page.getByTestId('title-position-center').click();
+  await openInspectorTab(page, 'look');
+  await page.getByTestId('preset-ambient').click();
+  await openInspectorTab(page, 'motion');
   await page.getByTestId('motion-amount').selectOption('medium');
+  await openInspectorTab(page, 'effects');
   await page.getByTestId('effect-add-type').selectOption('glow');
   await page.getByTestId('effect-add').click();
   await page.locator('[data-effect-type="glow"]').getByLabel('Glow driver').selectOption('static');
 
   await page.reload();
 
+  await openBrandControls(page);
   await expect(page.getByTestId('brand-input')).toHaveValue('prod. local');
   await expect(page.getByTestId('brand-layout')).toHaveValue('grid');
-  await expect(page.getByTestId('preset-ambient')).toHaveClass(/is-selected/);
   await expect(page.getByTestId('title-font')).toHaveValue('serif');
   await expect(page.getByTestId('title-x')).toHaveValue('50');
   await expect(page.getByTestId('title-y')).toHaveValue('50');
   await expect(page.getByTestId('title-align-center')).toHaveClass(/is-active/);
+  await openInspectorTab(page, 'look');
+  await expect(page.getByTestId('preset-ambient')).toHaveClass(/is-selected/);
+  await openInspectorTab(page, 'motion');
   await expect(page.getByTestId('motion-amount')).toHaveValue('medium');
+  await openInspectorTab(page, 'effects');
   await expect(page.locator('[data-effect-type="glow"]')).toHaveCount(1);
   await expect(page.locator('[data-effect-type="glow"]').getByLabel('Glow driver')).toHaveValue('static');
 
+  await openTemplateControls(page);
   await page.getByTestId('reset-settings').click();
   await page.reload();
 
+  await openBrandControls(page);
   await expect(page.getByTestId('brand-input')).toHaveValue('');
   await expect(page.getByTestId('brand-layout')).toHaveValue('corner');
-  await expect(page.getByTestId('preset-clean')).toHaveClass(/is-selected/);
   await expect(page.getByTestId('title-font')).toHaveValue('clean');
   await expect(page.getByTestId('title-x')).toHaveValue('5.5');
   await expect(page.getByTestId('title-y')).toHaveValue('88');
   await expect(page.getByTestId('title-align-left')).toHaveClass(/is-active/);
+  await openInspectorTab(page, 'look');
+  await expect(page.getByTestId('preset-clean')).toHaveClass(/is-selected/);
+  await openInspectorTab(page, 'motion');
   await expect(page.getByTestId('motion-amount')).toHaveValue('low');
+  await openInspectorTab(page, 'effects');
   await expect(page.getByTestId('effect-stack')).toHaveCount(0);
 });
 
@@ -142,6 +175,7 @@ test('persisted effect ids are normalized before deduplication', async ({ page }
   });
 
   await page.goto('/');
+  await openInspectorTab(page, 'effects');
 
   const effects = page.locator('[data-effect-type="zoom-punch"]');
   await expect(effects).toHaveCount(1);
