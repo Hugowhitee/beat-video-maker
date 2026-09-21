@@ -757,7 +757,7 @@ select:focus-visible {
   text-overflow: ellipsis;
   white-space: nowrap;
   color: #808a8c;
-  font-size: 8px;
+  font-size: 9px;
 }
 
 .waveform-shell {
@@ -902,20 +902,20 @@ select:focus-visible {
 
 .waveform-detail-header strong {
   color: #e5e8e4;
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 720;
 }
 
 .waveform-detail-header span {
   color: #8f999b;
-  font-size: 8px;
+  font-size: 9px;
   line-height: 1.3;
 }
 
 .waveform-zoom-controls {
   flex: 0 0 auto;
   display: grid;
-  grid-template-columns: 28px 42px 28px;
+  grid-template-columns: 30px 48px 30px;
   align-items: center;
   border: 1px solid #4e575a;
   border-radius: 2px;
@@ -926,16 +926,16 @@ select:focus-visible {
 .waveform-zoom-controls > span {
   display: grid;
   place-items: center;
-  min-height: 27px;
+  min-height: 30px;
   border-inline: 1px solid #4e575a;
   color: #cbd1cf;
-  font-size: 8px;
+  font-size: 9px;
   font-variant-numeric: tabular-nums;
 }
 
 .waveform-zoom-button {
-  width: 28px;
-  height: 27px;
+  width: 30px;
+  height: 30px;
   border: 0;
   background: transparent;
   color: #c7cecc;
@@ -968,7 +968,7 @@ select:focus-visible {
 }
 
 .waveform-detail {
-  height: 118px;
+  height: 132px;
   gap: 1px;
   padding: 7px 6px;
 }
@@ -997,7 +997,7 @@ select:focus-visible {
   top: 5px;
   left: 4px;
   color: #889295;
-  font-size: 8px;
+  font-size: 9px;
   font-weight: 650;
   line-height: 1;
   font-variant-numeric: tabular-nums;
@@ -1026,7 +1026,7 @@ select:focus-visible {
   gap: 8px;
   padding: 0 1px;
   color: #778184;
-  font-size: 8px;
+  font-size: 9px;
   font-variant-numeric: tabular-nums;
 }
 
@@ -1036,7 +1036,7 @@ select:focus-visible {
 
 .waveform-detail-scale strong {
   color: #b7bfbd;
-  font-size: 8px;
+  font-size: 9px;
   font-weight: 650;
 }
 
