@@ -61,9 +61,10 @@ test('one media intake accepts image and beat without hunting separate controls'
     },
   ]);
 
-  await expect(page.getByText('dropped-cover.png')).toBeVisible();
-  await expect(page.getByText('dropped-beat.wav')).toBeVisible();
-  await expect(page.getByText(/Audio ready/)).toBeVisible();
+  const sources = page.getByRole('complementary', { name: 'Sources' });
+  await expect(sources.getByText('dropped-cover.png')).toBeVisible();
+  await expect(sources.getByText('dropped-beat.wav')).toBeVisible();
+  await expect(sources.getByText(/Audio ready/)).toBeVisible();
 });
 
 test('empty preview is an actual media action', async ({ page }, testInfo) => {
