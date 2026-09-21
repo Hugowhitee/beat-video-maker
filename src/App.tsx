@@ -467,6 +467,11 @@ function App() {
     saveUserSettings(authoringSettings);
   }, [authoringSettings]);
 
+  useEffect(() => {
+    if (fixtureMode) return;
+    saveProjectOutputSettings(projectOutput);
+  }, [projectOutput]);
+
   const resetStyle = () => {
     clearUserSettings();
     setTitleSize(DEFAULT_USER_SETTINGS.titleSize);
@@ -585,6 +590,10 @@ function App() {
 
   const handlePreviewClick = (event: ReactMouseEvent<HTMLDivElement>) => {
     if (!placingTitle) {
+      if (!cover) {
+        mediaInputRef.current?.click();
+        return;
+      }
       void togglePlayback();
       return;
     }
@@ -625,7 +634,12 @@ function App() {
 
   useEffect(() => {
     let active = true;
-    void detectExportCapability()
+    setCapability((current) => ({
+      ...current,
+      supported: false,
+      label: 'Checking ' + resolvedOutput.summary + ' encoder…',
+    }));
+    void detectExportCapability(resolvedOutput)
       .then((next) => {
         if (active) setCapability(next);
       })
@@ -643,7 +657,7 @@ function App() {
         }
       });
     return () => { active = false; };
-  }, []);
+  }, [resolvedOutput]);
 
   useEffect(() => {
     if (!audioUrl) return undefined;
@@ -722,8 +736,8 @@ function App() {
     setManualBpm(null);
     setManualBarOffset(null);
     setGridEditing(false);
-    setAnalysisState('idle');
-    setAnalysisMessage('');
+    setAnalysisState('decoding');
+    setAnalysisMessage('Decoding audio…');
     setCurrentTime(0);
     setMediaMessage('Decoding audio…');
 
@@ -774,8 +788,60 @@ function App() {
         });
     } catch (error) {
       if (audioLoadIdRef.current !== loadId) return;
-      setMediaMessage(error instanceof Error ? error.message : 'Could not load audio.');
+      const message = error instanceof Error ? error.message : 'Could not load audio.';
+      setAnalysisState('error');
+      setAnalysisMessage(message);
+      setMediaMessage(message);
     }
+  };
+
+  const handleMediaFiles = async (files: File[]) => {
+    const classified = classifyMediaFiles(files);
+    const tasks: Promise<void>[] = [];
+
+    if (classified.image) tasks.push(handleCover(classified.image));
+    if (classified.audio) tasks.push(handleAudio(classified.audio));
+    if (classified.videos.length > 0) videoSources.addFiles(classified.videos);
+
+    if (
+      !classified.image
+      && !classified.audio
+      && classified.videos.length === 0
+    ) {
+      setMediaMessage('No supported image, audio or video files found.');
+      return;
+    }
+
+    if (classified.unsupported.length > 0) {
+      setMediaMessage(
+        'Added supported media · skipped '
+        + classified.unsupported.length
+        + ' unsupported file'
+        + (classified.unsupported.length === 1 ? '' : 's')
+        + '.',
+      );
+    }
+
+    await Promise.all(tasks);
+  };
+
+  const handleMediaDrop = (event: ReactDragEvent<HTMLElement>) => {
+    event.preventDefault();
+    event.stopPropagation();
+    setMediaDragActive(false);
+    const files = Array.from(event.dataTransfer.files ?? []);
+    if (files.length > 0) void handleMediaFiles(files);
+  };
+
+  const handleMediaDragOver = (event: ReactDragEvent<HTMLElement>) => {
+    event.preventDefault();
+    event.dataTransfer.dropEffect = 'copy';
+    setMediaDragActive(true);
+  };
+
+  const handleMediaDragLeave = (event: ReactDragEvent<HTMLElement>) => {
+    if (event.currentTarget.contains(event.relatedTarget as Node | null)) return;
+    setMediaDragActive(false);
   };
 
   const togglePlayback = useCallback(async () => {
