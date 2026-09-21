@@ -1292,7 +1292,7 @@ export const MediaLibrary = memo(function MediaLibrary({ onMediaSelect }: MediaL
                 {t('media.library.dropFilesHere')}
               </p>
               <div className="flex flex-wrap justify-center gap-2 mt-2">
-                {getSupportedMediaFormatLabels().filter((label) => beatvideoMode === 'video' || !['MP4', 'WEBM', 'MOV', 'AVI', 'MKV'].includes(label)).map((label) => (
+                {getSupportedMediaFormatLabels(allowedMediaKinds).map((label) => (
                   <span
                     key={label}
                     className="px-2 py-0.5 bg-secondary border border-border rounded text-xs font-mono text-muted-foreground"
