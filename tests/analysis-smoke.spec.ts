@@ -32,10 +32,10 @@ test('detects tempo and aligns the downbeat directly on the waveform', async ({ 
   await page.getByTestId('grid-edit-toggle').click();
   await expect(page.getByTestId('waveform-detail-panel')).toBeVisible();
   await expect(page.getByTestId('waveform-viewport')).toBeVisible();
-  await expect(page.getByTestId('waveform-zoom-label')).toHaveText('8 s');
+  await expect(page.getByTestId('waveform-zoom-label')).toHaveText('2 s');
 
   await page.getByTestId('waveform-zoom-in').click();
-  await expect(page.getByTestId('waveform-zoom-label')).toHaveText('4 s');
+  await expect(page.getByTestId('waveform-zoom-label')).toHaveText('1 s');
 
   const waveform = page.getByTestId('waveform-detail');
   const box = await waveform.boundingBox();
@@ -59,6 +59,34 @@ test('detects tempo and aligns the downbeat directly on the waveform', async ({ 
   await page.getByTestId('grid-reset').click();
   await expect(page.getByTestId('bar-offset')).toContainText('not set');
   expect(Number(await page.getByTestId('bpm-input').inputValue())).toBeGreaterThanOrEqual(118);
+});
+
+
+test('manual grid verification clears the low-confidence review state', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'desktop-normal', 'Grid review state is viewport-independent.');
+
+  await page.goto('/');
+  await page.getByTestId('audio-input').setInputFiles({
+    name: 'manual-grid.wav',
+    mimeType: 'audio/wav',
+    buffer: clickTrack(),
+  });
+
+  await expect(page.getByTestId('bpm-input')).not.toHaveValue('', { timeout: 30_000 });
+  await page.getByTestId('review-grid').click();
+  await expect(page.getByTestId('waveform-detail-panel')).toBeVisible();
+
+  const detail = page.getByTestId('waveform-detail');
+  const box = await detail.boundingBox();
+  expect(box).not.toBeNull();
+  await page.mouse.click(box!.x + box!.width * 0.5, box!.y + box!.height * 0.5);
+
+  await expect(page.getByTestId('grid-confidence')).toContainText('Manual grid');
+  await expect(page.getByTestId('analysis-attention')).toHaveCount(0);
+
+  await page.getByTestId('grid-edit-toggle').click();
+  await expect(page.getByTestId('waveform-detail-panel')).toHaveCount(0);
+  await expect(page.getByTestId('analysis-attention')).toHaveCount(0);
 });
 
 test('manual BPM remains editable without turning detector output into a fake manual value', async ({ page }, testInfo) => {
@@ -157,13 +185,13 @@ test('detail waveform follows the playhead and exposes bounded zoom windows', as
   const firstStart = Number(await detail.getAttribute('data-window-start'));
   const firstEnd = Number(await detail.getAttribute('data-window-end'));
   expect(firstStart).toBeGreaterThan(0);
-  expect(firstEnd - firstStart).toBeCloseTo(8, 1);
+  expect(firstEnd - firstStart).toBeCloseTo(2, 1);
 
   await page.getByTestId('waveform-zoom-out').click();
-  await expect(page.getByTestId('waveform-zoom-label')).toHaveText('16 s');
+  await expect(page.getByTestId('waveform-zoom-label')).toHaveText('4 s');
   const zoomedStart = Number(await detail.getAttribute('data-window-start'));
   const zoomedEnd = Number(await detail.getAttribute('data-window-end'));
-  expect(zoomedEnd - zoomedStart).toBeCloseTo(16, 1);
+  expect(zoomedEnd - zoomedStart).toBeCloseTo(4, 1);
 
   await page.getByTestId('grid-edit-toggle').click();
   await expect(page.getByTestId('waveform-detail-panel')).toHaveCount(0);
