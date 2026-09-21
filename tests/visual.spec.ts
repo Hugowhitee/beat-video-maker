@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test';
 import { mkdir } from 'node:fs/promises';
+import { clickTrack } from './fixtures/media';
 
 test('workspace is visually reviewable at the fixed viewport matrix', async ({ page }, testInfo) => {
   await page.goto('/?fixture=1');
@@ -167,6 +168,32 @@ test('vertical project output keeps the workstation hierarchy readable', async (
   await mkdir('artifacts/visual-qa', { recursive: true });
   await page.screenshot({
     path: 'artifacts/visual-qa/output-shorts.png',
+    fullPage: false,
+  });
+});
+
+
+test('precision beat-grid review is visually reviewable', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'desktop-normal', 'Beat-grid review uses the normal review viewport.');
+
+  await page.goto('/?fixture=1');
+  await page.getByTestId('audio-input').setInputFiles({
+    name: 'visual-grid.wav',
+    mimeType: 'audio/wav',
+    buffer: clickTrack(120, 16),
+  });
+  await expect(page.getByTestId('bpm-input')).not.toHaveValue('', { timeout: 30_000 });
+  await page.getByTestId('review-grid').click();
+  await expect(page.getByTestId('waveform-detail-panel')).toBeVisible();
+
+  const detailBox = await page.getByTestId('waveform-detail').boundingBox();
+  expect(detailBox).not.toBeNull();
+  expect(detailBox!.height).toBeGreaterThan(100);
+  expect(detailBox!.width).toBeGreaterThan(360);
+
+  await mkdir('artifacts/visual-qa', { recursive: true });
+  await page.screenshot({
+    path: 'artifacts/visual-qa/beat-grid-detail.png',
     fullPage: false,
   });
 });

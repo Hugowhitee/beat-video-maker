@@ -148,10 +148,14 @@ function yieldToMainThread() {
   return new Promise<void>((resolve) => setTimeout(resolve, 0));
 }
 
-export async function buildPeaksAsync(buffer: AudioBuffer, count = 120) {
+export async function buildPeaksAsync(
+  buffer: AudioBuffer,
+  count = Math.min(24_000, Math.max(1_600, Math.ceil(buffer.duration * 100))),
+) {
   const channel = buffer.getChannelData(0);
   const block = Math.max(1, Math.floor(channel.length / count));
   const peaks: number[] = [];
+  let lastYield = performance.now();
 
   for (let index = 0; index < count; index += 1) {
     const start = index * block;
@@ -162,7 +166,10 @@ export async function buildPeaksAsync(buffer: AudioBuffer, count = 120) {
     }
     peaks.push(Math.max(0.03, max));
 
-    if ((index + 1) % 8 === 0) await yieldToMainThread();
+    if (performance.now() - lastYield >= 8) {
+      await yieldToMainThread();
+      lastYield = performance.now();
+    }
   }
 
   const ceiling = Math.max(...peaks, 0.01);

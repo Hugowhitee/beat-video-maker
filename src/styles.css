@@ -736,6 +736,30 @@ select:focus-visible {
   font-size: 9px;
 }
 
+.waveform-toolbar {
+  min-height: 22px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 0 2px 4px;
+}
+
+.waveform-toolbar > span {
+  color: #c7cdcb;
+  font-size: 9px;
+  font-weight: 700;
+}
+
+.waveform-toolbar small {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: #808a8c;
+  font-size: 9px;
+}
+
 .waveform-shell {
   position: relative;
   margin-top: 0;
@@ -750,11 +774,6 @@ select:focus-visible {
   transition: outline-color 100ms ease, background-color 100ms ease;
 }
 
-.waveform-shell.is-grid-editing {
-  cursor: crosshair;
-  outline-color: #7598a8;
-  background: #242d31;
-}
 
 .waveform {
   height: 64px;
@@ -763,6 +782,15 @@ select:focus-visible {
   gap: 2px;
   padding: 4px 5px;
   overflow: hidden;
+}
+
+.waveform-overview {
+  height: 50px;
+  gap: 1px;
+}
+
+.waveform-overview span {
+  max-width: 4px;
 }
 
 .waveform span {
@@ -834,6 +862,182 @@ select:focus-visible {
   font-size: 9px;
   line-height: 1;
   text-align: center;
+}
+
+.waveform-viewport {
+  position: absolute;
+  z-index: 3;
+  top: 3px;
+  bottom: 3px;
+  min-width: 4px;
+  border: 1px solid rgba(133,174,191,0.7);
+  background: rgba(89,126,142,0.12);
+  pointer-events: none;
+}
+
+.waveform-detail-panel {
+  display: grid;
+  gap: 5px;
+  margin-top: 8px;
+  padding: 8px;
+  border: 1px solid #596367;
+  border-radius: 2px;
+  background: #202527;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.025);
+}
+
+.waveform-detail-header {
+  min-height: 31px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.waveform-detail-header > div:first-child {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.waveform-detail-header strong {
+  color: #e5e8e4;
+  font-size: 11px;
+  font-weight: 720;
+}
+
+.waveform-detail-header span {
+  color: #8f999b;
+  font-size: 9px;
+  line-height: 1.3;
+}
+
+.waveform-zoom-controls {
+  flex: 0 0 auto;
+  display: grid;
+  grid-template-columns: 30px 48px 30px;
+  align-items: center;
+  border: 1px solid #4e575a;
+  border-radius: 2px;
+  overflow: hidden;
+  background: #282e30;
+}
+
+.waveform-zoom-controls > span {
+  display: grid;
+  place-items: center;
+  min-height: 30px;
+  border-inline: 1px solid #4e575a;
+  color: #cbd1cf;
+  font-size: 9px;
+  font-variant-numeric: tabular-nums;
+}
+
+.waveform-zoom-button {
+  width: 30px;
+  height: 30px;
+  border: 0;
+  background: transparent;
+  color: #c7cecc;
+  cursor: pointer;
+  font-size: 14px;
+  line-height: 1;
+}
+
+.waveform-zoom-button:hover:not(:disabled) {
+  background: #343c3f;
+  color: #f0f3ef;
+}
+
+.waveform-zoom-button:disabled {
+  color: #596164;
+  cursor: default;
+}
+
+.waveform-detail-shell {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid #50595c;
+  border-radius: 2px;
+  background:
+    linear-gradient(to bottom, rgba(255,255,255,0.018), transparent 42%),
+    #252b2d;
+  cursor: crosshair;
+  user-select: none;
+  touch-action: none;
+}
+
+.waveform-detail {
+  height: 132px;
+  gap: 1px;
+  padding: 7px 6px;
+}
+
+.waveform-detail span {
+  max-width: 4px;
+  background: #91a9b2;
+}
+
+.detail-beat-markers {
+  inset: 6px;
+}
+
+.detail-beat-markers span {
+  top: 0;
+  bottom: 0;
+  background: rgba(229,106,47,0.32);
+}
+
+.detail-beat-markers span.is-bar {
+  background: rgba(229,106,47,0.9);
+}
+
+.detail-beat-markers span b {
+  position: absolute;
+  top: 5px;
+  left: 4px;
+  color: #889295;
+  font-size: 9px;
+  font-weight: 650;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.detail-beat-markers span.is-bar b {
+  color: #ffb58f;
+  font-weight: 760;
+}
+
+.detail-playhead {
+  z-index: 6;
+  width: 2px;
+  background: #f0f2ed;
+  box-shadow: 0 0 0 1px rgba(15,18,19,0.35);
+}
+
+.detail-downbeat {
+  z-index: 7;
+}
+
+.waveform-detail-scale {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 8px;
+  padding: 0 1px;
+  color: #778184;
+  font-size: 9px;
+  font-variant-numeric: tabular-nums;
+}
+
+.waveform-detail-scale span:last-child {
+  text-align: right;
+}
+
+.waveform-detail-scale strong {
+  color: #b7bfbd;
+  font-size: 9px;
+  font-weight: 650;
 }
 
 .grid-strip {
