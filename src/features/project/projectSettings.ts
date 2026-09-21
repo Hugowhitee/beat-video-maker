@@ -1,8 +1,8 @@
+import type { BackgroundFill } from '../compositor/types';
+
 export type OutputFormatPreset = 'youtube' | 'shorts' | 'square' | 'custom';
 export type ResolutionTier = '1080p' | '1440p' | '2160p';
 export type OutputFrameRate = 24 | 25 | 30 | 50 | 60;
-export type BackgroundFill = 'blur' | 'black';
-
 export type ProjectOutputSettings = {
   format: OutputFormatPreset;
   resolution: ResolutionTier;
