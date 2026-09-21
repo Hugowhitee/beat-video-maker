@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type {
+  CSSProperties,
   ChangeEvent,
+  DragEvent as ReactDragEvent,
   MouseEvent as ReactMouseEvent,
   PointerEvent as ReactPointerEvent,
 } from 'react';
@@ -58,6 +60,16 @@ import {
 import type { TitlePlacementKey } from './features/project/titlePlacement';
 import { VideoSourcesPanel } from './features/media/VideoSourcesPanel';
 import { useVideoSources } from './features/media/useVideoSources';
+import { classifyMediaFiles } from './features/media/classifyMediaFiles';
+import { ProjectSettingsDialog } from './features/project/ProjectSettingsDialog';
+import {
+  DEFAULT_PROJECT_OUTPUT,
+  loadProjectOutputSettings,
+  previewCanvasSize,
+  resolveProjectOutput,
+  saveProjectOutputSettings,
+} from './features/project/projectSettings';
+import type { ProjectOutputSettings } from './features/project/projectSettings';
 import {
   createDefaultModulation,
   createEffectInstance,
@@ -82,6 +94,9 @@ import {
 
 const fixtureMode = new URLSearchParams(window.location.search).has('fixture');
 const storedSettings = fixtureMode ? DEFAULT_USER_SETTINGS : loadUserSettings();
+const storedProjectOutput = fixtureMode
+  ? DEFAULT_PROJECT_OUTPUT
+  : loadProjectOutputSettings();
 
 const PRESET_LABELS: Record<VisualPreset, string> = {
   clean: 'Clean',
@@ -114,6 +129,7 @@ type EditorSnapshot = {
   modulations: EffectModulation[];
   bpmOverride: string | null;
   barOffset: number | null;
+  projectOutput: ProjectOutputSettings;
 };
 
 function FileControl(props: {
@@ -169,6 +185,21 @@ function SelectControl<T extends string>(props: {
   );
 }
 
+function AddMediaIcon() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <path
+        d="M12 15.5V5.5m0 0L8.5 9M12 5.5 15.5 9M5.5 14.5v3.25c0 .97.78 1.75 1.75 1.75h9.5c.97 0 1.75-.78 1.75-1.75V14.5"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.7"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
 function AppMark() {
   return (
     <svg viewBox="0 0 15 15" aria-hidden="true">
@@ -187,6 +218,7 @@ function App() {
   const gridDragPointerRef = useRef<number | null>(null);
   const exportAbortRef = useRef<AbortController | null>(null);
   const audioLoadIdRef = useRef(0);
+  const mediaInputRef = useRef<HTMLInputElement>(null);
 
   const [cover, setCover] = useState<CanvasImageSource | null>(() => fixtureMode ? makeFixtureCover() : null);
   const [coverName, setCoverName] = useState(fixtureMode ? 'visual-qa-fixture' : 'No image');
@@ -214,6 +246,9 @@ function App() {
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [mediaMessage, setMediaMessage] = useState('');
+  const [projectOutput, setProjectOutput] = useState<ProjectOutputSettings>(storedProjectOutput);
+  const [projectSettingsOpen, setProjectSettingsOpen] = useState(false);
+  const [mediaDragActive, setMediaDragActive] = useState(false);
   const [capability, setCapability] = useState<ExportCapability>({
     supported: false,
     container: null,
@@ -226,7 +261,8 @@ function App() {
   const [exportState, setExportState] = useState<'idle' | 'exporting' | 'done' | 'error' | 'cancelled'>('idle');
   const [exportProgress, setExportProgress] = useState(0);
   const [exportMessage, setExportMessage] = useState('');
-  const [analysisState, setAnalysisState] = useState<'idle' | 'analyzing' | 'ready' | 'error'>('idle');
+  const [analysisState, setAnalysisState] = useState<'idle' | 'decoding' | 'analyzing' | 'ready' | 'error'>('idle');
+  const [waveformState, setWaveformState] = useState<'idle' | 'preparing' | 'ready' | 'error'>('idle');
   const [analysis, setAnalysis] = useState<BeatGridAnalysis | null>(null);
   const [manualBpm, setManualBpm] = useState<string | null>(null);
   const [manualBarOffset, setManualBarOffset] = useState<number | null>(null);
@@ -271,9 +307,10 @@ function App() {
     modulations,
     bpmOverride: manualBpm,
     barOffset: manualBarOffset,
+    projectOutput,
   }), [
     brandLayout, brandOpacity, brandPosition, brandText, effects, manualBarOffset, manualBpm,
-    modulations, motion, preset, title, titleAlign, titleFont, titleSize, titleTracking, titleX, titleY,
+    modulations, motion, preset, projectOutput, title, titleAlign, titleFont, titleSize, titleTracking, titleX, titleY,
   ]);
 
   useEffect(() => {
@@ -314,6 +351,7 @@ function App() {
     setModulations(snapshot.modulations);
     setManualBpm(snapshot.bpmOverride);
     setManualBarOffset(snapshot.barOffset);
+    setProjectOutput(snapshot.projectOutput);
   }, []);
 
   const undoEditor = useCallback(() => {
@@ -337,6 +375,15 @@ function App() {
     applyEditorSnapshot(next);
     setHistoryState({ canUndo: true, canRedo: history.redo.length > 0 });
   }, [applyEditorSnapshot, editorSnapshot]);
+
+  const resolvedOutput = useMemo(
+    () => resolveProjectOutput(projectOutput),
+    [projectOutput],
+  );
+  const previewSize = useMemo(
+    () => previewCanvasSize(resolvedOutput),
+    [resolvedOutput],
+  );
 
   const authoringSettings: UserSettings = useMemo(() => ({
     titleSize,
@@ -373,6 +420,7 @@ function App() {
     brandOpacity,
     preset,
     motion,
+    backgroundFill: projectOutput.backgroundFill,
     effects,
     modulations,
     showGuides,
@@ -392,6 +440,7 @@ function App() {
     brandOpacity,
     preset,
     motion,
+    projectOutput.backgroundFill,
     effects,
     modulations,
     showGuides,
@@ -433,6 +482,11 @@ function App() {
     if (fixtureMode) return;
     saveUserSettings(authoringSettings);
   }, [authoringSettings]);
+
+  useEffect(() => {
+    if (fixtureMode) return;
+    saveProjectOutputSettings(projectOutput);
+  }, [projectOutput]);
 
   const resetStyle = () => {
     clearUserSettings();
@@ -552,6 +606,10 @@ function App() {
 
   const handlePreviewClick = (event: ReactMouseEvent<HTMLDivElement>) => {
     if (!placingTitle) {
+      if (!cover) {
+        mediaInputRef.current?.click();
+        return;
+      }
       void togglePlayback();
       return;
     }
@@ -592,7 +650,12 @@ function App() {
 
   useEffect(() => {
     let active = true;
-    void detectExportCapability()
+    setCapability((current) => ({
+      ...current,
+      supported: false,
+      label: 'Checking ' + resolvedOutput.summary + ' encoder…',
+    }));
+    void detectExportCapability(resolvedOutput)
       .then((next) => {
         if (active) setCapability(next);
       })
@@ -610,7 +673,7 @@ function App() {
         }
       });
     return () => { active = false; };
-  }, []);
+  }, [resolvedOutput]);
 
   useEffect(() => {
     if (!audioUrl) return undefined;
@@ -632,7 +695,15 @@ function App() {
       audioLevel: amplitudeAt(amplitudeEnvelope, time),
     });
     canvas.dataset.rendered = 'true';
-  }, [amplitudeEnvelope, cover, currentTime, resolveGrid, settings]);
+  }, [
+    amplitudeEnvelope,
+    cover,
+    currentTime,
+    previewSize.height,
+    previewSize.width,
+    resolveGrid,
+    settings,
+  ]);
 
   useEffect(() => {
     renderPreview();
@@ -685,12 +756,13 @@ function App() {
     setAudioBuffer(null);
     setPeaks([]);
     setAmplitudeEnvelope(null);
+    setWaveformState('idle');
     setAnalysis(null);
     setManualBpm(null);
     setManualBarOffset(null);
     setGridEditing(false);
-    setAnalysisState('idle');
-    setAnalysisMessage('');
+    setAnalysisState('decoding');
+    setAnalysisMessage('Decoding audio…');
     setCurrentTime(0);
     setMediaMessage('Decoding audio…');
 
@@ -706,6 +778,7 @@ function App() {
       setAnalysisMessage('Analyzing tempo and beat phase…');
       setMediaMessage('Audio ready · ' + decoded.duration.toFixed(1) + ' s');
 
+      setWaveformState('preparing');
       void Promise.all([
         buildPeaksAsync(decoded),
         buildAmplitudeEnvelopeAsync(decoded),
@@ -714,8 +787,11 @@ function App() {
           if (audioLoadIdRef.current !== loadId) return;
           setPeaks(nextPeaks);
           setAmplitudeEnvelope(nextEnvelope);
+          setWaveformState('ready');
         })
         .catch(() => {
+          if (audioLoadIdRef.current !== loadId) return;
+          setWaveformState('error');
           // Playback/export can continue even if non-essential preview features fail.
         });
 
@@ -741,8 +817,60 @@ function App() {
         });
     } catch (error) {
       if (audioLoadIdRef.current !== loadId) return;
-      setMediaMessage(error instanceof Error ? error.message : 'Could not load audio.');
+      const message = error instanceof Error ? error.message : 'Could not load audio.';
+      setAnalysisState('error');
+      setAnalysisMessage(message);
+      setMediaMessage(message);
     }
+  };
+
+  const handleMediaFiles = async (files: File[]) => {
+    const classified = classifyMediaFiles(files);
+    const tasks: Promise<void>[] = [];
+
+    if (classified.image) tasks.push(handleCover(classified.image));
+    if (classified.audio) tasks.push(handleAudio(classified.audio));
+    if (classified.videos.length > 0) videoSources.addFiles(classified.videos);
+
+    if (
+      !classified.image
+      && !classified.audio
+      && classified.videos.length === 0
+    ) {
+      setMediaMessage('No supported image, audio or video files found.');
+      return;
+    }
+
+    if (classified.unsupported.length > 0) {
+      setMediaMessage(
+        'Added supported media · skipped '
+        + classified.unsupported.length
+        + ' unsupported file'
+        + (classified.unsupported.length === 1 ? '' : 's')
+        + '.',
+      );
+    }
+
+    await Promise.all(tasks);
+  };
+
+  const handleMediaDrop = (event: ReactDragEvent<HTMLElement>) => {
+    event.preventDefault();
+    event.stopPropagation();
+    setMediaDragActive(false);
+    const files = Array.from(event.dataTransfer.files ?? []);
+    if (files.length > 0) void handleMediaFiles(files);
+  };
+
+  const handleMediaDragOver = (event: ReactDragEvent<HTMLElement>) => {
+    event.preventDefault();
+    event.dataTransfer.dropEffect = 'copy';
+    setMediaDragActive(true);
+  };
+
+  const handleMediaDragLeave = (event: ReactDragEvent<HTMLElement>) => {
+    if (event.currentTarget.contains(event.relatedTarget as Node | null)) return;
+    setMediaDragActive(false);
   };
 
   const togglePlayback = useCallback(async () => {
@@ -916,7 +1044,7 @@ function App() {
     exportAbortRef.current = controller;
     setExportState('exporting');
     setExportProgress(0);
-    setExportMessage('Rendering 1080p frames locally…');
+    setExportMessage('Rendering ' + resolvedOutput.summary + ' locally…');
 
     try {
       const result = await exportVideo({
@@ -927,6 +1055,7 @@ function App() {
         title,
         grid: resolveGrid(),
         amplitudeEnvelope,
+        output: resolvedOutput,
         signal: controller.signal,
         onProgress: setExportProgress,
       });
@@ -974,10 +1103,12 @@ function App() {
     ?? (analysis?.bpm === null || analysis?.bpm === undefined ? '' : analysis.bpm.toFixed(1));
   const gridHasCorrection = manualBpm !== null || manualBarOffset !== null;
   const gridConfidenceText =
-    analysisState === 'analyzing'
-      ? 'Analyzing…'
-      : analysisState === 'error'
-        ? 'Analysis failed'
+    analysisState === 'decoding'
+      ? 'Decoding…'
+      : analysisState === 'analyzing'
+        ? 'Analyzing…'
+        : analysisState === 'error'
+          ? 'Analysis failed'
         : analysis?.bpm === null || analysis?.bpm === undefined
           ? 'Tempo not detected'
           : analysis.confidence + ' confidence';
@@ -1022,7 +1153,14 @@ function App() {
             <button data-testid="undo-button" className="history-button" type="button" disabled={!historyState.canUndo} onClick={undoEditor}>Undo</button>
             <button data-testid="redo-button" className="history-button" type="button" disabled={!historyState.canRedo} onClick={redoEditor}>Redo</button>
           </div>
-          <span className="output-pill">1080p · 30 fps</span>
+          <button
+            type="button"
+            className="output-pill output-settings-button"
+            data-testid="output-settings-button"
+            onClick={() => setProjectSettingsOpen(true)}
+          >
+            {resolvedOutput.summary}
+          </button>
           <button
             data-testid="export-button"
             className={'primary-button ' + (exportState === 'exporting' ? 'is-cancel' : '')}
@@ -1044,11 +1182,49 @@ function App() {
       <section className="workspace">
         <aside className="panel inputs-panel" aria-label="Sources">
           <div className="panel-heading">
-            <div><h2>Sources</h2><p>Local media · nothing uploaded.</p></div>
+            <div><h2>Sources</h2><p>Image · beat · videos · local only.</p></div>
           </div>
 
-          <FileControl label="Cover image" detail={coverName} accept="image/png,image/jpeg,image/webp" testId="cover-input" onChange={handleCover} />
-          <FileControl label="Beat" detail={audioName} accept="audio/*,.wav,.mp3,.m4a,.flac" testId="audio-input" onChange={handleAudio} />
+          <input
+            ref={mediaInputRef}
+            data-testid="media-intake-input"
+            className="visually-hidden"
+            type="file"
+            multiple
+            accept="image/*,audio/*,video/*,.mov,.mkv,.flac,.m4a"
+            onChange={(event) => {
+              const files = Array.from(event.currentTarget.files ?? []);
+              if (files.length > 0) void handleMediaFiles(files);
+              event.currentTarget.value = '';
+            }}
+          />
+          <div
+            className={'media-intake ' + (mediaDragActive ? 'is-dragging' : '')}
+            data-testid="media-intake"
+            role="button"
+            tabIndex={0}
+            onClick={() => mediaInputRef.current?.click()}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault();
+                mediaInputRef.current?.click();
+              }
+            }}
+            onDragEnter={handleMediaDragOver}
+            onDragOver={handleMediaDragOver}
+            onDragLeave={handleMediaDragLeave}
+            onDrop={handleMediaDrop}
+          >
+            <span className="media-intake-icon"><AddMediaIcon /></span>
+            <div className="media-intake-copy">
+              <strong>Add media</strong>
+              <span>Drop image · beat · one or more videos</span>
+              <small>or click to browse · files stay on this device</small>
+            </div>
+          </div>
+
+          <FileControl label="Still image" detail={coverName} accept="image/png,image/jpeg,image/webp" testId="cover-input" onChange={handleCover} />
+          <FileControl label="Beat / audio" detail={audioName} accept="audio/*,.wav,.mp3,.m4a,.flac" testId="audio-input" onChange={handleAudio} />
 
           <VideoSourcesPanel
             items={videoSources.items}
@@ -1059,46 +1235,6 @@ function App() {
             onRemove={videoSources.remove}
             onRole={videoSources.setRole}
           />
-
-          <label className="control">
-            <span className="field-label">Title</span>
-            <input
-              name="title"
-              data-testid="title-input"
-              value={title}
-              maxLength={80}
-              placeholder="Beat title"
-              onChange={(event) => setTitle(event.target.value)}
-            />
-          </label>
-
-          <label className="control">
-            <span className="field-label">Producer / watermark</span>
-            <input
-              data-testid="brand-input"
-              value={brandText}
-              maxLength={60}
-              placeholder="prod. name"
-              disabled={Boolean(brandGraphic) && brandLayout === 'corner'}
-              onChange={(event) => setBrandText(event.target.value)}
-            />
-          </label>
-
-          <FileControl
-            label="Watermark graphic"
-            detail={brandGraphicName}
-            accept="image/png,image/svg+xml"
-            testId="brand-graphic-input"
-            onChange={handleBrandGraphic}
-          />
-          {brandGraphic && (
-            <button className="link-button" onClick={() => {
-              setBrandGraphic(null);
-              setBrandGraphicName('Text only');
-            }}>
-              Use text watermark instead
-            </button>
-          )}
 
           {mediaMessage && <p className="status-message" role="status">{mediaMessage}</p>}
         </aside>
@@ -1130,17 +1266,28 @@ function App() {
           </div>
 
           <div
-            className="canvas-shell"
+            className={'canvas-shell ' + (mediaDragActive ? 'is-media-dragging' : '')}
             data-testid="preview-shell"
+            style={{
+              '--preview-aspect': String(resolvedOutput.width / resolvedOutput.height),
+            } as CSSProperties}
             onClick={handlePreviewClick}
+            onDragEnter={handleMediaDragOver}
+            onDragOver={handleMediaDragOver}
+            onDragLeave={handleMediaDragLeave}
+            onDrop={handleMediaDrop}
           >
             <canvas
               ref={canvasRef}
               data-testid="preview-canvas"
               className={placingTitle ? 'is-placing-title' : ''}
-              width={1280}
-              height={720}
-              aria-label={placingTitle ? 'Click to place title' : '16 by 9 video preview'}
+              width={previewSize.width}
+              height={previewSize.height}
+              aria-label={
+                placingTitle
+                  ? 'Click to place title'
+                  : resolvedOutput.aspectLabel + ' video preview'
+              }
             />
             {placingTitle ? (
               <div className="canvas-placement-hint" data-testid="title-placement-hint">
@@ -1148,9 +1295,41 @@ function App() {
               </div>
             ) : null}
             {!cover && (
-              <div className="empty-overlay">
-                <span>Add a cover image</span>
-                <small>JPG · PNG · WebP</small>
+              <button
+                type="button"
+                className="empty-overlay empty-overlay-button"
+                data-testid="empty-media-action"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  mediaInputRef.current?.click();
+                }}
+              >
+                <span className="empty-media-icon"><AddMediaIcon /></span>
+                <span>Add media</span>
+                <small>Drop here or click to browse image · beat · video</small>
+              </button>
+            )}
+            {(analysisState === 'decoding'
+              || analysisState === 'analyzing'
+              || waveformState === 'preparing') && (
+              <div className="processing-card" data-testid="audio-processing" role="status">
+                <span className="activity-spinner" aria-hidden="true" />
+                <div>
+                  <strong>
+                    {analysisState === 'decoding'
+                      ? 'Decoding beat'
+                      : analysisState === 'analyzing'
+                        ? 'Analyzing beat grid'
+                        : 'Preparing waveform'}
+                  </strong>
+                  <small>
+                    {analysisState === 'analyzing'
+                      ? (analysisMessage || 'Analyzing tempo and beat phase…')
+                      : waveformState === 'preparing' && analysisState === 'ready'
+                        ? 'Building waveform and audio envelope…'
+                        : 'Working locally…'}
+                  </small>
+                </div>
               </div>
             )}
           </div>
@@ -1196,7 +1375,7 @@ function App() {
             >
               <div className="waveform">
                 {peaks.length > 0 ? peaks.map((peak, index) => (
-                  <span key={index} style={{ height: Math.max(8, peak * 42) }} />
+                  <span key={index} style={{ height: Math.max(10, peak * 56) }} />
                 )) : <p>Waveform appears after audio is decoded.</p>}
               </div>
               <div className="beat-markers" aria-hidden="true">
@@ -1309,6 +1488,31 @@ function App() {
                   </button>
                 </div>
   
+                {analysisState === 'ready'
+                  && (analysis?.confidence === 'low' || manualBarOffset === null) ? (
+                    <div className="analysis-attention" data-testid="analysis-attention">
+                      <div>
+                        <strong>Beat grid needs a quick check</strong>
+                        <span>
+                          Analysis is finished. Confirm tempo and place bar 1 before phrase-based motion or auto-edit relies on it.
+                        </span>
+                      </div>
+                      <button
+                        type="button"
+                        className="grid-action"
+                        data-testid="review-grid"
+                        onClick={() => {
+                          setGridEditing(true);
+                          requestAnimationFrame(() => {
+                            waveformRef.current?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+                          });
+                        }}
+                      >
+                        Review grid
+                      </button>
+                    </div>
+                  ) : null}
+
                 {gridEditing ? (
                   <p className="grid-help">
                     Click or drag on the waveform to place the first downbeat. Arrow keys fine-adjust the marker; Shift makes a larger move.
@@ -1347,7 +1551,7 @@ function App() {
 
         <aside className="panel style-panel" aria-label="Inspector">
           <div className="panel-heading">
-            <div><h2>Inspector</h2><p>Visual, title and brand.</p></div>
+            <div><h2>Inspector</h2><p>Look · effects · text · brand.</p></div>
           </div>
 
           <div className="preset-list" data-testid="preset-list">
@@ -1521,6 +1725,17 @@ function App() {
 
           <div className="control-group">
             <h3>Text</h3>
+            <label className="control inspector-primary-field">
+              <span className="field-label">Title</span>
+              <input
+                name="title"
+                data-testid="title-input"
+                value={title}
+                maxLength={80}
+                placeholder="Beat title"
+                onChange={(event) => setTitle(event.target.value)}
+              />
+            </label>
             <SelectControl
               label="Font direction"
               value={titleFont}
@@ -1654,6 +1869,32 @@ function App() {
 
           <div className="control-group">
             <h3>Brand</h3>
+            <label className="control inspector-primary-field">
+              <span className="field-label">Producer / watermark</span>
+              <input
+                data-testid="brand-input"
+                value={brandText}
+                maxLength={60}
+                placeholder="prod. name"
+                disabled={Boolean(brandGraphic) && brandLayout === 'corner'}
+                onChange={(event) => setBrandText(event.target.value)}
+              />
+            </label>
+            <FileControl
+              label="Watermark graphic"
+              detail={brandGraphicName}
+              accept="image/png,image/svg+xml"
+              testId="brand-graphic-input"
+              onChange={handleBrandGraphic}
+            />
+            {brandGraphic && (
+              <button className="link-button" onClick={() => {
+                setBrandGraphic(null);
+                setBrandGraphicName('Text only');
+              }}>
+                Use text watermark instead
+              </button>
+            )}
             <SelectControl
               label="Layout"
               value={brandLayout}
@@ -1729,6 +1970,41 @@ function App() {
           </div>
         </aside>
       </section>
+
+      {exportState === 'exporting' ? (
+        <section
+          className="render-progress-popover"
+          role="dialog"
+          aria-label="Rendering video"
+          data-testid="render-progress"
+        >
+          <div className="render-progress-heading">
+            <span className="activity-spinner" aria-hidden="true" />
+            <div>
+              <strong>Rendering locally</strong>
+              <span>{resolvedOutput.summary}</span>
+            </div>
+            <b>{Math.round(exportProgress * 100)}%</b>
+          </div>
+          <div className="render-progress-track" aria-hidden="true">
+            <span style={{ width: Math.round(exportProgress * 100) + '%' }} />
+          </div>
+          <div className="render-progress-footer">
+            <span>Media stays on this device.</span>
+            <button type="button" className="small-button" onClick={cancelExport}>
+              Cancel
+            </button>
+          </div>
+        </section>
+      ) : null}
+
+      {projectSettingsOpen ? (
+        <ProjectSettingsDialog
+          settings={projectOutput}
+          onChange={setProjectOutput}
+          onClose={() => setProjectSettingsOpen(false)}
+        />
+      ) : null}
     </main>
   );
 }

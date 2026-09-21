@@ -25,11 +25,11 @@ The first vertical slice is implemented and validated:
 
 - local JPG/PNG/WebP cover import;
 - local browser-decodable audio import;
-- a fixed 16:9 Clean compositor with blurred background fill and an unchanged sharp foreground;
+- editable YouTube 16:9, Shorts 9:16, Square 1:1 or custom project frames, with blur or black fill behind unchanged sharp foreground media;
 - editable title font direction, size, tracking and placement;
 - an optional channel/producer watermark as text or PNG/SVG, with a normal corner layout or a subtle repeated text grid clipped to the sharp cover;
 - playback, seek and a lightweight decoded waveform;
-- deterministic 1920×1080 / 30 fps export with the same compositor used by preview;
+- project-driven local export at the selected frame size and 24/25/30/50/60 fps, with the same compositor used by preview;
 - MP4/H.264 + AAC when available, with an explicit WebM/VP9 + Opus fallback instead of putting VP9 in an MP4 container;
 - disk-backed OPFS streaming for long browser exports where available, with an in-memory compatibility fallback;
 - cancellable export with partial-output cleanup;
@@ -54,15 +54,16 @@ Open the local Vite URL. Local development is not the recommended installation r
 
 ## Make a video
 
-1. Choose a cover image and audio file.
-2. Enter a title.
-3. Optionally enter a channel/producer watermark, or choose a transparent PNG/SVG mark.
-4. Choose **Corner** for a conventional mark, or **Watermark grid** to repeat the text subtly across only the sharp cover image.
-5. Choose one of the four curated title directions, then adjust size, tracking and placement.
-6. Adjust watermark placement/strength.
-7. Play or seek to check the composition. Safe guides are preview-only.
-8. Export. Current Chromium normally uses MP4/H.264 + AAC; a clearly labeled WebM fallback is used only when that MP4 path is unavailable.
-9. During a long render, the Export button becomes a Cancel action.
+1. Open **Project settings** from the output control and choose format, resolution, FPS and media fill.
+2. Drop image/audio/video media into **Sources**, or click the empty preview / specific source controls.
+3. Enter a title.
+4. Optionally enter a channel/producer watermark, or choose a transparent PNG/SVG mark.
+5. Choose **Corner** for a conventional mark, or **Watermark grid** to repeat the text subtly across only the sharp cover image.
+6. Adjust title, effects, motion and brand settings.
+7. Play or seek to check the composition. Safe/grid guides are preview-only.
+8. If musical analysis needs confirmation, use the beat-grid correction flow before relying on phrase-synchronised motion or auto-edit.
+9. Export. Current Chromium normally uses MP4/H.264 + AAC; a clearly labeled WebM fallback is used only when that MP4 path is unavailable.
+10. During a long render, the Export button remains cancellable.
 
 The app checks codec support at runtime and never reports an export as successful until a real non-empty encoded file exists.
 

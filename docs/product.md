@@ -6,13 +6,13 @@ Beatvideo Maker is a small local-first, preset-first browser compositor for beat
 
 The intended v0.1 fast path is:
 
-1. choose image;
-2. choose audio;
+1. choose or confirm the project output format;
+2. drop in an image/audio pair or add analyzed source videos;
 3. enter title and optional own wordmark/watermark;
-4. choose a strong visual preset;
-5. verify musical analysis;
-6. preview;
-7. export a clean 16:9 video.
+4. choose or adjust the visual treatment;
+5. verify musical analysis when confidence needs correction;
+6. preview in the actual output aspect;
+7. export locally with the same resolved frame settings.
 
 Source media remains on-device. The v1 browser target is current Chromium on Windows. The production PWA is hosted as a static GitHub Pages project site; a backend is not required for the core workflow.
 
@@ -28,6 +28,22 @@ Source media remains on-device. The v1 browser target is current Chromium on Win
 - Reusing UI work is encouraged when licensing permits it, but reuse design primitives/components/icons rather than another app's identity. Third-party logos, names and distinctive brand assets are never Beatvideo Maker assets.
 - Automatic editing should expose a compact plan the user can correct. Do not hide clip selection, beat placement or transition decisions behind an irreversible black box.
 - Hard cuts are the normal transition. Effects such as film burn are sparse accents for musically important moments, never the default between every clip.
+
+## Project output and media intake
+
+Project output is editable project state, not a hard-coded export preset.
+
+The canonical output settings own:
+- publishing format: YouTube 16:9, Shorts 9:16, Square 1:1 or Custom;
+- resolved width and height;
+- 24 / 25 / 30 / 50 / 60 fps;
+- photo/video background fill: restrained blur or black.
+
+The preview canvas and export encoder consume the same resolved output settings. Changing aspect ratio must visibly change the preview geometry and changing FPS must change the encoder frame rate. Capability detection is repeated against the selected geometry instead of assuming 1080p30 support.
+
+Media intake has one obvious local drop/browse surface that routes supported files to their canonical owners: still image, beat audio or one/more video sources. Specific source replacement controls may remain available, but they are secondary to the unified intake. The empty preview is an active add-media surface, never inert placeholder chrome.
+
+Processing is explicit state. Decoding/analyzing/model preparation/rendering should look busy while it is busy; confidence labels are only shown as finished analysis evidence. Weak beat evidence must point into a correction workflow instead of becoming a dead-end warning.
 
 ## Post-v0.1 editing modes
 
@@ -110,11 +126,11 @@ Presets configure the same primitives rather than owning separate render trees:
 The first baseline is considered proven when:
 
 - cover and audio can be imported locally;
-- Clean preview renders a fixed 16:9 frame without stretching the foreground image;
+- the default Clean preview renders the historical 16:9 baseline without stretching the foreground image;
 - title and watermark are visibly configurable;
 - playback and waveform are usable;
 - browser export capability is reported honestly;
-- a supported browser produces a non-empty encoded 1920×1080 / 30 fps file with audio;
+- a supported browser produces a non-empty encoded default 1920×1080 / 30 fps file with audio, while later project output settings must preserve that regression floor;
 - preview and export share the same compositor;
 - minimum/normal/wide UI screenshots are generated and visually inspected;
 - README and tests describe behavior that actually exists.
@@ -138,7 +154,7 @@ The Brand layer supports channel/producer text or a user-supplied transparent PN
 
 ## Export
 
-Primary target: MP4, 1920×1080, 30 fps, H.264/AVC + AAC, with the decoded source audio unchanged.
+Primary container/codec target: MP4 with H.264/AVC + AAC and the decoded source audio unchanged. The default project frame is 1920×1080 / 30 fps, but current project output settings may select supported YouTube/Shorts/Square/Custom dimensions and 24/25/30/50/60 fps.
 
 Capability selection is explicit:
 
@@ -214,7 +230,7 @@ Undo/Redo is session state, not a second project-storage system. Focused form fi
 
 Normal CI uses the committed npm lockfile and `npm ci`. It gates repository hygiene, typecheck, production/PWA build, synthetic analysis regressions, real short media encoding/cancellation and fixed-viewport visual evidence.
 
-A separate manual **Full export smoke** workflow owns sustained-duration validation so every small commit does not encode an entire beat. It uses the same 1920×1080 / 30 fps production path, defaults to 120 seconds, verifies a real finalized container and requires the OPFS/disk-backed output target. Run it on current `main` before a tagged release.
+A separate manual **Full export smoke** workflow owns sustained-duration validation so every small commit does not encode an entire beat. It intentionally uses the default 1920×1080 / 30 fps production path as the sustained regression case, defaults to 120 seconds, verifies a real finalized container and requires the OPFS/disk-backed output target. Run it on current `main` before a tagged release.
 
 Real-user beat analysis quality still benefits from a ground-truth FL Studio corpus; do not invent such evidence from synthetic fixtures. Confidence gating and manual BPM/bar-1 correction remain the safety net until that corpus exists.
 
