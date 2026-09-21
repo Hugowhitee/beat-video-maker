@@ -1,5 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { ProjectNotFoundError } from '@/app/route-error-cause'
+import { normalizeBeatvideoProjectMode } from '@/features/beatvideo/product-mode'
 
 export const Route = createFileRoute('/editor/$projectId')({
   // Editor loader data is tiny and migration state must be fresh on reopen.
@@ -25,6 +26,7 @@ export const Route = createFileRoute('/editor/$projectId')({
       project: {
         id: project.id,
         name: project.name,
+        beatvideoMode: normalizeBeatvideoProjectMode(project.beatvideoMode),
         width: project.metadata.width,
         height: project.metadata.height,
         fps: project.metadata.fps,
