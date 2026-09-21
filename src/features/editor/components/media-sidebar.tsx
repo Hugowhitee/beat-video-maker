@@ -60,6 +60,8 @@ import { EffectThumbnail, useGpuEffectPreviewData } from '@/features/editor/deps
 import { createLogger } from '@/shared/logging/logger'
 import { useSettingsStore } from '@/features/editor/deps/settings'
 import { resolveGeneratedLayerCanvasSize } from '../utils/generated-layer-canvas-size'
+import type { BeatvideoProjectMode } from '@/types/project'
+import { isSidebarTabVisibleForBeatvideoMode } from '@/config/beatvideo'
 const LazyAiPanel = lazy(() => import('./ai-tab').then((m) => ({ default: m.AiTab })))
 const LazyTranscriptEditorPanel = lazy(() =>
   importTranscriptEditorPanel().then(({ TranscriptEditorPanel }) => ({
@@ -286,7 +288,11 @@ const TEXT_TEMPLATE_GROUPS: ReadonlyArray<{
 const DEFAULT_TEXT_TEMPLATE_LABEL = 'Text'
 const ADD_TEXT_TEMPLATE_LABEL = 'Add Text'
 
-export const MediaSidebar = memo(function MediaSidebar() {
+export const MediaSidebar = memo(function MediaSidebar({
+  beatvideoMode = 'video',
+}: {
+  beatvideoMode?: BeatvideoProjectMode
+}) {
   const { t } = useTranslation()
   const editorDensity = useSettingsStore((s) => s.editorDensity)
   const editorLayout = getEditorLayout(editorDensity)
@@ -543,7 +549,13 @@ export const MediaSidebar = memo(function MediaSidebar() {
     { id: 'lottie' as const, icon: Sticker, label: t('lottieBrowser.tabLabel') },
     { id: 'transcript' as const, icon: Captions, label: t('transcript.tabLabel') },
     { id: 'ai' as const, icon: WandSparkles, label: t('editor.mediaSidebar.ai') },
-  ]
+  ].filter(({ id }) => isSidebarTabVisibleForBeatvideoMode(id, beatvideoMode))
+
+  useEffect(() => {
+    if (!isSidebarTabVisibleForBeatvideoMode(activeTab, beatvideoMode)) {
+      setActiveTab('media')
+    }
+  }, [activeTab, beatvideoMode, setActiveTab])
 
   const shouldSuppressGeneratedItemClick = useCallback(() => {
     if (!suppressGeneratedItemClickRef.current) {
