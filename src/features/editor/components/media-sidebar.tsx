@@ -34,6 +34,7 @@ import { usePlaybackStore } from '@/shared/state/playback'
 import { useSelectionStore } from '@/shared/state/selection'
 import { useProjectStore } from '@/features/editor/deps/projects'
 import { DEFAULT_PROJECT_HEIGHT, DEFAULT_PROJECT_WIDTH } from '@/shared/projects/defaults'
+import { normalizeBeatvideoProjectMode } from '@/features/beatvideo/product-mode'
 import {
   clearMediaDragData,
   MediaLibrary,
@@ -300,6 +301,9 @@ export const MediaSidebar = memo(function MediaSidebar() {
   const sidebarWidth = useEditorStore((s) => s.sidebarWidth)
   const setSidebarWidth = useEditorStore((s) => s.setSidebarWidth)
   const prefersReducedMotion = useReducedMotion()
+  const beatvideoMode = useProjectStore((state) =>
+    normalizeBeatvideoProjectMode(state.currentProject?.beatvideoMode),
+  )
 
   const [aiTabActivated, setAiTabActivated] = useState(activeTab === 'ai')
   // The Lottie panel hits an external API on mount, so keep it unmounted until
@@ -533,17 +537,34 @@ export const MediaSidebar = memo(function MediaSidebar() {
     return grouped
   }, [])
 
-  // Category items for the vertical nav
-  const categories = [
-    { id: 'media' as const, icon: Film, label: t('editor.mediaSidebar.media') },
-    { id: 'text' as const, icon: Type, label: t('editor.mediaSidebar.text') },
-    { id: 'shapes' as const, icon: Pentagon, label: t('editor.mediaSidebar.shapes') },
-    { id: 'effects' as const, icon: Layers, label: t('editor.mediaSidebar.effects') },
-    { id: 'transitions' as const, icon: Blend, label: t('editor.mediaSidebar.transitions') },
-    { id: 'lottie' as const, icon: Sticker, label: t('lottieBrowser.tabLabel') },
-    { id: 'transcript' as const, icon: Captions, label: t('transcript.tabLabel') },
-    { id: 'ai' as const, icon: WandSparkles, label: t('editor.mediaSidebar.ai') },
-  ]
+  // Beatvideo exposes only task-relevant top-level families. The underlying
+  // FreeCut panels stay available in code, but generic NLE clutter is not part
+  // of the normal Photo/Video workflow.
+  const categories = useMemo(
+    () =>
+      beatvideoMode === 'photo'
+        ? [
+            { id: 'media' as const, icon: Film, label: t('editor.mediaSidebar.media') },
+            { id: 'text' as const, icon: Type, label: t('editor.mediaSidebar.text') },
+            { id: 'effects' as const, icon: Layers, label: t('editor.mediaSidebar.effects') },
+          ]
+        : [
+            { id: 'media' as const, icon: Film, label: t('editor.mediaSidebar.media') },
+            { id: 'text' as const, icon: Type, label: t('editor.mediaSidebar.text') },
+            { id: 'effects' as const, icon: Layers, label: t('editor.mediaSidebar.effects') },
+            {
+              id: 'transitions' as const,
+              icon: Blend,
+              label: t('editor.mediaSidebar.transitions'),
+            },
+          ],
+    [beatvideoMode, t],
+  )
+
+  useEffect(() => {
+    if (categories.some((category) => category.id === activeTab)) return
+    setActiveTab('media')
+  }, [activeTab, categories, setActiveTab])
 
   const shouldSuppressGeneratedItemClick = useCallback(() => {
     if (!suppressGeneratedItemClickRef.current) {
