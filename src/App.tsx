@@ -1783,7 +1783,7 @@ function App() {
         <aside className="panel style-panel properties-panel" aria-label="Inspector">
           <div className="properties-heading">
             <div>
-              <span className="properties-kicker">Photo</span>
+              <span className="properties-kicker">Visual</span>
               <h2>Properties</h2>
             </div>
             <span className="properties-context" title={coverName}>
