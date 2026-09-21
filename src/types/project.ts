@@ -8,6 +8,7 @@ import type { TextMotionSpec } from './text-motion'
 import type { MaskVertex } from './masks'
 import type { ShapeStyleFields } from './timeline'
 import type { CompositionControlOverrides, CompositionControlSchema } from './composition-controls'
+import type { BeatvideoProjectMode } from '@/features/beatvideo/product-mode'
 
 /**
  * Selects the editing surface a stored composition naturally opens in.
@@ -23,6 +24,8 @@ export interface Project {
   id: string
   name: string
   description: string
+  /** Beatvideo product workflow. Missing legacy value resolves to Video mode. */
+  beatvideoMode?: BeatvideoProjectMode
   createdAt: number
   updatedAt: number
   duration: number
