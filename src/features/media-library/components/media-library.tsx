@@ -380,6 +380,14 @@ export const MediaLibrary = memo(function MediaLibrary({ onMediaSelect }: MediaL
     }
   }, [currentProjectId, loadMediaItems, projectStoreProjectId, setCurrentProject])
 
+  useEffect(() => {
+    if (beatvideoMode !== 'photo') return
+    if (sceneBrowserOpen) closeSceneBrowser()
+    if (filterByType === 'video' || filterByType === 'lottie') {
+      setFilterByType(null)
+    }
+  }, [beatvideoMode, closeSceneBrowser, filterByType, sceneBrowserOpen, setFilterByType])
+
   const selectedAssetCount = selectedMediaIds.length + selectedCompositionIds.length
   const { marquee } = useMediaLibraryMarquee({
     compositions,
@@ -1026,7 +1034,8 @@ export const MediaLibrary = memo(function MediaLibrary({ onMediaSelect }: MediaL
             </div>
           )}
           {sceneBrowserOpen && <div className="flex-1 min-w-0" aria-hidden />}
-          <div
+{beatvideoMode === 'video' ? (
+                    <div
             role="group"
             aria-label={t('media.library.libraryView')}
             className="inline-flex items-center h-7 rounded-md border border-border bg-secondary p-0.5 shrink-0"
@@ -1066,6 +1075,7 @@ export const MediaLibrary = memo(function MediaLibrary({ onMediaSelect }: MediaL
               </button>
             </HeaderActionTooltip>
           </div>
+          ) : null}
         </div>
 
         {!sceneBrowserOpen && (
@@ -1100,13 +1110,15 @@ export const MediaLibrary = memo(function MediaLibrary({ onMediaSelect }: MediaL
                     {t('media.library.allTypes')}
                   </DropdownMenuItem>
                   <DropdownMenuSeparator className="bg-border" />
-                  <DropdownMenuItem
+{beatvideoMode === 'video' ? (
+                                    <DropdownMenuItem
                     onClick={() => setFilterByType('video')}
                     className="text-xs hover:bg-accent hover:text-accent-foreground"
                   >
                     <Video className="w-3 h-3 mr-2" />
                     {t('media.type.video')}
                   </DropdownMenuItem>
+                  ) : null}
                   <DropdownMenuItem
                     onClick={() => setFilterByType('audio')}
                     className="text-xs hover:bg-accent hover:text-accent-foreground"
@@ -1121,6 +1133,7 @@ export const MediaLibrary = memo(function MediaLibrary({ onMediaSelect }: MediaL
                     <ImageIcon className="w-3 h-3 mr-2" />
                     {t('media.type.image')}
                   </DropdownMenuItem>
+                  {beatvideoMode === 'video' ? (
                   <DropdownMenuItem
                     onClick={() => setFilterByType('lottie')}
                     className="text-xs hover:bg-accent hover:text-accent-foreground"
@@ -1128,6 +1141,7 @@ export const MediaLibrary = memo(function MediaLibrary({ onMediaSelect }: MediaL
                     <FileJson className="w-3 h-3 mr-2" />
                     {t('media.type.lottie')}
                   </DropdownMenuItem>
+                  ) : null}
                 </DropdownMenuContent>
               </DropdownMenu>
 
