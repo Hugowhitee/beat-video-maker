@@ -2389,7 +2389,7 @@ button.preset-card:hover {
 
 .inspector-tabs {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0,1fr));
+  grid-template-columns: repeat(4, minmax(0,1fr));
   border-bottom: 1px solid #41494c;
   background: #202527;
 }
