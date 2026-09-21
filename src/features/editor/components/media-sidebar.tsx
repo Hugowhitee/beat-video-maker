@@ -30,7 +30,7 @@ import { usePlaybackStore } from '@/shared/state/playback'
 import { useSelectionStore } from '@/shared/state/selection'
 import { useProjectStore } from '@/features/editor/deps/projects'
 import { DEFAULT_PROJECT_HEIGHT, DEFAULT_PROJECT_WIDTH } from '@/shared/projects/defaults'
-import { normalizeBeatvideoProjectMode } from '@/features/beatvideo/product-mode'
+import { normalizeBeatvideoProjectMode } from '@/shared/beatvideo/product-mode'
 import {
   clearMediaDragData,
   MediaLibrary,
