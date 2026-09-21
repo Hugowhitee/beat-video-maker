@@ -15,6 +15,8 @@ import {
   Settings,
   Sparkles,
   Video,
+  Clapperboard,
+  Image as ImageIcon,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { DiscordIcon } from '@/components/brand/discord-icon'
@@ -41,6 +43,7 @@ import { LanguageSwitcher } from '@/shared/ui/language-switcher'
 import { useDebugStore } from '@/features/editor/stores/debug-store'
 import { useItemsStore, useTimelineStore } from '@/features/editor/deps/timeline-store'
 import { useMediaLibraryStore } from '@/features/editor/deps/media-library'
+import type { BeatvideoProjectMode } from '@/types/project'
 
 const SAVE_ANIMATION_MIN_MS = 1800
 
@@ -67,6 +70,8 @@ interface ToolbarProps {
     height: number
     fps: number
   }
+  beatvideoMode: BeatvideoProjectMode
+  onBeatvideoModeChange: (mode: BeatvideoProjectMode) => void
   onSave?: () => Promise<void>
   onExport?: () => void
   onExportBundle?: () => void
@@ -78,6 +83,8 @@ interface ToolbarProps {
 export const Toolbar = memo(function Toolbar({
   projectId,
   project,
+  beatvideoMode,
+  onBeatvideoModeChange,
   onSave,
   onExport,
   onExportBundle,
@@ -212,7 +219,43 @@ export const Toolbar = memo(function Toolbar({
         </div>
       </div>
 
-      <div className="flex flex-1 items-center justify-center">
+      <div className="flex flex-1 items-center justify-center gap-2">
+        <div
+          className="flex items-center gap-0.5 rounded-md bg-muted p-0.5"
+          role="group"
+          aria-label="Beatvideo mode"
+        >
+          {([
+            ['photo', ImageIcon, 'Photo'],
+            ['video', Clapperboard, 'Video'],
+          ] as const).map(([mode, Icon, label]) => {
+            const active = beatvideoMode === mode
+            return (
+              <button
+                key={mode}
+                type="button"
+                aria-pressed={active}
+                onClick={() => onBeatvideoModeChange(mode)}
+                className={cn(
+                  'flex h-7 items-center gap-1.5 rounded-[5px] px-2.5 text-xs font-medium transition-colors',
+                  active
+                    ? 'bg-background text-foreground shadow-sm'
+                    : 'text-muted-foreground hover:text-foreground',
+                )}
+                data-tooltip={
+                  mode === 'photo'
+                    ? 'Still image + beat workflow'
+                    : 'Footage + cuts + transitions workflow'
+                }
+                data-tooltip-side="bottom"
+              >
+                <Icon className="h-3.5 w-3.5" />
+                {label}
+              </button>
+            )
+          })}
+        </div>
+        <Separator orientation="vertical" className="h-5" />
         <WorkspaceSwitcher />
       </div>
 
