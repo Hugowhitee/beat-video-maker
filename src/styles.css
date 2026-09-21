@@ -997,6 +997,22 @@ select:focus-visible {
   background: rgba(229,106,47,0.9);
 }
 
+.detail-beat-markers span b {
+  position: absolute;
+  top: 5px;
+  left: 4px;
+  color: #889295;
+  font-size: 8px;
+  font-weight: 650;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.detail-beat-markers span.is-bar b {
+  color: #ffb58f;
+  font-weight: 760;
+}
+
 .detail-playhead {
   z-index: 6;
   width: 2px;
