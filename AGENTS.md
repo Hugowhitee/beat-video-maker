@@ -119,3 +119,14 @@ The production install surface is the GitHub Pages project site. Keep Pages-spec
 - Clean cut is represented by no transition object. Film Burn remains a sparse cut-boundary transition with real hidden-handle requirements.
 - Manual overrides and locks must survive unrelated regeneration. Default direct manipulation snaps to the verified musical grid; fine unsnapped correction is an explicit override.
 - Keep segment/source duration positive and within detected shot bounds. Pure edit-plan helpers own these invariants so UI drag gestures cannot bypass them.
+
+
+## Project/output workflow
+
+- Output geometry is editable project state. The top-bar output summary must stay actionable and must never be inert status text.
+- Preview and export consume the same resolved width/height/FPS; capability checks must use the selected output geometry.
+- Keep style/template state separate from project/output state. A style template must not silently overwrite project format/FPS.
+- The canonical media intake routes local image/audio/video files to their existing owners. Do not add parallel upload/media state.
+- Empty preview/add-media surfaces must be real actions and support drag/drop where practical.
+- Processing states are explicit: show decode/analysis/model/render work while it is running; only show confidence after analysis actually finishes.
+- Weak confidence always needs an actionable correction path. Do not use a LOW badge as the end of the workflow.
