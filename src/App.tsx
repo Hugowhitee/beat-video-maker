@@ -1196,6 +1196,32 @@ function App() {
   const downbeatText = manualBarOffset === null
     ? 'First downbeat not set'
     : 'Downbeat ' + manualBarOffset.toFixed(3) + ' s';
+  const overviewPeaks = resamplePeakRange(peaks, 0, 1, 220);
+  const detailWindowSeconds = DETAIL_WAVEFORM_WINDOWS[waveformZoomIndex] ?? 8;
+  const detailSpan = Math.min(duration || detailWindowSeconds, detailWindowSeconds);
+  const detailStart = duration > 0
+    ? Math.max(0, Math.min(Math.max(0, duration - detailSpan), currentTime - detailSpan / 2))
+    : 0;
+  const detailEnd = duration > 0 ? Math.min(duration, detailStart + detailSpan) : detailSpan;
+  const detailPeaks = duration > 0
+    ? resamplePeakRange(
+        peaks,
+        detailStart / Math.max(duration, 0.001),
+        detailEnd / Math.max(duration, 0.001),
+        260,
+      )
+    : [];
+  const detailBeatMarkers = beatMarkers.filter(
+    (time) => time >= detailStart && time <= detailEnd,
+  );
+  const overviewViewportLeft = duration > 0 ? detailStart / duration * 100 : 0;
+  const overviewViewportWidth = duration > 0 ? detailSpan / duration * 100 : 100;
+  const detailPlayheadLeft = detailEnd > detailStart
+    ? (currentTime - detailStart) / (detailEnd - detailStart) * 100
+    : 0;
+  const detailDownbeatLeft = manualBarOffset !== null && detailEnd > detailStart
+    ? (manualBarOffset - detailStart) / (detailEnd - detailStart) * 100
+    : null;
 
   return (
     <main className="app-shell">
