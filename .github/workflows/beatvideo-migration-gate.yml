@@ -27,6 +27,7 @@ jobs:
         run: node scripts/beatvideo-migration-visual-qa.mjs
 
       - name: Production dependency audit report
+        if: always()
         continue-on-error: true
         run: |
           mkdir -p artifacts/migration-security
