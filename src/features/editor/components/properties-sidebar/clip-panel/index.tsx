@@ -13,6 +13,7 @@ import { useTranslation } from 'react-i18next'
 import {
   Crosshair,
   Film,
+  Image as ImageIcon,
   Sparkles,
   SlidersHorizontal,
   Volume2,
@@ -41,6 +42,7 @@ import type { TransformProperties } from '@/types/transform'
 import type { TimelineItem, VideoItem, CompositionItem } from '@/types/timeline'
 import { getLinkedAudioCompanion } from '@/shared/utils/linked-media'
 import { useGizmoStore } from '@/features/editor/deps/preview'
+import { normalizeBeatvideoProjectMode } from '@/shared/beatvideo/product-mode'
 
 import { LayoutSection } from './layout-section'
 import { FillSection } from './fill-section'
@@ -122,6 +124,7 @@ function computeItemTypeInfo(items: TimelineItem[]) {
     // Pure shape selection gets a Shape tab (no audio) instead of Video.
     isOnlyShape: items.length > 0 && items.every((item) => item.type === 'shape'),
     isOnlyController: items.length > 0 && items.every((item) => item.type === 'controller'),
+    isOnlyImage: items.length > 0 && items.every((item) => item.type === 'image'),
   }
 }
 
@@ -431,6 +434,9 @@ const ClipPanelCore = memo(function ClipPanelCore({
     (s) => s.currentProject?.metadata.height ?? DEFAULT_PROJECT_HEIGHT,
   )
   const projectFps = useProjectStore((s) => s.currentProject?.metadata.fps ?? DEFAULT_PROJECT_FPS)
+  const beatvideoMode = useProjectStore((s) =>
+    normalizeBeatvideoProjectMode(s.currentProject?.beatvideoMode),
+  )
   // Canvas settings
   const canvas = useMemo(
     () => ({
@@ -461,6 +467,7 @@ const ClipPanelCore = memo(function ClipPanelCore({
     isOnlyText,
     isOnlyShape,
     isOnlyController,
+    isOnlyImage,
   } = itemTypeInfo
 
   // Memoized filtered arrays for child components - prevents new array creation each render
@@ -591,6 +598,9 @@ const ClipPanelCore = memo(function ClipPanelCore({
           icon: Crosshair,
         }
       }
+      if (isOnlyImage || beatvideoMode === 'photo') {
+        return { label: 'Image', icon: ImageIcon }
+      }
       return { label: t('editor.clipPanel.tabVideo'), icon: Film }
     }
     if (value === 'audio') {
@@ -599,9 +609,11 @@ const ClipPanelCore = memo(function ClipPanelCore({
     if (value === 'motion') {
       return {
         label:
-          workspace === 'motion'
-            ? t('editor.clipPanel.tabAnimate', { defaultValue: 'Animate' })
-            : t('editor.clipPanel.tabAnimation'),
+          beatvideoMode === 'photo'
+            ? 'Motion'
+            : workspace === 'motion'
+              ? t('editor.clipPanel.tabAnimate', { defaultValue: 'Animate' })
+              : t('editor.clipPanel.tabAnimation'),
         icon: WandSparkles,
       }
     }
@@ -734,7 +746,10 @@ const ClipPanelCore = memo(function ClipPanelCore({
                   {t('editor.clipPanel.adjustmentLayerHint')}
                 </div>
               )}
-              <EffectsSection items={visualItems} onEditInColor={handleEditInColor} />
+              <EffectsSection
+                items={visualItems}
+                onEditInColor={beatvideoMode === 'video' ? handleEditInColor : undefined}
+              />
               {/* Text style + animation only share the Effects tab for mixed
                   selections; a pure-text selection has dedicated Text /
                   Animation tabs. */}
