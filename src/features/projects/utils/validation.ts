@@ -13,7 +13,7 @@ import { DEFAULT_BEATVIDEO_PROJECT_MODE } from '@/shared/beatvideo/product-mode'
  */
 export function createProjectFormSchema(t: (key: string) => string) {
   return z.object({
-    beatvideoMode: z.enum(['photo', 'video']),
+    beatvideoMode: z.enum(['photo', 'video']).default(DEFAULT_BEATVIDEO_PROJECT_MODE),
 
     name: z
       .string()
