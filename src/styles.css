@@ -2541,7 +2541,7 @@ button.preset-card:hover {
 
 .properties-panel .effect-row-controls label > span {
   color: #8b9597;
-  font-size: 8px;
+  font-size: 9px;
 }
 
 .properties-panel .effect-order-actions button {
@@ -2689,7 +2689,7 @@ button.preset-card:hover {
 @media (max-width: 1180px) {
   .inspector-tabs button {
     padding-inline: 2px;
-    font-size: 8px;
+    font-size: 9px;
   }
 
   .properties-context { display: none; }
