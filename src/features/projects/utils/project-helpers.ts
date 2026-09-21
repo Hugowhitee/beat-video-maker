@@ -140,6 +140,7 @@ export function createProjectObject(
   formData: {
     name: string
     description?: string
+    beatvideoMode: import('@/types/project').BeatvideoProjectMode
     width: number
     height: number
     fps: number
