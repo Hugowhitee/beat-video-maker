@@ -1,8 +1,10 @@
+import type { ReactNode } from 'react';
+
 type EditorIconProps = {
   className?: string;
 };
 
-function IconShell(props: EditorIconProps & { children: React.ReactNode }) {
+function IconShell(props: EditorIconProps & { children: ReactNode }) {
   return (
     <svg
       className={props.className}
