@@ -40,6 +40,8 @@ import { useSelectionStore } from '@/shared/state/selection'
 import { ZOOM_MIN, ZOOM_MAX, SLIP_SLIDE_TOOLS_ENABLED } from '../constants'
 import { EDITOR_LAYOUT_CSS_VALUES } from '@/config/editor-layout'
 import { useResolvedHotkeys } from '@/features/timeline/deps/settings'
+import { useProjectStore } from '@/features/timeline/deps/projects'
+import { normalizeBeatvideoProjectMode } from '@/shared/beatvideo/product-mode'
 import { MicRecordControl } from './mic-record-control'
 
 interface TimelineHeaderProps {
@@ -452,6 +454,10 @@ export const TimelineHeader = memo(function TimelineHeader({
 }: TimelineHeaderProps) {
   const { t } = useTranslation()
   const hotkeys = useResolvedHotkeys()
+  const beatvideoMode = useProjectStore((state) =>
+    normalizeBeatvideoProjectMode(state.currentProject?.beatvideoMode),
+  )
+  const isPhotoMode = beatvideoMode === 'photo'
   const snapEnabled = useTimelineStore((s) => s.snapEnabled)
   const toggleSnap = useTimelineStore((s) => s.toggleSnap)
   const audioSkimmingEnabled = useTimelineStore((s) => s.audioSkimmingEnabled)
@@ -506,13 +512,15 @@ export const TimelineHeader = memo(function TimelineHeader({
       <div className="flex min-w-0 items-center gap-2.5">
         <h2 className="text-xs font-semibold tracking-wide uppercase text-muted-foreground flex items-center gap-2">
           <Film className="w-3 h-3" />
-          {t('timeline.header.title')}
+          {isPhotoMode ? 'Beat' : t('timeline.header.title')}
         </h2>
       </div>
 
       {/* Middle: Timeline Controls */}
       <div className="min-w-0 overflow-x-auto overflow-y-hidden">
         <div className="flex w-max min-w-full items-center justify-center gap-2.5">
+          {!isPhotoMode ? (
+            <>
           {/* Timeline Tools */}
           <div className="flex items-center gap-1">
             <Button
@@ -626,8 +634,9 @@ export const TimelineHeader = memo(function TimelineHeader({
               </DropdownMenu>
             ) : null}
           </div>
-
-          <Separator orientation="vertical" className="h-5 mx-1.5" />
+              <Separator orientation="vertical" className="h-5 mx-1.5" />
+            </>
+          ) : null}
 
           {/* Undo/Redo */}
           <div className="flex items-center gap-1">
@@ -672,6 +681,8 @@ export const TimelineHeader = memo(function TimelineHeader({
             </Button>
           </div>
 
+          {!isPhotoMode ? (
+            <>
           <Separator orientation="vertical" className="h-5 mx-1.5" />
 
           {/* In/Out Points */}
@@ -767,6 +778,11 @@ export const TimelineHeader = memo(function TimelineHeader({
 
           <Separator orientation="vertical" className="h-5 mx-1.5" />
 
+            </>
+          ) : (
+            <Separator orientation="vertical" className="h-5 mx-1.5" />
+          )}
+
           {/* Snap Toggle */}
           <Button
             variant="ghost"
@@ -813,6 +829,7 @@ export const TimelineHeader = memo(function TimelineHeader({
 
           <InlineKeyframesToggle isOpen={inlineKeyframesOpen} onToggle={toggleEditKeyframePanel} />
 
+          {!isPhotoMode ? (
           <Button
             variant="ghost"
             size="icon"
@@ -836,6 +853,7 @@ export const TimelineHeader = memo(function TimelineHeader({
           >
             <Link2 className="w-3.5 h-3.5" />
           </Button>
+          ) : null}
         </div>
       </div>
 
