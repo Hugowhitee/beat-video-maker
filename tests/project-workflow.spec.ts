@@ -1,6 +1,21 @@
 import { expect, test } from '@playwright/test';
 import { PNG, sineWave } from './fixtures/media';
 
+test('authoring controls stay grouped in Inspector instead of Sources', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'desktop-normal', 'Panel grouping is viewport-independent.');
+
+  await page.goto('/?fixture=1');
+
+  const sources = page.getByRole('complementary', { name: 'Sources' });
+  const inspector = page.getByRole('complementary', { name: 'Inspector' });
+
+  await expect(inspector.getByTestId('title-input')).toBeVisible();
+  await expect(inspector.getByTestId('brand-input')).toBeVisible();
+  await expect(inspector.getByTestId('brand-graphic-input')).toHaveCount(1);
+  await expect(sources.getByTestId('title-input')).toHaveCount(0);
+  await expect(sources.getByTestId('brand-input')).toHaveCount(0);
+});
+
 test('project output settings drive the real preview geometry', async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== 'desktop-normal', 'Project settings behavior is viewport-independent.');
 
