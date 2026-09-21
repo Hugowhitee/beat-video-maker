@@ -71,6 +71,9 @@ export type EditSegment = {
   sourceEnd: number;
   reason: string;
   motifId?: string;
+  motifSlot?: string;
+  manualOverride?: boolean;
+  locked?: boolean;
 };
 
 export type EditTransition = {
