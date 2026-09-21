@@ -1483,6 +1483,31 @@ function App() {
                   </button>
                 </div>
   
+                {analysisState === 'ready'
+                  && (analysis?.confidence === 'low' || manualBarOffset === null) ? (
+                    <div className="analysis-attention" data-testid="analysis-attention">
+                      <div>
+                        <strong>Beat grid needs a quick check</strong>
+                        <span>
+                          Analysis is finished. Confirm tempo and place bar 1 before phrase-based motion or auto-edit relies on it.
+                        </span>
+                      </div>
+                      <button
+                        type="button"
+                        className="grid-action"
+                        data-testid="review-grid"
+                        onClick={() => {
+                          setGridEditing(true);
+                          requestAnimationFrame(() => {
+                            waveformRef.current?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+                          });
+                        }}
+                      >
+                        Review grid
+                      </button>
+                    </div>
+                  ) : null}
+
                 {gridEditing ? (
                   <p className="grid-help">
                     Click or drag on the waveform to place the first downbeat. Arrow keys fine-adjust the marker; Shift makes a larger move.
@@ -1903,6 +1928,14 @@ function App() {
           </div>
         </aside>
       </section>
+
+      {projectSettingsOpen ? (
+        <ProjectSettingsDialog
+          settings={projectOutput}
+          onChange={setProjectOutput}
+          onClose={() => setProjectSettingsOpen(false)}
+        />
+      ) : null}
     </main>
   );
 }
