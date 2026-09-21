@@ -106,7 +106,7 @@ const PRESET_LABELS: Record<VisualPreset, string> = {
   visualizer: 'Minimal visualizer',
 };
 
-const DETAIL_WAVEFORM_WINDOWS = [32, 16, 8, 4] as const;
+const DETAIL_WAVEFORM_WINDOWS = [8, 4, 2, 1] as const;
 
 function resamplePeakRange(
   peaks: number[],
@@ -1183,6 +1183,11 @@ function App() {
   const bpmInputValue = manualBpm
     ?? (analysis?.bpm === null || analysis?.bpm === undefined ? '' : analysis.bpm.toFixed(1));
   const gridHasCorrection = manualBpm !== null || manualBarOffset !== null;
+  const gridIsManuallyVerified = Boolean(
+    verifiedGrid
+    && manualBarOffset !== null
+    && effectiveBpm !== null,
+  );
   const gridConfidenceText =
     analysisState === 'decoding'
       ? 'Decoding…'
@@ -1190,9 +1195,13 @@ function App() {
         ? 'Analyzing…'
         : analysisState === 'error'
           ? 'Analysis failed'
-        : analysis?.bpm === null || analysis?.bpm === undefined
-          ? 'Tempo not detected'
-          : analysis.confidence + ' confidence';
+          : gridIsManuallyVerified
+            ? 'Manual grid · verified'
+            : manualBpm !== null
+              ? 'Manual tempo · set bar 1'
+              : analysis?.bpm === null || analysis?.bpm === undefined
+                ? 'Tempo not detected'
+                : analysis.confidence + ' confidence';
   const downbeatText = manualBarOffset === null
     ? 'First downbeat not set'
     : 'Downbeat ' + manualBarOffset.toFixed(3) + ' s';
@@ -1664,11 +1673,24 @@ function App() {
                     className={'grid-action ' + (gridEditing ? 'is-active' : '')}
                     aria-pressed={gridEditing}
                     onClick={(event) => {
-                      setGridEditing((value) => !value);
+                      if (gridEditing) {
+                        setGridEditing(false);
+                        if (gridIsManuallyVerified) {
+                          setAnalysisMessage(
+                            'Manual grid verified · '
+                            + effectiveBpm!.toFixed(1)
+                            + ' BPM · bar 1 at '
+                            + manualBarOffset!.toFixed(3)
+                            + ' s',
+                          );
+                        }
+                      } else {
+                        setGridEditing(true);
+                      }
                       event.currentTarget.blur();
                     }}
                   >
-                    {gridEditing ? 'Done' : 'Edit grid'}
+                    {gridEditing ? 'Use grid' : 'Edit grid'}
                   </button>
                   <button
                     data-testid="bpm-half"
@@ -1706,12 +1728,13 @@ function App() {
                 </div>
   
                 {analysisState === 'ready'
-                  && (analysis?.confidence === 'low' || manualBarOffset === null) ? (
+                  && !gridIsManuallyVerified
+                  && (effectiveBpm === null || analysis?.confidence === 'low' || manualBarOffset === null) ? (
                     <div className="analysis-attention" data-testid="analysis-attention">
                       <div>
                         <strong>Beat grid needs a quick check</strong>
                         <span>
-                          Analysis is finished. Confirm tempo and place bar 1 before phrase-based motion or auto-edit relies on it.
+                          Analysis is finished. Zoom onto a clear transient, confirm tempo and align bar 1. Once the manual grid is valid, this review warning clears.
                         </span>
                       </div>
                       <button
@@ -1732,7 +1755,7 @@ function App() {
 
                 {gridEditing ? (
                   <p className="grid-help">
-                    Use the enlarged detail waveform to place bar 1 precisely. The overview remains available for coarse positioning; Arrow keys fine-adjust the marker and Shift makes a larger move.
+                    Align the orange beat grid to a clear transient in the 1–2 second detail view. Drag/click to move bar 1; the full grid moves with it. Arrow keys fine-adjust the marker and Shift makes a larger move.
                   </p>
                 ) : analysisState === 'error' ? (
                   <p className="grid-help is-error">{analysisMessage || 'Beat analysis failed.'}</p>
