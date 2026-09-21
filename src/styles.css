@@ -1322,3 +1322,213 @@ button.preset-card:hover {
 }
 
 .effect-strength { margin-top: 7px; }
+
+
+.video-sources {
+  margin-top: 13px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line-soft);
+}
+
+.source-section-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.source-section-heading > div {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.source-section-heading strong {
+  color: #313638;
+  font-size: 9px;
+  font-weight: 720;
+}
+
+.source-section-heading span,
+.source-empty,
+.source-local-note {
+  color: #737b7d;
+  font-size: 8px;
+  line-height: 1.4;
+}
+
+.source-empty,
+.source-local-note {
+  margin: 8px 0 0;
+}
+
+.detector-status {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-top: 8px;
+  padding: 7px;
+  border: 1px solid #9ea6a4;
+  border-radius: 3px;
+  background: #cdd3d1;
+}
+
+.detector-status.is-error {
+  border-color: #b78d88;
+  background: #d8c7c4;
+}
+
+.detector-status > div {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.detector-status strong {
+  color: #313638;
+  font-size: 8px;
+}
+
+.detector-status small {
+  color: #677073;
+  font-size: 7px;
+  line-height: 1.35;
+}
+
+.activity-spinner {
+  width: 11px;
+  height: 11px;
+  flex: 0 0 auto;
+  border: 1px solid #8e9899;
+  border-top-color: var(--steel);
+  border-radius: 50%;
+  animation: source-spin 800ms linear infinite;
+}
+
+@keyframes source-spin {
+  to { transform: rotate(360deg); }
+}
+
+.video-source-list {
+  display: grid;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.video-source-row {
+  display: grid;
+  gap: 6px;
+  padding: 7px;
+  border: 1px solid #adb3b1;
+  border-radius: 3px;
+  background: #ced2d0;
+}
+
+.video-source-row.state-error {
+  border-color: #b68e88;
+}
+
+.video-source-main {
+  display: grid;
+  grid-template-columns: minmax(0,1fr) 70px;
+  align-items: center;
+  gap: 6px;
+}
+
+.video-source-name {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.video-source-name strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: #303537;
+  font-size: 8px;
+  font-weight: 720;
+}
+
+.video-source-name span {
+  color: #727a7c;
+  font-size: 7px;
+  font-variant-numeric: tabular-nums;
+}
+
+.video-source-main select {
+  min-width: 0;
+  height: 26px;
+  border: 1px solid #7f8788;
+  border-radius: 2px;
+  background: var(--control);
+  color: #eef0ec;
+  padding: 3px 4px;
+  font-size: 7px;
+  color-scheme: dark;
+}
+
+.video-source-state {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  color: #687174;
+  font-size: 7px;
+}
+
+.video-source-state > span:last-child {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.source-state-dot {
+  width: 5px;
+  height: 5px;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  background: #90989a;
+}
+
+.source-state-dot.state-ready { background: var(--ok); }
+.source-state-dot.state-error { background: var(--danger); }
+.source-state-dot.state-analyzing,
+.source-state-dot.state-preparing,
+.source-state-dot.state-opening { background: var(--signal); }
+
+.source-progress {
+  height: 2px;
+  overflow: hidden;
+  background: #b4bab8;
+}
+
+.source-progress span {
+  display: block;
+  height: 100%;
+  background: var(--steel);
+}
+
+.video-source-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.video-source-actions button {
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #52778a;
+  cursor: pointer;
+  font-size: 7px;
+  font-weight: 650;
+}
+
+.video-source-actions button:last-child {
+  margin-left: auto;
+  color: #7f5c58;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .activity-spinner { animation: none; }
+}
