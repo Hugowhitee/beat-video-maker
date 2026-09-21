@@ -45,6 +45,8 @@ export type ClipShot = {
   end: number;
   motion: number;
   quality: number;
+  motionEvidence?: 'measured' | 'unavailable';
+  qualityEvidence?: 'measured' | 'unavailable';
   boundaryKind: ShotBoundaryKind;
   boundaryConfidence: number;
 };
