@@ -91,15 +91,16 @@ import {
   useCompositionNavigationStore,
 } from '@/features/media-library/deps/timeline-stores'
 import { useProjectStore } from '@/features/media-library/deps/projects'
+import { normalizeBeatvideoProjectMode } from '@/shared/beatvideo/product-mode'
 import { proxyService } from '../services/proxy-service'
 import { frameInterpolationService } from '../services/frame-interpolation-service'
 import { upscaleService } from '../services/upscale-service'
 import { importMediaLibraryService } from '../services/media-library-service-loader'
 import { cancelMediaTranscriptionJob } from '../services/media-transcription-runner'
 import { importMediaAnalysisService } from '../services/media-analysis-service-loader'
-import { getSupportedMediaFormatLabels } from '../utils/media-file-picker'
+import { getSupportedMediaFormatLabels, type MediaPickerKind } from '../utils/media-file-picker'
 import { getSharedProxyKey } from '../utils/proxy-key'
-import { getMediaType } from '../utils/validation'
+import { getMediaType, getMimeType } from '../utils/validation'
 import { getProjectBrokenMediaIds } from '@/features/media-library/utils/broken-media'
 import type { MediaMetadata } from '@/types/storage'
 import { isMarqueeJustFinished } from '@/shared/marquee/use-marquee-selection'
@@ -280,10 +281,25 @@ export const MediaLibrary = memo(function MediaLibrary({ onMediaSelect }: MediaL
   const brokenMediaIds = useMediaLibraryStore((s) => s.brokenMediaIds)
   const isScanningMediaHealth = useMediaLibraryStore((s) => s.isScanningMediaHealth)
   const openMissingMediaDialog = useMediaLibraryStore((s) => s.openMissingMediaDialog)
-  const projectStoreProjectId = useProjectStore((s) => s.currentProject?.id ?? null)
+  const currentProject = useProjectStore((s) => s.currentProject)
+  const projectStoreProjectId = currentProject?.id ?? null
+  const beatvideoMode = normalizeBeatvideoProjectMode(currentProject?.beatvideoMode)
+  const allowedMediaKinds = useMemo<readonly MediaPickerKind[]>(
+    () => (beatvideoMode === 'photo' ? ['image', 'audio'] : ['image', 'audio', 'video']),
+    [beatvideoMode],
+  )
+  const allowedMediaKindSet = useMemo(() => new Set(allowedMediaKinds), [allowedMediaKinds])
   const proxyStatus = useMediaLibraryStore((s) => s.proxyStatus)
   const transcriptStatus = useMediaLibraryStore((s) => s.transcriptStatus)
   const filteredMediaItems = useFilteredMediaItems()
+  const modeFilteredMediaItems = useMemo(
+    () =>
+      filteredMediaItems.filter((item) => {
+        const kind = getMediaType(item.mimeType)
+        return kind !== 'unknown' && allowedMediaKindSet.has(kind)
+      }),
+    [allowedMediaKindSet, filteredMediaItems],
+  )
   const mediaGroups = useMemo(() => {
     const groups: {
       key: string
@@ -296,7 +312,7 @@ export const MediaLibrary = memo(function MediaLibrary({ onMediaSelect }: MediaL
     const gifs: MediaMetadata[] = []
     const images: MediaMetadata[] = []
     const lotties: MediaMetadata[] = []
-    for (const item of filteredMediaItems) {
+    for (const item of modeFilteredMediaItems) {
       if (item.mimeType === 'image/gif') {
         gifs.push(item)
       } else {
@@ -338,7 +354,7 @@ export const MediaLibrary = memo(function MediaLibrary({ onMediaSelect }: MediaL
         items: lotties,
       })
     return groups
-  }, [filteredMediaItems, t])
+  }, [modeFilteredMediaItems, t])
   const compositions = useCompositionsStore((s) => s.compositions)
   const MediaTypeGroupView = viewMode === 'grid' ? GridMediaTypeGroup : ListMediaTypeGroup
   const EmptyMediaGrid = viewMode === 'grid' ? GridMediaGrid : ListMediaGrid
@@ -367,7 +383,7 @@ export const MediaLibrary = memo(function MediaLibrary({ onMediaSelect }: MediaL
   const selectedAssetCount = selectedMediaIds.length + selectedCompositionIds.length
   const { marquee } = useMediaLibraryMarquee({
     compositions,
-    filteredMediaItems,
+    filteredMediaItems: modeFilteredMediaItems,
     selectedMediaIds,
     selectedCompositionIds,
     scrollContainerRef,
@@ -398,7 +414,7 @@ export const MediaLibrary = memo(function MediaLibrary({ onMediaSelect }: MediaL
   // Import files by copying them into the workspace-backed media store.
   const handleImport = async () => {
     try {
-      await importMedia({ storageMode: 'copy' })
+      await importMedia({ storageMode: 'copy', allowedKinds: allowedMediaKinds })
     } catch (error) {
       logger.error('Import failed:', error)
     }
@@ -406,7 +422,7 @@ export const MediaLibrary = memo(function MediaLibrary({ onMediaSelect }: MediaL
 
   const handleLinkImport = async () => {
     try {
-      await importMedia({ storageMode: 'link' })
+      await importMedia({ storageMode: 'link', allowedKinds: allowedMediaKinds })
     } catch (error) {
       logger.error('Link import failed:', error)
     }
@@ -439,12 +455,40 @@ export const MediaLibrary = memo(function MediaLibrary({ onMediaSelect }: MediaL
   const handleImportHandles = useCallback(
     async (handles: FileSystemFileHandle[]) => {
       try {
-        await importHandles(handles)
+        const allowed: FileSystemFileHandle[] = []
+        let skipped = 0
+
+        for (const handle of handles) {
+          try {
+            const file = await handle.getFile()
+            const kind = getMediaType(getMimeType(file))
+            if (kind !== 'unknown' && allowedMediaKindSet.has(kind)) {
+              allowed.push(handle)
+            } else {
+              skipped += 1
+            }
+          } catch {
+            skipped += 1
+          }
+        }
+
+        if (allowed.length > 0) {
+          await importHandles(allowed)
+        }
+        if (skipped > 0) {
+          showNotification({
+            type: 'info',
+            message:
+              beatvideoMode === 'photo'
+                ? 'Photo mode accepts images and audio. Switch to Video mode to add footage.'
+                : 'That media type is hidden from the normal Video workflow.',
+          })
+        }
       } catch (error) {
         logger.error('Import failed:', error)
       }
     },
-    [importHandles],
+    [allowedMediaKindSet, beatvideoMode, importHandles, showNotification],
   )
 
   // Panel-level drag/drop handling so the drop zone covers the full panel height.
@@ -1248,7 +1292,7 @@ export const MediaLibrary = memo(function MediaLibrary({ onMediaSelect }: MediaL
                 {t('media.library.dropFilesHere')}
               </p>
               <div className="flex flex-wrap justify-center gap-2 mt-2">
-                {getSupportedMediaFormatLabels().map((label) => (
+                {getSupportedMediaFormatLabels().filter((label) => beatvideoMode === 'video' || !['MP4', 'WEBM', 'MOV', 'AVI', 'MKV'].includes(label)).map((label) => (
                   <span
                     key={label}
                     className="px-2 py-0.5 bg-secondary border border-border rounded text-xs font-mono text-muted-foreground"
