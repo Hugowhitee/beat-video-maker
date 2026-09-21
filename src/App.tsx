@@ -91,6 +91,15 @@ import {
   setEffectStrength,
   setEffectTarget,
 } from './features/effects/stack';
+import {
+  ChevronDownIcon,
+  ChevronUpIcon,
+  CrossIcon,
+  FrameIcon,
+  GridIcon,
+  RedoIcon,
+  UndoIcon,
+} from './components/EditorIcons';
 
 const fixtureMode = new URLSearchParams(window.location.search).has('fixture');
 const storedSettings = fixtureMode ? DEFAULT_USER_SETTINGS : loadUserSettings();
@@ -167,27 +176,35 @@ function FileControl(props: {
   detail: string;
   accept: string;
   testId: string;
+  actionLabel?: string | null;
   onChange: (file: File) => void | Promise<void>;
 }) {
+  const actionLabel = props.actionLabel === undefined ? 'Choose' : props.actionLabel;
+  const input = (
+    <input
+      data-testid={props.testId}
+      className="visually-hidden"
+      type="file"
+      accept={props.accept}
+      onChange={(event) => {
+        const file = event.currentTarget.files?.[0];
+        if (file) void props.onChange(file);
+      }}
+    />
+  );
+
   return (
     <div className="file-control">
       <div>
         <span className="field-label">{props.label}</span>
         <span className="file-detail">{props.detail}</span>
       </div>
-      <label className="small-button">
-        Choose
-        <input
-          data-testid={props.testId}
-          className="visually-hidden"
-          type="file"
-          accept={props.accept}
-          onChange={(event) => {
-            const file = event.currentTarget.files?.[0];
-            if (file) void props.onChange(file);
-          }}
-        />
-      </label>
+      {actionLabel ? (
+        <label className="small-button source-slot-action">
+          {actionLabel}
+          {input}
+        </label>
+      ) : input}
     </div>
   );
 }
@@ -1248,8 +1265,28 @@ function App() {
             </div>
           )}
           <div className="history-actions" aria-label="Edit history">
-            <button data-testid="undo-button" className="history-button" type="button" disabled={!historyState.canUndo} onClick={undoEditor}>Undo</button>
-            <button data-testid="redo-button" className="history-button" type="button" disabled={!historyState.canRedo} onClick={redoEditor}>Redo</button>
+            <button
+              data-testid="undo-button"
+              className="history-button editor-icon-button"
+              type="button"
+              aria-label="Undo"
+              title="Undo"
+              disabled={!historyState.canUndo}
+              onClick={undoEditor}
+            >
+              <UndoIcon className="editor-icon" />
+            </button>
+            <button
+              data-testid="redo-button"
+              className="history-button editor-icon-button"
+              type="button"
+              aria-label="Redo"
+              title="Redo"
+              disabled={!historyState.canRedo}
+              onClick={redoEditor}
+            >
+              <RedoIcon className="editor-icon" />
+            </button>
           </div>
           <button
             type="button"
@@ -1288,9 +1325,25 @@ function App() {
       </header>
 
       <section className="workspace">
-        <aside className="panel inputs-panel" aria-label="Sources">
-          <div className="panel-heading">
+        <aside
+          className={'panel inputs-panel ' + (mediaDragActive ? 'is-media-dragging' : '')}
+          aria-label="Sources"
+          onDragEnter={handleMediaDragOver}
+          onDragOver={handleMediaDragOver}
+          onDragLeave={handleMediaDragLeave}
+          onDrop={handleMediaDrop}
+        >
+          <div className="panel-heading source-panel-heading">
             <div><h2>Sources</h2><p>Image · beat · videos · local only.</p></div>
+            <button
+              type="button"
+              className="source-add-button"
+              data-testid="media-intake"
+              onClick={() => mediaInputRef.current?.click()}
+            >
+              <AddMediaIcon />
+              <span>Add media</span>
+            </button>
           </div>
 
           <input
@@ -1306,33 +1359,23 @@ function App() {
               event.currentTarget.value = '';
             }}
           />
-          <div
-            className={'media-intake ' + (mediaDragActive ? 'is-dragging' : '')}
-            data-testid="media-intake"
-            role="button"
-            tabIndex={0}
-            onClick={() => mediaInputRef.current?.click()}
-            onKeyDown={(event) => {
-              if (event.key === 'Enter' || event.key === ' ') {
-                event.preventDefault();
-                mediaInputRef.current?.click();
-              }
-            }}
-            onDragEnter={handleMediaDragOver}
-            onDragOver={handleMediaDragOver}
-            onDragLeave={handleMediaDragLeave}
-            onDrop={handleMediaDrop}
-          >
-            <span className="media-intake-icon"><AddMediaIcon /></span>
-            <div className="media-intake-copy">
-              <strong>Add media</strong>
-              <span>Drop image · beat · one or more videos</span>
-              <small>or click to browse · files stay on this device</small>
-            </div>
-          </div>
-
-          <FileControl label="Still image" detail={coverName} accept="image/png,image/jpeg,image/webp" testId="cover-input" onChange={handleCover} />
-          <FileControl label="Beat / audio" detail={audioName} accept="audio/*,.wav,.mp3,.m4a,.flac" testId="audio-input" onChange={handleAudio} />
+          <FileControl
+            label="Still image"
+            detail={coverName}
+            accept="image/png,image/jpeg,image/webp"
+            testId="cover-input"
+            actionLabel={cover ? 'Replace' : null}
+            onChange={handleCover}
+          />
+          <FileControl
+            label="Beat / audio"
+            detail={audioName}
+            accept="audio/*,.wav,.mp3,.m4a,.flac"
+            testId="audio-input"
+            actionLabel={audioBuffer ? 'Replace' : null}
+            onChange={handleAudio}
+          />
+          <p className="sources-drop-hint">Drop media anywhere in Sources or on the Preview.</p>
 
           <VideoSourcesPanel
             items={videoSources.items}
@@ -1356,19 +1399,25 @@ function App() {
             <div className="preview-tools" aria-label="Preview overlays">
               <button
                 data-testid="safe-guides-toggle"
-                className={'guide-toggle ' + (showGuides ? 'is-active' : '')}
+                className={'guide-toggle editor-icon-button ' + (showGuides ? 'is-active' : '')}
+                type="button"
+                aria-label="Safe area guides"
+                title="Safe area guides"
                 aria-pressed={showGuides}
                 onClick={() => setShowGuides((value) => !value)}
               >
-                Safe
+                <FrameIcon className="editor-icon" />
               </button>
               <button
                 data-testid="grid-guides-toggle"
-                className={'guide-toggle ' + (showGrid ? 'is-active' : '')}
+                className={'guide-toggle editor-icon-button ' + (showGrid ? 'is-active' : '')}
+                type="button"
+                aria-label="Composition grid"
+                title="Composition grid"
                 aria-pressed={showGrid}
                 onClick={() => setShowGrid((value) => !value)}
               >
-                Grid
+                <GridIcon className="editor-icon" />
               </button>
             </div>
           </div>
@@ -1929,21 +1978,33 @@ function App() {
                             <div className="effect-order-actions">
                               <button
                                 type="button"
+                                className="editor-icon-button"
                                 aria-label={'Move ' + definition.name + ' up'}
+                                title={'Move ' + definition.name + ' up'}
                                 disabled={!canMoveEffectWithinTarget(effects, effect.id, -1)}
                                 onClick={() => moveEffect(effect.id, -1)}
-                              >↑</button>
+                              >
+                                <ChevronUpIcon className="editor-icon" />
+                              </button>
                               <button
                                 type="button"
+                                className="editor-icon-button"
                                 aria-label={'Move ' + definition.name + ' down'}
+                                title={'Move ' + definition.name + ' down'}
                                 disabled={!canMoveEffectWithinTarget(effects, effect.id, 1)}
                                 onClick={() => moveEffect(effect.id, 1)}
-                              >↓</button>
+                              >
+                                <ChevronDownIcon className="editor-icon" />
+                              </button>
                               <button
                                 type="button"
+                                className="editor-icon-button"
                                 aria-label={'Remove ' + definition.name}
+                                title={'Remove ' + definition.name}
                                 onClick={() => removeEffect(effect.id)}
-                              >×</button>
+                              >
+                                <CrossIcon className="editor-icon" />
+                              </button>
                             </div>
                           </div>
 
