@@ -146,11 +146,23 @@ test('vertical project output keeps the workstation hierarchy readable', async (
   await page.getByRole('button', { name: 'Done' }).click();
 
   const canvas = page.getByTestId('preview-canvas');
-  const ratio = await canvas.evaluate((node) => {
-    const rect = node.getBoundingClientRect();
-    return rect.width / rect.height;
+  const frame = await canvas.evaluate((node) => {
+    const canvasNode = node as HTMLCanvasElement;
+    const rect = canvasNode.getBoundingClientRect();
+    const context = canvasNode.getContext('2d');
+    const pixel = context?.getImageData(
+      Math.floor(canvasNode.width / 2),
+      Math.floor(canvasNode.height / 2),
+      1,
+      1,
+    ).data;
+    return {
+      ratio: rect.width / rect.height,
+      centerLuma: pixel ? pixel[0] + pixel[1] + pixel[2] : 0,
+    };
   });
-  expect(ratio).toBeCloseTo(9 / 16, 2);
+  expect(frame.ratio).toBeCloseTo(9 / 16, 2);
+  expect(frame.centerLuma).toBeGreaterThan(40);
 
   await mkdir('artifacts/visual-qa', { recursive: true });
   await page.screenshot({
