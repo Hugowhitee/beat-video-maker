@@ -1,15 +1,19 @@
 {
-  "name": "FreeCut",
-  "short_name": "FreeCut",
+  "name": "Beatvideo Maker",
+  "short_name": "Beatvideo",
   "id": "/",
-  "description": "A browser-based video editor.",
+  "description": "A focused editor for beat-synchronised photo and video visuals.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
   "background_color": "#111827",
   "theme_color": "#111827",
   "orientation": "any",
-  "categories": ["video", "productivity", "utilities"],
+  "categories": [
+    "video",
+    "productivity",
+    "utilities"
+  ],
   "icons": [
     {
       "src": "/icons/icon-192.png",
@@ -28,15 +32,6 @@
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable"
-    }
-  ],
-  "screenshots": [
-    {
-      "src": "/assets/landing/timeline.png",
-      "sizes": "2048x1536",
-      "type": "image/png",
-      "form_factor": "wide",
-      "label": "FreeCut video editor timeline"
     }
   ]
 }
