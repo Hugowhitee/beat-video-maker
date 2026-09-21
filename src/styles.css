@@ -264,7 +264,7 @@ select:focus-visible {
   min-height: 0;
   height: calc(100dvh - 54px);
   display: grid;
-  grid-template-columns: 228px minmax(420px, 1fr) 280px;
+  grid-template-columns: 240px minmax(420px, 1fr) 300px;
   width: 100%;
   margin: 0;
 }
@@ -302,7 +302,7 @@ select:focus-visible {
 .panel-heading p {
   margin: 4px 0 0;
   color: #777f81;
-  font-size: 8px;
+  font-size: 9px;
   line-height: 1.35;
 }
 
@@ -315,9 +315,10 @@ select:focus-visible {
 }
 
 .media-intake {
-  display: grid;
-  gap: 3px;
-  margin-bottom: 6px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 8px;
   padding: 12px 10px;
   border: 1px dashed #929a98;
   border-radius: 3px;
@@ -325,6 +326,30 @@ select:focus-visible {
   color: #343a3c;
   cursor: pointer;
   transition: border-color 100ms ease, background 100ms ease, box-shadow 100ms ease;
+}
+
+.media-intake-icon {
+  width: 34px;
+  height: 34px;
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  border: 1px solid #9aa3a1;
+  border-radius: 3px;
+  background: #dce0de;
+  color: #496b7b !important;
+}
+
+.media-intake-icon svg {
+  width: 21px;
+  height: 21px;
+  display: block;
+}
+
+.media-intake-copy {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
 }
 
 .media-intake:hover,
@@ -335,18 +360,18 @@ select:focus-visible {
 }
 
 .media-intake strong {
-  font-size: 9px;
+  font-size: 11px;
   font-weight: 760;
 }
 
 .media-intake span {
   color: #60696b;
-  font-size: 8px;
+  font-size: 9px;
 }
 
 .media-intake small {
   color: #7b8385;
-  font-size: 7px;
+  font-size: 8px;
   line-height: 1.35;
 }
 
@@ -368,27 +393,28 @@ select:focus-visible {
 
 .field-label {
   color: #373d3f;
-  font-size: 9px;
+  font-size: 10px;
   font-weight: 670;
 }
 
 .file-detail {
   display: block;
-  max-width: 136px;
+  max-width: 154px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
   color: #777f81;
-  font-size: 8px;
+  font-size: 9px;
 }
 
 .small-button {
+  min-height: 30px;
   flex: 0 0 auto;
-  padding: 6px 8px;
+  padding: 6px 9px;
   border: 1px solid #929997;
   background: #c6cac8;
   color: #2f3436;
-  font-size: 9px;
+  font-size: 10px;
   font-weight: 700;
   box-shadow: inset 0 1px 0 rgba(255,255,255,0.28);
 }
@@ -417,13 +443,13 @@ select:focus-visible {
 .control select,
 .control-group select {
   width: 100%;
-  min-height: 32px;
-  padding: 6px 7px;
+  min-height: 34px;
+  padding: 7px 8px;
   border: 1px solid #7c8486;
   border-radius: 3px;
   background: var(--control);
   color: #eef0ec;
-  font-size: 9px;
+  font-size: 10px;
   color-scheme: dark;
   box-shadow: inset 0 1px 2px rgba(0,0,0,0.28);
 }
@@ -493,11 +519,12 @@ select:focus-visible {
 }
 
 .guide-toggle {
-  padding: 5px 7px;
+  min-height: 29px;
+  padding: 5px 8px;
   border: 1px solid #51585b;
   background: #262b2d;
   color: #aeb4b5;
-  font-size: 8px;
+  font-size: 9px;
 }
 
 .guide-toggle.is-active {
@@ -559,16 +586,34 @@ select:focus-visible {
   pointer-events: none;
 }
 
-.empty-overlay span {
-  font-size: 11px;
+.empty-overlay > span:not(.empty-media-icon) {
+  font-size: 13px;
   font-weight: 720;
 }
 
 .empty-overlay small {
-  margin-top: 5px;
-  color: #828a8d;
-  font-size: 8px;
-  letter-spacing: 0.08em;
+  margin-top: 6px;
+  color: #929a9c;
+  font-size: 9px;
+  letter-spacing: 0.02em;
+}
+
+.empty-media-icon {
+  width: 40px;
+  height: 40px;
+  display: grid;
+  place-items: center;
+  margin: 0 auto 10px;
+  border: 1px solid #4c5c63;
+  border-radius: 4px;
+  background: rgba(65, 83, 91, 0.28);
+  color: #a8c4d0;
+}
+
+.empty-media-icon svg {
+  width: 24px;
+  height: 24px;
+  display: block;
 }
 
 .empty-overlay-button {
@@ -610,7 +655,7 @@ select:focus-visible {
 }
 
 .processing-card strong {
-  font-size: 9px;
+  font-size: 10px;
 }
 
 .processing-card small {
@@ -618,26 +663,26 @@ select:focus-visible {
   text-overflow: ellipsis;
   white-space: nowrap;
   color: #a8b0b2;
-  font-size: 8px;
+  font-size: 9px;
 }
 
 .transport {
   display: grid;
-  grid-template-columns: 30px auto minmax(100px,1fr);
+  grid-template-columns: 34px auto minmax(100px,1fr);
   align-items: center;
   gap: 9px;
   margin-top: 9px;
 }
 
 .play-button {
-  width: 30px;
-  height: 28px;
+  width: 34px;
+  height: 32px;
   display: grid;
   place-items: center;
   border: 1px solid #939a98;
   background: #d9dcda;
   color: #24282a;
-  font-size: 9px;
+  font-size: 11px;
   box-shadow: inset 0 1px 0 rgba(255,255,255,0.3);
 }
 
@@ -648,7 +693,7 @@ select:focus-visible {
 
 .timecode {
   color: #c5cac8;
-  font-size: 8px;
+  font-size: 9px;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
@@ -675,7 +720,7 @@ select:focus-visible {
 
 .edit-dock-header strong {
   color: #dfe2de;
-  font-size: 8px;
+  font-size: 9px;
   font-weight: 760;
   letter-spacing: 0.09em;
   text-transform: uppercase;
@@ -688,7 +733,7 @@ select:focus-visible {
   text-overflow: ellipsis;
   white-space: nowrap;
   color: #8e9799;
-  font-size: 8px;
+  font-size: 9px;
 }
 
 .waveform-shell {
@@ -712,7 +757,7 @@ select:focus-visible {
 }
 
 .waveform {
-  height: 48px;
+  height: 64px;
   display: flex;
   align-items: center;
   gap: 2px;
@@ -731,7 +776,7 @@ select:focus-visible {
 .waveform p {
   margin: 0;
   color: #8e9799;
-  font-size: 8px;
+  font-size: 9px;
 }
 
 .beat-markers {
@@ -879,12 +924,12 @@ select:focus-visible {
 }
 
 .grid-action {
-  min-height: 25px;
-  padding: 4px 8px;
+  min-height: 29px;
+  padding: 5px 9px;
   border: 1px solid #555d60;
   background: #202426;
   color: #c0c6c5;
-  font-size: 8px;
+  font-size: 9px;
   font-weight: 650;
 }
 
@@ -913,7 +958,7 @@ select:focus-visible {
 .grid-help {
   margin: 0;
   color: #9ea6a8;
-  font-size: 8px;
+  font-size: 9px;
   line-height: 1.45;
 }
 
@@ -938,12 +983,12 @@ select:focus-visible {
 
 .analysis-attention strong {
   color: #eee1c7;
-  font-size: 8px;
+  font-size: 9px;
 }
 
 .analysis-attention span {
   color: #b8ab94;
-  font-size: 7px;
+  font-size: 8px;
   line-height: 1.35;
 }
 
@@ -999,11 +1044,11 @@ select:focus-visible {
 
 .preset-card {
   display: grid;
-  grid-template-columns: 28px minmax(0,1fr) 14px;
+  grid-template-columns: 32px minmax(0,1fr) 16px;
   align-items: center;
-  gap: 8px;
-  min-height: 42px;
-  padding: 7px;
+  gap: 9px;
+  min-height: 48px;
+  padding: 8px;
   border: 1px solid #aab0ae;
   border-radius: 3px;
   background: #d0d4d2;
@@ -1033,25 +1078,25 @@ button.preset-card:hover {
 }
 
 .preset-card strong {
-  font-size: 9px;
+  font-size: 10px;
   color: #2c3133;
 }
 
 .preset-card span {
   color: #6e7679;
-  font-size: 8px;
+  font-size: 9px;
   line-height: 1.25;
 }
 
 .preset-card .check {
   color: #426f84;
-  font-size: 9px;
+  font-size: 10px;
   text-align: center;
 }
 
 .preset-swatch {
-  width: 28px;
-  height: 28px;
+  width: 32px;
+  height: 32px;
   border: 1px solid #6a7275;
   border-radius: 2px;
   background: #262b2d;
@@ -1090,17 +1135,22 @@ button.preset-card:hover {
 .control-group h3 {
   margin: 0 0 9px;
   color: #34393b;
-  font-size: 9px;
+  font-size: 10px;
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
 
 .control-group .control { margin-top: 11px; }
 
+.inspector-primary-field {
+  margin-top: 0 !important;
+  margin-bottom: 4px;
+}
+
 .control-hint {
   margin: 7px 0 0;
   color: #747c7f;
-  font-size: 8px;
+  font-size: 9px;
   line-height: 1.4;
 }
 
@@ -1135,7 +1185,7 @@ button.preset-card:hover {
 }
 
 .title-position-grid {
-  width: 104px;
+  width: 116px;
   display: grid;
   grid-template-columns: repeat(3,1fr);
   gap: 4px;
@@ -1169,7 +1219,7 @@ button.preset-card:hover {
 .title-position-grid button.is-active span { background: #a9cfde; }
 
 .place-title-button {
-  width: 104px;
+  width: 116px;
   text-align: center;
 }
 
@@ -1186,7 +1236,7 @@ button.preset-card:hover {
 }
 
 .segmented-control {
-  width: 104px;
+  width: 116px;
   display: grid;
   grid-template-columns: repeat(3,1fr);
 }
@@ -1542,7 +1592,7 @@ button.preset-card:hover {
 
 @media (max-width: 1180px) {
   .workspace {
-    grid-template-columns: 210px minmax(400px,1fr) 258px;
+    grid-template-columns: 218px minmax(400px,1fr) 278px;
   }
 
   .panel { padding-inline: 12px; }
