@@ -7,11 +7,13 @@ export function resolveBeatvideoProjectMode(value: unknown): BeatvideoProjectMod
   return value === 'photo' ? 'photo' : 'video'
 }
 
-const PHOTO_SIDEBAR_TABS = new Set<EditorSidebarTab>([
+const PHOTO_SIDEBAR_TABS = new Set<EditorSidebarTab>(['media', 'text', 'effects'])
+const VIDEO_SIDEBAR_TABS = new Set<EditorSidebarTab>([
   'media',
   'text',
   'shapes',
   'effects',
+  'transitions',
   'lottie',
 ])
 
@@ -19,5 +21,5 @@ export function isSidebarTabVisibleForBeatvideoMode(
   tab: EditorSidebarTab,
   mode: BeatvideoProjectMode,
 ): boolean {
-  return mode === 'video' || PHOTO_SIDEBAR_TABS.has(tab)
+  return (mode === 'photo' ? PHOTO_SIDEBAR_TABS : VIDEO_SIDEBAR_TABS).has(tab)
 }
