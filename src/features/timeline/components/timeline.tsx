@@ -54,6 +54,7 @@ import {
 import { getDefaultActiveTrackId } from '../utils/default-active-track'
 import { KeyframeGraphPanel } from './keyframe-graph-panel'
 import { createRafCoalescedCallback } from '../utils/raf-coalesced-callback'
+import type { BeatvideoProjectMode } from '@/types/project'
 
 const logger = createLogger('Timeline')
 
@@ -70,6 +71,7 @@ const TRACK_SIZE_OPTIONS = [
 
 interface TimelineProps {
   duration: number // Total timeline duration in seconds
+  beatvideoMode?: BeatvideoProjectMode
 }
 
 /**
@@ -82,7 +84,7 @@ interface TimelineProps {
  *
  * Follows modular architecture with granular Zustand selectors
  */
-export const Timeline = memo(function Timeline({ duration }: TimelineProps) {
+export const Timeline = memo(function Timeline({ duration, beatvideoMode = 'video' }: TimelineProps) {
   const { t } = useTranslation()
   const editorDensity = useSettingsStore((s) => s.editorDensity)
   const editorLayout = getEditorLayout(editorDensity)
@@ -912,6 +914,7 @@ export const Timeline = memo(function Timeline({ duration }: TimelineProps) {
     >
       {/* Timeline Header */}
       <TimelineHeader
+        beatvideoMode={beatvideoMode}
         onZoomChange={zoomHandlers?.handleZoomChange}
         onZoomIn={zoomHandlers?.handleZoomIn}
         onZoomOut={zoomHandlers?.handleZoomOut}
@@ -1087,7 +1090,7 @@ export const Timeline = memo(function Timeline({ duration }: TimelineProps) {
         </div>
       </div>
       <KeyframeGraphPanel
-        isOpen={keyframePanelOpen}
+        isOpen={beatvideoMode === 'video' && keyframePanelOpen}
         placement="bottom"
         surface="edit"
         propertyColumnWidth={editorLayout.timelineSidebarWidth - 1}
