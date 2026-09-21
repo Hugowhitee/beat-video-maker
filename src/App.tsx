@@ -1929,6 +1929,33 @@ function App() {
         </aside>
       </section>
 
+      {exportState === 'exporting' ? (
+        <section
+          className="render-progress-popover"
+          role="dialog"
+          aria-label="Rendering video"
+          data-testid="render-progress"
+        >
+          <div className="render-progress-heading">
+            <span className="activity-spinner" aria-hidden="true" />
+            <div>
+              <strong>Rendering locally</strong>
+              <span>{resolvedOutput.summary}</span>
+            </div>
+            <b>{Math.round(exportProgress * 100)}%</b>
+          </div>
+          <div className="render-progress-track" aria-hidden="true">
+            <span style={{ width: Math.round(exportProgress * 100) + '%' }} />
+          </div>
+          <div className="render-progress-footer">
+            <span>Media stays on this device.</span>
+            <button type="button" className="small-button" onClick={cancelExport}>
+              Cancel
+            </button>
+          </div>
+        </section>
+      ) : null}
+
       {projectSettingsOpen ? (
         <ProjectSettingsDialog
           settings={projectOutput}
