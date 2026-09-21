@@ -65,6 +65,22 @@ test('project output settings drive the real preview geometry', async ({ page },
   expect(ratio).toBeCloseTo(9 / 16, 2);
 });
 
+test('Project Settings traps the active task and closes with Escape', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'desktop-normal', 'Project dialog keyboard behavior is viewport-independent.');
+
+  await page.goto('/?fixture=1');
+  const projectButton = page.getByTestId('project-settings-trigger');
+  await projectButton.click();
+
+  const dialog = page.getByTestId('project-settings-dialog');
+  await expect(dialog).toBeVisible();
+  await expect(dialog).toBeFocused();
+
+  await page.keyboard.press('Escape');
+  await expect(dialog).toHaveCount(0);
+  await expect(projectButton).toBeFocused();
+});
+
 test('project fill is a real compositor choice and remains undoable', async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== 'desktop-normal', 'Project rendering is viewport-independent.');
 
@@ -106,6 +122,32 @@ test('one media intake accepts image and beat without hunting separate controls'
   await expect(sources.getByText('dropped-cover.png')).toBeVisible();
   await expect(sources.getByText('dropped-beat.wav')).toBeVisible();
   await expect(sources.getByText(/Audio ready/)).toBeVisible();
+});
+
+test('Sources keeps one primary add-media action instead of duplicate empty Choose controls', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'desktop-normal', 'Source intake grouping is viewport-independent.');
+
+  await page.goto('/');
+  const sources = page.getByRole('complementary', { name: 'Sources' });
+
+  await expect(sources.getByTestId('media-intake')).toBeVisible();
+  await expect(sources.locator('.file-control .source-slot-action')).toHaveCount(0);
+
+  await page.getByTestId('media-intake-input').setInputFiles([
+    {
+      name: 'slots-cover.png',
+      mimeType: 'image/png',
+      buffer: PNG,
+    },
+    {
+      name: 'slots-beat.wav',
+      mimeType: 'audio/wav',
+      buffer: sineWave(2),
+    },
+  ]);
+
+  await expect(sources.locator('.file-control .source-slot-action')).toHaveCount(2);
+  await expect(sources.getByText('Replace')).toHaveCount(2);
 });
 
 test('empty preview is an actual media action', async ({ page }, testInfo) => {
