@@ -80,9 +80,20 @@ export function WorkspaceGate({ children }: { children: React.ReactNode }) {
   }, [])
 
   // Initial load: check if we have a saved handle, check its permission.
+  // Migration visual QA uses an origin-private OPFS root in DEV only. It exercises
+  // the real workspace/project/editor code without requiring a native folder picker
+  // on a CI runner; production builds can never enter this path.
   useEffect(() => {
     let cancelled = false
     ;(async () => {
+      const visualQa =
+        import.meta.env.DEV &&
+        new URLSearchParams(window.location.search).get('beatvideoVisualQa') === '1'
+      if (visualQa) {
+        const root = await navigator.storage.getDirectory()
+        if (!cancelled) await activate(root)
+        return
+      }
       if (!isFileSystemAccessSupported()) {
         if (!cancelled) setStatus({ kind: 'unavailable' })
         return
