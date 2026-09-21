@@ -47,6 +47,7 @@ test('detects tempo and aligns the downbeat directly on the waveform', async ({ 
 
   await expect(page.getByTestId('downbeat-handle')).toBeVisible();
   await expect(page.getByTestId('detail-downbeat-handle')).toBeVisible();
+  await expect(page.locator('.detail-beat-markers b').first()).toBeVisible();
   await expect(page.getByTestId('bar-offset')).not.toContainText('not set');
 
   const beforeUndo = await page.getByTestId('bar-offset').textContent();
