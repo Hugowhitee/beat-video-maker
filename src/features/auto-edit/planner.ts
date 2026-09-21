@@ -359,6 +359,7 @@ function slotsToSegments(
       sourceEnd: range.sourceEnd,
       reason: `${slot.section.kind} · ${slot.beatSpan} beat${slot.beatSpan === 1 ? '' : 's'} · energy ${slot.section.energy.toFixed(2)}`,
       motifId,
+      motifSlot: motifId ? `slot-${segmentIndex + 1}` : undefined,
     };
 
     segments.push(segment);
