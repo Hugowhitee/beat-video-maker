@@ -131,6 +131,7 @@ test('Sources keeps one primary add-media action instead of duplicate empty Choo
   const sources = page.getByRole('complementary', { name: 'Sources' });
 
   await expect(sources.getByTestId('media-intake')).toBeVisible();
+  await expect(sources.getByText('Add videos')).toHaveCount(0);
   await expect(sources.locator('.file-control .source-slot-action')).toHaveCount(0);
 
   await page.getByTestId('media-intake-input').setInputFiles([
