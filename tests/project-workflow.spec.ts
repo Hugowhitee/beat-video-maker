@@ -20,6 +20,26 @@ test('authoring controls stay grouped in Inspector instead of Sources', async ({
   await expect(sources.getByTestId('brand-input')).toHaveCount(0);
 });
 
+test('Inspector exposes one authoring family at a time', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'desktop-normal', 'Inspector context is viewport-independent.');
+
+  await page.goto('/?fixture=1');
+
+  await expect(page.getByTestId('inspector-look')).toBeVisible();
+  await expect(page.getByTestId('title-input')).toHaveCount(0);
+  await expect(page.getByTestId('effects-control')).toHaveCount(0);
+
+  await page.getByTestId('inspector-tab-effects').click();
+  await expect(page.getByTestId('effects-control')).toBeVisible();
+  await expect(page.getByTestId('title-input')).toHaveCount(0);
+  await expect(page.getByTestId('preset-list')).toHaveCount(0);
+
+  await page.getByTestId('inspector-tab-text').click();
+  await expect(page.getByTestId('title-input')).toBeVisible();
+  await expect(page.getByTestId('effects-control')).toHaveCount(0);
+  await expect(page.getByTestId('preset-list')).toHaveCount(0);
+});
+
 test('project output settings drive the real preview geometry', async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== 'desktop-normal', 'Project settings behavior is viewport-independent.');
 
