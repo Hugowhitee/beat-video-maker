@@ -30,8 +30,8 @@ import { EDITOR_LAYOUT_CSS_VALUES } from '@/config/editor-layout'
 import { cn } from '@/shared/ui/cn'
 import { useDebugStore } from '@/features/editor/stores/debug-store'
 import { useTimelineStore } from '@/features/editor/deps/timeline-store'
-import { BeatvideoModeSwitcher } from '@/features/beatvideo/components/product-mode-switcher'
-import type { BeatvideoProjectMode } from '@/features/beatvideo/product-mode'
+import { BeatvideoModeSwitcher } from './beatvideo-mode-switcher'
+import type { BeatvideoProjectMode } from '@/shared/beatvideo/product-mode'
 
 const SAVE_ANIMATION_MIN_MS = 1800
 
