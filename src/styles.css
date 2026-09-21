@@ -2648,6 +2648,10 @@ button.preset-card:hover {
   color: #e9ece8;
 }
 
+.project-settings-dialog .field-label {
+  color: #aab4b6;
+}
+
 .dialog-header,
 .dialog-section {
   border-color: #41494c;
