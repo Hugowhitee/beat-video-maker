@@ -145,6 +145,20 @@ test('stacked beat-video effects are visually reviewable', async ({ page }, test
 });
 
 
+test('Project Settings is visually reviewable from the explicit toolbar action', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'desktop-normal', 'Project Settings uses the normal review viewport.');
+
+  await page.goto('/?fixture=1');
+  await page.getByTestId('project-settings-trigger').click();
+  await expect(page.getByTestId('project-settings-dialog')).toBeVisible();
+
+  await mkdir('artifacts/visual-qa', { recursive: true });
+  await page.screenshot({
+    path: 'artifacts/visual-qa/project-settings.png',
+    fullPage: false,
+  });
+});
+
 test('vertical project output keeps the workstation hierarchy readable', async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== 'desktop-normal', 'Vertical output uses the normal review viewport.');
 
