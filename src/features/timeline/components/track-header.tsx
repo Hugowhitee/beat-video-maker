@@ -14,7 +14,7 @@ import { useTrackDrag } from '../hooks/use-track-drag'
 import { TIMELINE_SIDEBAR_WIDTH } from '../constants'
 import { EDITOR_LAYOUT_CSS_VALUES } from '@/config/editor-layout'
 import { useItemsStore } from '../stores/items-store'
-import { isTrackDisabled } from '@/features/timeline/utils/classic-tracks'
+import { getTrackKind, isTrackDisabled } from '@/features/timeline/utils/classic-tracks'
 import { isTrackSyncLockActive } from '../utils/track-sync-lock'
 
 interface TrackHeaderProps {
@@ -108,8 +108,8 @@ export const TrackHeader = memo(function TrackHeader({
           `}
           onClick={onSelect}
         >
-          <span className="min-w-0 flex-1 truncate text-xs font-semibold font-mono">
-            {track.name}
+          <span className="min-w-0 flex-1 truncate text-xs font-semibold">
+            {getTrackKind(track) === 'audio' ? 'Beat' : 'Image'}
           </span>
           <span className="shrink-0 text-[10px] text-muted-foreground">{itemCountLabel}</span>
           <Button
