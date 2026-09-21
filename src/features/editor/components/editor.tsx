@@ -53,6 +53,7 @@ import { EDITOR_WORKSPACE_TIMELINE_SIZE, type EditorWorkspaceId } from '@/config
 import {
   createProjectUpgradeBackup,
   formatProjectUpgradeBackupName,
+  updateStoredProject,
 } from '@/features/editor/deps/projects'
 import { useClearKeyframesDialogStore } from '@/shared/state/clear-keyframes-dialog'
 import { useTtsGenerateDialogStore } from '@/shared/state/tts-generate-dialog'
@@ -177,6 +178,7 @@ interface EditorProps {
     height: number
     fps: number
     backgroundColor?: string
+    beatvideoMode?: import('@/types/project').BeatvideoProjectMode
   }
   migration: {
     storedSchemaVersion: number
@@ -388,6 +390,9 @@ export const LoadedEditor = memo(function LoadedEditor({
   const [exportDialogOpen, setExportDialogOpen] = useState(false)
   const [bundleExportDialogOpen, setBundleExportDialogOpen] = useState(false)
   const [renderQueueOpen, setRenderQueueOpen] = useState(false)
+  const [beatvideoMode, setBeatvideoMode] = useState<
+    import('@/types/project').BeatvideoProjectMode
+  >(project.beatvideoMode ?? 'video')
   const renderQueueActiveCount = useRenderQueueStore(
     (s) => s.jobs.filter((j) => j.status === 'queued' || j.status === 'rendering').length,
   )
@@ -411,6 +416,10 @@ export const LoadedEditor = memo(function LoadedEditor({
   useEffect(() => {
     hasRefreshedMigrationStateRef.current = false
   }, [projectId])
+
+  useEffect(() => {
+    setBeatvideoMode(project.beatvideoMode ?? 'video')
+  }, [project.beatvideoMode, projectId])
 
   useEffect(() => {
     rememberLastEditorProjectId(projectId)
@@ -477,6 +486,7 @@ export const LoadedEditor = memo(function LoadedEditor({
       id: project.id,
       name: project.name,
       description: '',
+      beatvideoMode,
       duration: 0,
       schemaVersion: migration.currentSchemaVersion,
       metadata: {
@@ -527,6 +537,7 @@ export const LoadedEditor = memo(function LoadedEditor({
   }, [
     migration.currentSchemaVersion,
     migration.requiresUpgrade,
+    beatvideoMode,
     project.backgroundColor,
     project.fps,
     project.height,
@@ -606,6 +617,35 @@ export const LoadedEditor = memo(function LoadedEditor({
     }
   }, [projectId])
 
+  const handleBeatvideoModeChange = useCallback(
+    async (nextMode: import('@/types/project').BeatvideoProjectMode) => {
+      if (nextMode === beatvideoMode) return
+
+      const previousMode = beatvideoMode
+      setBeatvideoMode(nextMode)
+
+      if (nextMode === 'photo') {
+        const editor = useEditorStore.getState()
+        if (editor.activeTab === 'transitions' || editor.activeTab === 'transcript' || editor.activeTab === 'ai') {
+          editor.setActiveTab('media')
+        }
+      }
+
+      try {
+        await updateStoredProject(projectId, { beatvideoMode: nextMode })
+        const currentProject = useProjectStore.getState().currentProject
+        if (currentProject?.id === projectId) {
+          useProjectStore.getState().setCurrentProject({ ...currentProject, beatvideoMode: nextMode })
+        }
+      } catch (error) {
+        setBeatvideoMode(previousMode)
+        logger.error('Failed to change Beatvideo mode:', error)
+        toast.error('Could not change Beatvideo mode')
+      }
+    },
+    [beatvideoMode, projectId],
+  )
+
   const handleExport = useCallback(() => {
     // Pause playback when opening export dialog
     usePlaybackStore.getState().pause()
@@ -681,6 +721,8 @@ export const LoadedEditor = memo(function LoadedEditor({
         <Toolbar
           projectId={projectId}
           project={project}
+          beatvideoMode={beatvideoMode}
+          onBeatvideoModeChange={handleBeatvideoModeChange}
           onSave={handleSave}
           onExport={handleExport}
           onExportBundle={handleExportBundle}
@@ -695,7 +737,7 @@ export const LoadedEditor = memo(function LoadedEditor({
         {mediaFullColumn && !hidesDefaultSidebars && (
           <InteractionLockRegion locked={isMaskEditingActive}>
             <ErrorBoundary level="feature">
-              <MediaSidebar />
+              <MediaSidebar beatvideoMode={beatvideoMode} />
             </ErrorBoundary>
           </InteractionLockRegion>
         )}
@@ -739,7 +781,7 @@ export const LoadedEditor = memo(function LoadedEditor({
                 {!mediaFullColumn && (
                   <InteractionLockRegion locked={isMaskEditingActive}>
                     <ErrorBoundary level="feature">
-                      <MediaSidebar />
+                      <MediaSidebar beatvideoMode={beatvideoMode} />
                     </ErrorBoundary>
                   </InteractionLockRegion>
                 )}

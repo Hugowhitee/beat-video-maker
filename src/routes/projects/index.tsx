@@ -39,6 +39,7 @@ import { LegacyMigrationErrors } from '@/features/projects/components/legacy-mig
 import { TrashSection } from '@/features/projects/components/trash-section'
 import { WorkspaceIndicator } from '@/features/workspace-gate'
 import { LanguageSwitcher } from '@/shared/ui/language-switcher'
+import { resolveBeatvideoProjectMode } from '@/config/beatvideo'
 
 export const Route = createFileRoute('/projects/')({
   component: ProjectsIndex,
@@ -379,6 +380,7 @@ function ProjectsIndex() {
               defaultValues={{
                 name: editingProject.name,
                 description: editingProject.description,
+                beatvideoMode: resolveBeatvideoProjectMode(editingProject.beatvideoMode),
                 width: editingProject.metadata.width,
                 height: editingProject.metadata.height,
                 fps: editingProject.metadata.fps,

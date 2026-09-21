@@ -21,6 +21,8 @@ import {
 } from '../utils/validation'
 import { getProjectFpsOptions } from '../utils/project-fps'
 import { ProjectTemplatePicker } from './project-template-picker'
+import { Clapperboard, Image as ImageIcon } from 'lucide-react'
+import { cn } from '@/shared/ui/cn'
 
 interface ProjectFormBaseProps {
   onSubmit: (data: ProjectFormData) => Promise<void> | void
@@ -91,6 +93,7 @@ function ProjectFormBase({
     )
   }, [resolvedDefaultValues.height, resolvedDefaultValues.width])
 
+  const beatvideoMode = watch('beatvideoMode')
   const fps = watch('fps')
   const fpsOptions = useMemo(() => getProjectFpsOptions(fps), [fps])
 
@@ -124,6 +127,61 @@ function ProjectFormBase({
       {/* Form */}
       <div className={isInlineSurface ? '' : 'max-w-[1400px] mx-auto px-6 py-8'}>
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+          <input type="hidden" {...register('beatvideoMode')} />
+          <div className="panel-bg border border-border rounded-lg p-5">
+            <div className="mb-3">
+              <h2 className="text-sm font-semibold text-foreground">Beatvideo mode</h2>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Choose the workflow first. Both use the same FreeCut project, renderer and export engine.
+              </p>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              {([
+                {
+                  id: 'photo' as const,
+                  label: 'Photo',
+                  description: 'Hero image + beat. Focus on motion, effects, overlays and text.',
+                  icon: ImageIcon,
+                },
+                {
+                  id: 'video' as const,
+                  label: 'Video',
+                  description: 'Source footage, cuts, transitions, analysis and full manual editing.',
+                  icon: Clapperboard,
+                },
+              ]).map((modeOption) => {
+                const Icon = modeOption.icon
+                const selected = beatvideoMode === modeOption.id
+                return (
+                  <button
+                    key={modeOption.id}
+                    type="button"
+                    aria-pressed={selected}
+                    onClick={() =>
+                      setValue('beatvideoMode', modeOption.id, {
+                        shouldDirty: true,
+                        shouldValidate: true,
+                      })
+                    }
+                    className={cn(
+                      'flex min-h-20 items-start gap-3 rounded-lg border p-3 text-left transition-colors',
+                      selected
+                        ? 'border-primary bg-primary/10 text-foreground'
+                        : 'border-border bg-secondary/20 text-muted-foreground hover:bg-secondary/40 hover:text-foreground',
+                    )}
+                  >
+                    <Icon className="mt-0.5 h-5 w-5 shrink-0" />
+                    <span>
+                      <strong className="block text-sm font-medium">{modeOption.label}</strong>
+                      <span className="mt-1 block text-xs leading-relaxed">
+                        {modeOption.description}
+                      </span>
+                    </span>
+                  </button>
+                )
+              })}
+            </div>
+          </div>
           <div className="grid grid-cols-1 lg:grid-cols-[minmax(320px,420px)_1fr] gap-6 items-start">
             {/* Project Details */}
             <div

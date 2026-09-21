@@ -1,0 +1,33 @@
+name: Downstream CI
+
+on:
+  pull_request:
+  push:
+    branches:
+      - migration/freecut-upstream
+      - feat/freecut-photo-video-mode
+      - main
+
+permissions:
+  contents: read
+
+concurrency:
+  group: downstream-ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+      - uses: voidzero-dev/setup-vp@v1
+        with:
+          node-version: '22'
+          cache: true
+      - run: vp install
+      - run: vp run check
+      - run: vp run check:boundaries
+      - run: vp run check:deps-contracts
+      - run: vp test run
+      - run: vp build

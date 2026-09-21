@@ -18,11 +18,14 @@ import type { CompositionControlOverrides, CompositionControlSchema } from './co
  * compositing workspace.
  */
 export type CompositionEditorKind = 'sequence' | 'composite-2d'
+export type BeatvideoProjectMode = 'photo' | 'video'
 
 export interface Project {
   id: string
   name: string
   description: string
+  /** Beatvideo product workflow. Missing on upstream/legacy projects = video. */
+  beatvideoMode?: BeatvideoProjectMode
   createdAt: number
   updatedAt: number
   duration: number

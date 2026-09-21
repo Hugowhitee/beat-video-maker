@@ -737,6 +737,7 @@ const projectSchema = z
     id: z.string().min(1),
     name: z.string().min(1).max(100),
     description: z.string().max(500),
+    beatvideoMode: z.enum(['photo', 'video']).optional(),
     createdAt: z.number().int().min(0),
     updatedAt: z.number().int().min(0),
     duration: z.number().min(0),
