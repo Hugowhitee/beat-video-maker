@@ -15,14 +15,24 @@ import { amplitudeAt } from '../analysis/audioFeatures';
 import type { AmplitudeEnvelope } from '../analysis/audioFeatures';
 import type { VerifiedGrid } from '../analysis/types';
 import { createExportTarget } from './outputTarget';
+import {
+  DEFAULT_PROJECT_OUTPUT,
+  resolveProjectOutput,
+} from '../project/projectSettings';
+import type { ResolvedOutputSettings } from '../project/projectSettings';
 
-const WIDTH = 1920;
-const HEIGHT = 1080;
-const FPS = 30;
+const DEFAULT_OUTPUT = resolveProjectOutput(DEFAULT_PROJECT_OUTPUT);
 
 let aacFallbackRegistered = false;
 
-const videoQuality = () => new Quality({ bitrate: 8_000_000 });
+const videoQuality = (output: ResolvedOutputSettings = DEFAULT_OUTPUT) => {
+  const baselinePixelsPerSecond = 1920 * 1080 * 30;
+  const pixelsPerSecond = output.width * output.height * output.fps;
+  const bitrate = Math.round(
+    Math.max(6_000_000, Math.min(35_000_000, 8_000_000 * (pixelsPerSecond / baselinePixelsPerSecond))),
+  );
+  return new Quality({ bitrate });
+};
 const audioQuality = () => new Quality({ bitrate: 192_000 });
 
 async function canUseAudioCodec(codec: AudioCodec, audioBuffer?: AudioBuffer) {
@@ -45,12 +55,15 @@ async function ensureAacEncoder(audioBuffer?: AudioBuffer) {
   return canUseAudioCodec('aac', audioBuffer);
 }
 
-async function pickVideoCodec(codecs: VideoCodec[]): Promise<VideoCodec | null> {
+async function pickVideoCodec(
+  codecs: VideoCodec[],
+  output: ResolvedOutputSettings = DEFAULT_OUTPUT,
+): Promise<VideoCodec | null> {
   return getFirstEncodableVideoCodec(codecs, {
-    width: WIDTH,
-    height: HEIGHT,
-    frameRate: FPS,
-    quality: videoQuality(),
+    width: output.width,
+    height: output.height,
+    frameRate: output.fps,
+    quality: videoQuality(output),
   });
 }
 
@@ -64,7 +77,9 @@ export type ExportCapability = {
   label: string;
 };
 
-export async function detectExportCapability(): Promise<ExportCapability> {
+export async function detectExportCapability(
+  output: ResolvedOutputSettings = DEFAULT_OUTPUT,
+): Promise<ExportCapability> {
   if (typeof VideoEncoder === 'undefined') {
     return {
       supported: false,
@@ -77,7 +92,7 @@ export async function detectExportCapability(): Promise<ExportCapability> {
     };
   }
 
-  const avc = await pickVideoCodec(['avc']);
+  const avc = await pickVideoCodec(['avc'], output);
   if (avc && await ensureAacEncoder()) {
     return {
       supported: true,
@@ -90,7 +105,7 @@ export async function detectExportCapability(): Promise<ExportCapability> {
     };
   }
 
-  const vp9 = await pickVideoCodec(['vp9']);
+  const vp9 = await pickVideoCodec(['vp9'], output);
   if (vp9 && await canUseAudioCodec('opus')) {
     return {
       supported: true,
@@ -122,6 +137,7 @@ type ExportOptions = {
   title: string;
   grid: VerifiedGrid | null;
   amplitudeEnvelope: AmplitudeEnvelope | null;
+  output: ResolvedOutputSettings;
   signal?: AbortSignal;
   onProgress?: (progress: number) => void;
 };
@@ -146,6 +162,7 @@ export async function exportVideo(options: ExportOptions): Promise<EncodedVideo>
     title,
     grid,
     amplitudeEnvelope,
+    output: exportOutput,
     signal,
     onProgress,
   } = options;
@@ -171,8 +188,8 @@ export async function exportVideo(options: ExportOptions): Promise<EncodedVideo>
   }
 
   const canvas = document.createElement('canvas');
-  canvas.width = WIDTH;
-  canvas.height = HEIGHT;
+  canvas.width = exportOutput.width;
+  canvas.height = exportOutput.height;
   const ctx = canvas.getContext('2d', { alpha: false });
   if (!ctx) throw new Error('Canvas 2D rendering is unavailable.');
 
@@ -188,7 +205,7 @@ export async function exportVideo(options: ExportOptions): Promise<EncodedVideo>
 
   const videoSource = new CanvasSource(canvas, {
     codec: capability.videoCodec,
-    quality: videoQuality(),
+    quality: videoQuality(exportOutput),
     keyFrameInterval: 2,
   });
   const audioSource = new AudioBufferSource({
@@ -196,25 +213,25 @@ export async function exportVideo(options: ExportOptions): Promise<EncodedVideo>
     quality: audioQuality(),
   });
 
-  output.addVideoTrack(videoSource, { frameRate: FPS });
+  output.addVideoTrack(videoSource, { frameRate: exportOutput.fps });
   output.addAudioTrack(audioSource);
   output.setMetadataTags({ title: title.trim() || 'Beat video' });
 
   try {
     await output.start();
 
-    const frameCount = Math.max(1, Math.ceil(audioBuffer.duration * FPS));
+    const frameCount = Math.max(1, Math.ceil(audioBuffer.duration * exportOutput.fps));
     const exportSettings = { ...settings, showGuides: false, showGrid: false };
 
     const feedVideo = async () => {
       for (let frame = 0; frame < frameCount; frame += 1) {
         if (signal?.aborted) throw abortError();
 
-        const time = frame / FPS;
+        const time = frame / exportOutput.fps;
         renderComposition(ctx, {
           source,
-          width: WIDTH,
-          height: HEIGHT,
+          width: exportOutput.width,
+          height: exportOutput.height,
           time,
           settings: exportSettings,
           grid,
@@ -222,8 +239,8 @@ export async function exportVideo(options: ExportOptions): Promise<EncodedVideo>
         });
         await videoSource.add(
           time,
-          1 / FPS,
-          frame % (FPS * 2) === 0 ? { keyFrame: true } : undefined,
+          1 / exportOutput.fps,
+          frame % (exportOutput.fps * 2) === 0 ? { keyFrame: true } : undefined,
         );
 
         if (frame % 3 === 0 || frame === frameCount - 1) {
