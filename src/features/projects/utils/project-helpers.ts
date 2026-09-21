@@ -140,7 +140,7 @@ export function createProjectObject(
   formData: {
     name: string
     description?: string
-    beatvideoMode: import('@/types/project').BeatvideoProjectMode
+    beatvideoMode?: import('@/types/project').BeatvideoProjectMode
     width: number
     height: number
     fps: number
@@ -153,7 +153,7 @@ export function createProjectObject(
     id: id || generateProjectId(),
     name: formData.name,
     description: formData.description || '',
-    beatvideoMode: formData.beatvideoMode,
+    beatvideoMode: formData.beatvideoMode ?? 'photo',
     metadata: {
       width: formData.width,
       height: formData.height,
