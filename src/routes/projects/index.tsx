@@ -6,7 +6,6 @@ import { createLogger } from '@/shared/logging/logger'
 
 const logger = createLogger('ProjectsIndex')
 import { Button } from '@/components/ui/button'
-import { Separator } from '@/components/ui/separator'
 import { Plus, Upload, FolderOpen, File } from 'lucide-react'
 import { FreeCutLogo } from '@/components/brand/freecut-logo'
 import { ProjectList } from '@/features/projects/components/project-list'
@@ -169,7 +168,7 @@ function ProjectsIndex() {
     setImportProgress({ percent: 0, stage: 'validating' })
 
     try {
-      // If useProjectsFolder is enabled, create/get the FreeCutProjects subfolder first
+      // If useProjectsFolder is enabled, create/get the BeatvideoProjects subfolder first
       let finalDestination = destinationDir
       if (useProjectsFolder) {
         try {
@@ -177,7 +176,7 @@ function ProjectsIndex() {
             create: true,
           })
         } catch (err) {
-          logger.error('Failed to create FreeCutProjects folder:', err)
+          logger.error('Failed to create BeatvideoProjects folder:', err)
           throw new Error(t('projects.import.createFolderFailed', { folder: PROJECTS_FOLDER_NAME }))
         }
       }
