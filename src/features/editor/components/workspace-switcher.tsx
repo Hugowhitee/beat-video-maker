@@ -5,6 +5,7 @@ import type { LucideIcon } from 'lucide-react'
 import { useEditorStore } from '@/shared/state/editor'
 import { cn } from '@/shared/ui/cn'
 import type { EditorWorkspaceId } from '@/config/editor-workspaces'
+import type { BeatvideoProjectMode } from '@/types/project'
 
 const WORKSPACE_ITEMS: readonly {
   id: EditorWorkspaceId
@@ -21,7 +22,11 @@ const WORKSPACE_ITEMS: readonly {
  * (scopes, inspector tab, sidebar tab, timeline split) without touching
  * selection, playhead, or project state.
  */
-export const WorkspaceSwitcher = memo(function WorkspaceSwitcher() {
+export const WorkspaceSwitcher = memo(function WorkspaceSwitcher({
+  beatvideoMode = 'video',
+}: {
+  beatvideoMode?: BeatvideoProjectMode
+}) {
   const { t } = useTranslation()
   const workspace = useEditorStore((s) => s.workspace)
   const setWorkspace = useEditorStore((s) => s.setWorkspace)
@@ -49,7 +54,7 @@ export const WorkspaceSwitcher = memo(function WorkspaceSwitcher() {
             )}
           >
             <Icon className="h-3.5 w-3.5" />
-            {t(labelKey)}
+            {beatvideoMode === 'photo' && id === 'edit' ? 'Design' : t(labelKey)}
           </button>
         )
       })}
