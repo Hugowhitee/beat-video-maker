@@ -102,6 +102,7 @@ function drawBackground(
   if (!frame.source) return;
 
   const { width, height, source, settings } = frame;
+  if (settings.backgroundFill === 'black') return;
   const strength = motionStrength(frame);
   const musicalMotion = phraseMotion(frame);
   const presetAmount =
