@@ -139,7 +139,7 @@ type BeforeInstallPromptEvent = Event & {
   userChoice: Promise<{ outcome: 'accepted' | 'dismissed'; platform: string }>;
 };
 
-type InspectorTab = 'look' | 'motion' | 'effects' | 'overlays' | 'text';
+type InspectorTab = 'look' | 'motion' | 'effects' | 'text';
 
 type EditorSnapshot = {
   title: string;
@@ -1796,7 +1796,6 @@ function App() {
               ['look', 'Look'],
               ['motion', 'Motion'],
               ['effects', 'Effects'],
-              ['overlays', 'Overlays'],
               ['text', 'Text'],
             ] as Array<[InspectorTab, string]>).map(([value, label]) => (
               <button
@@ -2008,20 +2007,6 @@ function App() {
               </section>
             ) : null}
 
-            {inspectorTab === 'overlays' ? (
-              <section className="property-surface" data-testid="inspector-overlays">
-                <div className="property-section-heading">
-                  <div>
-                    <strong>Overlays</strong>
-                    <span>Visual elements above the photo.</span>
-                  </div>
-                </div>
-                <div className="empty-property-state">
-                  <strong>No overlay layer yet</strong>
-                  <span>Audio bars and circular reactive visualizers belong here later. This pass keeps the editor simple instead of inventing a second effects engine.</span>
-                </div>
-              </section>
-            ) : null}
 
             {inspectorTab === 'text' ? (
               <section className="property-surface text-brand-surface" data-testid="inspector-text">
