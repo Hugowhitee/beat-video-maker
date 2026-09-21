@@ -1013,6 +1013,14 @@ function App() {
     return Math.max(0, Math.min(maxTime, ratio * maxTime));
   }, [audioBuffer]);
 
+  const detailTimeFromClientX = useCallback((clientX: number, start: number, end: number) => {
+    const waveform = detailWaveformRef.current;
+    if (!waveform || end <= start) return start;
+    const rect = waveform.getBoundingClientRect();
+    const ratio = rect.width <= 0 ? 0 : (clientX - rect.left) / rect.width;
+    return Math.max(start, Math.min(end, start + ratio * (end - start)));
+  }, []);
+
   const setDownbeatAtPlayhead = useCallback(() => {
     if (!audioBuffer) return;
     setManualBarOffset(currentTime);
@@ -1058,6 +1066,48 @@ function App() {
   const handleWaveformPointerEnd = useCallback((event: ReactPointerEvent<HTMLDivElement>) => {
     if (gridDragPointerRef.current !== event.pointerId) return;
     gridDragPointerRef.current = null;
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId);
+    }
+  }, []);
+
+  const handleDetailPointerDown = useCallback((
+    event: ReactPointerEvent<HTMLDivElement>,
+    start: number,
+    end: number,
+  ) => {
+    if (!audioBuffer) return;
+    const time = detailTimeFromClientX(event.clientX, start, end);
+
+    if (!gridEditing) {
+      seekTo(time);
+      return;
+    }
+
+    event.preventDefault();
+    event.currentTarget.setPointerCapture(event.pointerId);
+    detailDragPointerRef.current = event.pointerId;
+    setManualBarOffset(time);
+  }, [audioBuffer, detailTimeFromClientX, gridEditing, seekTo]);
+
+  const handleDetailPointerMove = useCallback((
+    event: ReactPointerEvent<HTMLDivElement>,
+    start: number,
+    end: number,
+  ) => {
+    if (
+      !gridEditing
+      || detailDragPointerRef.current !== event.pointerId
+      || !audioBuffer
+    ) return;
+
+    event.preventDefault();
+    setManualBarOffset(detailTimeFromClientX(event.clientX, start, end));
+  }, [audioBuffer, detailTimeFromClientX, gridEditing]);
+
+  const handleDetailPointerEnd = useCallback((event: ReactPointerEvent<HTMLDivElement>) => {
+    if (detailDragPointerRef.current !== event.pointerId) return;
+    detailDragPointerRef.current = null;
     if (event.currentTarget.hasPointerCapture(event.pointerId)) {
       event.currentTarget.releasePointerCapture(event.pointerId);
     }
