@@ -1,0 +1,63 @@
+name: Beatvideo Migration Gate
+
+on:
+  pull_request:
+
+jobs:
+  migration-gate:
+    name: Photo Video Visual + Security Gate
+    if: github.head_ref == 'migration/freecut-beatvideo'
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Vite+
+        uses: voidzero-dev/setup-vp@v1
+        with:
+          node-version: '22'
+          cache: true
+
+      - name: Install dependencies
+        run: vp install
+
+      - name: Visual Photo Video probe
+        run: node scripts/beatvideo-migration-visual-qa.mjs
+
+      - name: Production dependency audit report
+        continue-on-error: true
+        run: |
+          mkdir -p artifacts/migration-security
+          npm audit --omit=dev --json > artifacts/migration-security/npm-audit.json || true
+          node - <<'NODE'
+          const fs = require('node:fs')
+          const report = JSON.parse(fs.readFileSync('artifacts/migration-security/npm-audit.json', 'utf8'))
+          const counts = report.metadata?.vulnerabilities ?? {}
+          console.log('Production audit:', counts)
+          fs.appendFileSync(
+            process.env.GITHUB_STEP_SUMMARY,
+            [
+              '## Production dependency audit',
+              '',
+              '| severity | count |',
+              '| --- | ---: |',
+              `| critical | ${counts.critical ?? 0} |`,
+              `| high | ${counts.high ?? 0} |`,
+              `| moderate | ${counts.moderate ?? 0} |`,
+              `| low | ${counts.low ?? 0} |`,
+              '',
+            ].join('\n'),
+          )
+          NODE
+
+      - name: Upload migration evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: beatvideo-migration-evidence
+          path: |
+            artifacts/migration-visual-qa/
+            artifacts/migration-security/npm-audit.json
+          if-no-files-found: warn
