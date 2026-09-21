@@ -10,6 +10,8 @@ import { useTimelineViewportStore } from '../stores/timeline-viewport-store'
 import { registerZoomTo100, useZoomStore } from '../stores/zoom-store'
 import { usePlaybackStore } from '@/shared/state/playback'
 import { useEditorStore } from '@/shared/state/editor'
+import { useProjectStore } from '@/features/timeline/deps/projects'
+import { normalizeBeatvideoProjectMode } from '@/shared/beatvideo/product-mode'
 import { useSelectionStore } from '@/shared/state/selection'
 
 // Hooks
@@ -749,6 +751,9 @@ export const TimelineContent = memo(function TimelineContent({
 
   perfMarkRender('TimelineContent')
   const { t } = useTranslation()
+  const beatvideoMode = useProjectStore((state) =>
+    normalizeBeatvideoProjectMode(state.currentProject?.beatvideoMode),
+  )
 
   // Prefetch waveforms for clips approaching the viewport
   useWaveformPrefetch()
@@ -2165,7 +2170,7 @@ export const TimelineContent = memo(function TimelineContent({
           onMarqueeGestureCancel={cancelMarqueePointerGesture}
         />
 
-        {itemIds.length === 0 && (
+        {beatvideoMode === 'video' && itemIds.length === 0 && (
           <div className="pointer-events-none absolute inset-x-0 bottom-0 top-[64px] z-20 flex items-center justify-center px-6">
             <div className="rounded-xl border border-dashed border-border/80 bg-background/85 px-5 py-4 text-center shadow-lg backdrop-blur-sm">
               <p className="text-sm font-semibold text-foreground">{t('timeline.emptyTitle')}</p>
