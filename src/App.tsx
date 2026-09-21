@@ -1375,7 +1375,7 @@ function App() {
             >
               <div className="waveform">
                 {peaks.length > 0 ? peaks.map((peak, index) => (
-                  <span key={index} style={{ height: Math.max(8, peak * 42) }} />
+                  <span key={index} style={{ height: Math.max(10, peak * 56) }} />
                 )) : <p>Waveform appears after audio is decoded.</p>}
               </div>
               <div className="beat-markers" aria-hidden="true">
