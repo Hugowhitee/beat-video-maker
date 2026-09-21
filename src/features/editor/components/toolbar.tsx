@@ -3,22 +3,17 @@ import { useNavigate } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 import {
   ArrowLeft,
-  BookOpen,
   Bug,
   ChevronDown,
   Download,
   FolderArchive,
-  Github,
   Keyboard,
   ListVideo,
   Save,
   Settings,
-  Sparkles,
   Video,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { DiscordIcon } from '@/components/brand/discord-icon'
-import { DISCORD_INVITE_URL } from '@/config/community'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -27,19 +22,14 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Separator } from '@/components/ui/separator'
-import { LocalInferenceStatusPill } from './local-inference-status-pill'
 import { ProjectDebugPanel } from './project-debug-panel'
 import { SettingsDialog } from './settings-dialog'
 import { ShortcutsDialog } from './shortcuts-dialog'
 import { UnsavedChangesDialog } from './unsaved-changes-dialog'
-import { WhatsNewDialog } from './whats-new-dialog'
-import { hasUnseenChangelog } from './whats-new-seen'
 import { EDITOR_LAYOUT_CSS_VALUES } from '@/config/editor-layout'
 import { cn } from '@/shared/ui/cn'
-import { LanguageSwitcher } from '@/shared/ui/language-switcher'
 import { useDebugStore } from '@/features/editor/stores/debug-store'
-import { useItemsStore, useTimelineStore } from '@/features/editor/deps/timeline-store'
-import { useMediaLibraryStore } from '@/features/editor/deps/media-library'
+import { useTimelineStore } from '@/features/editor/deps/timeline-store'
 import { BeatvideoModeSwitcher } from '@/features/beatvideo/components/product-mode-switcher'
 import type { BeatvideoProjectMode } from '@/features/beatvideo/product-mode'
 
@@ -51,13 +41,6 @@ const SaveDirtyIndicator = memo(function SaveDirtyIndicator() {
     <span className="absolute -right-1 -top-1 h-2 w-2 animate-pulse rounded-full bg-orange-500" />
   ) : null
 })
-
-function formatProjectDuration(seconds: number): string {
-  if (seconds < 60) return `${Math.round(seconds)}s`
-  const minutes = Math.floor(seconds / 60)
-  const remainingSeconds = Math.round(seconds % 60)
-  return remainingSeconds > 0 ? `${minutes}m ${remainingSeconds}s` : `${minutes}m`
-}
 
 interface ToolbarProps {
   projectId: string
@@ -91,32 +74,9 @@ export const Toolbar = memo(function Toolbar({
   const [showUnsavedDialog, setShowUnsavedDialog] = useState(false)
   const [showShortcutsDialog, setShowShortcutsDialog] = useState(false)
   const [showSettingsDialog, setShowSettingsDialog] = useState(false)
-  const [showWhatsNewDialog, setShowWhatsNewDialog] = useState(false)
-  const [hasUnseenWhatsNew, setHasUnseenWhatsNew] = useState(false)
   const [isSaveAnimating, setIsSaveAnimating] = useState(false)
   const [saveAnimationKey, setSaveAnimationKey] = useState(0)
   const saveAnimationTimeoutRef = useRef<number | undefined>(undefined)
-  const itemCount = useItemsStore((state) => state.items.length)
-  const maxItemEndFrame = useItemsStore((state) => state.maxItemEndFrame)
-  const mediaDependencyIds = useItemsStore((state) => state.mediaDependencyIds)
-  const brokenMediaIds = useMediaLibraryStore((state) => state.brokenMediaIds)
-  const projectSummary = useMemo(
-    () => {
-      const projectMediaIds = new Set(mediaDependencyIds)
-      return {
-        durationSeconds: project.fps > 0 ? maxItemEndFrame / project.fps : 0,
-        clipCount: itemCount,
-        mediaCount: mediaDependencyIds.length,
-        brokenMediaCount: brokenMediaIds.filter((mediaId) => projectMediaIds.has(mediaId)).length,
-      }
-    },
-    [brokenMediaIds, itemCount, maxItemEndFrame, mediaDependencyIds, project.fps],
-  )
-
-  useEffect(() => {
-    setHasUnseenWhatsNew(hasUnseenChangelog())
-  }, [])
-
   useEffect(() => {
     return () => {
       if (saveAnimationTimeoutRef.current !== undefined) {
@@ -124,11 +84,6 @@ export const Toolbar = memo(function Toolbar({
       }
     }
   }, [])
-
-  const openWhatsNew = () => {
-    setHasUnseenWhatsNew(false)
-    setShowWhatsNewDialog(true)
-  }
 
   const handleBackClick = () => {
     if (useTimelineStore.getState().isDirty) {
@@ -201,15 +156,7 @@ export const Toolbar = memo(function Toolbar({
             {project?.name || t('common.untitledProject')}
           </h1>
           <span className="font-mono text-[11px] text-muted-foreground">
-            {t('toolbar.specsDetailed', {
-              width: project?.width,
-              height: project?.height,
-              fps: project?.fps,
-              duration: formatProjectDuration(projectSummary.durationSeconds),
-              clips: projectSummary.clipCount,
-              media: projectSummary.mediaCount,
-              missing: projectSummary.brokenMediaCount,
-            })}
+            {project.width}×{project.height} · {project.fps} fps
           </span>
         </div>
       </div>
@@ -218,77 +165,15 @@ export const Toolbar = memo(function Toolbar({
         <BeatvideoModeSwitcher projectId={projectId} fallbackMode={project.beatvideoMode} />
       </div>
 
-      <LocalInferenceStatusPill />
-
       <ShortcutsDialog open={showShortcutsDialog} onOpenChange={setShowShortcutsDialog} />
 
       <SettingsDialog open={showSettingsDialog} onOpenChange={setShowSettingsDialog} />
-
-      <WhatsNewDialog open={showWhatsNewDialog} onOpenChange={setShowWhatsNewDialog} />
 
       <div className="flex items-center gap-1.5">
         {import.meta.env.DEV && import.meta.env.VITE_SHOW_DEBUG_PANEL !== 'false' && (
           <DebugPopover projectId={projectId} />
         )}
 
-        {/* Socials */}
-        <Button variant="outline" size="icon" className="h-7 w-7" asChild>
-          <a
-            href="https://github.com/walterlow/freecut"
-            target="_blank"
-            rel="noopener noreferrer"
-            data-tooltip={t('toolbar.viewOnGitHub')}
-            data-tooltip-side="bottom"
-            aria-label={t('toolbar.viewOnGitHub')}
-          >
-            <Github className="h-4 w-4" />
-          </a>
-        </Button>
-        <Button variant="outline" size="icon" className="h-7 w-7" asChild>
-          <a
-            href={DISCORD_INVITE_URL}
-            target="_blank"
-            rel="noopener noreferrer"
-            data-tooltip={t('toolbar.joinDiscord')}
-            data-tooltip-side="bottom"
-            aria-label={t('toolbar.joinDiscord')}
-          >
-            <DiscordIcon className="h-4 w-4" />
-          </a>
-        </Button>
-
-        <Separator orientation="vertical" className="h-5" />
-
-        {/* Utility */}
-        <Button variant="outline" size="icon" className="h-7 w-7" asChild>
-          <a
-            href="/docs"
-            target="_blank"
-            rel="noopener noreferrer"
-            data-tooltip="User Guide"
-            data-tooltip-side="bottom"
-            aria-label="User Guide"
-          >
-            <BookOpen className="h-4 w-4" />
-          </a>
-        </Button>
-        <Button
-          variant="outline"
-          size="icon"
-          className="h-7 w-7 relative"
-          onClick={openWhatsNew}
-          data-tooltip={t('toolbar.whatsNew')}
-          data-tooltip-side="bottom"
-          aria-label={t('toolbar.whatsNewAria')}
-        >
-          <Sparkles className="h-4 w-4" />
-          {hasUnseenWhatsNew && (
-            <span
-              className="absolute top-1 right-1 h-1.5 w-1.5 rounded-full bg-primary"
-              aria-hidden="true"
-            />
-          )}
-        </Button>
         <Button
           variant="outline"
           size="icon"
