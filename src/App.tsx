@@ -1786,8 +1786,8 @@ function App() {
               <span className="properties-kicker">Visual</span>
               <h2>Properties</h2>
             </div>
-            <span className="properties-context" title={coverName}>
-              {cover ? coverName : 'Canvas'}
+            <span className="properties-context">
+              {cover ? 'Cover' : 'Canvas'}
             </span>
           </div>
 
