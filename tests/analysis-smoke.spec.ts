@@ -30,7 +30,14 @@ test('detects tempo and aligns the downbeat directly on the waveform', async ({ 
   expect(restoredBpm).toBeLessThanOrEqual(122);
 
   await page.getByTestId('grid-edit-toggle').click();
-  const waveform = page.getByTestId('waveform-editor');
+  await expect(page.getByTestId('waveform-detail-panel')).toBeVisible();
+  await expect(page.getByTestId('waveform-viewport')).toBeVisible();
+  await expect(page.getByTestId('waveform-zoom-label')).toHaveText('8 s');
+
+  await page.getByTestId('waveform-zoom-in').click();
+  await expect(page.getByTestId('waveform-zoom-label')).toHaveText('4 s');
+
+  const waveform = page.getByTestId('waveform-detail');
   const box = await waveform.boundingBox();
   expect(box).not.toBeNull();
   await page.mouse.move(box!.x + box!.width * 0.22, box!.y + box!.height / 2);
@@ -39,6 +46,7 @@ test('detects tempo and aligns the downbeat directly on the waveform', async ({ 
   await page.mouse.up();
 
   await expect(page.getByTestId('downbeat-handle')).toBeVisible();
+  await expect(page.getByTestId('detail-downbeat-handle')).toBeVisible();
   await expect(page.getByTestId('bar-offset')).not.toContainText('not set');
 
   const beforeUndo = await page.getByTestId('bar-offset').textContent();
@@ -120,4 +128,43 @@ test('keyboard transport and grid-edit arrows have separate focus behavior', asy
   await page.getByTestId('bpm-input').focus();
   await page.keyboard.press('ArrowRight');
   expect(Number(await seek.inputValue())).toBeLessThan(0.01);
+});
+
+
+test('detail waveform follows the playhead and exposes bounded zoom windows', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'desktop-normal', 'Waveform follow behavior is viewport-independent.');
+
+  await page.goto('/');
+  await page.getByTestId('audio-input').setInputFiles({
+    name: 'follow-waveform.wav',
+    mimeType: 'audio/wav',
+    buffer: clickTrack(120, 24),
+  });
+
+  await expect(page.getByTestId('bpm-input')).not.toHaveValue('', { timeout: 30_000 });
+
+  const seek = page.getByTestId('seek-input');
+  await seek.evaluate((node) => {
+    const input = node as HTMLInputElement;
+    input.value = '8';
+    input.dispatchEvent(new Event('change', { bubbles: true }));
+  });
+
+  await page.getByTestId('grid-edit-toggle').click();
+  const detail = page.getByTestId('waveform-detail');
+  await expect(detail).toBeVisible();
+
+  const firstStart = Number(await detail.getAttribute('data-window-start'));
+  const firstEnd = Number(await detail.getAttribute('data-window-end'));
+  expect(firstStart).toBeGreaterThan(0);
+  expect(firstEnd - firstStart).toBeCloseTo(8, 1);
+
+  await page.getByTestId('waveform-zoom-out').click();
+  await expect(page.getByTestId('waveform-zoom-label')).toHaveText('16 s');
+  const zoomedStart = Number(await detail.getAttribute('data-window-start'));
+  const zoomedEnd = Number(await detail.getAttribute('data-window-end'));
+  expect(zoomedEnd - zoomedStart).toBeCloseTo(16, 1);
+
+  await page.getByTestId('grid-edit-toggle').click();
+  await expect(page.getByTestId('waveform-detail-panel')).toHaveCount(0);
 });
