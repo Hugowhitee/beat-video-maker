@@ -126,11 +126,11 @@ Presets configure the same primitives rather than owning separate render trees:
 The first baseline is considered proven when:
 
 - cover and audio can be imported locally;
-- Clean preview renders a fixed 16:9 frame without stretching the foreground image;
+- the default Clean preview renders the historical 16:9 baseline without stretching the foreground image;
 - title and watermark are visibly configurable;
 - playback and waveform are usable;
 - browser export capability is reported honestly;
-- a supported browser produces a non-empty encoded 1920×1080 / 30 fps file with audio;
+- a supported browser produces a non-empty encoded default 1920×1080 / 30 fps file with audio, while later project output settings must preserve that regression floor;
 - preview and export share the same compositor;
 - minimum/normal/wide UI screenshots are generated and visually inspected;
 - README and tests describe behavior that actually exists.
@@ -154,7 +154,7 @@ The Brand layer supports channel/producer text or a user-supplied transparent PN
 
 ## Export
 
-Primary target: MP4, 1920×1080, 30 fps, H.264/AVC + AAC, with the decoded source audio unchanged.
+Primary container/codec target: MP4 with H.264/AVC + AAC and the decoded source audio unchanged. The default project frame is 1920×1080 / 30 fps, but current project output settings may select supported YouTube/Shorts/Square/Custom dimensions and 24/25/30/50/60 fps.
 
 Capability selection is explicit:
 
@@ -230,7 +230,7 @@ Undo/Redo is session state, not a second project-storage system. Focused form fi
 
 Normal CI uses the committed npm lockfile and `npm ci`. It gates repository hygiene, typecheck, production/PWA build, synthetic analysis regressions, real short media encoding/cancellation and fixed-viewport visual evidence.
 
-A separate manual **Full export smoke** workflow owns sustained-duration validation so every small commit does not encode an entire beat. It uses the same 1920×1080 / 30 fps production path, defaults to 120 seconds, verifies a real finalized container and requires the OPFS/disk-backed output target. Run it on current `main` before a tagged release.
+A separate manual **Full export smoke** workflow owns sustained-duration validation so every small commit does not encode an entire beat. It intentionally uses the default 1920×1080 / 30 fps production path as the sustained regression case, defaults to 120 seconds, verifies a real finalized container and requires the OPFS/disk-backed output target. Run it on current `main` before a tagged release.
 
 Real-user beat analysis quality still benefits from a ground-truth FL Studio corpus; do not invent such evidence from synthetic fixtures. Confidence gating and manual BPM/bar-1 correction remain the safety net until that corpus exists.
 
