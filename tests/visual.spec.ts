@@ -7,8 +7,11 @@ test('workspace is visually reviewable at the fixed viewport matrix', async ({ p
   await expect(page.getByText('Beatvideo Maker', { exact: true })).toBeVisible();
   await expect(page.getByTestId('preview-canvas')).toBeVisible();
 
+  await page.getByTestId('inspector-tab-text').click();
   await page.getByTestId('title-input').fill('MIDNIGHT STATIC');
+  await page.getByTestId('brand-disclosure').locator('summary').click();
   await page.getByTestId('brand-input').fill('prod. usolido');
+  await page.getByTestId('inspector-tab-look').click();
 
   const metrics = await page.evaluate(() => {
     const canvas = document.querySelector('[data-testid="preview-canvas"]');
@@ -64,6 +67,8 @@ test('watermark grid stays subtle and clipped to the cover', async ({ page }, te
   test.skip(testInfo.project.name !== 'desktop-normal', 'Watermark grid uses the normal review viewport.');
 
   await page.goto('/?fixture=1');
+  await page.getByTestId('inspector-tab-text').click();
+  await page.getByTestId('brand-disclosure').locator('summary').click();
   const canvas = page.getByTestId('preview-canvas');
   const before = await canvas.evaluate((node) => (node as HTMLCanvasElement).toDataURL('image/png'));
 
@@ -100,6 +105,7 @@ test('centered title and composition grid are visually reviewable', async ({ pag
   test.skip(testInfo.project.name !== 'desktop-normal', 'Authoring layout uses the normal review viewport.');
 
   await page.goto('/?fixture=1');
+  await page.getByTestId('inspector-tab-text').click();
   await page.getByTestId('title-position-center').click();
   await page.getByTestId('grid-guides-toggle').click();
   await page.getByTestId('safe-guides-toggle').click();
@@ -117,6 +123,7 @@ test('stacked beat-video effects are visually reviewable', async ({ page }, test
   test.skip(testInfo.project.name !== 'desktop-normal', 'Effect stack uses the normal review viewport.');
 
   await page.goto('/?fixture=1');
+  await page.getByTestId('inspector-tab-effects').click();
   for (const [type, name] of [
     ['zoom-punch', 'Zoom punch'],
     ['shake', 'Shake'],
