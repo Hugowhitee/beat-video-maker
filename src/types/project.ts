@@ -8,7 +8,7 @@ import type { TextMotionSpec } from './text-motion'
 import type { MaskVertex } from './masks'
 import type { ShapeStyleFields } from './timeline'
 import type { CompositionControlOverrides, CompositionControlSchema } from './composition-controls'
-import type { BeatvideoProjectMode } from '@/features/beatvideo/product-mode'
+import type { BeatvideoProjectMode } from '@/shared/beatvideo/product-mode'
 
 /**
  * Selects the editing surface a stored composition naturally opens in.
