@@ -244,7 +244,6 @@ function App() {
   const audioRef = useRef<HTMLAudioElement>(null);
   const waveformRef = useRef<HTMLDivElement>(null);
   const detailWaveformRef = useRef<HTMLDivElement>(null);
-  const gridDragPointerRef = useRef<number | null>(null);
   const detailDragPointerRef = useRef<number | null>(null);
   const exportAbortRef = useRef<AbortController | null>(null);
   const audioLoadIdRef = useRef(0);
@@ -1040,36 +1039,8 @@ function App() {
   const handleWaveformPointerDown = useCallback((event: ReactPointerEvent<HTMLDivElement>) => {
     if (!audioBuffer) return;
     const time = waveformTimeFromClientX(event.clientX);
-
-    if (!gridEditing) {
-      seekTo(time);
-      return;
-    }
-
-    event.preventDefault();
-    event.currentTarget.setPointerCapture(event.pointerId);
-    gridDragPointerRef.current = event.pointerId;
-    setManualBarOffset(time);
-  }, [audioBuffer, gridEditing, seekTo, waveformTimeFromClientX]);
-
-  const handleWaveformPointerMove = useCallback((event: ReactPointerEvent<HTMLDivElement>) => {
-    if (
-      !gridEditing
-      || gridDragPointerRef.current !== event.pointerId
-      || !audioBuffer
-    ) return;
-
-    event.preventDefault();
-    setManualBarOffset(waveformTimeFromClientX(event.clientX));
-  }, [audioBuffer, gridEditing, waveformTimeFromClientX]);
-
-  const handleWaveformPointerEnd = useCallback((event: ReactPointerEvent<HTMLDivElement>) => {
-    if (gridDragPointerRef.current !== event.pointerId) return;
-    gridDragPointerRef.current = null;
-    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
-      event.currentTarget.releasePointerCapture(event.pointerId);
-    }
-  }, []);
+    seekTo(time);
+  }, [audioBuffer, seekTo, waveformTimeFromClientX]);
 
   const handleDetailPointerDown = useCallback((
     event: ReactPointerEvent<HTMLDivElement>,
@@ -1492,20 +1463,17 @@ function App() {
               <small>
                 {audioBuffer
                   ? (gridEditing
-                      ? 'Whole track · detail view is the precision surface'
+                      ? 'Click the overview to move the detail window · align only in Detail'
                       : 'Click to seek · Edit grid for precise alignment')
                   : 'Whole-track waveform'}
               </small>
             </div>
             <div
               ref={waveformRef}
-              className={'waveform-shell waveform-overview-shell ' + (gridEditing ? 'is-grid-editing' : '')}
+              className="waveform-shell waveform-overview-shell"
               data-testid="waveform-editor"
-              aria-label={gridEditing ? 'Beat-grid overview waveform' : 'Audio waveform'}
+              aria-label={gridEditing ? 'Beat-grid overview · click to focus detail' : 'Audio waveform'}
               onPointerDown={handleWaveformPointerDown}
-              onPointerMove={handleWaveformPointerMove}
-              onPointerUp={handleWaveformPointerEnd}
-              onPointerCancel={handleWaveformPointerEnd}
             >
               <div className="waveform waveform-overview">
                 {overviewPeaks.length > 0 ? overviewPeaks.map((peak, index) => (
