@@ -152,6 +152,7 @@ export function createProjectObject(
     id: id || generateProjectId(),
     name: formData.name,
     description: formData.description || '',
+    beatvideoMode: formData.beatvideoMode,
     metadata: {
       width: formData.width,
       height: formData.height,
