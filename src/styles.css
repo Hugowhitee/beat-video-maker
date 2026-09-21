@@ -2880,3 +2880,21 @@ button.preset-card:hover {
     justify-content: center;
   }
 }
+
+
+/* Source metadata remains compact but readable at normal desktop scale. */
+.inputs-panel .source-section-heading span,
+.inputs-panel .source-empty,
+.inputs-panel .source-local-note,
+.inputs-panel .detector-status small,
+.inputs-panel .video-source-name span,
+.inputs-panel .video-source-state,
+.inputs-panel .video-source-main select,
+.inputs-panel .video-source-actions button {
+  font-size: 9px;
+}
+
+.inputs-panel .video-source-name strong,
+.inputs-panel .detector-status strong {
+  font-size: 10px;
+}
