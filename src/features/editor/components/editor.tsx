@@ -65,6 +65,7 @@ import {
   useSubtitleScanProgressStore,
 } from '@/features/editor/deps/media-library'
 import { IoDragReadout } from '@/shared/timeline/io-range'
+import type { BeatvideoProjectMode } from '@/features/beatvideo/product-mode'
 const logger = createLogger('Editor')
 const LazyTimeline = lazy(() => importTimeline().then(({ Timeline }) => ({ default: Timeline })))
 const LazyColorGradingDock = lazy(() =>
@@ -173,6 +174,7 @@ interface EditorProps {
   project: {
     id: string
     name: string
+    beatvideoMode: BeatvideoProjectMode
     width: number
     height: number
     fps: number
@@ -477,6 +479,7 @@ export const LoadedEditor = memo(function LoadedEditor({
       id: project.id,
       name: project.name,
       description: '',
+      beatvideoMode: project.beatvideoMode,
       duration: 0,
       schemaVersion: migration.currentSchemaVersion,
       metadata: {
@@ -528,6 +531,7 @@ export const LoadedEditor = memo(function LoadedEditor({
     migration.currentSchemaVersion,
     migration.requiresUpgrade,
     project.backgroundColor,
+    project.beatvideoMode,
     project.fps,
     project.height,
     project.id,
