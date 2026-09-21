@@ -7,6 +7,7 @@ export type TitleAlign = 'left' | 'center' | 'right';
 export type TitleFont = 'clean' | 'condensed' | 'serif' | 'mono';
 export type VisualPreset = 'clean' | 'ambient' | 'reactive' | 'pulse' | 'visualizer';
 export type MotionAmount = 'off' | 'low' | 'medium';
+export type BackgroundFill = 'blur' | 'black';
 
 export type CompositionSettings = {
   title: string;
