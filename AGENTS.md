@@ -107,3 +107,15 @@ The production install surface is the GitHub Pages project site. Keep Pages-spec
 - Pixel effects should eventually run through one shared GPU pipeline adapted from a mature permissively licensed implementation. Do not add one-off shader canvases per effect.
 - Transform/product glue such as deterministic scale/shake/drift evaluation may remain local when it is small, testable and consumed by the canonical compositor.
 - Preview and export must evaluate the exact same ordered effect stack and modulation inputs.
+
+
+## Musical manual editing
+
+- The manual edit surface is beat/bar/phrase-first, not a generic seconds-first NLE timeline.
+- Manual operations mutate the same canonical `EditPlan` used by Loop / Guided / Auto. Do not create a second manual timeline state.
+- Loop repeats use stable `motifId + motifSlot` identities so edits to one motif slot can propagate to linked repeats.
+- Supported product operations are Drop/Replace, Cut, Slip, Slide, Lock and cut-boundary transitions; Trim/Move build on the same invariants.
+- Slip changes source time without changing the musical slot. Slide moves a shared cut while preserving the neighboring pair's combined duration.
+- Clean cut is represented by no transition object. Film Burn remains a sparse cut-boundary transition with real hidden-handle requirements.
+- Manual overrides and locks must survive unrelated regeneration. Default direct manipulation snaps to the verified musical grid; fine unsnapped correction is an explicit override.
+- Keep segment/source duration positive and within detected shot bounds. Pure edit-plan helpers own these invariants so UI drag gestures cannot bypass them.

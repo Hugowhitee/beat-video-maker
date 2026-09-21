@@ -52,6 +52,24 @@ The planner varies cadence with the music. A calm intro/break should generally b
 
 `EditMotif` is a reusable cut/source pattern over a musical loop or phrase. Loop mode repeats one motif exactly until the user changes it; Auto mode may reuse or vary motifs by section.
 
+### Musical manual edit surface
+
+The manual workflow borrows the directness of a video-editor timeline without copying a full Resolve/Premiere model.
+
+The horizontal edit surface is primarily musical: beats, bars and phrases are the main ruler; seconds/timecode are secondary. Generated blocks are `EditPlan` segments.
+
+Core operations:
+- **Drop / Replace** changes the source shot underneath a fixed musical slot.
+- **Cut** splits a segment at a snapped musical boundary.
+- **Slip** moves the source in/out range while the timeline slot stays fixed.
+- **Slide** moves the cut shared by two adjacent segments while their combined duration stays fixed.
+- **Lock** protects a good manual choice from later regeneration.
+- **Transition** is a small object on the cut boundary; absence means hard cut.
+
+Loop mode edits one motif rather than a three-minute repeated timeline. Repeated segments carry a stable motif slot identity so source replacements, slips, cut slides and locks can propagate to linked copies. A later explicit detach/variation action may break one repeat away from the motif.
+
+These manipulations are pure `EditPlan` operations and therefore work identically for Auto/Guided corrections. The UI must not maintain a parallel timeline state.
+
 ### Transition language and intro assets
 
 Most edit points are **clean hard cuts**. In the edit-plan model, no transition object at a boundary means a normal hard cut. Effect transitions are separate cut-centered objects that reference the adjacent left/right segments, carry duration/alignment, and require enough hidden source handles on both sides. This follows the proven handle-based approach used by mature editors and avoids shortening/overlapping the visible segment timeline just to show an effect.
