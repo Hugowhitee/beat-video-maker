@@ -1015,7 +1015,7 @@ function App() {
     exportAbortRef.current = controller;
     setExportState('exporting');
     setExportProgress(0);
-    setExportMessage('Rendering 1080p frames locally…');
+    setExportMessage('Rendering ' + resolvedOutput.summary + ' locally…');
 
     try {
       const result = await exportVideo({
@@ -1026,6 +1026,7 @@ function App() {
         title,
         grid: resolveGrid(),
         amplitudeEnvelope,
+        output: resolvedOutput,
         signal: controller.signal,
         onProgress: setExportProgress,
       });
@@ -1073,10 +1074,12 @@ function App() {
     ?? (analysis?.bpm === null || analysis?.bpm === undefined ? '' : analysis.bpm.toFixed(1));
   const gridHasCorrection = manualBpm !== null || manualBarOffset !== null;
   const gridConfidenceText =
-    analysisState === 'analyzing'
-      ? 'Analyzing…'
-      : analysisState === 'error'
-        ? 'Analysis failed'
+    analysisState === 'decoding'
+      ? 'Decoding…'
+      : analysisState === 'analyzing'
+        ? 'Analyzing…'
+        : analysisState === 'error'
+          ? 'Analysis failed'
         : analysis?.bpm === null || analysis?.bpm === undefined
           ? 'Tempo not detected'
           : analysis.confidence + ' confidence';
@@ -1121,7 +1124,14 @@ function App() {
             <button data-testid="undo-button" className="history-button" type="button" disabled={!historyState.canUndo} onClick={undoEditor}>Undo</button>
             <button data-testid="redo-button" className="history-button" type="button" disabled={!historyState.canRedo} onClick={redoEditor}>Redo</button>
           </div>
-          <span className="output-pill">1080p · 30 fps</span>
+          <button
+            type="button"
+            className="output-pill output-settings-button"
+            data-testid="output-settings-button"
+            onClick={() => setProjectSettingsOpen(true)}
+          >
+            {resolvedOutput.summary}
+          </button>
           <button
             data-testid="export-button"
             className={'primary-button ' + (exportState === 'exporting' ? 'is-cancel' : '')}
@@ -1146,8 +1156,43 @@ function App() {
             <div><h2>Sources</h2><p>Local media · nothing uploaded.</p></div>
           </div>
 
-          <FileControl label="Cover image" detail={coverName} accept="image/png,image/jpeg,image/webp" testId="cover-input" onChange={handleCover} />
-          <FileControl label="Beat" detail={audioName} accept="audio/*,.wav,.mp3,.m4a,.flac" testId="audio-input" onChange={handleAudio} />
+          <input
+            ref={mediaInputRef}
+            data-testid="media-intake-input"
+            className="visually-hidden"
+            type="file"
+            multiple
+            accept="image/*,audio/*,video/*,.mov,.mkv,.flac,.m4a"
+            onChange={(event) => {
+              const files = Array.from(event.currentTarget.files ?? []);
+              if (files.length > 0) void handleMediaFiles(files);
+              event.currentTarget.value = '';
+            }}
+          />
+          <div
+            className={'media-intake ' + (mediaDragActive ? 'is-dragging' : '')}
+            data-testid="media-intake"
+            role="button"
+            tabIndex={0}
+            onClick={() => mediaInputRef.current?.click()}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault();
+                mediaInputRef.current?.click();
+              }
+            }}
+            onDragEnter={handleMediaDragOver}
+            onDragOver={handleMediaDragOver}
+            onDragLeave={handleMediaDragLeave}
+            onDrop={handleMediaDrop}
+          >
+            <strong>Drop media here</strong>
+            <span>Image · beat · one or more videos</span>
+            <small>or click to browse · files stay on this device</small>
+          </div>
+
+          <FileControl label="Still image" detail={coverName} accept="image/png,image/jpeg,image/webp" testId="cover-input" onChange={handleCover} />
+          <FileControl label="Beat / audio" detail={audioName} accept="audio/*,.wav,.mp3,.m4a,.flac" testId="audio-input" onChange={handleAudio} />
 
           <VideoSourcesPanel
             items={videoSources.items}
@@ -1229,17 +1274,28 @@ function App() {
           </div>
 
           <div
-            className="canvas-shell"
+            className={'canvas-shell ' + (mediaDragActive ? 'is-media-dragging' : '')}
             data-testid="preview-shell"
+            style={{
+              '--preview-aspect': String(resolvedOutput.width / resolvedOutput.height),
+            } as CSSProperties}
             onClick={handlePreviewClick}
+            onDragEnter={handleMediaDragOver}
+            onDragOver={handleMediaDragOver}
+            onDragLeave={handleMediaDragLeave}
+            onDrop={handleMediaDrop}
           >
             <canvas
               ref={canvasRef}
               data-testid="preview-canvas"
               className={placingTitle ? 'is-placing-title' : ''}
-              width={1280}
-              height={720}
-              aria-label={placingTitle ? 'Click to place title' : '16 by 9 video preview'}
+              width={previewSize.width}
+              height={previewSize.height}
+              aria-label={
+                placingTitle
+                  ? 'Click to place title'
+                  : resolvedOutput.aspectLabel + ' video preview'
+              }
             />
             {placingTitle ? (
               <div className="canvas-placement-hint" data-testid="title-placement-hint">
@@ -1247,9 +1303,28 @@ function App() {
               </div>
             ) : null}
             {!cover && (
-              <div className="empty-overlay">
+              <button
+                type="button"
+                className="empty-overlay empty-overlay-button"
+                data-testid="empty-media-action"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  mediaInputRef.current?.click();
+                }}
+              >
                 <span>Add a cover image</span>
-                <small>JPG · PNG · WebP</small>
+                <small>Click or drop image · audio · video</small>
+              </button>
+            )}
+            {(analysisState === 'decoding' || analysisState === 'analyzing') && (
+              <div className="processing-card" data-testid="audio-processing" role="status">
+                <span className="activity-spinner" aria-hidden="true" />
+                <div>
+                  <strong>
+                    {analysisState === 'decoding' ? 'Decoding beat' : 'Analyzing beat grid'}
+                  </strong>
+                  <small>{analysisMessage || 'Working locally…'}</small>
+                </div>
               </div>
             )}
           </div>
