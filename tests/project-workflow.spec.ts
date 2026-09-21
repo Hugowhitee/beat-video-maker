@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test';
 import { PNG, sineWave } from './fixtures/media';
 
-test('project output settings drive the real preview geometry and persist', async ({ page }, testInfo) => {
+test('project output settings drive the real preview geometry', async ({ page }, testInfo) => {
   test.skip(testInfo.project.name !== 'desktop-normal', 'Project settings behavior is viewport-independent.');
 
   await page.goto('/?fixture=1');
@@ -80,4 +80,19 @@ test('empty preview is an actual media action', async ({ page }, testInfo) => {
   });
 
   await expect(page.getByText('clicked-cover.png')).toBeVisible();
+});
+
+
+test('project output settings persist independently from style templates', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'desktop-normal', 'Project persistence is viewport-independent.');
+
+  await page.goto('/');
+  await page.getByTestId('output-settings-button').click();
+  await page.getByTestId('output-format-square').click();
+  await page.getByTestId('output-fps').selectOption('25');
+  await page.getByRole('button', { name: 'Done' }).click();
+  await expect(page.getByTestId('output-settings-button')).toContainText('1080×1080 · 25 fps');
+
+  await page.reload();
+  await expect(page.getByTestId('output-settings-button')).toContainText('1080×1080 · 25 fps');
 });
