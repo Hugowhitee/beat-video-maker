@@ -1007,6 +1007,7 @@ export const MediaLibrary = memo(function MediaLibrary({ onMediaSelect }: MediaL
         </div>
       )}
 
+      {(beatvideoMode === 'video' || mediaGroups.length > 0) ? (
       {/* Search + view toggle always render so the toggle stays reachable
           in Scene mode. The search input and the filter row below only scope
           the media-library grid, so they're hidden when the Scene browser is
@@ -1225,6 +1226,8 @@ export const MediaLibrary = memo(function MediaLibrary({ onMediaSelect }: MediaL
           </>
         )}
       </div>
+      ) : null}
+
 
       {/* Composition navigation banner — shown when inside a sub-composition */}
       {activeCompositionId !== null && activeCompLabel && (
@@ -1287,14 +1290,30 @@ export const MediaLibrary = memo(function MediaLibrary({ onMediaSelect }: MediaL
             />
           ))}
 
-          {/* Loading / empty state when no groups to show */}
-          {mediaGroups.length === 0 && (
+          {/* Photo keeps the media panel secondary to the Preview. */}
+          {mediaGroups.length === 0 && beatvideoMode === 'photo' ? (
+            <div className="flex min-h-40 flex-col items-center justify-center gap-3 px-4 text-center">
+              <div className="flex h-9 w-9 items-center justify-center rounded-md border border-border bg-secondary/40">
+                <ImageIcon className="h-4 w-4 text-muted-foreground" />
+              </div>
+              <div className="space-y-1">
+                <p className="text-xs font-medium text-foreground">Image + beat</p>
+                <p className="text-[11px] leading-relaxed text-muted-foreground">
+                  Drop files here or choose them once. The Preview is the main canvas.
+                </p>
+              </div>
+              <Button size="sm" variant="outline" className="h-7 text-xs" onClick={handleImport}>
+                <Upload className="mr-1.5 h-3.5 w-3.5" />
+                Choose files
+              </Button>
+            </div>
+          ) : mediaGroups.length === 0 ? (
             <EmptyMediaGrid
               onMediaSelect={onMediaSelect}
               itemSize={mediaItemSize}
               allowedKinds={allowedMediaKinds}
             />
-          )}
+          ) : null}
         </div>
 
         {/* Drag overlay — absolute sibling, always covers the visible viewport */}
