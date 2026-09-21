@@ -1,0 +1,38 @@
+name: Migration lock refresh probe
+
+on:
+  pull_request:
+    branches:
+      - migration/freecut-upstream
+
+jobs:
+  lock-probe:
+    if: github.head_ref == 'fix/migration-runtime-audit'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Refresh lockfile metadata
+        run: npm install --package-lock-only --ignore-scripts
+      - name: Print patched lock entries
+        run: |
+          node - <<'NODE'
+          const fs = require('node:fs')
+          const lock = JSON.parse(fs.readFileSync('package-lock.json', 'utf8'))
+          const keys = [
+            '',
+            'node_modules/seroval',
+            'node_modules/fflate',
+            'node_modules/protobufjs',
+            'node_modules/tar',
+          ]
+          for (const key of keys) {
+            console.log('LOCK_ENTRY_START ' + (key || '<root>'))
+            console.log(JSON.stringify(lock.packages[key], null, 2))
+            console.log('LOCK_ENTRY_END ' + (key || '<root>'))
+          }
+          NODE
