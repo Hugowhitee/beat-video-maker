@@ -147,6 +147,16 @@ select:focus-visible {
   font-variant-numeric: tabular-nums;
 }
 
+.output-settings-button {
+  cursor: pointer;
+}
+
+.output-settings-button:hover {
+  border-color: #758b94;
+  background: #d1d6d5;
+  color: #2f4d5b;
+}
+
 .primary-button,
 .small-button,
 .play-button,
@@ -302,6 +312,42 @@ select:focus-visible {
   font-weight: 760;
   letter-spacing: 0.1em;
   text-transform: uppercase;
+}
+
+.media-intake {
+  display: grid;
+  gap: 3px;
+  margin-bottom: 6px;
+  padding: 12px 10px;
+  border: 1px dashed #929a98;
+  border-radius: 3px;
+  background: #ced2d0;
+  color: #343a3c;
+  cursor: pointer;
+  transition: border-color 100ms ease, background 100ms ease, box-shadow 100ms ease;
+}
+
+.media-intake:hover,
+.media-intake.is-dragging {
+  border-color: #587b8e;
+  background: #d7dedd;
+  box-shadow: inset 3px 0 0 #587b8e;
+}
+
+.media-intake strong {
+  font-size: 9px;
+  font-weight: 760;
+}
+
+.media-intake span {
+  color: #60696b;
+  font-size: 8px;
+}
+
+.media-intake small {
+  color: #7b8385;
+  font-size: 7px;
+  line-height: 1.35;
 }
 
 .file-control {
@@ -462,14 +508,20 @@ select:focus-visible {
 
 .canvas-shell {
   position: relative;
-  width: min(100%, calc((100dvh - 300px) * 16 / 9));
-  aspect-ratio: 16 / 9;
+  width: min(100%, calc((100dvh - 300px) * var(--preview-aspect, 1.7778)));
+  max-height: calc(100dvh - 300px);
+  aspect-ratio: var(--preview-aspect, 1.7778);
   margin: 0 auto;
   overflow: hidden;
   border: 1px solid #51585b;
   border-radius: 3px;
   background: #090a0a;
   box-shadow: 0 10px 28px rgba(0,0,0,0.22);
+}
+
+.canvas-shell.is-media-dragging {
+  border-color: #78a0b3;
+  box-shadow: 0 0 0 2px rgba(120,160,179,0.22), 0 10px 28px rgba(0,0,0,0.22);
 }
 
 .canvas-shell canvas {
@@ -517,6 +569,56 @@ select:focus-visible {
   color: #828a8d;
   font-size: 8px;
   letter-spacing: 0.08em;
+}
+
+.empty-overlay-button {
+  width: 100%;
+  border: 0;
+  background: transparent;
+  color: #e9ece8;
+  pointer-events: auto;
+  cursor: pointer;
+}
+
+.empty-overlay-button:hover {
+  background: rgba(88,123,142,0.08);
+}
+
+.processing-card {
+  position: absolute;
+  left: 12px;
+  bottom: 12px;
+  z-index: 8;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 190px;
+  max-width: calc(100% - 24px);
+  padding: 8px 10px;
+  border: 1px solid #596266;
+  border-radius: 3px;
+  background: rgba(24,28,30,0.92);
+  color: #eef0ec;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.25);
+  pointer-events: none;
+}
+
+.processing-card > div {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.processing-card strong {
+  font-size: 9px;
+}
+
+.processing-card small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: #a8b0b2;
+  font-size: 8px;
 }
 
 .transport {
@@ -816,6 +918,40 @@ select:focus-visible {
 }
 
 .grid-help.is-error { color: #e5a28f; }
+
+.analysis-attention {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px;
+  border: 1px solid #6d6250;
+  border-radius: 2px;
+  background: #332f28;
+}
+
+.analysis-attention > div {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.analysis-attention strong {
+  color: #eee1c7;
+  font-size: 8px;
+}
+
+.analysis-attention span {
+  color: #b8ab94;
+  font-size: 7px;
+  line-height: 1.35;
+}
+
+.analysis-attention .grid-action {
+  flex: 0 0 auto;
+  border-color: #88795f;
+  color: #ead7b4;
+}
 
 .export-status {
   min-height: 36px;
@@ -1143,6 +1279,197 @@ button.preset-card:hover {
 .template-message {
   color: #687073 !important;
   word-break: break-word;
+}
+
+
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: grid;
+  place-items: center;
+  padding: 18px;
+  background: rgba(22,25,26,0.48);
+  backdrop-filter: blur(3px);
+}
+
+.project-settings-dialog {
+  width: min(620px, calc(100vw - 32px));
+  max-height: min(760px, calc(100dvh - 32px));
+  overflow-y: auto;
+  border: 1px solid #7f8785;
+  border-radius: 4px;
+  background: #d9dcda;
+  color: #232729;
+  box-shadow: 0 22px 60px rgba(20,24,25,0.34);
+}
+
+.dialog-header,
+.dialog-footer {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 14px 16px;
+}
+
+.dialog-header {
+  border-bottom: 1px solid #b3b8b6;
+}
+
+.dialog-header h2 {
+  margin: 2px 0 0;
+  font-size: 16px;
+  letter-spacing: -0.025em;
+}
+
+.dialog-header p {
+  margin: 5px 0 0;
+  color: #677073;
+  font-size: 9px;
+}
+
+.dialog-close {
+  width: 27px;
+  height: 27px;
+  border: 1px solid #969d9b;
+  border-radius: 3px;
+  background: #c9cdcb;
+  color: #555d5f;
+  cursor: pointer;
+  font-size: 17px;
+  line-height: 1;
+}
+
+.dialog-section {
+  display: grid;
+  gap: 8px;
+  padding: 13px 16px;
+  border-bottom: 1px solid #c0c4c2;
+}
+
+.format-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0,1fr));
+  gap: 6px;
+}
+
+.format-grid button {
+  min-height: 58px;
+  display: grid;
+  align-content: center;
+  gap: 3px;
+  padding: 8px;
+  border: 1px solid #9ba2a0;
+  border-radius: 3px;
+  background: #cdd1cf;
+  color: #343a3c;
+  cursor: pointer;
+  text-align: left;
+}
+
+.format-grid button strong { font-size: 9px; }
+.format-grid button span { color: #70787a; font-size: 8px; }
+
+.format-grid button.is-active {
+  border-color: #587b8e;
+  background: #d8e1e3;
+  box-shadow: inset 0 -2px 0 #587b8e;
+}
+
+.two-column-settings {
+  grid-template-columns: 1fr 1fr;
+}
+
+.two-column-settings label,
+.dialog-section > label,
+.custom-size-row label {
+  display: grid;
+  gap: 5px;
+}
+
+.project-settings-dialog select,
+.project-settings-dialog input {
+  min-height: 32px;
+  width: 100%;
+  padding: 6px 7px;
+  border: 1px solid #7c8486;
+  border-radius: 3px;
+  background: #202426;
+  color: #eef0ec;
+  font-size: 9px;
+  color-scheme: dark;
+}
+
+.custom-size-row {
+  display: grid;
+  grid-template-columns: minmax(0,1fr) auto minmax(0,1fr);
+  align-items: end;
+  gap: 8px;
+}
+
+.custom-size-row > span {
+  padding-bottom: 8px;
+  color: #747c7f;
+}
+
+.custom-size-row label > span {
+  color: #667073;
+  font-size: 8px;
+}
+
+.fill-segmented {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+}
+
+.fill-segmented button {
+  min-height: 34px;
+  border: 1px solid #969d9b;
+  background: #c9cdcb;
+  color: #4c5456;
+  cursor: pointer;
+  font-size: 9px;
+}
+
+.fill-segmented button:first-child { border-radius: 3px 0 0 3px; }
+.fill-segmented button:last-child {
+  border-left: 0;
+  border-radius: 0 3px 3px 0;
+}
+
+.fill-segmented button.is-active {
+  background: #30444e;
+  border-color: #587b8e;
+  color: #eff5f6;
+}
+
+.dialog-hint {
+  margin: 0;
+  color: #747c7f;
+  font-size: 8px;
+  line-height: 1.45;
+}
+
+.dialog-footer {
+  align-items: center;
+}
+
+.dialog-footer > div {
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+
+.dialog-footer strong {
+  color: #2d3335;
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+}
+
+.dialog-footer span {
+  color: #747c7f;
+  font-size: 8px;
 }
 
 @media (max-width: 1180px) {
