@@ -19,6 +19,7 @@ import { isTrackSyncLockActive } from '../utils/track-sync-lock'
 
 interface TrackHeaderProps {
   track: TimelineTrack
+  compact?: boolean
   isActive: boolean
   isSelected: boolean
   canDeleteTrack: boolean
@@ -41,6 +42,7 @@ interface TrackHeaderProps {
 function areTrackHeaderPropsEqual(prev: TrackHeaderProps, next: TrackHeaderProps): boolean {
   return (
     prev.track === next.track &&
+    prev.compact === next.compact &&
     prev.isActive === next.isActive &&
     prev.isSelected === next.isSelected &&
     prev.canDeleteTrack === next.canDeleteTrack &&
@@ -60,6 +62,7 @@ function areTrackHeaderPropsEqual(prev: TrackHeaderProps, next: TrackHeaderProps
  */
 export const TrackHeader = memo(function TrackHeader({
   track,
+  compact = false,
   isActive,
   isSelected,
   canDeleteTrack,
@@ -83,6 +86,82 @@ export const TrackHeader = memo(function TrackHeader({
   // Use track drag hook (visuals handled centrally by timeline.tsx via DOM)
   const { handleDragStart } = useTrackDrag(track)
   const itemCountLabel = t('timeline.trackHeader.clipCount', { count: itemCount })
+
+  if (compact) {
+    return (
+      <div
+        className="relative overflow-hidden"
+        style={{
+          height: `${track.height}px`,
+          contentVisibility: 'auto',
+          containIntrinsicSize: `${TIMELINE_SIDEBAR_WIDTH}px ${track.height}px`,
+        }}
+        data-track-id={track.id}
+        data-track-disabled={trackDisabled ? 'true' : undefined}
+      >
+        <div
+          className={`
+            flex h-full items-center gap-1.5 overflow-hidden px-2
+            ${isSelected ? 'bg-primary/10' : trackDisabled ? 'bg-muted/30' : 'hover:bg-secondary/40'}
+            ${isActive ? 'border-l-3 border-l-primary' : 'border-l-3 border-l-transparent'}
+            ${trackDisabled ? 'text-muted-foreground' : ''}
+          `}
+          onClick={onSelect}
+        >
+          <span className="min-w-0 flex-1 truncate text-xs font-semibold font-mono">
+            {track.name}
+          </span>
+          <span className="shrink-0 text-[10px] text-muted-foreground">{itemCountLabel}</span>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-6 w-6 rounded"
+            onClick={(event) => {
+              event.stopPropagation()
+              onToggleLock()
+            }}
+            aria-label={
+              track.locked
+                ? t('timeline.trackHeader.unlockTrack')
+                : t('timeline.trackHeader.lockTrack')
+            }
+            data-tooltip={
+              track.locked
+                ? t('timeline.trackHeader.unlockTrack')
+                : t('timeline.trackHeader.lockTrack')
+            }
+          >
+            <Lock className={`h-3 w-3 ${track.locked ? 'text-primary' : 'opacity-60'}`} />
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-6 w-6 rounded"
+            onClick={(event) => {
+              event.stopPropagation()
+              onToggleDisabled()
+            }}
+            aria-label={
+              trackDisabled
+                ? t('timeline.trackHeader.enableTrack')
+                : t('timeline.trackHeader.disableTrack')
+            }
+            data-tooltip={
+              trackDisabled
+                ? t('timeline.trackHeader.enableTrack')
+                : t('timeline.trackHeader.disableTrack')
+            }
+          >
+            {trackDisabled ? (
+              <PowerOff className="h-3 w-3 text-primary" />
+            ) : (
+              <Power className="h-3 w-3 opacity-60" />
+            )}
+          </Button>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <ContextMenu>
