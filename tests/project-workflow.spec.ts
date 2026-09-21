@@ -121,7 +121,8 @@ test('empty preview is an actual media action', async ({ page }, testInfo) => {
     buffer: PNG,
   });
 
-  await expect(page.getByText('clicked-cover.png')).toBeVisible();
+  const sources = page.getByRole('complementary', { name: 'Sources' });
+  await expect(sources.getByText('clicked-cover.png')).toBeVisible();
 });
 
 
