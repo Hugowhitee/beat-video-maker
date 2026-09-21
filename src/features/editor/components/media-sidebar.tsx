@@ -14,12 +14,8 @@ import {
   Star,
   Hexagon,
   Heart,
-  Pentagon,
   Blend,
   Pen,
-  Captions,
-  Sticker,
-  WandSparkles,
 } from 'lucide-react'
 import { motion, useReducedMotion } from 'motion/react'
 import { Button } from '@/components/ui/button'
