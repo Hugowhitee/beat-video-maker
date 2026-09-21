@@ -725,7 +725,8 @@ export const MediaLibrary = memo(function MediaLibrary({ onMediaSelect }: MediaL
               </DropdownMenu>
             </div>
 
-            <HeaderActionTooltip label={t('media.library.importMediaFromUrl')}>
+{beatvideoMode === 'video' ? (
+                        <HeaderActionTooltip label={t('media.library.importMediaFromUrl')}>
               <button
                 onClick={() => setShowImportUrlDialog(true)}
                 disabled={!currentProjectId}
@@ -741,6 +742,7 @@ export const MediaLibrary = memo(function MediaLibrary({ onMediaSelect }: MediaL
                 </span>
               </button>
             </HeaderActionTooltip>
+            ) : null}
 
             {/* Workspace health scan indicator */}
             {isScanningMediaHealth && (
@@ -1246,8 +1248,8 @@ export const MediaLibrary = memo(function MediaLibrary({ onMediaSelect }: MediaL
         >
           <MarqueeOverlay marquee={marquee} />
 
-          {/* Compositions section — collapsible, auto-hidden when empty */}
-          <CompositionsSection />
+          {/* Compositions are a video-workflow concept in Beatvideo. */}
+          {beatvideoMode === 'video' ? <CompositionsSection /> : null}
 
           {/* Media sections — grouped by type */}
           {mediaGroups.map((group) => (
@@ -1273,7 +1275,11 @@ export const MediaLibrary = memo(function MediaLibrary({ onMediaSelect }: MediaL
 
           {/* Loading / empty state when no groups to show */}
           {mediaGroups.length === 0 && (
-            <EmptyMediaGrid onMediaSelect={onMediaSelect} itemSize={mediaItemSize} />
+            <EmptyMediaGrid
+              onMediaSelect={onMediaSelect}
+              itemSize={mediaItemSize}
+              allowedKinds={allowedMediaKinds}
+            />
           )}
         </div>
 
