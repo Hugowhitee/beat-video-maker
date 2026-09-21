@@ -106,6 +106,34 @@ const PRESET_LABELS: Record<VisualPreset, string> = {
   visualizer: 'Minimal visualizer',
 };
 
+const DETAIL_WAVEFORM_WINDOWS = [32, 16, 8, 4] as const;
+
+function resamplePeakRange(
+  peaks: number[],
+  startRatio: number,
+  endRatio: number,
+  count: number,
+) {
+  if (peaks.length === 0 || count <= 0) return [];
+
+  const start = Math.max(0, Math.min(peaks.length - 1, Math.floor(startRatio * peaks.length)));
+  const end = Math.max(start + 1, Math.min(peaks.length, Math.ceil(endRatio * peaks.length)));
+  const span = Math.max(1, end - start);
+  const output: number[] = [];
+
+  for (let index = 0; index < count; index += 1) {
+    const from = start + Math.floor(index * span / count);
+    const to = Math.max(from + 1, start + Math.ceil((index + 1) * span / count));
+    let peak = 0.03;
+    for (let sourceIndex = from; sourceIndex < Math.min(end, to); sourceIndex += 1) {
+      peak = Math.max(peak, peaks[sourceIndex] ?? 0.03);
+    }
+    output.push(peak);
+  }
+
+  return output;
+}
+
 type BeforeInstallPromptEvent = Event & {
   prompt: () => Promise<void>;
   userChoice: Promise<{ outcome: 'accepted' | 'dismissed'; platform: string }>;
@@ -215,7 +243,9 @@ function App() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const audioRef = useRef<HTMLAudioElement>(null);
   const waveformRef = useRef<HTMLDivElement>(null);
+  const detailWaveformRef = useRef<HTMLDivElement>(null);
   const gridDragPointerRef = useRef<number | null>(null);
+  const detailDragPointerRef = useRef<number | null>(null);
   const exportAbortRef = useRef<AbortController | null>(null);
   const audioLoadIdRef = useRef(0);
   const mediaInputRef = useRef<HTMLInputElement>(null);
@@ -267,6 +297,7 @@ function App() {
   const [manualBpm, setManualBpm] = useState<string | null>(null);
   const [manualBarOffset, setManualBarOffset] = useState<number | null>(null);
   const [gridEditing, setGridEditing] = useState(false);
+  const [waveformZoomIndex, setWaveformZoomIndex] = useState(2);
   const [analysisMessage, setAnalysisMessage] = useState('');
   const [amplitudeEnvelope, setAmplitudeEnvelope] = useState<AmplitudeEnvelope | null>(null);
   const [preset, setPreset] = useState<VisualPreset>(storedSettings.preset);
