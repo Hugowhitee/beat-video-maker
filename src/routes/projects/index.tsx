@@ -7,10 +7,8 @@ import { createLogger } from '@/shared/logging/logger'
 const logger = createLogger('ProjectsIndex')
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
-import { Plus, Upload, FolderOpen, File, Github, BookOpen } from 'lucide-react'
+import { Plus, Upload, FolderOpen, File } from 'lucide-react'
 import { FreeCutLogo } from '@/components/brand/freecut-logo'
-import { DiscordIcon } from '@/components/brand/discord-icon'
-import { DISCORD_INVITE_URL } from '@/config/community'
 import { ProjectList } from '@/features/projects/components/project-list'
 import { EditProjectForm } from '@/features/projects/components/project-form'
 import {
@@ -64,13 +62,13 @@ function ProjectsIndex() {
   const [projectNameFromFile, setProjectNameFromFile] = useState<string | null>(null)
   const [destinationDir, setDestinationDir] = useState<FileSystemDirectoryHandle | null>(null)
   const [destinationName, setDestinationName] = useState<string | null>(null)
-  const [useProjectsFolder, setUseProjectsFolder] = useState(true) // Create FreeCutProjects subfolder
+  const [useProjectsFolder, setUseProjectsFolder] = useState(true) // Create BeatvideoProjects subfolder
   const [importDialogOpen, setImportDialogOpen] = useState(false)
   const [importProgress, setImportProgress] = useState<ImportProgress | null>(null)
   const [importError, setImportError] = useState<string | null>(null)
   const [isImporting, setIsImporting] = useState(false)
 
-  const PROJECTS_FOLDER_NAME = 'FreeCutProjects'
+  const PROJECTS_FOLDER_NAME = 'BeatvideoProjects'
 
   // Extract project name from bundle filename
   // Handles both "myproject.freecut.zip" and browser-renamed "myproject.freecut (1).zip"
@@ -277,30 +275,6 @@ function ProjectsIndex() {
 
               <Separator orientation="vertical" className="h-6" />
 
-              <Button variant="outline" size="lg" className="gap-2 px-4" asChild>
-                <Link to="/docs">
-                  <BookOpen className="w-4 h-4" />
-                  Docs
-                </Link>
-              </Button>
-              <Button variant="outline" size="lg" className="gap-2 px-4" asChild>
-                <a href={DISCORD_INVITE_URL} target="_blank" rel="noopener noreferrer">
-                  <DiscordIcon className="w-4 h-4" />
-                  Discord
-                </a>
-              </Button>
-              <Button variant="outline" size="lg" className="gap-2 px-4" asChild>
-                <a
-                  href="https://github.com/walterlow/freecut"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  aria-label={t('projects.viewOnGitHub')}
-                >
-                  <Github className="w-4 h-4" />
-                  GitHub
-                </a>
-              </Button>
-
               <Separator orientation="vertical" className="h-6" />
 
               <WorkspaceIndicator />
@@ -484,7 +458,7 @@ function ProjectsIndex() {
                   )}
                 </Button>
 
-                {/* FreeCutProjects subfolder option */}
+                {/* BeatvideoProjects subfolder option */}
                 <label className="flex items-center gap-2 cursor-pointer">
                   <input
                     type="checkbox"
