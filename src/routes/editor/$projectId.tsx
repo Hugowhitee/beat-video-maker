@@ -1,5 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { ProjectNotFoundError } from '@/app/route-error-cause'
+import { resolveBeatvideoProjectMode } from '@/config/beatvideo'
 
 export const Route = createFileRoute('/editor/$projectId')({
   // Editor loader data is tiny and migration state must be fresh on reopen.
@@ -29,6 +30,7 @@ export const Route = createFileRoute('/editor/$projectId')({
         height: project.metadata.height,
         fps: project.metadata.fps,
         backgroundColor: project.metadata.backgroundColor,
+        beatvideoMode: resolveBeatvideoProjectMode(project.beatvideoMode),
       },
       migration: {
         storedSchemaVersion,
