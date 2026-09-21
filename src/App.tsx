@@ -1470,19 +1470,29 @@ function App() {
               <strong>Beat</strong>
               <span>{audioBuffer ? audioName : 'Add audio to reveal the musical grid'}</span>
             </div>
+            <div className="waveform-toolbar">
+              <span>Overview</span>
+              <small>
+                {audioBuffer
+                  ? (gridEditing
+                      ? 'Whole track · detail view is the precision surface'
+                      : 'Click to seek · Edit grid for precise alignment')
+                  : 'Whole-track waveform'}
+              </small>
+            </div>
             <div
               ref={waveformRef}
-              className={'waveform-shell ' + (gridEditing ? 'is-grid-editing' : '')}
+              className={'waveform-shell waveform-overview-shell ' + (gridEditing ? 'is-grid-editing' : '')}
               data-testid="waveform-editor"
-              aria-label={gridEditing ? 'Beat-grid alignment waveform' : 'Audio waveform'}
+              aria-label={gridEditing ? 'Beat-grid overview waveform' : 'Audio waveform'}
               onPointerDown={handleWaveformPointerDown}
               onPointerMove={handleWaveformPointerMove}
               onPointerUp={handleWaveformPointerEnd}
               onPointerCancel={handleWaveformPointerEnd}
             >
-              <div className="waveform">
-                {peaks.length > 0 ? peaks.map((peak, index) => (
-                  <span key={index} style={{ height: Math.max(10, peak * 56) }} />
+              <div className="waveform waveform-overview">
+                {overviewPeaks.length > 0 ? overviewPeaks.map((peak, index) => (
+                  <span key={index} style={{ height: Math.max(8, peak * 42) }} />
                 )) : <p>Waveform appears after audio is decoded.</p>}
               </div>
               <div className="beat-markers" aria-hidden="true">
@@ -1495,11 +1505,22 @@ function App() {
                 ))}
               </div>
               {duration > 0 ? (
-                <span
-                  className="waveform-playhead"
-                  aria-hidden="true"
-                  style={{ left: (currentTime / Math.max(duration, 0.001) * 100) + '%' }}
-                />
+                <>
+                  <span
+                    className="waveform-viewport"
+                    data-testid="waveform-viewport"
+                    aria-hidden="true"
+                    style={{
+                      left: overviewViewportLeft + '%',
+                      width: Math.max(1.5, Math.min(100, overviewViewportWidth)) + '%',
+                    }}
+                  />
+                  <span
+                    className="waveform-playhead"
+                    aria-hidden="true"
+                    style={{ left: (currentTime / Math.max(duration, 0.001) * 100) + '%' }}
+                  />
+                </>
               ) : null}
               {manualBarOffset !== null && duration > 0 ? (
                 <span
@@ -1512,6 +1533,95 @@ function App() {
                 </span>
               ) : null}
             </div>
+
+            {audioBuffer && gridEditing ? (
+              <section className="waveform-detail-panel" data-testid="waveform-detail-panel">
+                <div className="waveform-detail-header">
+                  <div>
+                    <strong>Detail / follow</strong>
+                    <span>Waveform follows the playhead while you review the grid.</span>
+                  </div>
+                  <div className="waveform-zoom-controls" aria-label="Waveform zoom">
+                    <button
+                      type="button"
+                      className="waveform-zoom-button"
+                      data-testid="waveform-zoom-out"
+                      aria-label="Zoom waveform out"
+                      disabled={waveformZoomIndex === 0}
+                      onClick={() => setWaveformZoomIndex((index) => Math.max(0, index - 1))}
+                    >
+                      −
+                    </button>
+                    <span data-testid="waveform-zoom-label">{detailWindowSeconds} s</span>
+                    <button
+                      type="button"
+                      className="waveform-zoom-button"
+                      data-testid="waveform-zoom-in"
+                      aria-label="Zoom waveform in"
+                      disabled={waveformZoomIndex === DETAIL_WAVEFORM_WINDOWS.length - 1}
+                      onClick={() => setWaveformZoomIndex((index) =>
+                        Math.min(DETAIL_WAVEFORM_WINDOWS.length - 1, index + 1)
+                      )}
+                    >
+                      +
+                    </button>
+                  </div>
+                </div>
+                <div
+                  ref={detailWaveformRef}
+                  className="waveform-detail-shell"
+                  data-testid="waveform-detail"
+                  data-window-start={detailStart.toFixed(3)}
+                  data-window-end={detailEnd.toFixed(3)}
+                  aria-label="Detailed beat-grid alignment waveform"
+                  onPointerDown={(event) => handleDetailPointerDown(event, detailStart, detailEnd)}
+                  onPointerMove={(event) => handleDetailPointerMove(event, detailStart, detailEnd)}
+                  onPointerUp={handleDetailPointerEnd}
+                  onPointerCancel={handleDetailPointerEnd}
+                >
+                  <div className="waveform waveform-detail">
+                    {detailPeaks.map((peak, index) => (
+                      <span key={index} style={{ height: Math.max(12, peak * 92) }} />
+                    ))}
+                  </div>
+                  <div className="beat-markers detail-beat-markers" aria-hidden="true">
+                    {detailBeatMarkers.map((time, index) => (
+                      <span
+                        key={index}
+                        className={isBarMarker(time) ? 'is-bar' : ''}
+                        style={{
+                          left: ((time - detailStart) / Math.max(detailEnd - detailStart, 0.001) * 100) + '%',
+                        }}
+                      />
+                    ))}
+                  </div>
+                  <span
+                    className="waveform-playhead detail-playhead"
+                    aria-hidden="true"
+                    style={{
+                      left: Math.max(0, Math.min(100, detailPlayheadLeft)) + '%',
+                    }}
+                  />
+                  {detailDownbeatLeft !== null
+                    && detailDownbeatLeft >= 0
+                    && detailDownbeatLeft <= 100 ? (
+                      <span
+                        className="downbeat-handle detail-downbeat"
+                        data-testid="detail-downbeat-handle"
+                        aria-hidden="true"
+                        style={{ left: detailDownbeatLeft + '%' }}
+                      >
+                        <b>1</b>
+                      </span>
+                    ) : null}
+                </div>
+                <div className="waveform-detail-scale" aria-hidden="true">
+                  <span>{formatTime(detailStart)}</span>
+                  <strong>{formatTime(currentTime)}</strong>
+                  <span>{formatTime(detailEnd)}</span>
+                </div>
+              </section>
+            ) : null}
   
             {audioBuffer && (
               <section className="grid-strip" data-testid="grid-strip" aria-label="Beat alignment">
@@ -1611,7 +1721,7 @@ function App() {
                         onClick={() => {
                           setGridEditing(true);
                           requestAnimationFrame(() => {
-                            waveformRef.current?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+                            detailWaveformRef.current?.scrollIntoView({ block: 'center', behavior: 'smooth' });
                           });
                         }}
                       >
@@ -1622,7 +1732,7 @@ function App() {
 
                 {gridEditing ? (
                   <p className="grid-help">
-                    Click or drag on the waveform to place the first downbeat. Arrow keys fine-adjust the marker; Shift makes a larger move.
+                    Use the enlarged detail waveform to place bar 1 precisely. The overview remains available for coarse positioning; Arrow keys fine-adjust the marker and Shift makes a larger move.
                   </p>
                 ) : analysisState === 'error' ? (
                   <p className="grid-help is-error">{analysisMessage || 'Beat analysis failed.'}</p>
