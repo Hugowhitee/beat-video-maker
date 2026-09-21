@@ -679,7 +679,15 @@ function App() {
       audioLevel: amplitudeAt(amplitudeEnvelope, time),
     });
     canvas.dataset.rendered = 'true';
-  }, [amplitudeEnvelope, cover, currentTime, resolveGrid, settings]);
+  }, [
+    amplitudeEnvelope,
+    cover,
+    currentTime,
+    previewSize.height,
+    previewSize.width,
+    resolveGrid,
+    settings,
+  ]);
 
   useEffect(() => {
     renderPreview();
