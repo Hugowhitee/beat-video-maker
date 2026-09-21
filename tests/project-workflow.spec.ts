@@ -9,11 +9,35 @@ test('authoring controls stay grouped in Inspector instead of Sources', async ({
   const sources = page.getByRole('complementary', { name: 'Sources' });
   const inspector = page.getByRole('complementary', { name: 'Inspector' });
 
+  await expect(inspector.getByTestId('inspector-look')).toBeVisible();
+  await inspector.getByTestId('inspector-tab-text').click();
   await expect(inspector.getByTestId('title-input')).toBeVisible();
+  const brandDisclosure = inspector.getByTestId('brand-disclosure');
+  await brandDisclosure.locator('summary').click();
   await expect(inspector.getByTestId('brand-input')).toBeVisible();
   await expect(inspector.getByTestId('brand-graphic-input')).toHaveCount(1);
   await expect(sources.getByTestId('title-input')).toHaveCount(0);
   await expect(sources.getByTestId('brand-input')).toHaveCount(0);
+});
+
+test('Inspector exposes one authoring family at a time', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'desktop-normal', 'Inspector context is viewport-independent.');
+
+  await page.goto('/?fixture=1');
+
+  await expect(page.getByTestId('inspector-look')).toBeVisible();
+  await expect(page.getByTestId('title-input')).toHaveCount(0);
+  await expect(page.getByTestId('effects-control')).toHaveCount(0);
+
+  await page.getByTestId('inspector-tab-effects').click();
+  await expect(page.getByTestId('effects-control')).toBeVisible();
+  await expect(page.getByTestId('title-input')).toHaveCount(0);
+  await expect(page.getByTestId('preset-list')).toHaveCount(0);
+
+  await page.getByTestId('inspector-tab-text').click();
+  await expect(page.getByTestId('title-input')).toBeVisible();
+  await expect(page.getByTestId('effects-control')).toHaveCount(0);
+  await expect(page.getByTestId('preset-list')).toHaveCount(0);
 });
 
 test('project output settings drive the real preview geometry', async ({ page }, testInfo) => {
@@ -22,9 +46,11 @@ test('project output settings drive the real preview geometry', async ({ page },
   await page.goto('/?fixture=1');
 
   const outputButton = page.getByTestId('output-settings-button');
+  const projectButton = page.getByTestId('project-settings-trigger');
   await expect(outputButton).toContainText('1920×1080 · 30 fps');
+  await expect(projectButton).toBeVisible();
 
-  await outputButton.click();
+  await projectButton.click();
   await expect(page.getByTestId('project-settings-dialog')).toBeVisible();
   await page.getByTestId('output-format-shorts').click();
   await page.getByTestId('output-fps').selectOption('60');
@@ -95,7 +121,8 @@ test('empty preview is an actual media action', async ({ page }, testInfo) => {
     buffer: PNG,
   });
 
-  await expect(page.getByText('clicked-cover.png')).toBeVisible();
+  const sources = page.getByRole('complementary', { name: 'Sources' });
+  await expect(sources.getByText('clicked-cover.png')).toBeVisible();
 });
 
 

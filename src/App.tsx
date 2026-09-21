@@ -139,6 +139,8 @@ type BeforeInstallPromptEvent = Event & {
   userChoice: Promise<{ outcome: 'accepted' | 'dismissed'; platform: string }>;
 };
 
+type InspectorTab = 'look' | 'motion' | 'effects' | 'text';
+
 type EditorSnapshot = {
   title: string;
   titleSize: number;
@@ -304,6 +306,7 @@ function App() {
   const [effects, setEffects] = useState<VisualEffectInstance[]>(storedSettings.effects);
   const [modulations, setModulations] = useState<EffectModulation[]>(storedSettings.modulations);
   const [effectToAdd, setEffectToAdd] = useState<EffectType>('zoom-punch');
+  const [inspectorTab, setInspectorTab] = useState<InspectorTab>('look');
   const videoSources = useVideoSources();
   const [historyState, setHistoryState] = useState({ canUndo: false, canRedo: false });
   const [installPrompt, setInstallPrompt] = useState<BeforeInstallPromptEvent | null>(null);
@@ -1250,8 +1253,18 @@ function App() {
           </div>
           <button
             type="button"
+            className="project-settings-trigger"
+            data-testid="project-settings-trigger"
+            aria-label="Project settings"
+            onClick={() => setProjectSettingsOpen(true)}
+          >
+            Project
+          </button>
+          <button
+            type="button"
             className="output-pill output-settings-button"
             data-testid="output-settings-button"
+            aria-label="Output settings"
             onClick={() => setProjectSettingsOpen(true)}
           >
             {resolvedOutput.summary}
@@ -1767,424 +1780,495 @@ function App() {
           )}
         </section>
 
-        <aside className="panel style-panel" aria-label="Inspector">
-          <div className="panel-heading">
-            <div><h2>Inspector</h2><p>Look · effects · text · brand.</p></div>
+        <aside className="panel style-panel properties-panel" aria-label="Inspector">
+          <div className="properties-heading">
+            <div>
+              <span className="properties-kicker">Visual</span>
+              <h2>Properties</h2>
+            </div>
+            <span className="properties-context">
+              {cover ? 'Cover' : 'Canvas'}
+            </span>
           </div>
 
-          <div className="preset-list" data-testid="preset-list">
+          <div className="inspector-tabs" role="tablist" aria-label="Photo properties">
             {([
-              ['clean', 'Clean', 'Photo first · nearly still'],
-              ['ambient', 'Ambient', 'Slow background drift'],
-              ['reactive', 'Reactive', 'Real amplitude accent'],
-              ['pulse', 'Pulse', '8-bar phrase curve'],
-              ['visualizer', 'Minimal visualizer', 'Small amplitude line'],
-            ] as Array<[VisualPreset, string, string]>).map(([value, label, description]) => (
+              ['look', 'Look'],
+              ['motion', 'Motion'],
+              ['effects', 'Effects'],
+              ['text', 'Text'],
+            ] as Array<[InspectorTab, string]>).map(([value, label]) => (
               <button
                 key={value}
                 type="button"
-                data-testid={'preset-' + value}
-                className={'preset-card ' + (preset === value ? 'is-selected' : '')}
-                onClick={() => setPreset(value)}
+                role="tab"
+                data-testid={'inspector-tab-' + value}
+                aria-selected={inspectorTab === value}
+                className={inspectorTab === value ? 'is-active' : ''}
+                onClick={() => setInspectorTab(value)}
               >
-                <div className={'preset-swatch preset-' + value} />
-                <div><strong>{label}</strong><span>{description}</span></div>
-                <span className="check">{preset === value ? '✓' : ''}</span>
+                {label}
               </button>
             ))}
           </div>
 
-          <div className="control-group">
-            <h3>Motion</h3>
-            <SelectControl
-              label="Amount"
-              value={motion}
-              onChange={setMotion}
-              testId="motion-amount"
-              options={[
-                { value: 'off', label: 'Off' },
-                { value: 'low', label: 'Low' },
-                { value: 'medium', label: 'Medium' },
-              ]}
-            />
-            {verifiedGrid?.barOffset == null && (preset === 'ambient' || preset === 'pulse') ? (
-              <p className="control-hint">Verify bar 1 to enable bar-synchronised motion.</p>
-            ) : null}
-          </div>
-
-          <div className="control-group effects-control" data-testid="effects-control">
-            <h3>Effects</h3>
-            <div className="effect-add-row">
-              <select
-                data-testid="effect-add-type"
-                value={effectToAdd}
-                onChange={(event) => setEffectToAdd(event.target.value as EffectType)}
-              >
-                {EFFECT_TYPES.map((type) => (
-                  <option key={type} value={type}>{effectDefinition(type).name}</option>
-                ))}
-              </select>
-              <button
-                type="button"
-                className="small-button"
-                data-testid="effect-add"
-                onClick={addEffect}
-              >
-                Add
-              </button>
-            </div>
-
-            {effects.length === 0 ? (
-              <p className="control-hint">Add effects by target. Order matters within the same target.</p>
-            ) : (
-              <div className="effect-stack" data-testid="effect-stack">
-                {effects.map((effect) => {
-                  const definition = effectDefinition(effect.type);
-                  const modulation = modulations.find((candidate) => candidate.effectId === effect.id) ?? null;
-                  return (
-                    <article
-                      key={effect.id}
-                      className={'effect-row ' + (effect.enabled ? '' : 'is-disabled')}
-                      data-effect-type={effect.type}
+          <div className="inspector-tab-content">
+            {inspectorTab === 'look' ? (
+              <section className="property-surface" data-testid="inspector-look">
+                <div className="property-section-heading">
+                  <div>
+                    <strong>Look</strong>
+                    <span>Start from a recipe, then refine it in Motion and Effects.</span>
+                  </div>
+                </div>
+                <div className="preset-list inspector-preset-list" data-testid="preset-list">
+                  {([
+                    ['clean', 'Clean', 'Photo first · nearly still'],
+                    ['ambient', 'Ambient', 'Slow background drift'],
+                    ['reactive', 'Reactive', 'Real amplitude accent'],
+                    ['pulse', 'Pulse', '8-bar phrase curve'],
+                    ['visualizer', 'Minimal visualizer', 'Small amplitude line'],
+                  ] as Array<[VisualPreset, string, string]>).map(([value, label, description]) => (
+                    <button
+                      key={value}
+                      type="button"
+                      data-testid={'preset-' + value}
+                      className={'preset-card ' + (preset === value ? 'is-selected' : '')}
+                      onClick={() => setPreset(value)}
                     >
-                      <div className="effect-row-header">
-                        <label className="effect-enable">
-                          <input
-                            type="checkbox"
-                            checked={effect.enabled}
-                            aria-label={'Enable ' + definition.name}
-                            onChange={(event) => setEffects((current) =>
-                              setEffectEnabled(current, effect.id, event.target.checked)
-                            )}
-                          />
-                          <span>{definition.name}</span>
-                        </label>
-                        <div className="effect-order-actions">
-                          <button
-                            type="button"
-                            aria-label={'Move ' + definition.name + ' up'}
-                            disabled={!canMoveEffectWithinTarget(effects, effect.id, -1)}
-                            onClick={() => moveEffect(effect.id, -1)}
-                          >↑</button>
-                          <button
-                            type="button"
-                            aria-label={'Move ' + definition.name + ' down'}
-                            disabled={!canMoveEffectWithinTarget(effects, effect.id, 1)}
-                            onClick={() => moveEffect(effect.id, 1)}
-                          >↓</button>
-                          <button
-                            type="button"
-                            aria-label={'Remove ' + definition.name}
-                            onClick={() => removeEffect(effect.id)}
-                          >×</button>
-                        </div>
-                      </div>
+                      <div className={'preset-swatch preset-' + value} />
+                      <div><strong>{label}</strong><span>{description}</span></div>
+                      <span className="check">{preset === value ? '✓' : ''}</span>
+                    </button>
+                  ))}
+                </div>
+              </section>
+            ) : null}
 
-                      <p>{definition.description}</p>
+            {inspectorTab === 'motion' ? (
+              <section className="property-surface" data-testid="inspector-motion">
+                <div className="property-section-heading">
+                  <div>
+                    <strong>Motion</strong>
+                    <span>Movement of the still image, independent from pixel effects.</span>
+                  </div>
+                </div>
+                <SelectControl
+                  label="Amount"
+                  value={motion}
+                  onChange={setMotion}
+                  testId="motion-amount"
+                  options={[
+                    { value: 'off', label: 'Off' },
+                    { value: 'low', label: 'Low' },
+                    { value: 'medium', label: 'Medium' },
+                  ]}
+                />
+                {verifiedGrid?.barOffset == null && (preset === 'ambient' || preset === 'pulse') ? (
+                  <p className="control-hint">Bar-synchronised motion uses the verified grid when available.</p>
+                ) : null}
+              </section>
+            ) : null}
 
-                      <div className="effect-row-controls">
-                        <label>
-                          <span>Target</span>
-                          <select
-                            aria-label={definition.name + ' target'}
-                            value={effect.target}
-                            disabled={definition.targets.length === 1}
-                            onChange={(event) => setEffects((current) =>
-                              setEffectTarget(current, effect.id, event.target.value as VisualTarget)
-                            )}
+            {inspectorTab === 'effects' ? (
+              <section className="property-surface effects-control" data-testid="effects-control">
+                <div className="property-section-heading">
+                  <div>
+                    <strong>Effects</strong>
+                    <span>Ordered stack · background, foreground or final composite.</span>
+                  </div>
+                </div>
+                <div className="effect-add-row">
+                  <select
+                    data-testid="effect-add-type"
+                    value={effectToAdd}
+                    onChange={(event) => setEffectToAdd(event.target.value as EffectType)}
+                  >
+                    {EFFECT_TYPES.map((type) => (
+                      <option key={type} value={type}>{effectDefinition(type).name}</option>
+                    ))}
+                  </select>
+                  <button
+                    type="button"
+                    className="small-button"
+                    data-testid="effect-add"
+                    onClick={addEffect}
+                  >
+                    Add effect
+                  </button>
+                </div>
+
+                {effects.length === 0 ? (
+                  <div className="empty-property-state">
+                    <strong>No effects</strong>
+                    <span>Add an effect above. Motion stays separate.</span>
+                  </div>
+                ) : (
+                  <div className="effect-stack" data-testid="effect-stack">
+                    {effects.map((effect) => {
+                      const definition = effectDefinition(effect.type);
+                      const modulation = modulations.find((candidate) => candidate.effectId === effect.id) ?? null;
+                      return (
+                        <article
+                          key={effect.id}
+                          className={'effect-row ' + (effect.enabled ? '' : 'is-disabled')}
+                          data-effect-type={effect.type}
+                        >
+                          <div className="effect-row-header">
+                            <label className="effect-enable">
+                              <input
+                                type="checkbox"
+                                checked={effect.enabled}
+                                aria-label={'Enable ' + definition.name}
+                                onChange={(event) => setEffects((current) =>
+                                  setEffectEnabled(current, effect.id, event.target.checked)
+                                )}
+                              />
+                              <span>{definition.name}</span>
+                            </label>
+                            <div className="effect-order-actions">
+                              <button
+                                type="button"
+                                aria-label={'Move ' + definition.name + ' up'}
+                                disabled={!canMoveEffectWithinTarget(effects, effect.id, -1)}
+                                onClick={() => moveEffect(effect.id, -1)}
+                              >↑</button>
+                              <button
+                                type="button"
+                                aria-label={'Move ' + definition.name + ' down'}
+                                disabled={!canMoveEffectWithinTarget(effects, effect.id, 1)}
+                                onClick={() => moveEffect(effect.id, 1)}
+                              >↓</button>
+                              <button
+                                type="button"
+                                aria-label={'Remove ' + definition.name}
+                                onClick={() => removeEffect(effect.id)}
+                              >×</button>
+                            </div>
+                          </div>
+
+                          <div className="effect-row-controls">
+                            <label>
+                              <span>Target</span>
+                              <select
+                                aria-label={definition.name + ' target'}
+                                value={effect.target}
+                                disabled={definition.targets.length === 1}
+                                onChange={(event) => setEffects((current) =>
+                                  setEffectTarget(current, effect.id, event.target.value as VisualTarget)
+                                )}
+                              >
+                                {definition.targets.map((target) => (
+                                  <option key={target} value={target}>{target}</option>
+                                ))}
+                              </select>
+                            </label>
+
+                            <label>
+                              <span>Driver</span>
+                              <select
+                                aria-label={definition.name + ' driver'}
+                                value={modulation?.driver ?? 'static'}
+                                onChange={(event) => setEffectDriver(
+                                  effect,
+                                  event.target.value as ModulationDriver | 'static',
+                                )}
+                              >
+                                <option value="static">Static</option>
+                                {definition.drivers.map((driver) => (
+                                  <option key={driver} value={driver}>{driver}</option>
+                                ))}
+                              </select>
+                            </label>
+                          </div>
+
+                          <label className="range-control effect-strength">
+                            <span>
+                              <span>Strength</span>
+                              <output>{Math.round(effect.strength * 100)}%</output>
+                            </span>
+                            <input
+                              aria-label={definition.name + ' strength'}
+                              type="range"
+                              min={0}
+                              max={1}
+                              step={0.05}
+                              value={effect.strength}
+                              onChange={(event) => setEffects((current) =>
+                                setEffectStrength(current, effect.id, Number(event.target.value))
+                              )}
+                            />
+                          </label>
+                        </article>
+                      );
+                    })}
+                  </div>
+                )}
+              </section>
+            ) : null}
+
+
+            {inspectorTab === 'text' ? (
+              <section className="property-surface text-brand-surface" data-testid="inspector-text">
+                <div className="property-section-heading">
+                  <div>
+                    <strong>Title</strong>
+                    <span>Edit the selected title and place it directly on the preview.</span>
+                  </div>
+                </div>
+                <label className="control inspector-primary-field">
+                  <span className="field-label">Title</span>
+                  <input
+                    name="title"
+                    data-testid="title-input"
+                    value={title}
+                    maxLength={80}
+                    placeholder="Beat title"
+                    onChange={(event) => setTitle(event.target.value)}
+                  />
+                </label>
+                <SelectControl
+                  label="Font"
+                  value={titleFont}
+                  onChange={setTitleFont}
+                  testId="title-font"
+                  options={[
+                    { value: 'clean', label: 'Clean grotesk' },
+                    { value: 'condensed', label: 'Condensed' },
+                    { value: 'serif', label: 'Editorial serif' },
+                    { value: 'mono', label: 'Technical mono' },
+                  ]}
+                />
+                <label className="range-control">
+                  <span><span>Size</span><output>{titleSize}px</output></span>
+                  <input
+                    data-testid="title-size"
+                    type="range"
+                    min={36}
+                    max={86}
+                    value={titleSize}
+                    onChange={(event) => setTitleSize(Number(event.target.value))}
+                  />
+                </label>
+                <label className="range-control">
+                  <span><span>Tracking</span><output>{titleTracking >= 0 ? '+' : ''}{titleTracking}px</output></span>
+                  <input
+                    data-testid="title-tracking"
+                    type="range"
+                    min={-2}
+                    max={8}
+                    step={1}
+                    value={titleTracking}
+                    onChange={(event) => setTitleTracking(Number(event.target.value))}
+                  />
+                </label>
+
+                <div className="placement-workbench">
+                  <div className="placement-heading">
+                    <span className="field-label">Position</span>
+                    <button
+                      type="button"
+                      className={'small-button place-title-button ' + (placingTitle ? 'is-active' : '')}
+                      data-testid="place-title"
+                      aria-pressed={placingTitle}
+                      onClick={() => {
+                        const nextPlacing = !placingTitle;
+                        setPlacingTitle(nextPlacing);
+                        if (nextPlacing) {
+                          setShowGuides(true);
+                          setShowGrid(true);
+                        }
+                      }}
+                    >
+                      {placingTitle ? 'Cancel' : 'Place on preview'}
+                    </button>
+                  </div>
+                  <div className="placement-tools">
+                    <div className="title-position-grid" data-testid="title-position-grid">
+                      {TITLE_PLACEMENT_KEYS.map((key) => {
+                        const placement = placementPreset(key);
+                        const active =
+                          Math.abs(titleX - placement.x) < 0.001
+                          && Math.abs(titleY - placement.y) < 0.001
+                          && titleAlign === placement.align;
+                        return (
+                          <button
+                            key={key}
+                            type="button"
+                            className={active ? 'is-active' : ''}
+                            data-testid={'title-position-' + key}
+                            aria-label={key.replace('-', ' ')}
+                            aria-pressed={active}
+                            onClick={() => applyTitlePlacement(key)}
                           >
-                            {definition.targets.map((target) => (
-                              <option key={target} value={target}>{target}</option>
-                            ))}
-                          </select>
-                        </label>
-
-                        <label>
-                          <span>Driver</span>
-                          <select
-                            aria-label={definition.name + ' driver'}
-                            value={modulation?.driver ?? 'static'}
-                            onChange={(event) => setEffectDriver(
-                              effect,
-                              event.target.value as ModulationDriver | 'static',
-                            )}
+                            <span />
+                          </button>
+                        );
+                      })}
+                    </div>
+                    <div className="title-align-control">
+                      <span className="field-label">Align</span>
+                      <div className="segmented-control" aria-label="Title alignment">
+                        {(['left', 'center', 'right'] as TitleAlign[]).map((align) => (
+                          <button
+                            key={align}
+                            type="button"
+                            data-testid={'title-align-' + align}
+                            className={titleAlign === align ? 'is-active' : ''}
+                            aria-pressed={titleAlign === align}
+                            onClick={() => setTitleAlign(align)}
                           >
-                            <option value="static">Static</option>
-                            {definition.drivers.map((driver) => (
-                              <option key={driver} value={driver}>{driver}</option>
-                            ))}
-                          </select>
-                        </label>
+                            {align === 'left' ? 'L' : align === 'center' ? 'C' : 'R'}
+                          </button>
+                        ))}
                       </div>
+                    </div>
+                  </div>
+                </div>
 
-                      <label className="range-control effect-strength">
-                        <span>
-                          <span>Strength</span>
-                          <output>{Math.round(effect.strength * 100)}%</output>
-                        </span>
+                <details className="property-disclosure" data-testid="advanced-position-disclosure">
+                  <summary>Advanced position</summary>
+                  <div className="coordinate-controls">
+                    <label className="compact-coordinate">
+                      <span>X</span>
+                      <input
+                        data-testid="title-x"
+                        type="number"
+                        min={2}
+                        max={98}
+                        step={0.1}
+                        value={Math.round(titleX * 1000) / 10}
+                        onChange={(event) => {
+                          const value = Number(event.target.value);
+                          if (Number.isFinite(value)) setTitleX(Math.max(0.02, Math.min(0.98, value / 100)));
+                        }}
+                      />
+                      <em>%</em>
+                    </label>
+                    <label className="compact-coordinate">
+                      <span>Y</span>
+                      <input
+                        data-testid="title-y"
+                        type="number"
+                        min={6}
+                        max={94}
+                        step={0.1}
+                        value={Math.round(titleY * 1000) / 10}
+                        onChange={(event) => {
+                          const value = Number(event.target.value);
+                          if (Number.isFinite(value)) setTitleY(Math.max(0.06, Math.min(0.94, value / 100)));
+                        }}
+                      />
+                      <em>%</em>
+                    </label>
+                  </div>
+                </details>
+
+                <details className="property-disclosure" data-testid="brand-disclosure">
+                  <summary>Brand / watermark</summary>
+                  <div className="disclosure-content">
+                    <label className="control inspector-primary-field">
+                      <span className="field-label">Producer / watermark</span>
+                      <input
+                        data-testid="brand-input"
+                        value={brandText}
+                        maxLength={60}
+                        placeholder="prod. name"
+                        disabled={Boolean(brandGraphic) && brandLayout === 'corner'}
+                        onChange={(event) => setBrandText(event.target.value)}
+                      />
+                    </label>
+                    <FileControl
+                      label="Graphic"
+                      detail={brandGraphicName}
+                      accept="image/png,image/svg+xml"
+                      testId="brand-graphic-input"
+                      onChange={handleBrandGraphic}
+                    />
+                    {brandGraphic ? (
+                      <button className="link-button" onClick={() => {
+                        setBrandGraphic(null);
+                        setBrandGraphicName('Text only');
+                      }}>
+                        Use text watermark instead
+                      </button>
+                    ) : null}
+                    <SelectControl
+                      label="Layout"
+                      value={brandLayout}
+                      onChange={setBrandLayout}
+                      testId="brand-layout"
+                      options={[
+                        { value: 'corner', label: 'Corner' },
+                        { value: 'grid', label: 'Watermark grid' },
+                      ]}
+                    />
+                    {brandLayout === 'corner' ? (
+                      <SelectControl
+                        label="Corner"
+                        value={brandPosition}
+                        onChange={setBrandPosition}
+                        options={[
+                          { value: 'top-right', label: 'Top right' },
+                          { value: 'top-left', label: 'Top left' },
+                          { value: 'bottom-right', label: 'Bottom right' },
+                          { value: 'bottom-left', label: 'Bottom left' },
+                        ]}
+                      />
+                    ) : null}
+                    <label className="range-control">
+                      <span><span>{brandLayout === 'grid' ? 'Grid strength' : 'Opacity'}</span><output>{Math.round(brandOpacity * 100)}%</output></span>
+                      <input
+                        data-testid="brand-opacity"
+                        type="range"
+                        min={0.2}
+                        max={1}
+                        step={0.05}
+                        value={brandOpacity}
+                        onChange={(event) => setBrandOpacity(Number(event.target.value))}
+                      />
+                    </label>
+                  </div>
+                </details>
+
+                <details className="property-disclosure" data-testid="templates-disclosure">
+                  <summary>Templates</summary>
+                  <div className="disclosure-content">
+                    <p className="control-hint">Save this look as an editable local template. Media is not embedded.</p>
+                    <div className="template-actions">
+                      <button
+                        type="button"
+                        className="small-button"
+                        data-testid="save-template"
+                        onClick={saveTemplateFile}
+                      >
+                        Save template
+                      </button>
+                      <label className="small-button">
+                        Open template
                         <input
-                          aria-label={definition.name + ' strength'}
-                          type="range"
-                          min={0}
-                          max={1}
-                          step={0.05}
-                          value={effect.strength}
-                          onChange={(event) => setEffects((current) =>
-                            setEffectStrength(current, effect.id, Number(event.target.value))
-                          )}
+                          data-testid="template-input"
+                          className="visually-hidden"
+                          type="file"
+                          accept=".json,application/json"
+                          onChange={(event) => {
+                            const file = event.currentTarget.files?.[0];
+                            if (file) void handleTemplate(file);
+                            event.currentTarget.value = '';
+                          }}
                         />
                       </label>
-                    </article>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-
-          <div className="control-group">
-            <h3>Text</h3>
-            <label className="control inspector-primary-field">
-              <span className="field-label">Title</span>
-              <input
-                name="title"
-                data-testid="title-input"
-                value={title}
-                maxLength={80}
-                placeholder="Beat title"
-                onChange={(event) => setTitle(event.target.value)}
-              />
-            </label>
-            <SelectControl
-              label="Font direction"
-              value={titleFont}
-              onChange={setTitleFont}
-              testId="title-font"
-              options={[
-                { value: 'clean', label: 'Clean grotesk' },
-                { value: 'condensed', label: 'Condensed' },
-                { value: 'serif', label: 'Editorial serif' },
-                { value: 'mono', label: 'Technical mono' },
-              ]}
-            />
-            <label className="range-control">
-              <span><span>Title size</span><output>{titleSize}px</output></span>
-              <input
-                data-testid="title-size"
-                type="range"
-                min={36}
-                max={86}
-                value={titleSize}
-                onChange={(event) => setTitleSize(Number(event.target.value))}
-              />
-            </label>
-            <label className="range-control">
-              <span><span>Tracking</span><output>{titleTracking >= 0 ? '+' : ''}{titleTracking}px</output></span>
-              <input
-                data-testid="title-tracking"
-                type="range"
-                min={-2}
-                max={8}
-                step={1}
-                value={titleTracking}
-                onChange={(event) => setTitleTracking(Number(event.target.value))}
-              />
-            </label>
-            <div className="title-placement-control">
-              <span className="field-label">Quick position</span>
-              <div className="title-position-grid" data-testid="title-position-grid">
-                {TITLE_PLACEMENT_KEYS.map((key) => {
-                  const placement = placementPreset(key);
-                  const active =
-                    Math.abs(titleX - placement.x) < 0.001
-                    && Math.abs(titleY - placement.y) < 0.001
-                    && titleAlign === placement.align;
-                  return (
-                    <button
-                      key={key}
-                      type="button"
-                      className={active ? 'is-active' : ''}
-                      data-testid={'title-position-' + key}
-                      aria-label={key.replace('-', ' ')}
-                      aria-pressed={active}
-                      onClick={() => applyTitlePlacement(key)}
-                    >
-                      <span />
+                    </div>
+                    {templateMessage ? (
+                      <p className="template-message" data-testid="template-message" role="status">{templateMessage}</p>
+                    ) : null}
+                    <button type="button" className="link-button" data-testid="reset-settings" onClick={resetStyle}>
+                      Reset style defaults
                     </button>
-                  );
-                })}
-              </div>
-              <button
-                type="button"
-                className={'small-button place-title-button ' + (placingTitle ? 'is-active' : '')}
-                data-testid="place-title"
-                aria-pressed={placingTitle}
-                onClick={() => {
-                  const nextPlacing = !placingTitle;
-                  setPlacingTitle(nextPlacing);
-                  if (nextPlacing) {
-                    setShowGuides(true);
-                    setShowGrid(true);
-                  }
-                }}
-              >
-                {placingTitle ? 'Cancel placement' : 'Place on canvas'}
-              </button>
-            </div>
-
-            <div className="title-align-control">
-              <span className="field-label">Alignment</span>
-              <div className="segmented-control" aria-label="Title alignment">
-                {(['left', 'center', 'right'] as TitleAlign[]).map((align) => (
-                  <button
-                    key={align}
-                    type="button"
-                    data-testid={'title-align-' + align}
-                    className={titleAlign === align ? 'is-active' : ''}
-                    aria-pressed={titleAlign === align}
-                    onClick={() => setTitleAlign(align)}
-                  >
-                    {align === 'left' ? 'L' : align === 'center' ? 'C' : 'R'}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div className="coordinate-controls">
-              <label className="compact-coordinate">
-                <span>X</span>
-                <input
-                  data-testid="title-x"
-                  type="number"
-                  min={2}
-                  max={98}
-                  step={0.1}
-                  value={Math.round(titleX * 1000) / 10}
-                  onChange={(event) => {
-                    const value = Number(event.target.value);
-                    if (Number.isFinite(value)) setTitleX(Math.max(0.02, Math.min(0.98, value / 100)));
-                  }}
-                />
-                <em>%</em>
-              </label>
-              <label className="compact-coordinate">
-                <span>Y</span>
-                <input
-                  data-testid="title-y"
-                  type="number"
-                  min={6}
-                  max={94}
-                  step={0.1}
-                  value={Math.round(titleY * 1000) / 10}
-                  onChange={(event) => {
-                    const value = Number(event.target.value);
-                    if (Number.isFinite(value)) setTitleY(Math.max(0.06, Math.min(0.94, value / 100)));
-                  }}
-                />
-                <em>%</em>
-              </label>
-            </div>
-          </div>
-
-          <div className="control-group">
-            <h3>Brand</h3>
-            <label className="control inspector-primary-field">
-              <span className="field-label">Producer / watermark</span>
-              <input
-                data-testid="brand-input"
-                value={brandText}
-                maxLength={60}
-                placeholder="prod. name"
-                disabled={Boolean(brandGraphic) && brandLayout === 'corner'}
-                onChange={(event) => setBrandText(event.target.value)}
-              />
-            </label>
-            <FileControl
-              label="Watermark graphic"
-              detail={brandGraphicName}
-              accept="image/png,image/svg+xml"
-              testId="brand-graphic-input"
-              onChange={handleBrandGraphic}
-            />
-            {brandGraphic && (
-              <button className="link-button" onClick={() => {
-                setBrandGraphic(null);
-                setBrandGraphicName('Text only');
-              }}>
-                Use text watermark instead
-              </button>
-            )}
-            <SelectControl
-              label="Layout"
-              value={brandLayout}
-              onChange={setBrandLayout}
-              testId="brand-layout"
-              options={[
-                { value: 'corner', label: 'Corner' },
-                { value: 'grid', label: 'Watermark grid' },
-              ]}
-            />
-            {brandLayout === 'corner' ? (
-              <SelectControl
-                label="Corner"
-                value={brandPosition}
-                onChange={setBrandPosition}
-                options={[
-                  { value: 'top-right', label: 'Top right' },
-                  { value: 'top-left', label: 'Top left' },
-                  { value: 'bottom-right', label: 'Bottom right' },
-                  { value: 'bottom-left', label: 'Bottom left' },
-                ]}
-              />
-            ) : (
-              <p className="control-hint">Grid repeats the text subtly across the sharp cover. Uploaded graphics stay available for Corner.</p>
-            )}
-            <label className="range-control">
-              <span><span>{brandLayout === 'grid' ? 'Grid strength' : 'Opacity'}</span><output>{Math.round(brandOpacity * 100)}%</output></span>
-              <input
-                data-testid="brand-opacity"
-                type="range"
-                min={0.2}
-                max={1}
-                step={0.05}
-                value={brandOpacity}
-                onChange={(event) => setBrandOpacity(Number(event.target.value))}
-              />
-            </label>
-          </div>
-
-          <div className="scope-note">
-            <strong>Templates</strong>
-            <p>Save this look as an editable local template. Source media is never embedded.</p>
-            <div className="template-actions">
-              <button
-                type="button"
-                className="small-button"
-                data-testid="save-template"
-                onClick={saveTemplateFile}
-              >
-                Save template
-              </button>
-              <label className="small-button">
-                Open template
-                <input
-                  data-testid="template-input"
-                  className="visually-hidden"
-                  type="file"
-                  accept=".json,application/json"
-                  onChange={(event) => {
-                    const file = event.currentTarget.files?.[0];
-                    if (file) void handleTemplate(file);
-                    event.currentTarget.value = '';
-                  }}
-                />
-              </label>
-            </div>
-            {templateMessage ? (
-              <p className="template-message" data-testid="template-message" role="status">{templateMessage}</p>
+                  </div>
+                </details>
+              </section>
             ) : null}
-            <button type="button" className="link-button" data-testid="reset-settings" onClick={resetStyle}>
-              Reset style defaults
-            </button>
           </div>
         </aside>
       </section>

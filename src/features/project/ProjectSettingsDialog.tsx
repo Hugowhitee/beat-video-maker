@@ -44,8 +44,8 @@ export function ProjectSettingsDialog(props: {
         <header className="dialog-header">
           <div>
             <span className="eyebrow">PROJECT</span>
-            <h2 id="project-settings-title">Output settings</h2>
-            <p>Change these any time. Preview and export use the same frame.</p>
+            <h2 id="project-settings-title">Project settings</h2>
+            <p>Output format, frame rate and canvas fill. Preview and export stay matched.</p>
           </div>
           <button
             type="button"
@@ -165,7 +165,7 @@ export function ProjectSettingsDialog(props: {
         ) : null}
 
         <div className="dialog-section">
-          <span className="field-label">Photo / video fill</span>
+          <span className="field-label">Background fill</span>
           <div className="fill-segmented" role="group" aria-label="Background fill">
             <button
               type="button"

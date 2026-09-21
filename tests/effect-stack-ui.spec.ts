@@ -12,6 +12,7 @@ test('three effects stack, reorder and participate in undo history', async ({ pa
   test.skip(testInfo.project.name !== 'desktop-normal', 'Effect editing is viewport-independent.');
 
   await page.goto('/?fixture=1');
+  await page.getByTestId('inspector-tab-effects').click();
   const canvas = page.getByTestId('preview-canvas');
   const before = await canvas.evaluate((node) => (node as HTMLCanvasElement).toDataURL('image/png'));
 
@@ -45,6 +46,7 @@ test('blur can target background or composite without leaving the curated effect
   test.skip(testInfo.project.name !== 'desktop-normal', 'Effect target editing is viewport-independent.');
 
   await page.goto('/?fixture=1');
+  await page.getByTestId('inspector-tab-effects').click();
   await page.getByTestId('effect-add-type').selectOption('blur');
   await page.getByTestId('effect-add').click();
 
