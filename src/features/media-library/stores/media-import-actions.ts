@@ -449,7 +449,7 @@ export function createImportActions(
 
       try {
         // Open file picker
-        const handles = await showMediaFilePicker({ multiple: true })
+        const handles = await showMediaFilePicker({ multiple: true, allowedKinds: options?.allowedKinds })
 
         event.set('fileCount', handles.length)
 
