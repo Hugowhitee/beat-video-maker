@@ -712,6 +712,7 @@ export const LoadedEditor = memo(function LoadedEditor({
       style={editorLayoutCssVars as import('react').CSSProperties}
       role="application"
       aria-label={t('editor.editor.appLabel')}
+      data-beatvideo-mode={beatvideoMode}
     >
       <AutoSaveController onSave={handleSave} />
       <TimelineShortcutsController />
@@ -826,7 +827,7 @@ export const LoadedEditor = memo(function LoadedEditor({
                         <MotionTimelineDock project={project} />
                       ) : (
                         <Suspense fallback={null}>
-                          <LazyTimeline duration={timelineDuration} />
+                          <LazyTimeline duration={timelineDuration} beatvideoMode={beatvideoMode} />
                         </Suspense>
                       )}
                     </div>
