@@ -80,9 +80,12 @@ test('manual grid verification clears the low-confidence review state', async ({
   const detail = page.getByTestId('waveform-detail');
   const box = await detail.boundingBox();
   expect(box).not.toBeNull();
-  await page.mouse.move(box!.x + box!.width * 0.5, box!.y + box!.height * 0.5);
-  await page.mouse.down();
-  await page.mouse.up();
+  await detail.click({
+    position: {
+      x: Math.max(1, box!.width * 0.5),
+      y: Math.max(1, box!.height * 0.5),
+    },
+  });
 
   await expect(page.getByTestId('bar-offset')).not.toContainText('not set');
   await expect(page.getByTestId('grid-confidence')).toContainText('Manual grid');
