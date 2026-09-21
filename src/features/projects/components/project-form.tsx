@@ -130,9 +130,9 @@ function ProjectFormBase({
           <input type="hidden" {...register('beatvideoMode')} />
           <div className="panel-bg border border-border rounded-lg p-5">
             <div className="mb-3">
-              <h2 className="text-sm font-semibold text-foreground">Beatvideo mode</h2>
+              <h2 className="text-sm font-semibold text-foreground">Project type</h2>
               <p className="mt-1 text-xs text-muted-foreground">
-                Choose the workflow first. Both use the same FreeCut project, renderer and export engine.
+                Choose what you are making. You can switch later without losing shared project settings.
               </p>
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
@@ -140,13 +140,13 @@ function ProjectFormBase({
                 {
                   id: 'photo' as const,
                   label: 'Photo',
-                  description: 'Hero image + beat. Focus on motion, effects, overlays and text.',
+                  description: 'Cover image + beat. Shape the look, motion, effects and text.',
                   icon: ImageIcon,
                 },
                 {
                   id: 'video' as const,
                   label: 'Video',
-                  description: 'Source footage, cuts, transitions, analysis and full manual editing.',
+                  description: 'Footage + beat. Cut clips, add transitions and use manual or assisted editing.',
                   icon: Clapperboard,
                 },
               ]).map((modeOption) => {
