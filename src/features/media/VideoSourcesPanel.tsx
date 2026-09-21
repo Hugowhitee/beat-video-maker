@@ -32,26 +32,23 @@ export function VideoSourcesPanel(props: {
 
   return (
     <section className="video-sources" aria-label="Video sources">
+      <input
+        className="visually-hidden"
+        data-testid="video-sources-input"
+        type="file"
+        accept="video/*,.mp4,.webm,.mov,.mkv"
+        multiple
+        onChange={(event) => {
+          const files = Array.from(event.currentTarget.files ?? []);
+          if (files.length > 0) props.onAddFiles(files);
+          event.currentTarget.value = '';
+        }}
+      />
       <div className="source-section-heading">
         <div>
           <strong>Video sources</strong>
           <span>Local footage for Loop · Guided · Auto</span>
         </div>
-        <label className="small-button">
-          Add videos
-          <input
-            className="visually-hidden"
-            data-testid="video-sources-input"
-            type="file"
-            accept="video/*,.mp4,.webm,.mov,.mkv"
-            multiple
-            onChange={(event) => {
-              const files = Array.from(event.currentTarget.files ?? []);
-              if (files.length > 0) props.onAddFiles(files);
-              event.currentTarget.value = '';
-            }}
-          />
-        </label>
       </div>
 
       {props.detector.state === 'loading' ? (
