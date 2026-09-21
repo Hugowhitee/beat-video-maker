@@ -405,6 +405,9 @@ export const LoadedEditor = memo(function LoadedEditor({
   const propertiesFullColumn = useEditorStore((s) => s.propertiesFullColumn)
   const mediaFullColumn = useEditorStore((s) => s.mediaFullColumn)
   const workspace = useEditorStore((s) => s.workspace)
+  const beatvideoMode = useProjectStore((state) =>
+    normalizeBeatvideoProjectMode(state.currentProject?.beatvideoMode ?? project.beatvideoMode),
+  )
   const isMaskEditingActive = useMaskEditorStore((s) => s.isEditing)
   const hasRefreshedMigrationStateRef = useRef(false)
   const timelinePanelRef = useRef<ImperativePanelHandle>(null)
@@ -795,7 +798,7 @@ export const LoadedEditor = memo(function LoadedEditor({
                         </Suspense>
                       )}
                     </div>
-                    <AudioMeterPanel />
+                    {beatvideoMode === 'video' ? <AudioMeterPanel /> : null}
                   </div>
                 </ErrorBoundary>
               </InteractionLockRegion>
