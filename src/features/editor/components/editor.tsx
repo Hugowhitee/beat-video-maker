@@ -53,6 +53,7 @@ import { EDITOR_WORKSPACE_TIMELINE_SIZE, type EditorWorkspaceId } from '@/config
 import {
   createProjectUpgradeBackup,
   formatProjectUpgradeBackupName,
+  updateStoredProject,
 } from '@/features/editor/deps/projects'
 import { useClearKeyframesDialogStore } from '@/shared/state/clear-keyframes-dialog'
 import { useTtsGenerateDialogStore } from '@/shared/state/tts-generate-dialog'
@@ -629,7 +630,11 @@ export const LoadedEditor = memo(function LoadedEditor({
       }
 
       try {
-        await useProjectStore.getState().updateProject(projectId, { beatvideoMode: nextMode })
+        await updateStoredProject(projectId, { beatvideoMode: nextMode })
+        const currentProject = useProjectStore.getState().currentProject
+        if (currentProject?.id === projectId) {
+          useProjectStore.getState().setCurrentProject({ ...currentProject, beatvideoMode: nextMode })
+        }
       } catch (error) {
         setBeatvideoMode(previousMode)
         logger.error('Failed to change Beatvideo mode:', error)
