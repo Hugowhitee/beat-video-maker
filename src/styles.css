@@ -308,7 +308,7 @@ select:focus-visible {
 
 .eyebrow {
   color: #9eb5c0;
-  font-size: 7px;
+  font-size: 8px;
   font-weight: 760;
   letter-spacing: 0.1em;
   text-transform: uppercase;
@@ -571,7 +571,7 @@ select:focus-visible {
   border-radius: 3px;
   background: rgba(24,28,30,0.9);
   color: #eef0ec;
-  font-size: 8px;
+  font-size: 9px;
   font-weight: 650;
   pointer-events: none;
   white-space: nowrap;
@@ -831,7 +831,7 @@ select:focus-visible {
   border-radius: 2px;
   background: #342015;
   color: #ffb087;
-  font-size: 8px;
+  font-size: 9px;
   line-height: 1;
   text-align: center;
 }
@@ -860,7 +860,7 @@ select:focus-visible {
 
 .bpm-editor > span:first-child {
   color: #9ea6a8;
-  font-size: 8px;
+  font-size: 9px;
   font-weight: 650;
   letter-spacing: 0.04em;
   text-transform: uppercase;
@@ -892,7 +892,7 @@ select:focus-visible {
 
 .bpm-field em {
   color: #9ea6a8;
-  font-size: 8px;
+  font-size: 9px;
   font-style: normal;
   letter-spacing: 0.06em;
 }
@@ -1033,7 +1033,7 @@ select:focus-visible {
 
 .export-status small {
   color: #90989a;
-  font-size: 8px;
+  font-size: 9px;
   line-height: 1.35;
 }
 
@@ -1315,7 +1315,7 @@ button.preset-card:hover {
 .scope-note p {
   margin: 5px 0 0;
   color: #687073;
-  font-size: 8px;
+  font-size: 9px;
   line-height: 1.5;
 }
 
@@ -1362,7 +1362,7 @@ button.preset-card:hover {
 }
 
 .render-progress-heading strong { font-size: 9px; }
-.render-progress-heading span { color: #a4adaf; font-size: 8px; }
+.render-progress-heading span { color: #a4adaf; font-size: 9px; }
 .render-progress-heading b {
   font-size: 10px;
   font-variant-numeric: tabular-nums;
@@ -1390,7 +1390,7 @@ button.preset-card:hover {
 
 .render-progress-footer > span {
   color: #8e9799;
-  font-size: 7px;
+  font-size: 8px;
 }
 
 .render-progress-footer .small-button {
@@ -1487,7 +1487,7 @@ button.preset-card:hover {
 }
 
 .format-grid button strong { font-size: 9px; }
-.format-grid button span { color: #70787a; font-size: 8px; }
+.format-grid button span { color: #70787a; font-size: 9px; }
 
 .format-grid button.is-active {
   border-color: #587b8e;
@@ -1533,7 +1533,7 @@ button.preset-card:hover {
 
 .custom-size-row label > span {
   color: #667073;
-  font-size: 8px;
+  font-size: 9px;
 }
 
 .fill-segmented {
@@ -1565,7 +1565,7 @@ button.preset-card:hover {
 .dialog-hint {
   margin: 0;
   color: #747c7f;
-  font-size: 8px;
+  font-size: 9px;
   line-height: 1.45;
 }
 
@@ -1587,7 +1587,7 @@ button.preset-card:hover {
 
 .dialog-footer span {
   color: #747c7f;
-  font-size: 8px;
+  font-size: 9px;
 }
 
 @media (max-width: 1180px) {
@@ -1669,7 +1669,7 @@ button.preset-card:hover {
   background: var(--control);
   color: #eef0ec;
   padding: 5px 6px;
-  font-size: 8px;
+  font-size: 9px;
   color-scheme: dark;
 }
 
@@ -1737,7 +1737,7 @@ button.preset-card:hover {
 .effect-row > p {
   margin: 5px 0 7px;
   color: #737b7d;
-  font-size: 8px;
+  font-size: 9px;
   line-height: 1.35;
 }
 
@@ -1755,7 +1755,7 @@ button.preset-card:hover {
 
 .effect-row-controls label > span {
   color: #667073;
-  font-size: 7px;
+  font-size: 8px;
   font-weight: 650;
   text-transform: uppercase;
   letter-spacing: 0.04em;
@@ -1790,7 +1790,7 @@ button.preset-card:hover {
 
 .source-section-heading strong {
   color: #313638;
-  font-size: 9px;
+  font-size: 10px;
   font-weight: 720;
 }
 
@@ -1798,7 +1798,7 @@ button.preset-card:hover {
 .source-empty,
 .source-local-note {
   color: #737b7d;
-  font-size: 8px;
+  font-size: 9px;
   line-height: 1.4;
 }
 
@@ -1831,18 +1831,18 @@ button.preset-card:hover {
 
 .detector-status strong {
   color: #313638;
-  font-size: 8px;
+  font-size: 9px;
 }
 
 .detector-status small {
   color: #677073;
-  font-size: 7px;
+  font-size: 8px;
   line-height: 1.35;
 }
 
 .activity-spinner {
-  width: 11px;
-  height: 11px;
+  width: 13px;
+  height: 13px;
   flex: 0 0 auto;
   border: 1px solid #8e9899;
   border-top-color: var(--steel);
@@ -1891,25 +1891,25 @@ button.preset-card:hover {
   text-overflow: ellipsis;
   white-space: nowrap;
   color: #303537;
-  font-size: 8px;
+  font-size: 9px;
   font-weight: 720;
 }
 
 .video-source-name span {
   color: #727a7c;
-  font-size: 7px;
+  font-size: 8px;
   font-variant-numeric: tabular-nums;
 }
 
 .video-source-main select {
   min-width: 0;
-  height: 26px;
+  height: 28px;
   border: 1px solid #7f8788;
   border-radius: 2px;
   background: var(--control);
   color: #eef0ec;
   padding: 3px 4px;
-  font-size: 7px;
+  font-size: 8px;
   color-scheme: dark;
 }
 
@@ -1919,7 +1919,7 @@ button.preset-card:hover {
   align-items: center;
   gap: 5px;
   color: #687174;
-  font-size: 7px;
+  font-size: 8px;
 }
 
 .video-source-state > span:last-child {
@@ -1929,8 +1929,8 @@ button.preset-card:hover {
 }
 
 .source-state-dot {
-  width: 5px;
-  height: 5px;
+  width: 6px;
+  height: 6px;
   flex: 0 0 auto;
   border-radius: 50%;
   background: #90989a;
@@ -1965,7 +1965,7 @@ button.preset-card:hover {
   background: transparent;
   color: #52778a;
   cursor: pointer;
-  font-size: 7px;
+  font-size: 8px;
   font-weight: 650;
 }
 
