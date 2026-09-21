@@ -9,7 +9,11 @@ test('authoring controls stay grouped in Inspector instead of Sources', async ({
   const sources = page.getByRole('complementary', { name: 'Sources' });
   const inspector = page.getByRole('complementary', { name: 'Inspector' });
 
+  await expect(inspector.getByTestId('inspector-look')).toBeVisible();
+  await inspector.getByTestId('inspector-tab-text').click();
   await expect(inspector.getByTestId('title-input')).toBeVisible();
+  const brandDisclosure = inspector.getByTestId('brand-disclosure');
+  await brandDisclosure.locator('summary').click();
   await expect(inspector.getByTestId('brand-input')).toBeVisible();
   await expect(inspector.getByTestId('brand-graphic-input')).toHaveCount(1);
   await expect(sources.getByTestId('title-input')).toHaveCount(0);
@@ -22,9 +26,11 @@ test('project output settings drive the real preview geometry', async ({ page },
   await page.goto('/?fixture=1');
 
   const outputButton = page.getByTestId('output-settings-button');
+  const projectButton = page.getByTestId('project-settings-trigger');
   await expect(outputButton).toContainText('1920×1080 · 30 fps');
+  await expect(projectButton).toBeVisible();
 
-  await outputButton.click();
+  await projectButton.click();
   await expect(page.getByTestId('project-settings-dialog')).toBeVisible();
   await page.getByTestId('output-format-shorts').click();
   await page.getByTestId('output-fps').selectOption('60');
