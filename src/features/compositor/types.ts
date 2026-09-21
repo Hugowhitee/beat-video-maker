@@ -24,6 +24,7 @@ export type CompositionSettings = {
   brandOpacity: number;
   preset: VisualPreset;
   motion: MotionAmount;
+  backgroundFill: BackgroundFill;
   effects?: VisualEffectInstance[];
   modulations?: EffectModulation[];
   showGuides: boolean;
