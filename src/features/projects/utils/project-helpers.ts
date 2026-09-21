@@ -138,6 +138,7 @@ export function getUniqueFps(projects: Project[]): number[] {
  */
 export function createProjectObject(
   formData: {
+    beatvideoMode: 'photo' | 'video'
     name: string
     description?: string
     width: number
@@ -152,6 +153,7 @@ export function createProjectObject(
     id: id || generateProjectId(),
     name: formData.name,
     description: formData.description || '',
+    beatvideoMode: formData.beatvideoMode,
     metadata: {
       width: formData.width,
       height: formData.height,
