@@ -1220,9 +1220,17 @@ function App() {
         260,
       )
     : [];
-  const detailBeatMarkers = beatMarkers.filter(
-    (time) => time >= detailStart && time <= detailEnd,
-  );
+  const beatSeconds = effectiveBpm ? 60 / effectiveBpm : null;
+  const detailGridMarkers = beatMarkers
+    .filter((time) => time >= detailStart && time <= detailEnd)
+    .map((time) => {
+      if (manualBarOffset === null || beatSeconds === null) {
+        return { time, beatInBar: null as number | null };
+      }
+      const beatIndex = Math.round((time - manualBarOffset) / beatSeconds);
+      const beatInBar = ((beatIndex % 4) + 4) % 4 + 1;
+      return { time, beatInBar };
+    });
   const overviewViewportLeft = duration > 0 ? detailStart / duration * 100 : 0;
   const overviewViewportWidth = duration > 0 ? detailSpan / duration * 100 : 100;
   const detailPlayheadLeft = detailEnd > detailStart
@@ -1594,14 +1602,16 @@ function App() {
                     ))}
                   </div>
                   <div className="beat-markers detail-beat-markers" aria-hidden="true">
-                    {detailBeatMarkers.map((time, index) => (
+                    {detailGridMarkers.map((marker, index) => (
                       <span
                         key={index}
-                        className={isBarMarker(time) ? 'is-bar' : ''}
+                        className={marker.beatInBar === 1 ? 'is-bar' : ''}
                         style={{
-                          left: ((time - detailStart) / Math.max(detailEnd - detailStart, 0.001) * 100) + '%',
+                          left: ((marker.time - detailStart) / Math.max(detailEnd - detailStart, 0.001) * 100) + '%',
                         }}
-                      />
+                      >
+                        {marker.beatInBar !== null ? <b>{marker.beatInBar}</b> : null}
+                      </span>
                     ))}
                   </div>
                   <span
