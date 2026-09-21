@@ -12,6 +12,8 @@ import { useSelectionStore } from '@/shared/state/selection'
 import { useEditorStore } from '@/shared/state/editor'
 import { useTimelineStore } from '../stores/timeline-store'
 import { useSettingsStore } from '@/features/timeline/deps/settings'
+import { useProjectStore } from '@/features/timeline/deps/projects'
+import { normalizeBeatvideoProjectMode } from '@/shared/beatvideo/product-mode'
 
 import { Button } from '@/components/ui/button'
 import {
@@ -84,6 +86,10 @@ interface TimelineProps {
  */
 export const Timeline = memo(function Timeline({ duration }: TimelineProps) {
   const { t } = useTranslation()
+  const beatvideoMode = useProjectStore((state) =>
+    normalizeBeatvideoProjectMode(state.currentProject?.beatvideoMode),
+  )
+  const isPhotoMode = beatvideoMode === 'photo'
   const editorDensity = useSettingsStore((s) => s.editorDensity)
   const editorLayout = getEditorLayout(editorDensity)
   const {
@@ -842,6 +848,7 @@ export const Timeline = memo(function Timeline({ duration }: TimelineProps) {
               >
                 <TrackHeader
                   track={track}
+                  compact={isPhotoMode}
                   isActive={activeTrackId === track.id}
                   isSelected={selectedTrackIdsSet.has(track.id)}
                   canDeleteTrack={tracks.length > 1}
@@ -909,6 +916,7 @@ export const Timeline = memo(function Timeline({ duration }: TimelineProps) {
       className="timeline-bg h-full border-t border-border flex flex-col overflow-hidden"
       role="region"
       aria-label={t('timeline.region')}
+      data-beatvideo-mode={beatvideoMode}
     >
       {/* Timeline Header */}
       <TimelineHeader
@@ -918,11 +926,15 @@ export const Timeline = memo(function Timeline({ duration }: TimelineProps) {
         onZoomToFit={zoomHandlers?.handleZoomToFit}
       />
 
-      {/* Standalone-timeline (sequence) tabs — Main + top-level sequences */}
-      <SequenceTabs />
+      {!isPhotoMode ? (
+        <>
+          {/* Standalone-timeline (sequence) tabs — Main + top-level sequences */}
+          <SequenceTabs />
 
-      {/* Composition Breadcrumbs - shown when inside a sub-composition */}
-      <CompositionBreadcrumbs />
+          {/* Composition Breadcrumbs - shown when inside a sub-composition */}
+          <CompositionBreadcrumbs />
+        </>
+      ) : null}
 
       {/* Timeline Content */}
       <div
@@ -935,6 +947,17 @@ export const Timeline = memo(function Timeline({ duration }: TimelineProps) {
           style={{ width: EDITOR_LAYOUT_CSS_VALUES.timelineSidebarWidth }}
         >
           {/* Tracks label with controls */}
+          {isPhotoMode ? (
+            <div
+              className="flex items-center px-3 border-b border-border bg-secondary/20 flex-shrink-0"
+              style={{ height: EDITOR_LAYOUT_CSS_VALUES.timelineTracksHeaderHeight }}
+            >
+              <span className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">
+                Layers
+              </span>
+            </div>
+          ) : (
+            <>
           <div
             className="flex items-center justify-between px-3 border-b border-border bg-secondary/20 flex-shrink-0"
             style={{ height: EDITOR_LAYOUT_CSS_VALUES.timelineTracksHeaderHeight }}
@@ -1013,6 +1036,9 @@ export const Timeline = memo(function Timeline({ duration }: TimelineProps) {
               </Button>
             </div>
           </div>
+
+            </>
+          )}
 
           {/* Track labels - synced scroll (no scrollbar) */}
           <div ref={trackHeadersViewportRef} className="flex-1 overflow-hidden relative">
