@@ -12,10 +12,6 @@ export function BeatvideoPhotoQuickStart() {
   const itemCount = useTimelineStore((state) => state.items.length)
   const [busy, setBusy] = useState(false)
 
-  if (itemCount > 0) {
-    return null
-  }
-
   const handleChoose = async () => {
     if (busy) return
     setBusy(true)
@@ -26,15 +22,17 @@ export function BeatvideoPhotoQuickStart() {
       })
       if (imported.length === 0) return
 
-      const project = useProjectStore.getState().currentProject
-      const result = await setupBeatvideoPhotoTimeline({
-        importedMedia: imported,
-        width: project?.metadata.width ?? DEFAULT_PROJECT_WIDTH,
-        height: project?.metadata.height ?? DEFAULT_PROJECT_HEIGHT,
-      })
+      if (itemCount === 0) {
+        const project = useProjectStore.getState().currentProject
+        const result = await setupBeatvideoPhotoTimeline({
+          importedMedia: imported,
+          width: project?.metadata.width ?? DEFAULT_PROJECT_WIDTH,
+          height: project?.metadata.height ?? DEFAULT_PROJECT_HEIGHT,
+        })
 
-      if (result.status === 'unresolved-media') {
-        toast.error('Media was imported, but could not be placed on the timeline.')
+        if (result.status === 'unresolved-media') {
+          toast.error('Media was imported, but could not be placed on the timeline.')
+        }
       }
     } catch (error) {
       toast.error('Could not add cover and beat.', {
@@ -60,9 +58,11 @@ export function BeatvideoPhotoQuickStart() {
           <ImagePlus className="h-4 w-4 shrink-0" />
         )}
         <span className="min-w-0">
-          <span className="block text-sm font-medium">Cover + beat</span>
+          <span className="block text-sm font-medium">
+            {itemCount === 0 ? 'Cover + beat' : 'Add media'}
+          </span>
           <span className="block text-xs font-normal text-muted-foreground">
-            Choose an image and audio file
+            {itemCount === 0 ? 'Choose an image and audio file' : 'Images or audio'}
           </span>
         </span>
       </Button>
