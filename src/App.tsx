@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type {
+  CSSProperties,
   ChangeEvent,
+  DragEvent as ReactDragEvent,
   MouseEvent as ReactMouseEvent,
   PointerEvent as ReactPointerEvent,
 } from 'react';
@@ -58,6 +60,16 @@ import {
 import type { TitlePlacementKey } from './features/project/titlePlacement';
 import { VideoSourcesPanel } from './features/media/VideoSourcesPanel';
 import { useVideoSources } from './features/media/useVideoSources';
+import { classifyMediaFiles } from './features/media/classifyMediaFiles';
+import { ProjectSettingsDialog } from './features/project/ProjectSettingsDialog';
+import {
+  DEFAULT_PROJECT_OUTPUT,
+  loadProjectOutputSettings,
+  previewCanvasSize,
+  resolveProjectOutput,
+  saveProjectOutputSettings,
+} from './features/project/projectSettings';
+import type { ProjectOutputSettings } from './features/project/projectSettings';
 import {
   createDefaultModulation,
   createEffectInstance,
@@ -82,6 +94,9 @@ import {
 
 const fixtureMode = new URLSearchParams(window.location.search).has('fixture');
 const storedSettings = fixtureMode ? DEFAULT_USER_SETTINGS : loadUserSettings();
+const storedProjectOutput = fixtureMode
+  ? DEFAULT_PROJECT_OUTPUT
+  : loadProjectOutputSettings();
 
 const PRESET_LABELS: Record<VisualPreset, string> = {
   clean: 'Clean',
@@ -187,6 +202,7 @@ function App() {
   const gridDragPointerRef = useRef<number | null>(null);
   const exportAbortRef = useRef<AbortController | null>(null);
   const audioLoadIdRef = useRef(0);
+  const mediaInputRef = useRef<HTMLInputElement>(null);
 
   const [cover, setCover] = useState<CanvasImageSource | null>(() => fixtureMode ? makeFixtureCover() : null);
   const [coverName, setCoverName] = useState(fixtureMode ? 'visual-qa-fixture' : 'No image');
@@ -214,6 +230,9 @@ function App() {
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [mediaMessage, setMediaMessage] = useState('');
+  const [projectOutput, setProjectOutput] = useState<ProjectOutputSettings>(storedProjectOutput);
+  const [projectSettingsOpen, setProjectSettingsOpen] = useState(false);
+  const [mediaDragActive, setMediaDragActive] = useState(false);
   const [capability, setCapability] = useState<ExportCapability>({
     supported: false,
     container: null,
@@ -226,7 +245,7 @@ function App() {
   const [exportState, setExportState] = useState<'idle' | 'exporting' | 'done' | 'error' | 'cancelled'>('idle');
   const [exportProgress, setExportProgress] = useState(0);
   const [exportMessage, setExportMessage] = useState('');
-  const [analysisState, setAnalysisState] = useState<'idle' | 'analyzing' | 'ready' | 'error'>('idle');
+  const [analysisState, setAnalysisState] = useState<'idle' | 'decoding' | 'analyzing' | 'ready' | 'error'>('idle');
   const [analysis, setAnalysis] = useState<BeatGridAnalysis | null>(null);
   const [manualBpm, setManualBpm] = useState<string | null>(null);
   const [manualBarOffset, setManualBarOffset] = useState<number | null>(null);
