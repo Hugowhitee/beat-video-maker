@@ -774,11 +774,6 @@ select:focus-visible {
   transition: outline-color 100ms ease, background-color 100ms ease;
 }
 
-.waveform-shell.is-grid-editing {
-  cursor: crosshair;
-  outline-color: #7598a8;
-  background: #242d31;
-}
 
 .waveform {
   height: 64px;
