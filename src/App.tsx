@@ -56,6 +56,8 @@ import {
   TITLE_PLACEMENT_KEYS,
 } from './features/project/titlePlacement';
 import type { TitlePlacementKey } from './features/project/titlePlacement';
+import { VideoSourcesPanel } from './features/media/VideoSourcesPanel';
+import { useVideoSources } from './features/media/useVideoSources';
 import {
   createDefaultModulation,
   createEffectInstance,
@@ -236,6 +238,7 @@ function App() {
   const [effects, setEffects] = useState<VisualEffectInstance[]>(storedSettings.effects);
   const [modulations, setModulations] = useState<EffectModulation[]>(storedSettings.modulations);
   const [effectToAdd, setEffectToAdd] = useState<EffectType>('zoom-punch');
+  const videoSources = useVideoSources();
   const [historyState, setHistoryState] = useState({ canUndo: false, canRedo: false });
   const [installPrompt, setInstallPrompt] = useState<BeforeInstallPromptEvent | null>(null);
   const [installHelpOpen, setInstallHelpOpen] = useState(false);
@@ -1046,6 +1049,16 @@ function App() {
 
           <FileControl label="Cover image" detail={coverName} accept="image/png,image/jpeg,image/webp" testId="cover-input" onChange={handleCover} />
           <FileControl label="Beat" detail={audioName} accept="audio/*,.wav,.mp3,.m4a,.flac" testId="audio-input" onChange={handleAudio} />
+
+          <VideoSourcesPanel
+            items={videoSources.items}
+            detector={videoSources.detector}
+            onAddFiles={videoSources.addFiles}
+            onCancel={videoSources.cancel}
+            onRetry={videoSources.retry}
+            onRemove={videoSources.remove}
+            onRole={videoSources.setRole}
+          />
 
           <label className="control">
             <span className="field-label">Title</span>
