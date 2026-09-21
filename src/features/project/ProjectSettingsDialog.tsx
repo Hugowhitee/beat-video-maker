@@ -35,18 +35,10 @@ export function ProjectSettingsDialog(props: {
       : null;
     dialogRef.current?.focus();
 
-    const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key !== 'Escape') return;
-      event.preventDefault();
-      props.onClose();
-    };
-    window.addEventListener('keydown', onKeyDown);
-
     return () => {
-      window.removeEventListener('keydown', onKeyDown);
       previousFocus?.focus();
     };
-  }, [props.onClose]);
+  }, []);
 
   return (
     <div
@@ -62,6 +54,11 @@ export function ProjectSettingsDialog(props: {
         role="dialog"
         tabIndex={-1}
         aria-modal="true"
+        onKeyDown={(event) => {
+          if (event.key !== 'Escape') return;
+          event.preventDefault();
+          props.onClose();
+        }}
         aria-labelledby="project-settings-title"
         data-testid="project-settings-dialog"
       >
