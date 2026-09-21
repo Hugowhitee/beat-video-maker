@@ -31,7 +31,10 @@ import { cn } from '@/shared/ui/cn'
 import { useDebugStore } from '@/features/editor/stores/debug-store'
 import { useTimelineStore } from '@/features/editor/deps/timeline-store'
 import { BeatvideoModeSwitcher } from './beatvideo-mode-switcher'
-import type { BeatvideoProjectMode } from '@/shared/beatvideo/product-mode'
+import {
+  normalizeBeatvideoProjectMode,
+  type BeatvideoProjectMode,
+} from '@/shared/beatvideo/product-mode'
 
 const SAVE_ANIMATION_MIN_MS = 1800
 
@@ -50,7 +53,7 @@ interface ToolbarProps {
     width: number
     height: number
     fps: number
-    beatvideoMode: BeatvideoProjectMode
+    beatvideoMode?: BeatvideoProjectMode
   }
   onSave?: () => Promise<void>
   onExport?: () => void
@@ -162,7 +165,7 @@ export const Toolbar = memo(function Toolbar({
       </div>
 
       <div className="flex flex-1 items-center justify-center">
-        <BeatvideoModeSwitcher projectId={projectId} fallbackMode={project.beatvideoMode} />
+        <BeatvideoModeSwitcher projectId={projectId} fallbackMode={normalizeBeatvideoProjectMode(project.beatvideoMode)} />
       </div>
 
       <ShortcutsDialog open={showShortcutsDialog} onOpenChange={setShowShortcutsDialog} />
