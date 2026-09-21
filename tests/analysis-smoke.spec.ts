@@ -80,8 +80,11 @@ test('manual grid verification clears the low-confidence review state', async ({
   const detail = page.getByTestId('waveform-detail');
   const box = await detail.boundingBox();
   expect(box).not.toBeNull();
-  await page.mouse.click(box!.x + box!.width * 0.5, box!.y + box!.height * 0.5);
+  await page.mouse.move(box!.x + box!.width * 0.5, box!.y + box!.height * 0.5);
+  await page.mouse.down();
+  await page.mouse.up();
 
+  await expect(page.getByTestId('bar-offset')).not.toContainText('not set');
   await expect(page.getByTestId('grid-confidence')).toContainText('Manual grid');
   await expect(page.getByTestId('analysis-attention')).toHaveCount(0);
 
@@ -172,12 +175,13 @@ test('detail waveform follows the playhead and exposes bounded zoom windows', as
 
   await expect(page.getByTestId('bpm-input')).not.toHaveValue('', { timeout: 30_000 });
 
-  const seek = page.getByTestId('seek-input');
-  await seek.evaluate((node) => {
-    const input = node as HTMLInputElement;
-    input.value = '8';
-    input.dispatchEvent(new Event('change', { bubbles: true }));
-  });
+  const overviewBeforeEdit = page.getByTestId('waveform-editor');
+  const overviewBeforeEditBox = await overviewBeforeEdit.boundingBox();
+  expect(overviewBeforeEditBox).not.toBeNull();
+  await page.mouse.click(
+    overviewBeforeEditBox!.x + overviewBeforeEditBox!.width * 0.4,
+    overviewBeforeEditBox!.y + overviewBeforeEditBox!.height * 0.5,
+  );
 
   await page.getByTestId('grid-edit-toggle').click();
   const detail = page.getByTestId('waveform-detail');
