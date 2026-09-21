@@ -256,7 +256,7 @@ export const Toolbar = memo(function Toolbar({
           })}
         </div>
         <Separator orientation="vertical" className="h-5" />
-        <WorkspaceSwitcher />
+        <WorkspaceSwitcher beatvideoMode={beatvideoMode} />
       </div>
 
       <LocalInferenceStatusPill />
