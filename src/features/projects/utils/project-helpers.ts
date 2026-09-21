@@ -1,7 +1,7 @@
 import { CURRENT_SCHEMA_VERSION } from '@/shared/projects/migrations'
 import { i18n } from '@/i18n'
 import type { Project } from '@/types/project'
-import { DEFAULT_BEATVIDEO_PROJECT_MODE } from '@/features/beatvideo/product-mode'
+import { DEFAULT_BEATVIDEO_PROJECT_MODE } from '@/shared/beatvideo/product-mode'
 
 /**
  * Generate a unique project ID (8-character base62 hash)
