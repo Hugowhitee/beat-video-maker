@@ -96,7 +96,7 @@ export function useVideoSources() {
     file: File,
     controller: AbortController,
   ) => {
-    if (removedRef.current.has(id)) return;
+    if (removedRef.current.has(id) || controller.signal.aborted) return;
 
     patch(id, (item) => ({
       ...item,
