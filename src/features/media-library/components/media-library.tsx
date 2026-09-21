@@ -1007,12 +1007,12 @@ export const MediaLibrary = memo(function MediaLibrary({ onMediaSelect }: MediaL
         </div>
       )}
 
-      {(beatvideoMode === 'video' || mediaGroups.length > 0) ? (
       {/* Search + view toggle always render so the toggle stays reachable
           in Scene mode. The search input and the filter row below only scope
           the media-library grid, so they're hidden when the Scene browser is
           mounted (it has its own search). */}
-      <div className="px-4 pt-3 pb-2 space-y-2 flex-shrink-0">
+      {(beatvideoMode === 'video' || mediaGroups.length > 0) ? (
+        <div className="px-4 pt-3 pb-2 space-y-2 flex-shrink-0">
         {/* Search + Media/Scenes toggle group */}
         <div className="@container flex items-center gap-2">
           {!sceneBrowserOpen && (
