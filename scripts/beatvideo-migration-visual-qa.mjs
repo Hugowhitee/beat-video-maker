@@ -71,7 +71,7 @@ async function main() {
       page.on('pageerror', (error) => pageErrors.push(error.message))
 
       await page.goto(`${BASE_URL}/projects/new?beatvideoVisualQa=1`, {
-        waitUntil: 'networkidle',
+        waitUntil: 'domcontentloaded',
       })
 
       const photoMode = page.getByRole('tab', { name: 'Photo' })
@@ -159,7 +159,7 @@ async function main() {
 
       // The mode switch is project state, not temporary UI state. A reload must
       // reopen the same workflow so users never land in the wrong editor.
-      await page.reload({ waitUntil: 'networkidle' })
+      await page.reload({ waitUntil: 'domcontentloaded' })
       await page.getByRole('application').waitFor({ state: 'visible' })
       await page.getByRole('tab', { name: 'Video' }).waitFor({ state: 'visible' })
       await page.waitForFunction(() => {
