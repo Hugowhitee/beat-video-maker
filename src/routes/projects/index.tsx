@@ -36,7 +36,7 @@ import { LegacyMigrationBanner } from '@/features/projects/components/legacy-mig
 import { LegacyMigrationErrors } from '@/features/projects/components/legacy-migration-errors'
 import { TrashSection } from '@/features/projects/components/trash-section'
 import { WorkspaceIndicator } from '@/features/workspace-gate'
-import { normalizeBeatvideoProjectMode } from '@/features/beatvideo/product-mode'
+import { normalizeBeatvideoProjectMode } from '@/shared/beatvideo/product-mode'
 
 export const Route = createFileRoute('/projects/')({
   component: ProjectsIndex,
