@@ -69,21 +69,21 @@ function ProjectsIndex() {
   const PROJECTS_FOLDER_NAME = 'BeatvideoProjects'
 
   // Extract project name from bundle filename
-  // Handles both "myproject.freecut.zip" and browser-renamed "myproject.freecut (1).zip"
+  // Handles Beatvideo bundles and legacy FreeCut bundles, including browser duplicate suffixes.
   const extractProjectName = (fileName: string): string => {
     // Remove .zip extension first
     let name = fileName.replace(/\.zip$/i, '')
     // Remove browser duplicate suffix like " (1)", " (2)", etc.
     name = name.replace(/\s*\(\d+\)$/, '')
-    // Remove .freecut suffix
-    name = name.replace(/\.freecut$/i, '')
+    // Remove current or legacy bundle suffix
+    name = name.replace(/\.(beatvideo|freecut)$/i, '')
     return name
   }
 
-  // Check if file is a valid bundle (handles browser-renamed files like "project.freecut (1).zip")
+  // Check current Beatvideo bundles and legacy FreeCut bundles.
   const isValidBundleFile = (fileName: string): boolean => {
-    // Match: anything.freecut.zip or anything.freecut (N).zip
-    return /\.freecut(\s*\(\d+\))?\.zip$/i.test(fileName)
+    // Match: anything.beatvideo.zip / anything.freecut.zip, including browser duplicate suffixes.
+    return /\.(beatvideo|freecut)(\s*\(\d+\))?\.zip$/i.test(fileName)
   }
 
   const isLoading = useProjectsLoading()
@@ -135,7 +135,7 @@ function ProjectsIndex() {
   const handleSelectDestination = async () => {
     try {
       const dirHandle = await window.showDirectoryPicker({
-        id: 'freecut-import',
+        id: 'beatvideo-import',
         mode: 'readwrite',
         startIn: 'documents',
       })
