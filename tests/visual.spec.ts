@@ -135,3 +135,26 @@ test('stacked beat-video effects are visually reviewable', async ({ page }, test
     fullPage: false,
   });
 });
+
+
+test('vertical project output keeps the workstation hierarchy readable', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name !== 'desktop-normal', 'Vertical output uses the normal review viewport.');
+
+  await page.goto('/?fixture=1');
+  await page.getByTestId('output-settings-button').click();
+  await page.getByTestId('output-format-shorts').click();
+  await page.getByRole('button', { name: 'Done' }).click();
+
+  const canvas = page.getByTestId('preview-canvas');
+  const ratio = await canvas.evaluate((node) => {
+    const rect = node.getBoundingClientRect();
+    return rect.width / rect.height;
+  });
+  expect(ratio).toBeCloseTo(9 / 16, 2);
+
+  await mkdir('artifacts/visual-qa', { recursive: true });
+  await page.screenshot({
+    path: 'artifacts/visual-qa/output-shorts.png',
+    fullPage: false,
+  });
+});
