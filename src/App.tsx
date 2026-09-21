@@ -129,6 +129,7 @@ type EditorSnapshot = {
   modulations: EffectModulation[];
   bpmOverride: string | null;
   barOffset: number | null;
+  projectOutput: ProjectOutputSettings;
 };
 
 function FileControl(props: {
@@ -290,9 +291,10 @@ function App() {
     modulations,
     bpmOverride: manualBpm,
     barOffset: manualBarOffset,
+    projectOutput,
   }), [
     brandLayout, brandOpacity, brandPosition, brandText, effects, manualBarOffset, manualBpm,
-    modulations, motion, preset, title, titleAlign, titleFont, titleSize, titleTracking, titleX, titleY,
+    modulations, motion, preset, projectOutput, title, titleAlign, titleFont, titleSize, titleTracking, titleX, titleY,
   ]);
 
   useEffect(() => {
@@ -333,6 +335,7 @@ function App() {
     setModulations(snapshot.modulations);
     setManualBpm(snapshot.bpmOverride);
     setManualBarOffset(snapshot.barOffset);
+    setProjectOutput(snapshot.projectOutput);
   }, []);
 
   const undoEditor = useCallback(() => {
@@ -356,6 +359,15 @@ function App() {
     applyEditorSnapshot(next);
     setHistoryState({ canUndo: true, canRedo: history.redo.length > 0 });
   }, [applyEditorSnapshot, editorSnapshot]);
+
+  const resolvedOutput = useMemo(
+    () => resolveProjectOutput(projectOutput),
+    [projectOutput],
+  );
+  const previewSize = useMemo(
+    () => previewCanvasSize(resolvedOutput),
+    [resolvedOutput],
+  );
 
   const authoringSettings: UserSettings = useMemo(() => ({
     titleSize,
@@ -392,6 +404,7 @@ function App() {
     brandOpacity,
     preset,
     motion,
+    backgroundFill: projectOutput.backgroundFill,
     effects,
     modulations,
     showGuides,
@@ -411,6 +424,7 @@ function App() {
     brandOpacity,
     preset,
     motion,
+    projectOutput.backgroundFill,
     effects,
     modulations,
     showGuides,
