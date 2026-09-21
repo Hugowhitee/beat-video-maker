@@ -6,7 +6,7 @@ import {
   DEFAULT_PROJECT_WIDTH,
 } from '@/shared/projects/defaults'
 import { isAllowedProjectFps } from './project-fps'
-import { DEFAULT_BEATVIDEO_PROJECT_MODE } from '@/features/beatvideo/product-mode'
+import { DEFAULT_BEATVIDEO_PROJECT_MODE } from '@/shared/beatvideo/product-mode'
 
 /**
  * Validation schema for project creation/update form
