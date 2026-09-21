@@ -2705,3 +2705,178 @@ button.preset-card:hover {
     max-height: 520px;
   }
 }
+
+
+/* Final editor-control cleanup: one interaction language across toolbar, preview and sources. */
+
+.editor-icon {
+  width: 15px;
+  height: 15px;
+  display: block;
+  pointer-events: none;
+}
+
+.editor-icon-button {
+  width: 30px;
+  min-width: 30px;
+  height: 30px;
+  min-height: 30px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border-radius: 3px;
+}
+
+.history-actions {
+  gap: 2px;
+  padding-right: 4px;
+  margin-right: 2px;
+  border-right: 1px solid #41494c;
+}
+
+.history-button.editor-icon-button {
+  border-color: transparent;
+  background: transparent;
+}
+
+.history-button.editor-icon-button:not(:disabled):hover {
+  border-color: #535f63;
+  background: #30383b;
+}
+
+.source-panel-heading {
+  min-height: 46px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 9px;
+  margin-bottom: 8px;
+}
+
+.source-panel-heading > div {
+  min-width: 0;
+}
+
+.source-add-button {
+  min-height: 30px;
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 8px;
+  border: 1px solid #5c686c;
+  border-radius: 3px;
+  background: #30383a;
+  color: #d8ddda;
+  cursor: pointer;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.source-add-button:hover {
+  border-color: #748b94;
+  background: #394347;
+  color: #f2f5f1;
+}
+
+.source-add-button svg {
+  width: 16px;
+  height: 16px;
+  display: block;
+}
+
+.inputs-panel.is-media-dragging {
+  background: #283034;
+  box-shadow: inset 3px 0 0 #6f94a4;
+}
+
+.inputs-panel .file-control {
+  min-height: 44px;
+}
+
+.source-slot-action {
+  min-height: 27px !important;
+  padding: 4px 7px !important;
+  font-size: 9px !important;
+}
+
+.sources-drop-hint {
+  margin: 6px 0 0;
+  color: #737e81;
+  font-size: 9px;
+  line-height: 1.4;
+}
+
+.preview-tools {
+  gap: 3px;
+}
+
+.guide-toggle.editor-icon-button {
+  border-color: #4c5558;
+  background: #282e30;
+  color: #8e989a;
+}
+
+.guide-toggle.editor-icon-button:hover {
+  border-color: #68767b;
+  background: #31383b;
+  color: #e1e5e2;
+}
+
+.guide-toggle.editor-icon-button.is-active {
+  border-color: #6d91a0;
+  background: #304047;
+  color: #dceaf0;
+}
+
+.effect-order-actions {
+  gap: 2px;
+}
+
+.properties-panel .effect-order-actions button.editor-icon-button {
+  width: 27px;
+  min-width: 27px;
+  height: 27px;
+  min-height: 27px;
+  padding: 0;
+  border-color: transparent;
+  background: transparent;
+  color: #919c9f;
+}
+
+.properties-panel .effect-order-actions button.editor-icon-button:hover:not(:disabled) {
+  border-color: #505b5f;
+  background: #353d40;
+  color: #eef1ed;
+}
+
+.properties-panel .effect-order-actions button.editor-icon-button:last-child:hover:not(:disabled) {
+  border-color: #72524f;
+  background: #3a2e2d;
+  color: #e9bbb6;
+}
+
+.dialog-close.editor-icon-button {
+  width: 30px;
+  height: 30px;
+  border-color: transparent;
+  background: transparent;
+}
+
+.dialog-close.editor-icon-button:hover {
+  border-color: #596366;
+  background: #333a3d;
+  color: #f0f2ee;
+}
+
+@media (max-width: 760px) {
+  .source-add-button span {
+    display: none;
+  }
+
+  .source-add-button {
+    width: 30px;
+    padding: 0;
+    justify-content: center;
+  }
+}
