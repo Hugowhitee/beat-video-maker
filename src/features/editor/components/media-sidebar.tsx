@@ -39,6 +39,7 @@ import {
 import { importTranscriptEditorPanel } from '@/features/editor/deps/timeline-panels'
 import { LottieBrowserPanel } from '@/features/editor/deps/lottie-browser'
 import { TransitionsPanel } from './transitions-panel'
+import { BeatvideoPhotoQuickStart } from './beatvideo-photo-quick-start'
 import {
   createDefaultGradientItem,
   createDefaultShapeItem,
@@ -736,9 +737,12 @@ export const MediaSidebar = memo(function MediaSidebar() {
 
             {/* Media Tab - Full Media Library */}
             <div
-              className={`min-h-0 flex-1 overflow-hidden ${activeTab === 'media' ? 'block' : 'hidden'}`}
+              className={`min-h-0 flex-1 overflow-hidden ${activeTab === 'media' ? 'flex flex-col' : 'hidden'}`}
             >
-              <MediaLibrary />
+              {beatvideoMode === 'photo' ? <BeatvideoPhotoQuickStart /> : null}
+              <div className="min-h-0 flex-1">
+                <MediaLibrary />
+              </div>
             </div>
 
             {/* Text Tab */}
