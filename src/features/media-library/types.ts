@@ -1,4 +1,5 @@
 import type { MediaAttribution, MediaMetadata } from '@/types/storage'
+import type { MediaPickerKind } from './utils/media-file-picker'
 import type { TranscriptionProgressSnapshot } from '@/shared/utils/transcription-progress'
 import type { InterpolationStage } from './frame-interpolation-constants'
 import type { UpscaleStage } from './upscale-constants'
@@ -139,7 +140,7 @@ export interface MediaLibraryActions {
    * Defaults to copying into FreeCut's workspace-backed media store. Use
    * storageMode='link' to reference files directly on the user's disk.
    */
-  importMedia: (options?: { storageMode?: 'copy' | 'link' }) => Promise<MediaMetadata[]>
+  importMedia: (options?: { storageMode?: 'copy' | 'link'; allowedKinds?: readonly MediaPickerKind[] }) => Promise<MediaMetadata[]>
   /**
    * Import media from a direct URL into OPFS-backed storage.
    * Best for CORS-enabled direct media files (mp4, mp3, png, etc.).
