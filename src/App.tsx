@@ -247,6 +247,7 @@ function App() {
   const [exportProgress, setExportProgress] = useState(0);
   const [exportMessage, setExportMessage] = useState('');
   const [analysisState, setAnalysisState] = useState<'idle' | 'decoding' | 'analyzing' | 'ready' | 'error'>('idle');
+  const [waveformState, setWaveformState] = useState<'idle' | 'preparing' | 'ready' | 'error'>('idle');
   const [analysis, setAnalysis] = useState<BeatGridAnalysis | null>(null);
   const [manualBpm, setManualBpm] = useState<string | null>(null);
   const [manualBarOffset, setManualBarOffset] = useState<number | null>(null);
@@ -740,6 +741,7 @@ function App() {
     setAudioBuffer(null);
     setPeaks([]);
     setAmplitudeEnvelope(null);
+    setWaveformState('idle');
     setAnalysis(null);
     setManualBpm(null);
     setManualBarOffset(null);
@@ -761,6 +763,7 @@ function App() {
       setAnalysisMessage('Analyzing tempo and beat phase…');
       setMediaMessage('Audio ready · ' + decoded.duration.toFixed(1) + ' s');
 
+      setWaveformState('preparing');
       void Promise.all([
         buildPeaksAsync(decoded),
         buildAmplitudeEnvelopeAsync(decoded),
@@ -769,8 +772,11 @@ function App() {
           if (audioLoadIdRef.current !== loadId) return;
           setPeaks(nextPeaks);
           setAmplitudeEnvelope(nextEnvelope);
+          setWaveformState('ready');
         })
         .catch(() => {
+          if (audioLoadIdRef.current !== loadId) return;
+          setWaveformState('error');
           // Playback/export can continue even if non-essential preview features fail.
         });
 
@@ -1324,14 +1330,26 @@ function App() {
                 <small>Click or drop image · audio · video</small>
               </button>
             )}
-            {(analysisState === 'decoding' || analysisState === 'analyzing') && (
+            {(analysisState === 'decoding'
+              || analysisState === 'analyzing'
+              || waveformState === 'preparing') && (
               <div className="processing-card" data-testid="audio-processing" role="status">
                 <span className="activity-spinner" aria-hidden="true" />
                 <div>
                   <strong>
-                    {analysisState === 'decoding' ? 'Decoding beat' : 'Analyzing beat grid'}
+                    {analysisState === 'decoding'
+                      ? 'Decoding beat'
+                      : analysisState === 'analyzing'
+                        ? 'Analyzing beat grid'
+                        : 'Preparing waveform'}
                   </strong>
-                  <small>{analysisMessage || 'Working locally…'}</small>
+                  <small>
+                    {analysisState === 'analyzing'
+                      ? (analysisMessage || 'Analyzing tempo and beat phase…')
+                      : waveformState === 'preparing' && analysisState === 'ready'
+                        ? 'Building waveform and audio envelope…'
+                        : 'Working locally…'}
+                  </small>
                 </div>
               </div>
             )}
