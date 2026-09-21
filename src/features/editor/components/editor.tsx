@@ -178,7 +178,7 @@ interface EditorProps {
     height: number
     fps: number
     backgroundColor?: string
-    beatvideoMode: import('@/types/project').BeatvideoProjectMode
+    beatvideoMode?: import('@/types/project').BeatvideoProjectMode
   }
   migration: {
     storedSchemaVersion: number
@@ -390,7 +390,9 @@ export const LoadedEditor = memo(function LoadedEditor({
   const [exportDialogOpen, setExportDialogOpen] = useState(false)
   const [bundleExportDialogOpen, setBundleExportDialogOpen] = useState(false)
   const [renderQueueOpen, setRenderQueueOpen] = useState(false)
-  const [beatvideoMode, setBeatvideoMode] = useState(project.beatvideoMode)
+  const [beatvideoMode, setBeatvideoMode] = useState<
+    import('@/types/project').BeatvideoProjectMode
+  >(project.beatvideoMode ?? 'video')
   const renderQueueActiveCount = useRenderQueueStore(
     (s) => s.jobs.filter((j) => j.status === 'queued' || j.status === 'rendering').length,
   )
@@ -416,7 +418,7 @@ export const LoadedEditor = memo(function LoadedEditor({
   }, [projectId])
 
   useEffect(() => {
-    setBeatvideoMode(project.beatvideoMode)
+    setBeatvideoMode(project.beatvideoMode ?? 'video')
   }, [project.beatvideoMode, projectId])
 
   useEffect(() => {
