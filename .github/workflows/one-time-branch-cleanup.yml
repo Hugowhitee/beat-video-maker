@@ -1,0 +1,78 @@
+name: One-time branch residue cleanup
+
+on:
+  push:
+    branches:
+      - migration/freecut-upstream
+
+permissions:
+  contents: write
+
+jobs:
+  cleanup:
+    if: contains(github.event.head_commit.message, '[branch-cleanup]')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Delete proven stale branches
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const branches = [
+              'arch/upstream-first-media',
+              'automation/freecut-import',
+              'chore/release-cleanup',
+              'feat/auto-edit-planner-foundation',
+              'feat/beatvideo-musical-edit-core',
+              'feat/beatvideo-shell-cleanup',
+              'feat/beatvideo-visible-branding',
+              'feat/detailed-beat-grid',
+              'feat/editor-authoring',
+              'feat/editor-control-kit',
+              'feat/editor-polish',
+              'feat/editor-shell',
+              'feat/effect-stack',
+              'feat/effect-stack-foundation',
+              'feat/freecut-edit-plan-adapter',
+              'feat/freecut-photo-video-mode',
+              'feat/install-experience',
+              'feat/manual-loop-editor',
+              'feat/photo-timeline-surface',
+              'feat/vertical-slice',
+              'feat/video-source-analysis',
+              'feat/watermark-grid',
+              'feat/waveform-grid-editor',
+              'feat/workstation-ui',
+              'fix/audio-import-responsiveness',
+              'fix/migration-runtime-audit',
+              'fix/release-smoke-gate',
+              'migration/freecut-beatvideo',
+              'perf/watermark-grid-render',
+              'refactor/upstream-beat-analysis'
+            ]
+
+            const deleted = []
+            const skipped = []
+            for (const branch of branches) {
+              try {
+                await github.rest.git.deleteRef({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  ref: `heads/${branch}`,
+                })
+                deleted.push(branch)
+              } catch (error) {
+                if (error.status === 404 || error.status === 422) {
+                  skipped.push(branch)
+                  continue
+                }
+                throw error
+              }
+            }
+
+            core.summary
+              .addHeading('Branch cleanup')
+              .addRaw(`Deleted: ${deleted.length}\n\n`)
+              .addList(deleted)
+              .addRaw(`\nSkipped/missing: ${skipped.length}\n\n`)
+              .addList(skipped)
+              .write()
