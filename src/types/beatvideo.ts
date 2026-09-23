@@ -41,6 +41,10 @@ export type BeatvideoMusicAnalysis = {
    * A detected downbeat is useful evidence but not treated as user-verified bar 1.
    * Once the user sets bar 1 on the timeline, this becomes the canonical anchor.
    */
+  /** First model-detected downbeat used as the phase reference for corrections. */
+  detectedBarOneTime: number | null
   barOneTime: number | null
   barOneVerified: boolean
+  /** Optional user tempo correction; null keeps the model tempo. */
+  bpmOverride: number | null
 }
