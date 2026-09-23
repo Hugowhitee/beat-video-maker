@@ -39,23 +39,7 @@ jobs:
       - name: Add SPA fallback and validate project paths
         run: |
           cp dist/index.html dist/404.html
-          node --input-type=module <<'NODE'
-          import { readFileSync } from 'node:fs'
-
-          const html = readFileSync('dist/index.html', 'utf8')
-          const manifest = JSON.parse(readFileSync('dist/manifest.webmanifest', 'utf8'))
-          const sw = readFileSync('dist/sw.js', 'utf8')
-
-          if (!html.includes('/beat-video-maker/assets/')) {
-            throw new Error('Pages build is missing the /beat-video-maker/ asset base.')
-          }
-          if (manifest.start_url !== './' || manifest.scope !== './') {
-            throw new Error('PWA manifest is not scoped relative to the project site.')
-          }
-          if (!sw.includes("scopedPath('index.html')")) {
-            throw new Error('Service worker fallback is not scoped to the project site.')
-          }
-          NODE
+          node scripts/check-pages-output.mjs
 
       - uses: actions/upload-pages-artifact@v4
         with:
