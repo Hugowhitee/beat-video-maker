@@ -57,6 +57,7 @@ const toolIgnorePatterns = [
 
 // https://vite.dev/config/
 export default defineConfig({
+  base: process.env.GITHUB_PAGES === 'true' ? '/beat-video-maker/' : '/',
   lint: {
     ...oxlintConfig,
     ignorePatterns: toolIgnorePatterns,
