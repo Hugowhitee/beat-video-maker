@@ -14,6 +14,7 @@ import './index.css'
 const log = createLogger('App')
 const UPDATE_CHECK_INTERVAL_MS = 5 * 60 * 1000
 const ACCEPTED_APP_UPDATE_SIGNATURE_KEY = 'freecut-accepted-app-update-signature'
+const APP_BASE_URL = import.meta.env.BASE_URL
 
 let updateToastVisible = false
 let devVitePreloadRecoveryInFlight = false
@@ -152,7 +153,7 @@ async function checkForAppShellUpdate() {
   }
   appShellUpdateCheckInFlight = true
   try {
-    const response = await fetch(`/?__freecut_update_check=${Date.now()}`, {
+    const response = await fetch(`${APP_BASE_URL}?__freecut_update_check=${Date.now()}`, {
       cache: 'no-store',
       headers: {
         'Cache-Control': 'no-cache',
@@ -274,7 +275,7 @@ window.addEventListener('vite:preloadError', (event) => {
 if (import.meta.env.PROD && 'serviceWorker' in navigator) {
   window.addEventListener('load', () => {
     navigator.serviceWorker
-      .register('/sw.js')
+      .register(`${APP_BASE_URL}sw.js`)
       .then((registration) => {
         watchForServiceWorkerUpdate(registration)
         registration.update().catch((error: unknown) => {
