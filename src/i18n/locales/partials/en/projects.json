@@ -322,8 +322,8 @@
         },
         "browsers": {
           "question": "What browsers are supported?",
-          "answerP1": "Beatvideo Maker currently works best in Chrome or Edge 113+. It relies on modern browser APIs like WebGPU, WebCodecs, OPFS, and File System Access, so the full workflow is currently Chromium-first.",
-          "answerP2": "<strong>Brave users:</strong> The File System Access API is disabled by default. To enable it, navigate to <code>brave://flags/#file-system-access-api</code>, set it to <strong>Enabled</strong>, and relaunch the browser."
+          "answerP1": "Beatvideo Maker works best in a recent desktop browser with WebGPU, WebCodecs, and writable local storage. Chrome, Edge, and Brave are supported paths.",
+          "answerP2": "<strong>Brave users:</strong> Beatvideo Maker uses private local browser storage automatically when Brave does not expose a folder picker. No browser flag is required."
         },
         "exportFormats": {
           "question": "What export formats are supported?",
