@@ -1,17 +1,16 @@
-# FreeCut Workspace
+# Beatvideo Maker Workspace
 
-This folder is your FreeCut project workspace - the app's source of truth
-for everything: projects, media metadata, thumbnails, waveforms, caches.
+This folder is your Beatvideo Maker project workspace - the app's source of truth
+for projects, media metadata, thumbnails, analysis data, waveforms, and caches.
 
-Everything here is **plain files** you can `cat`, `grep`, and diff with
-normal tools. AI coding agents can read them directly without a browser.
+Everything here is **plain files** you can inspect and back up with normal tools.
 
 ## Layout
 
 ```
 ./
 |-- README.md                  <- this file
-|-- .freecut-workspace.json    <- marker + schema version
+|-- .freecut-workspace.json    <- legacy-compatible marker + schema version
 |-- index.json                 <- fast project list
 |-- projects/
 |   `-- <projectId>/
@@ -25,30 +24,35 @@ normal tools. AI coding agents can read them directly without a browser.
 |       |-- source.link.json   <- OR a link descriptor to an external file
 |       |-- thumbnail.jpg
 |       `-- cache/
-|           |-- filmstrip/     <- timeline frame thumbnails (0.jpg, 1.jpg, ...)
-|           |-- waveform/      <- audio peaks (binned binary + multi-res.bin)
-|           |-- gif-frames/    <- pre-extracted GIF frames
-|           |-- decoded-audio/ <- chunked PCM for preview playback
-|           |-- preview-audio.wav  <- conformed WAV for non-browser codecs
-|           `-- ai/            <- transcripts, captions, scene cuts, ...
+|           |-- filmstrip/
+|           |-- waveform/
+|           |-- gif-frames/
+|           |-- decoded-audio/
+|           |-- preview-audio.wav
+|           `-- ai/
 `-- content/
-    |-- <hash[0:2]>/<hash>/    <- content-addressable source dedup (reserved)
+    |-- <hash[0:2]>/<hash>/
     |   |-- refs.json
     |   `-- data.<ext>
-    `-- proxies/<proxyKey>/    <- shared proxies (keyed by content fingerprint)
+    `-- proxies/<proxyKey>/
         |-- proxy.mp4
         `-- meta.json
 ```
 
+## Compatibility files
+
+Some internal filenames still use the historical `.freecut-*` prefix. They are kept
+for safe compatibility with the upstream storage format; the product and workspace
+are Beatvideo Maker.
+
 ## Safe to edit?
 
 Everything except media source bytes is safe to inspect. Editing
-`project.json` externally works; FreeCut picks up changes on next load.
+`project.json` externally works; Beatvideo Maker picks up changes on next load.
 
-Binary caches (waveforms, decoded audio, filmstrips) are regeneratable -
-delete them and the app will rebuild them on demand.
+Binary caches are regeneratable - delete them and the app rebuilds them when needed.
 
 ## Moving the workspace
 
-You can move this folder to a new location - the app just needs you to
-re-pick it via the "Reconnect" prompt on next launch.
+You can move this folder to a new location. Beatvideo Maker just needs you to
+pick it again from the reconnect prompt on next launch.
