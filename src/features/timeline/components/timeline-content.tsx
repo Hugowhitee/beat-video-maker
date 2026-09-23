@@ -43,6 +43,7 @@ import { TimelineTrack } from './timeline-track'
 import { TimelineGuidelines } from './timeline-guidelines'
 import { TimelineMediaDropZone } from './timeline-media-drop-zone'
 import { TimelineRecordingOverlay } from './timeline-recording-overlay'
+import { BeatvideoGridOverlay } from './beatvideo-grid-overlay'
 import { IO_LANE_HEIGHT } from './timeline-markers'
 import { FirstTrackRowFrame, TrackRowFrame, TrackSectionDivider } from './track-row-frame'
 import { MarqueeOverlay } from '@/shared/marquee/marquee-overlay'
@@ -2113,11 +2114,12 @@ export const TimelineContent = memo(function TimelineContent({
   const trackSurfaceOverlayChildren = useMemo(
     () => (
       <>
+        <BeatvideoGridOverlay duration={actualDuration} variant="tracks" />
         {isDragging && <TimelineGuidelines />}
         <TimelineRecordingOverlay />
       </>
     ),
-    [isDragging],
+    [actualDuration, isDragging],
   )
 
   return (
