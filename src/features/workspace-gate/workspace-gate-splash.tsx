@@ -46,7 +46,7 @@ export function WorkspaceGateSplash({ status, error, onPickFolder, onReconnect }
               {t('projects.workspaceGate.unsupportedBrowserDescription')}
             </p>
             <Button asChild variant="outline" size="sm" className="gap-2">
-              <a href="/docs/workspaces">
+              <a href={`${import.meta.env.BASE_URL}docs/workspaces`}>
                 <BookOpen className="h-4 w-4" />
                 {t('projects.workspaceGate.workspaceGuide')}
               </a>
@@ -70,7 +70,7 @@ export function WorkspaceGateSplash({ status, error, onPickFolder, onReconnect }
                 {t('projects.workspaceGate.chooseFolder')}
               </Button>
               <Button asChild variant="outline" size="lg" className="gap-2">
-                <a href="/docs/workspaces">
+                <a href={`${import.meta.env.BASE_URL}docs/workspaces`}>
                   <BookOpen className="h-4 w-4" />
                   {t('projects.workspaceGate.workspaceGuide')}
                 </a>
@@ -105,7 +105,7 @@ export function WorkspaceGateSplash({ status, error, onPickFolder, onReconnect }
               </Button>
             </div>
             <Button asChild variant="ghost" size="sm" className="gap-2">
-              <a href="/docs/workspaces">
+              <a href={`${import.meta.env.BASE_URL}docs/workspaces`}>
                 <BookOpen className="h-4 w-4" />
                 {t('projects.workspaceGate.workspaceGuide')}
               </a>
