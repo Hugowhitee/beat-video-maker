@@ -12,3 +12,4 @@ export {
 export { useMediaLibraryStore } from '@/features/timeline/deps/media-library-store'
 export { useProjectStore } from '@/features/timeline/deps/projects'
 export { DEFAULT_TRACK_HEIGHT } from '@/features/timeline/constants'
+export { getOrDecodeAudio } from '@/runtime/composition-runtime/utils/audio-decode-cache'
