@@ -31,6 +31,7 @@ export const Route = createFileRoute('/editor/$projectId')({
         fps: project.metadata.fps,
         backgroundColor: project.metadata.backgroundColor,
         beatvideoMode: resolveBeatvideoProjectMode(project.beatvideoMode),
+        beatvideoMusic: project.beatvideoMusic,
       },
       migration: {
         storedSchemaVersion,
