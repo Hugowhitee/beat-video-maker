@@ -1,0 +1,74 @@
+name: Deploy Pages
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: beatvideo-pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: voidzero-dev/setup-vp@v1
+        with:
+          node-version: '22'
+          cache: true
+
+      - uses: actions/configure-pages@v5
+
+      - run: vp install
+
+      - name: Build Beatvideo Maker for GitHub Pages
+        env:
+          GITHUB_PAGES: 'true'
+        run: vp build
+
+      - name: Add SPA fallback and validate project paths
+        run: |
+          cp dist/index.html dist/404.html
+          node --input-type=module <<'NODE'
+          import { readFileSync } from 'node:fs'
+
+          const html = readFileSync('dist/index.html', 'utf8')
+          const manifest = JSON.parse(readFileSync('dist/manifest.webmanifest', 'utf8'))
+          const sw = readFileSync('dist/sw.js', 'utf8')
+
+          if (!html.includes('/beat-video-maker/assets/')) {
+            throw new Error('Pages build is missing the /beat-video-maker/ asset base.')
+          }
+          if (manifest.start_url !== './' || manifest.scope !== './') {
+            throw new Error('PWA manifest is not scoped relative to the project site.')
+          }
+          if (!sw.includes("scopedPath('index.html')")) {
+            throw new Error('Service worker fallback is not scoped to the project site.')
+          }
+          NODE
+
+      - uses: actions/upload-pages-artifact@v4
+        with:
+          path: dist
+
+  deploy:
+    runs-on: ubuntu-latest
+    needs: build
+    timeout-minutes: 10
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy Beatvideo Maker
+        id: deployment
+        uses: actions/deploy-pages@v4
