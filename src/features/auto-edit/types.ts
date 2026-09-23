@@ -8,8 +8,6 @@ export type {
   MusicSection,
   MusicSectionKind,
 } from '@/types/beatvideo'
-import type { MusicMap, MusicSection } from '@/types/beatvideo'
-
 export type ShotBoundaryKind = 'source-start' | 'hard-cut' | 'transition' | 'unknown';
 
 export type ClipShot = {
