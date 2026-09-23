@@ -2,39 +2,13 @@ export type EditMode = 'loop' | 'guided' | 'auto';
 export type TransitionProfile = 'clean' | 'mixed';
 export type EditTransitionKind = 'film-burn';
 
-export type MusicSectionKind =
-  | 'intro'
-  | 'verse'
-  | 'chorus'
-  | 'break'
-  | 'build'
-  | 'drop'
-  | 'outro'
-  | 'unknown';
-
-export type MusicBeat = {
-  time: number;
-  index: number;
-  downbeat: boolean;
-  strength: number;
-};
-
-export type MusicSection = {
-  id: string;
-  start: number;
-  end: number;
-  kind: MusicSectionKind;
-  energy: number;
-  confidence: number;
-};
-
-export type MusicMap = {
-  duration: number;
-  bpm: number | null;
-  beatsPerBar: number;
-  beats: MusicBeat[];
-  sections: MusicSection[];
-};
+export type {
+  MusicBeat,
+  MusicMap,
+  MusicSection,
+  MusicSectionKind,
+} from '@/types/beatvideo'
+import type { MusicMap, MusicSection } from '@/types/beatvideo'
 
 export type ShotBoundaryKind = 'source-start' | 'hard-cut' | 'transition' | 'unknown';
 
