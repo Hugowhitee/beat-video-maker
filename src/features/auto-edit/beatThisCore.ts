@@ -98,7 +98,7 @@ export function buildSparseMelFilterbank(
     for (let mel = 0; mel < melBins; mel += 1) {
       const weight = dense[rowOffset + mel] ?? 0
       if (Math.abs(weight) <= 1e-12) continue
-      counts[bin] += 1
+      counts[bin] = (counts[bin] ?? 0) + 1
       nonZeroCount += 1
     }
   }
@@ -147,7 +147,7 @@ export function projectMagnitudeToLogMel(
 
     for (let index = start; index < end; index += 1) {
       const mel = filterbank.melIndices[index] ?? 0
-      output[mel] += value * (filterbank.weights[index] ?? 0)
+      output[mel] = (output[mel] ?? 0) + value * (filterbank.weights[index] ?? 0)
     }
   }
 
