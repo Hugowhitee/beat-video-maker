@@ -8,6 +8,7 @@ import type { TextMotionSpec } from './text-motion'
 import type { MaskVertex } from './masks'
 import type { ShapeStyleFields } from './timeline'
 import type { CompositionControlOverrides, CompositionControlSchema } from './composition-controls'
+import type { BeatvideoMusicAnalysis } from './beatvideo'
 
 /**
  * Selects the editing surface a stored composition naturally opens in.
@@ -26,6 +27,8 @@ export interface Project {
   description: string
   /** Beatvideo product workflow. Missing on upstream/legacy projects = video. */
   beatvideoMode?: BeatvideoProjectMode
+  /** Beat/downbeat analysis for the project's selected music source. */
+  beatvideoMusic?: BeatvideoMusicAnalysis
   createdAt: number
   updatedAt: number
   duration: number
