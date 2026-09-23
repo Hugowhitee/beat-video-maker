@@ -69,10 +69,9 @@ function toHex(buffer: ArrayBuffer) {
 }
 
 async function verifySha256(bytes: Uint8Array, expected: string, label: string) {
-  const digest = await crypto.subtle.digest(
-    'SHA-256',
-    bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength),
-  )
+  const digestInput = new ArrayBuffer(bytes.byteLength)
+  new Uint8Array(digestInput).set(bytes)
+  const digest = await crypto.subtle.digest('SHA-256', digestInput)
   const actual = toHex(digest)
   if (actual !== expected) {
     throw new Error(
