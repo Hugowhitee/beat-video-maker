@@ -21,6 +21,15 @@ export async function getBrowserWorkspaceHandle(): Promise<FileSystemDirectoryHa
     throw new Error('Browser-private workspace storage is unavailable.')
   }
 
+  // Ask the browser to make local project storage durable when it supports
+  // persistence. A denial is not fatal: OPFS remains usable for this session
+  // and future visits under the browser's normal storage policy.
+  try {
+    await navigator.storage.persist?.()
+  } catch {
+    // Persistence is best-effort and must never block the editor.
+  }
+
   const root = await navigator.storage.getDirectory()
   return root.getDirectoryHandle(BROWSER_WORKSPACE_DIRECTORY, { create: true })
 }
