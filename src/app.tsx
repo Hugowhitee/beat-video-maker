@@ -11,7 +11,12 @@ import { routeTree } from './routeTree.gen'
 // Route errors (thrown from beforeLoad/loader) never reach the React
 // ErrorBoundary below — TanStack catches them first. Without this, they render
 // its untranslated built-in fallback with the message hidden in production.
-const router = createRouter({ routeTree, defaultErrorComponent: RouteErrorScreen })
+const routerBasePath = import.meta.env.BASE_URL === '/' ? '/' : import.meta.env.BASE_URL.replace(/\/$/, '')
+const router = createRouter({
+  routeTree,
+  basepath: routerBasePath,
+  defaultErrorComponent: RouteErrorScreen,
+})
 const LazyToaster = lazy(async () => {
   const { Toaster } = await import('@/components/ui/sonner')
   return { default: Toaster }
