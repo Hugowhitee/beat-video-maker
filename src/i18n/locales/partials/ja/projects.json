@@ -179,7 +179,7 @@
     },
     "workspaceGate": {
       "unsupportedBrowser": "サポートされていないブラウザ",
-      "unsupportedBrowserDescription": "Beatvideo Makerのワークスペースフォルダストレージには、Chromiumベースのブラウザ（Chrome、Edge、Brave、Arc）が必要です。FirefoxとSafariはまだFile System Access APIをサポートしていません。",
+      "unsupportedBrowserDescription": "Beatvideo Maker には書き込み可能なローカルブラウザストレージが必要です。フォルダーピッカーが利用できない、またはブロックされている場合は、代わりにブラウザのプライベートなローカルストレージを使用します。",
       "pickTitle": "ワークスペースフォルダを選択",
       "pickDescription": "Beatvideo Makerは、すべてのプロジェクト、メディア、キャッシュを、あなたが管理するフォルダ内のプレーンファイルとして保存します。ディスク上の任意のフォルダを選んでください。プロジェクトはそこに保存されます。",
       "chooseFolder": "フォルダを選択",
@@ -322,8 +322,8 @@
         },
         "browsers": {
           "question": "対応しているブラウザは？",
-          "answerP1": "Beatvideo Makerは現在、ChromeまたはEdge 113以降で最も快適に動作します。WebGPU、WebCodecs、OPFS、File System AccessなどのモダンなブラウザAPIに依存しているため、現時点ではフルワークフローはChromium優先です。",
-          "answerP2": "<strong>Braveユーザーの方:</strong> File System Access APIはデフォルトで無効になっています。有効にするには、<code>brave://flags/#file-system-access-api</code>に移動し、<strong>Enabled</strong>に設定して、ブラウザを再起動してください。"
+          "answerP1": "Beatvideo Maker は、WebGPU、WebCodecs、書き込み可能なローカルストレージに対応した最新のデスクトップブラウザで最適に動作します。Chrome、Edge、Brave をサポートしています。",
+          "answerP2": "<strong>Brave ユーザー:</strong> Brave がフォルダーピッカーを提供しない場合、Beatvideo Maker は自動的にブラウザのプライベートなローカルストレージを使用します。実験的なフラグを有効にする必要はありません。"
         },
         "exportFormats": {
           "question": "対応しているエクスポート形式は？",
