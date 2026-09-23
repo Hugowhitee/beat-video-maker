@@ -179,7 +179,7 @@
     },
     "workspaceGate": {
       "unsupportedBrowser": "Navegador não compatível",
-      "unsupportedBrowserDescription": "O Beatvideo Maker requer um navegador baseado em Chromium (Chrome, Edge, Brave, Arc) para seu armazenamento em pasta de área de trabalho. Firefox e Safari ainda não oferecem suporte à File System Access API.",
+      "unsupportedBrowserDescription": "O Beatvideo Maker precisa de armazenamento local gravável no navegador. Quando o seletor de pastas não está disponível ou é bloqueado, o app usa armazenamento local privado do navegador.",
       "pickTitle": "Escolha sua pasta de área de trabalho",
       "pickDescription": "O Beatvideo Maker armazena todos os seus projetos, mídias e caches como arquivos simples em uma pasta que você controla. Escolha qualquer pasta no disco — seus projetos viverão lá.",
       "chooseFolder": "Escolher pasta",
@@ -322,8 +322,8 @@
         },
         "browsers": {
           "question": "Quais navegadores são compatíveis?",
-          "answerP1": "O Beatvideo Maker funciona melhor no Chrome ou Edge 113+. Ele depende de APIs modernas do navegador como WebGPU, WebCodecs, OPFS e File System Access, então o fluxo completo é atualmente voltado para o Chromium.",
-          "answerP2": "<strong>Usuários do Brave:</strong> a File System Access API está desativada por padrão. Para ativá-la, vá para <code>brave://flags/#file-system-access-api</code>, defina como <strong>Enabled</strong> e reinicie o navegador."
+          "answerP1": "O Beatvideo Maker funciona melhor em um navegador de desktop recente com WebGPU, WebCodecs e armazenamento local gravável. Chrome, Edge e Brave são compatíveis.",
+          "answerP2": "<strong>Usuários do Brave:</strong> o Beatvideo Maker usa automaticamente o armazenamento local privado do navegador quando o Brave não disponibiliza o seletor de pastas. Nenhuma flag experimental é necessária."
         },
         "exportFormats": {
           "question": "Quais formatos de exportação são compatíveis?",
