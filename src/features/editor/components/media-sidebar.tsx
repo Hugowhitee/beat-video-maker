@@ -742,7 +742,16 @@ export const MediaSidebar = memo(function MediaSidebar({
             <div
               className={`min-h-0 flex-1 overflow-hidden ${activeTab === 'media' ? 'block' : 'hidden'}`}
             >
-              <MediaLibrary />
+              <div className="flex h-full min-h-0 flex-col">
+                <div className="shrink-0 border-b border-border bg-secondary/15 px-3 py-2 text-[10px] leading-relaxed text-muted-foreground">
+                  {beatvideoMode === 'photo'
+                    ? 'Photo: import a cover and beat. Drag the cover onto the timeline; use Beat to analyze the music.'
+                    : 'Video: import footage and a beat. Drag clips onto the timeline; double-click a card to inspect it first.'}
+                </div>
+                <div className="min-h-0 flex-1 overflow-hidden">
+                  <MediaLibrary />
+                </div>
+              </div>
             </div>
 
             {/* Beatvideo musical analysis and grid correction. */}
