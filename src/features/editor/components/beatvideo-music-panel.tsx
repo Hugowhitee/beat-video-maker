@@ -2,8 +2,11 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { AudioLines, Crosshair, LocateFixed, Play, RotateCcw } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
-import { analyzeMusicMedia, type MusicAnalysisProgress } from '@/features/auto-edit/musicAnalysis'
-import { resolveBeatvideoMusicGrid } from '@/features/auto-edit/musicGrid'
+import {
+  analyzeMusicMedia,
+  resolveBeatvideoMusicGrid,
+  type MusicAnalysisProgress,
+} from '@/features/editor/deps/beatvideo-music'
 import { useMediaLibraryStore } from '@/features/editor/deps/media-library'
 import { updateStoredProject, useProjectStore } from '@/features/editor/deps/projects'
 import { useTimelineSettingsStore } from '@/features/editor/deps/timeline-store'
