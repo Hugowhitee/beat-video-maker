@@ -117,7 +117,9 @@ export function WorkspaceGate({ children }: { children: React.ReactNode }) {
       }
     })().catch((error) => {
       logger.error('Gate initialization failed', error)
-      if (!cancelled) setStatus({ kind: 'pick' })
+      if (!cancelled) {
+        setStatus({ kind: isFileSystemAccessSupported() ? 'pick' : 'unavailable' })
+      }
     })
     return () => {
       cancelled = true
@@ -139,7 +141,7 @@ export function WorkspaceGate({ children }: { children: React.ReactNode }) {
     return () => {
       unsubscribe()
     }
-  }, [])
+  }, [activate])
 
   const handlePick = useCallback(async () => {
     setError(null)
