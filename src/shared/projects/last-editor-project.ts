@@ -1,4 +1,5 @@
 const LAST_EDITOR_PROJECT_ID_KEY = 'freecut-last-editor-project-id'
+const appBasePath = import.meta.env.BASE_URL === '/' ? '' : import.meta.env.BASE_URL.replace(/\/$/, '')
 
 function safeDecodeURIComponent(value: string): string {
   try {
@@ -8,8 +9,14 @@ function safeDecodeURIComponent(value: string): string {
   }
 }
 
+function stripAppBasePath(pathname: string): string {
+  if (!appBasePath) return pathname
+  if (pathname === appBasePath || pathname === `${appBasePath}/`) return '/'
+  return pathname.startsWith(`${appBasePath}/`) ? pathname.slice(appBasePath.length) : pathname
+}
+
 export function getEditorProjectIdFromPathname(pathname: string): string | undefined {
-  const projectId = pathname.match(/^\/editor\/([^/]+)/)?.[1]
+  const projectId = stripAppBasePath(pathname).match(/^\/editor\/([^/]+)/)?.[1]
   return projectId ? safeDecodeURIComponent(projectId) : undefined
 }
 
@@ -34,8 +41,12 @@ export function getEditorProjectReloadPathWithCacheBust(): string {
   const currentProjectId = getEditorProjectIdFromPathname(nextUrl.pathname)
   const projectId = currentProjectId ?? getLastEditorProjectId()
 
-  if (projectId && !currentProjectId && (nextUrl.pathname === '/' || nextUrl.pathname === '')) {
-    nextUrl.pathname = `/editor/${encodeURIComponent(projectId)}`
+  const appRootPath = appBasePath || '/'
+  const isAtAppRoot =
+    nextUrl.pathname === appRootPath || nextUrl.pathname === `${appRootPath.replace(/\/$/, '')}/`
+
+  if (projectId && !currentProjectId && isAtAppRoot) {
+    nextUrl.pathname = `${appBasePath}/editor/${encodeURIComponent(projectId)}`
   }
 
   nextUrl.searchParams.set('__freecut_updated', Date.now().toString())
