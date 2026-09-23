@@ -179,7 +179,7 @@
     },
     "workspaceGate": {
       "unsupportedBrowser": "Navegador no compatible",
-      "unsupportedBrowserDescription": "Beatvideo Maker requiere un navegador basado en Chromium (Chrome, Edge, Brave, Arc) para su almacenamiento en carpeta de espacio de trabajo. Firefox y Safari aún no admiten la File System Access API.",
+      "unsupportedBrowserDescription": "Beatvideo Maker necesita almacenamiento local del navegador con acceso de escritura. Si el selector de carpetas no está disponible o está bloqueado, la app usa almacenamiento local privado del navegador.",
       "pickTitle": "Elige tu carpeta de espacio de trabajo",
       "pickDescription": "Beatvideo Maker almacena todos tus proyectos, medios y cachés como archivos sencillos en una carpeta que tú controlas. Elige cualquier carpeta del disco: tus proyectos vivirán allí.",
       "chooseFolder": "Elegir carpeta",
@@ -322,8 +322,8 @@
         },
         "browsers": {
           "question": "¿Qué navegadores son compatibles?",
-          "answerP1": "Beatvideo Maker funciona mejor en Chrome o Edge 113+. Depende de APIs modernas del navegador como WebGPU, WebCodecs, OPFS y File System Access, por lo que el flujo completo es actualmente Chromium-first.",
-          "answerP2": "<strong>Usuarios de Brave:</strong> la File System Access API está desactivada por defecto. Para activarla, ve a <code>brave://flags/#file-system-access-api</code>, ponla en <strong>Enabled</strong> y reinicia el navegador."
+          "answerP1": "Beatvideo Maker funciona mejor en un navegador de escritorio reciente con WebGPU, WebCodecs y almacenamiento local con acceso de escritura. Chrome, Edge y Brave son opciones compatibles.",
+          "answerP2": "<strong>Usuarios de Brave:</strong> Beatvideo Maker usa automáticamente almacenamiento local privado del navegador cuando Brave no ofrece un selector de carpetas. No hace falta activar ninguna opción experimental."
         },
         "exportFormats": {
           "question": "¿Qué formatos de exportación son compatibles?",
