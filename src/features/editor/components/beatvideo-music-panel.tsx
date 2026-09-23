@@ -269,9 +269,9 @@ export function BeatvideoMusicPanel() {
                 </div>
               </div>
               <div className="rounded-md border border-border bg-secondary/20 p-2">
-                <div className="text-[9px] uppercase tracking-wider text-muted-foreground">Meter</div>
+                <div className="text-[9px] uppercase tracking-wider text-muted-foreground">Beats / bar</div>
                 <div className="mt-1 font-mono text-sm text-foreground">
-                  {resolvedGrid.beatsPerBar}/4
+                  {resolvedGrid.beatsPerBar}
                 </div>
               </div>
               <div className="rounded-md border border-border bg-secondary/20 p-2">
