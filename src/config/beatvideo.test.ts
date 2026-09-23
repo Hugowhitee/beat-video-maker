@@ -16,6 +16,7 @@ describe('Beatvideo project mode', () => {
 
   it('keeps Photo focused and Video editing-oriented', () => {
     expect(isSidebarTabVisibleForBeatvideoMode('media', 'photo')).toBe(true)
+    expect(isSidebarTabVisibleForBeatvideoMode('beat', 'photo')).toBe(true)
     expect(isSidebarTabVisibleForBeatvideoMode('overlay', 'photo')).toBe(true)
     expect(isSidebarTabVisibleForBeatvideoMode('text', 'photo')).toBe(false)
     expect(isSidebarTabVisibleForBeatvideoMode('effects', 'photo')).toBe(true)
@@ -23,6 +24,7 @@ describe('Beatvideo project mode', () => {
     expect(isSidebarTabVisibleForBeatvideoMode('shapes', 'photo')).toBe(false)
     expect(isSidebarTabVisibleForBeatvideoMode('ai', 'photo')).toBe(false)
 
+    expect(isSidebarTabVisibleForBeatvideoMode('beat', 'video')).toBe(true)
     expect(isSidebarTabVisibleForBeatvideoMode('transitions', 'video')).toBe(true)
     expect(isSidebarTabVisibleForBeatvideoMode('shapes', 'video')).toBe(true)
     expect(isSidebarTabVisibleForBeatvideoMode('lottie', 'video')).toBe(true)
