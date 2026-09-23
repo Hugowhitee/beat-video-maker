@@ -179,6 +179,7 @@ interface EditorProps {
     fps: number
     backgroundColor?: string
     beatvideoMode?: import('@/types/project').BeatvideoProjectMode
+    beatvideoMusic?: import('@/types/beatvideo').BeatvideoMusicAnalysis
   }
   migration: {
     storedSchemaVersion: number
@@ -487,6 +488,7 @@ export const LoadedEditor = memo(function LoadedEditor({
       name: project.name,
       description: '',
       beatvideoMode,
+      beatvideoMusic: project.beatvideoMusic,
       duration: 0,
       schemaVersion: migration.currentSchemaVersion,
       metadata: {
@@ -538,6 +540,7 @@ export const LoadedEditor = memo(function LoadedEditor({
     migration.currentSchemaVersion,
     migration.requiresUpgrade,
     beatvideoMode,
+    project.beatvideoMusic,
     project.backgroundColor,
     project.fps,
     project.height,
