@@ -6,6 +6,7 @@ import {
   ChevronRight,
   ChevronUp,
   Film,
+  ImagePlus,
   Layers,
   Type,
   Square,
@@ -542,6 +543,7 @@ export const MediaSidebar = memo(function MediaSidebar({
   // Category items for the vertical nav
   const categories = [
     { id: 'media' as const, icon: Film, label: t('editor.mediaSidebar.media') },
+    { id: 'overlay' as const, icon: ImagePlus, label: 'Overlay' },
     { id: 'text' as const, icon: Type, label: t('editor.mediaSidebar.text') },
     { id: 'shapes' as const, icon: Pentagon, label: t('editor.mediaSidebar.shapes') },
     { id: 'effects' as const, icon: Layers, label: t('editor.mediaSidebar.effects') },
@@ -734,6 +736,103 @@ export const MediaSidebar = memo(function MediaSidebar({
               className={`min-h-0 flex-1 overflow-hidden ${activeTab === 'media' ? 'block' : 'hidden'}`}
             >
               <MediaLibrary />
+            </div>
+
+            {/* Beatvideo Photo overlay hub — composed from canonical FreeCut layers. */}
+            <div
+              className={`min-h-0 flex-1 overflow-y-auto p-3 ${activeTab === 'overlay' ? 'block' : 'hidden'}`}
+            >
+              <div className="space-y-5">
+                <section className="space-y-2">
+                  <div>
+                    <div className="text-xs font-medium text-foreground">Text</div>
+                    <div className="mt-0.5 text-[10px] leading-relaxed text-muted-foreground">
+                      Add a title layer, then position and style it in Properties.
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-3 gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => handleAddText()}
+                      className="flex flex-col items-center gap-1 p-1.5 rounded-md border border-border bg-secondary/30 hover:bg-secondary/50 hover:border-primary/50 transition-[transform,background-color,border-color,color] duration-150 active:scale-[0.98] group"
+                    >
+                      {renderTextTemplatePreview()}
+                      <span className="text-[9px] text-muted-foreground group-hover:text-foreground">
+                        Add text
+                      </span>
+                    </button>
+                    {TEXT_STYLE_PRESETS.slice(0, 2).map((preset) => (
+                      <button
+                        key={preset.id}
+                        type="button"
+                        onClick={() => handleAddText(preset.id)}
+                        className="flex flex-col items-center gap-1 p-1.5 rounded-md border border-border bg-secondary/30 hover:bg-secondary/50 hover:border-primary/50 transition-[transform,background-color,border-color,color] duration-150 active:scale-[0.98] group"
+                      >
+                        {renderTextTemplatePreview(preset)}
+                        <span className="w-full truncate text-center text-[9px] text-muted-foreground group-hover:text-foreground">
+                          {preset.label}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                </section>
+
+                <section className="space-y-2">
+                  <div>
+                    <div className="text-xs font-medium text-foreground">Image / logo</div>
+                    <div className="mt-0.5 text-[10px] leading-relaxed text-muted-foreground">
+                      Import your own PNG, SVG or image in Media, then drag it onto the composition.
+                    </div>
+                  </div>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="w-full justify-start gap-2"
+                    onClick={() => setActiveTab('media')}
+                  >
+                    <ImagePlus className="h-3.5 w-3.5" />
+                    Open Media
+                  </Button>
+                </section>
+
+                <section className="space-y-2">
+                  <div>
+                    <div className="text-xs font-medium text-foreground">Shape</div>
+                    <div className="mt-0.5 text-[10px] leading-relaxed text-muted-foreground">
+                      Simple graphic layers for bars, blocks and framing.
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-3 gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => handleAddShape('rectangle', 'solid')}
+                      className="flex flex-col items-center justify-center gap-1.5 p-2 rounded-lg border border-border bg-secondary/30 hover:bg-secondary/50 hover:border-primary/50 transition-colors"
+                    >
+                      <div className="h-7 w-7 rounded-sm border border-border bg-foreground/80" />
+                      <span className="text-[9px] text-muted-foreground">Solid</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleAddShape('rectangle', 'gradient')}
+                      className="flex flex-col items-center justify-center gap-1.5 p-2 rounded-lg border border-border bg-secondary/30 hover:bg-secondary/50 hover:border-primary/50 transition-colors"
+                    >
+                      <div className="h-7 w-7 rounded-sm border border-border bg-gradient-to-br from-muted-foreground/25 to-foreground/80" />
+                      <span className="text-[9px] text-muted-foreground">Gradient</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleAddShape('circle')}
+                      className="flex flex-col items-center justify-center gap-1.5 p-2 rounded-lg border border-border bg-secondary/30 hover:bg-secondary/50 hover:border-primary/50 transition-colors"
+                    >
+                      <div className="flex h-7 w-7 items-center justify-center rounded-sm border border-border">
+                        <Circle className="h-4 w-4 text-foreground/80" />
+                      </div>
+                      <span className="text-[9px] text-muted-foreground">Circle</span>
+                    </button>
+                  </div>
+                </section>
+              </div>
             </div>
 
             {/* Text Tab */}
