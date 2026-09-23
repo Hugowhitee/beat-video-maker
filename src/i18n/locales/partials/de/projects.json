@@ -179,7 +179,7 @@
     },
     "workspaceGate": {
       "unsupportedBrowser": "Nicht unterstützter Browser",
-      "unsupportedBrowserDescription": "Beatvideo Maker benötigt einen Chromium-basierten Browser (Chrome, Edge, Brave, Arc) für seinen Arbeitsbereich-Ordnerspeicher. Firefox und Safari unterstützen die File System Access API noch nicht.",
+      "unsupportedBrowserDescription": "Beatvideo Maker benötigt beschreibbaren lokalen Browserspeicher. Wenn der Ordnerwähler nicht verfügbar oder blockiert ist, verwendet die App stattdessen privaten lokalen Browserspeicher.",
       "pickTitle": "Wähle deinen Arbeitsbereich-Ordner",
       "pickDescription": "Beatvideo Maker speichert alle deine Projekte, Medien und Caches als einfache Dateien in einem Ordner, den du kontrollierst. Wähle einen beliebigen Ordner auf der Festplatte – deine Projekte werden dort gespeichert.",
       "chooseFolder": "Ordner auswählen",
@@ -322,8 +322,8 @@
         },
         "browsers": {
           "question": "Welche Browser werden unterstützt?",
-          "answerP1": "Beatvideo Maker funktioniert derzeit am besten in Chrome oder Edge 113+. Es stützt sich auf moderne Browser-APIs wie WebGPU, WebCodecs, OPFS und File System Access, daher ist der vollständige Workflow derzeit Chromium-orientiert.",
-          "answerP2": "<strong>Brave-Nutzer:</strong> Die File System Access API ist standardmäßig deaktiviert. Um sie zu aktivieren, gehe zu <code>brave://flags/#file-system-access-api</code>, stelle sie auf <strong>Enabled</strong> und starte den Browser neu."
+          "answerP1": "Beatvideo Maker funktioniert am besten in einem aktuellen Desktop-Browser mit WebGPU, WebCodecs und beschreibbarem lokalen Speicher. Chrome, Edge und Brave werden unterstützt.",
+          "answerP2": "<strong>Brave-Nutzer:</strong> Beatvideo Maker verwendet automatisch privaten lokalen Browserspeicher, wenn Brave keinen Ordnerwähler bereitstellt. Es muss kein experimentelles Flag aktiviert werden."
         },
         "exportFormats": {
           "question": "Welche Exportformate werden unterstützt?",
