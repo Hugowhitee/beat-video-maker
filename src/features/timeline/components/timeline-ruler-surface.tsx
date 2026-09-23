@@ -1,6 +1,7 @@
 import { memo, useCallback, useEffect, useLayoutEffect, useRef, type RefObject } from 'react'
 import { useZoomStore } from '../stores/zoom-store'
 import { TimelineMarkers } from './timeline-markers'
+import { BeatvideoGridOverlay } from './beatvideo-grid-overlay'
 import { applyTimelineLiveGeometry } from '../utils/timeline-live-geometry'
 import { EDITOR_LAYOUT_CSS_VALUES } from '@/config/editor-layout'
 
@@ -70,6 +71,7 @@ export const TimelineRulerSurface = memo(function TimelineRulerSurface({
         }}
       >
         <TimelineMarkers duration={duration} />
+        <BeatvideoGridOverlay duration={duration} variant="ruler" />
       </div>
     </div>
   )
