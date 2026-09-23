@@ -247,8 +247,8 @@
         },
         "browsers": {
           "question": "Hangi tarayıcılar destekleniyor?",
-          "answerP1": "Beatvideo Maker şu anda Chrome veya Edge 113+ üzerinde en iyi şekilde çalışır. WebGPU, WebCodecs, OPFS ve File System Access gibi modern tarayıcı API'lerine dayanır; bu yüzden tam iş akışı şimdilik Chromium önceliklidir.",
-          "answerP2": "<strong>Brave kullanıcıları:</strong> File System Access API varsayılan olarak kapalıdır. Etkinleştirmek için <code>brave://flags/#file-system-access-api</code> adresine gidin, <strong>Enabled</strong> yapın ve tarayıcıyı yeniden başlatın."
+          "answerP1": "Beatvideo Maker; WebGPU, WebCodecs ve yazılabilir yerel depolamaya sahip güncel bir masaüstü tarayıcıda en iyi şekilde çalışır. Chrome, Edge ve Brave desteklenen seçeneklerdir.",
+          "answerP2": "<strong>Brave kullanıcıları:</strong> Brave bir klasör seçici sunmadığında Beatvideo Maker otomatik olarak özel yerel tarayıcı depolamasını kullanır. Deneysel bir ayarı etkinleştirmeniz gerekmez."
         },
         "exportFormats": {
           "question": "Hangi dışa aktarma biçimleri destekleniyor?",
@@ -267,7 +267,7 @@
     },
     "workspaceGate": {
       "unsupportedBrowser": "Desteklenmeyen tarayıcı",
-      "unsupportedBrowserDescription": "Beatvideo Maker çalışma alanı klasörü depolaması için Chromium tabanlı bir tarayıcı (Chrome, Edge, Brave, Arc) gerektirir. Firefox ve Safari henüz File System Access API'yi desteklemiyor.",
+      "unsupportedBrowserDescription": "Beatvideo Maker yazılabilir yerel tarayıcı depolamasına ihtiyaç duyar. Klasör seçici kullanılamıyorsa veya engelleniyorsa uygulama bunun yerine özel yerel tarayıcı depolamasını kullanır.",
       "pickTitle": "Çalışma alanı klasörünüzü seçin",
       "pickDescription": "Beatvideo Maker tüm projelerinizi, medyanızı ve önbelleklerinizi kontrol ettiğiniz bir klasörde düz dosyalar olarak saklar. Diskte herhangi bir klasör seçin; projeleriniz orada yaşar.",
       "chooseFolder": "Klasör seç",
