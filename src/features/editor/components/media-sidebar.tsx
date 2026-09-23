@@ -5,6 +5,7 @@ import {
   ChevronLeft,
   ChevronRight,
   ChevronUp,
+  AudioLines,
   Film,
   ImagePlus,
   Layers,
@@ -63,6 +64,9 @@ import { useSettingsStore } from '@/features/editor/deps/settings'
 import { resolveGeneratedLayerCanvasSize } from '../utils/generated-layer-canvas-size'
 import type { BeatvideoProjectMode } from '@/types/project'
 import { isSidebarTabVisibleForBeatvideoMode } from '@/config/beatvideo'
+const LazyBeatvideoMusicPanel = lazy(() =>
+  import('./beatvideo-music-panel').then((module) => ({ default: module.BeatvideoMusicPanel })),
+)
 const LazyAiPanel = lazy(() => import('./ai-tab').then((m) => ({ default: m.AiTab })))
 const LazyTranscriptEditorPanel = lazy(() =>
   importTranscriptEditorPanel().then(({ TranscriptEditorPanel }) => ({
@@ -308,11 +312,13 @@ export const MediaSidebar = memo(function MediaSidebar({
   const setSidebarWidth = useEditorStore((s) => s.setSidebarWidth)
   const prefersReducedMotion = useReducedMotion()
 
+  const [beatTabActivated, setBeatTabActivated] = useState(activeTab === 'beat')
   const [aiTabActivated, setAiTabActivated] = useState(activeTab === 'ai')
   // The Lottie panel hits an external API on mount, so keep it unmounted until
   // the tab is first opened; it then stays mounted (state preserved).
   const [lottieTabActivated, setLottieTabActivated] = useState(activeTab === 'lottie')
   useEffect(() => {
+    if (activeTab === 'beat') setBeatTabActivated(true)
     if (activeTab === 'ai') setAiTabActivated(true)
     if (activeTab === 'lottie') setLottieTabActivated(true)
   }, [activeTab])
@@ -543,6 +549,7 @@ export const MediaSidebar = memo(function MediaSidebar({
   // Category items for the vertical nav
   const categories = [
     { id: 'media' as const, icon: Film, label: t('editor.mediaSidebar.media') },
+    { id: 'beat' as const, icon: AudioLines, label: 'Beat' },
     { id: 'overlay' as const, icon: ImagePlus, label: 'Overlay' },
     { id: 'text' as const, icon: Type, label: t('editor.mediaSidebar.text') },
     { id: 'shapes' as const, icon: Pentagon, label: t('editor.mediaSidebar.shapes') },
@@ -736,6 +743,17 @@ export const MediaSidebar = memo(function MediaSidebar({
               className={`min-h-0 flex-1 overflow-hidden ${activeTab === 'media' ? 'block' : 'hidden'}`}
             >
               <MediaLibrary />
+            </div>
+
+            {/* Beatvideo musical analysis and grid correction. */}
+            <div
+              className={`min-h-0 flex-1 overflow-hidden ${activeTab === 'beat' ? 'block' : 'hidden'}`}
+            >
+              {beatTabActivated ? (
+                <Suspense fallback={null}>
+                  <LazyBeatvideoMusicPanel />
+                </Suspense>
+              ) : null}
             </div>
 
             {/* Beatvideo Photo overlay hub — composed from canonical FreeCut layers. */}
