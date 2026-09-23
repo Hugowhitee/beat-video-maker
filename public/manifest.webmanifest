@@ -1,0 +1,42 @@
+{
+  "name": "Beatvideo Maker",
+  "short_name": "Beatvideo",
+  "id": "./",
+  "description": "A focused editor for beat-driven photo and video visuals.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#111827",
+  "theme_color": "#111827",
+  "orientation": "any",
+  "categories": ["video", "productivity", "utilities"],
+  "icons": [
+    {
+      "src": "./icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "./icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "./icons/icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "./assets/landing/timeline.png",
+      "sizes": "2048x1536",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "Beatvideo Maker editor"
+    }
+  ]
+}
