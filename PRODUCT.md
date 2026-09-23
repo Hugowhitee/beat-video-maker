@@ -1,75 +1,99 @@
-# Product
+# Beatvideo Maker product
 
-## Register
+## Purpose
 
-product
+Beatvideo Maker is a focused local-first editor for beat-driven photo and music-video visuals. It combines a fast music-production workflow with the interaction quality of a mature desktop video editor.
 
-## Users
+The product is downstream of FreeCut. FreeCut owns the general editing engine; Beatvideo owns the narrower workflow, music intelligence and product hierarchy.
 
-Experienced video editors. They come from Premiere Pro and DaVinci Resolve and
-expect those workflows: keyboard-driven, frame-accurate, dense panels they read
-at a glance. Their context is a focused editing session, often hours long, eyes
-on the preview and timeline, hands on shortcuts. They want professional power
-without an install, a subscription, or cloud uploads. The headline draw is that
-projects and media stay local on disk while editing, analysis, transcription,
-AI generation, and export all run in the browser.
+## Primary users
 
-## Product Purpose
+Music producers and creators who already understand timelines, beats, bars and basic video editing. They want something faster than setting up a full generic NLE for every beat visual, without losing real editor controls when they need them.
 
-FreeCut is a browser-based, local-first, multi-track video editor. It exists to
-give serious editors a real NLE that runs entirely in the browser, with a
-workspace folder on their own disk as the source of truth (projects, media
-metadata, thumbnails, waveforms, transcripts, scene cuts, caches all as plain
-files). Success is an editor who would otherwise open Premiere choosing FreeCut
-for a real cut, and never noticing the browser, because playback is
-frame-accurate, scrubbing is responsive, and the tools they reach for by muscle
-memory are all there.
+## Primary hierarchy
 
-## Brand Personality
+The app is project-first, not upload-first.
 
-Precise and professional. Three words: **precise, confident, calm.** The UI is a
-serious instrument, not a consumer toy. Voice in labels and copy is direct and
-technical, the language editors already use (ripple, rolling, slip, slide, mark
-in/out, source-time). No exclamation, no hand-holding, no whimsy. The interface
-projects expert confidence by being legible, predictable, and fast.
+1. **Projects** — open an existing project or create one.
+2. **New project** — name, Photo/Video type, output format and FPS.
+3. **Media** — bring in cover/beat or footage/beat.
+4. **Beat** — analyze and verify the musical grid.
+5. **Edit** — preview/timeline plus the controls relevant to the selected mode.
+6. **Export** — local render through the canonical FreeCut export path.
 
-## Anti-references
+A source upload is never the app's home screen.
 
-- **Consumer-cute editors** (CapCut, iMovie): playful mascots, rounded candy
-  buttons, emoji, gamified flourishes. FreeCut is a pro tool, not a toy.
-- **Flashy SaaS dashboards**: gradient heroes, glassmorphism, big-number metric
-  cards, marketing-grade decoration inside the working UI.
-- **Cramped legacy NLE chrome**: dense to the point of noise, beveled gray
-  toolbars, illegible 10px labels. Density here must stay clean and readable.
-- **Bare-bones open-source utility look**: default browser controls, unstyled
-  forms, no considered visual hierarchy.
+## Photo mode
 
-## Design Principles
+Photo mode is the fastest path for a beat visual:
 
-1. **The footage is the hero.** Chrome stays quiet and recedes; the preview and
-   the editor's content carry the color and attention. The UI earns pixels only
-   when it helps the cut.
-2. **Density without noise.** High information density is a feature for this
-   user, but every panel must stay scannable, aligned, and legible. Clean is not
-   the enemy of dense.
-3. **Frame-accurate and responsive, always.** Perceived precision is part of the
-   brand. Interactions (scrub, zoom, playback, edits) must feel instant and
-   exact; sluggishness or imprecision reads as amateur.
-4. **Respect muscle memory.** Match the conventions pro editors already carry
-   (Remotion-style timing, NLE edit tools, keyboard-first operation). Surprise is
-   a cost, not a delight.
-5. **Expert confidence, not hand-holding.** Speak the editor's language plainly.
-   Trust the user; don't over-explain or decorate.
+- still image is the hero;
+- beat audio drives the musical grid;
+- Media, Beat, Overlay and Effects are first-class;
+- motion/color remain available through FreeCut workspaces/properties;
+- generic video-only controls stay out of the normal path.
 
-## Accessibility & Inclusion
+Overlay means real timeline/compositor layers built from FreeCut primitives: text, imported logo/image and simple shapes. It is not a renamed preset/look menu.
 
-- **WCAG AA contrast.** Body text holds >=4.5:1 against its panel background;
-  large/bold text >=3:1. The current `--muted-foreground` (oklch 0.6) on dark
-  panels is borderline and should be verified and bumped toward ink where it
-  fails. Placeholder text held to the same 4.5:1.
-- Always-dark theme is intentional for long sessions and color-critical work
-  (scopes, grading); contrast work happens within the dark ramp, not by adding a
-  light mode.
-- Honor `prefers-reduced-motion` for panel transitions, scrub overlays, and
-  reveals as the system grows (not yet captured as a hard requirement, revisit
-  with the user).
+## Video mode
+
+Video mode exposes footage editing without changing engines:
+
+- normal FreeCut timeline, waveform, playhead and seeking;
+- cuts, slip/slide and transitions;
+- text/shapes/effects;
+- motion/keyframes and color;
+- Beatvideo Loop / Guided / Auto planning on top of the same timeline.
+
+Importing footage should make the next action obvious: inspect it or drag it onto the timeline. Beatvideo automation may create timeline items, but it never creates a parallel hidden edit state.
+
+## Musical grid contract
+
+The old standalone Beatvideo waveform/grid is not part of the product direction.
+
+The canonical rule is:
+
+- FreeCut owns the time axis, playhead, waveform and click/scrub behavior;
+- Beatvideo overlays musical evidence on that same geometry;
+- beats and bars remain fixed to time while the playhead moves;
+- bar 1 is visually unambiguous;
+- detected bar 1 is distinguished from a user-verified bar 1;
+- BPM and bar-1 corrections are explicit, reversible project state;
+- analysis progress is visible while work is actually running.
+
+The grid should feel closer to DJ/DAW beat-grid tooling than a decorative waveform widget: stable phase, clear downbeats, direct seeking and obvious correction controls.
+
+## Automation
+
+Beatvideo's music intelligence owns:
+
+- Beat This beat/downbeat analysis;
+- MusicMap and musical sections;
+- TransNet/ClipMap evidence where required;
+- deterministic Loop / Guided / Auto edit planning;
+- beat/amplitude/phrase reactive modulation.
+
+Automation must remain inspectable and correctable. It produces normal FreeCut project/timeline data.
+
+## Design
+
+The interface is precise, calm and dense enough to scan quickly. The preview and content carry attention; chrome recedes.
+
+Avoid:
+
+- AI-generated dashboard/card aesthetics;
+- tiny ambiguous controls;
+- inert placeholder features;
+- duplicate controls that do nearly the same thing;
+- explanatory copy in place of a working interaction;
+- separate custom editor systems where FreeCut already has a mature implementation.
+
+Prefer direct manipulation, conventional editor behavior, consistent spacing and progressive disclosure.
+
+## Local-first boundary
+
+Projects and media stay local. The browser may ask the user to choose a workspace folder before project creation so the editor has a durable local source of truth. Core editing does not require accounts, cloud uploads or a rendering backend.
+
+## Upstream rule
+
+FreeCut remains a maintained dependency/foundation, not a one-time code dump. Keep Beatvideo-specific changes localized and preserve upstream lineage and MIT provenance in `UPSTREAM_FREECUT.md`.
