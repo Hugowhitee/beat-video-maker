@@ -216,7 +216,7 @@ export function buildEditPlanTimelineDraft(
   )) {
     const source = sourceById.get(segment.sourceId)
     if (!source) {
-      throw new Error(`No FreeCut media binding exists for source "${segment.sourceId}".`)
+      throw new Error(`No editor media binding exists for source "${segment.sourceId}".`)
     }
 
     const mediaType = getMediaType(source.media.mimeType)
@@ -309,7 +309,7 @@ async function resolveEditSources(
       const media = mediaById[mediaId]
       if (!media) {
         throw new Error(
-          `Beatvideo source "${sourceId}" is not available in the FreeCut media library.`,
+          `Beatvideo source "${sourceId}" is not available in the media library.`,
         )
       }
 
@@ -374,7 +374,7 @@ export async function applyEditPlanToFreeCutTimeline(
     )
     if (!validation.canAdd) {
       warnings.push(
-        `Skipped transition ${transition.sourceTransitionId}: ${validation.reason ?? 'invalid FreeCut transition'}.`,
+        `Skipped transition ${transition.sourceTransitionId}: ${validation.reason ?? 'invalid editor transition'}.`,
       )
       continue
     }
