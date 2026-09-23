@@ -16,16 +16,16 @@ const page = {
           headers: ['Symptom', 'Fix'],
           rows: [
             [
-              'Unsupported browser, or no workspace picker',
-              'Use Chrome or Edge 113+, which support the APIs FreeCut needs.',
+              'Local storage is unavailable',
+              'Use a recent desktop browser with writable local storage. Chrome, Edge, and Brave are the recommended paths.',
             ],
             [
-              'Brave cannot pick a folder',
-              'Enable `brave://flags/#file-system-access-api` and relaunch Brave.',
+              'Brave does not show a folder picker',
+              'Nothing is wrong: Beatvideo Maker automatically uses private local browser storage in Brave.',
             ],
             [
-              'Permission denied',
-              'Choose a normal folder you can edit, then allow read and write access.',
+              'Folder permission denied',
+              'For a normal folder workspace, choose a folder you can edit and allow read and write access.',
             ],
             [
               'Asked to reconnect on reopen',
@@ -76,14 +76,14 @@ const page = {
           rows: [
             [
               'Effects, scopes, or AI unavailable',
-              'WebGPU may be off — use recent Chrome or Edge, update GPU drivers, and keep hardware acceleration on.',
+              'WebGPU may be off — update your browser and GPU drivers and keep hardware acceleration on.',
             ],
             [
               'A model download is slow or fails',
               'Keep the tab open, retry on a stable connection, and clear the **Local AI Model Cache** if a download is corrupt.',
             ],
             ['Out of memory during AI work', 'Use **Unload Local Models** to release runtimes.'],
-            ['LUT import blocked', 'LUT (.cube) import requires a Chromium-based browser.'],
+            ['LUT import blocked', 'Try a recent Chromium-based desktop browser.'],
           ],
         },
       ],
