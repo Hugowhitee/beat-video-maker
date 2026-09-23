@@ -16,6 +16,7 @@ import { useSyncExternalStore } from 'react'
 type PathnameListener = () => void
 
 const listeners = new Set<PathnameListener>()
+const appBasePath = import.meta.env.BASE_URL === '/' ? '' : import.meta.env.BASE_URL.replace(/\/$/, '')
 let patched = false
 
 function notify() {
@@ -50,8 +51,14 @@ function subscribe(listener: PathnameListener): () => void {
   }
 }
 
+function stripAppBasePath(pathname: string): string {
+  if (!appBasePath) return pathname
+  if (pathname === appBasePath || pathname === `${appBasePath}/`) return '/'
+  return pathname.startsWith(`${appBasePath}/`) ? pathname.slice(appBasePath.length) : pathname
+}
+
 function getSnapshot(): string {
-  return typeof window === 'undefined' ? '/' : window.location.pathname
+  return typeof window === 'undefined' ? '/' : stripAppBasePath(window.location.pathname)
 }
 
 function getServerSnapshot(): string {
