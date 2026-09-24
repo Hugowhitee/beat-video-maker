@@ -31,6 +31,10 @@ import {
 } from '@/infrastructure/storage/handles-db'
 import { onPermissionLost, setWorkspaceRoot } from '@/infrastructure/storage/workspace-fs/root'
 import { createLogger } from '@/shared/logging/logger'
+import {
+  getBrowserWorkspaceHandle,
+  isBrowserWorkspaceSupported,
+} from '@/infrastructure/storage/browser-workspace'
 import { WorkspaceGateSplash } from './workspace-gate-splash'
 import { usePathname } from './use-pathname'
 
@@ -47,7 +51,7 @@ const logger = createLogger('WorkspaceGate')
 
 type GateStatus =
   | { kind: 'initializing' }
-  | { kind: 'unavailable' } // Non-Chromium browsers
+  | { kind: 'unavailable' } // No writable local filesystem capability
   | { kind: 'pick' } // No saved handle
   | { kind: 'reconnect'; handleName: string } // Saved handle, permission revoked
   | { kind: 'ready' }
@@ -84,7 +88,14 @@ export function WorkspaceGate({ children }: { children: React.ReactNode }) {
     let cancelled = false
     ;(async () => {
       if (!isFileSystemAccessSupported()) {
-        if (!cancelled) setStatus({ kind: 'unavailable' })
+        if (!isBrowserWorkspaceSupported()) {
+          if (!cancelled) setStatus({ kind: 'unavailable' })
+          return
+        }
+
+        const handle = await getBrowserWorkspaceHandle()
+        if (cancelled) return
+        await activate(handle)
         return
       }
       // Promote any legacy `workspace:current` into a proper known-workspace
@@ -106,7 +117,9 @@ export function WorkspaceGate({ children }: { children: React.ReactNode }) {
       }
     })().catch((error) => {
       logger.error('Gate initialization failed', error)
-      if (!cancelled) setStatus({ kind: 'pick' })
+      if (!cancelled) {
+        setStatus({ kind: isFileSystemAccessSupported() ? 'pick' : 'unavailable' })
+      }
     })
     return () => {
       cancelled = true
@@ -118,19 +131,32 @@ export function WorkspaceGate({ children }: { children: React.ReactNode }) {
     const unsubscribe = onPermissionLost(() => {
       void (async () => {
         const record = await getWorkspaceHandleRecord()
+        if (!record && !isFileSystemAccessSupported() && isBrowserWorkspaceSupported()) {
+          await activate(await getBrowserWorkspaceHandle())
+          return
+        }
         setStatus({ kind: 'reconnect', handleName: record?.name ?? 'workspace' })
       })()
     })
     return () => {
       unsubscribe()
     }
-  }, [])
+  }, [activate])
 
   const handlePick = useCallback(async () => {
     setError(null)
     try {
+      if (!isFileSystemAccessSupported()) {
+        if (!isBrowserWorkspaceSupported()) {
+          setStatus({ kind: 'unavailable' })
+          return
+        }
+        await activate(await getBrowserWorkspaceHandle())
+        return
+      }
+
       const handle = await window.showDirectoryPicker({
-        id: 'freecut-workspace',
+        id: 'beatvideo-workspace',
         mode: 'readwrite',
         startIn: 'documents',
       })

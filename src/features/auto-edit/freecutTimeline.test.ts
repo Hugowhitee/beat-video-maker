@@ -175,6 +175,6 @@ describe('buildEditPlanTimelineDraft', () => {
         existingTracks: [makeTrack()],
         existingItems: [],
       }),
-    ).toThrow('No FreeCut media binding exists for source "source-a".')
+    ).toThrow('No editor media binding exists for source "source-a".')
   })
 })

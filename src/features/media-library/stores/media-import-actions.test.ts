@@ -18,6 +18,11 @@ const proxyServiceMocks = vi.hoisted(() => ({
   generateProxy: vi.fn(),
 }))
 
+const mediaFilePickerMocks = vi.hoisted(() => ({
+  hasMediaFilePickerSupport: vi.fn(),
+  showMediaFilePicker: vi.fn(),
+}))
+
 const loggerMocks = vi.hoisted(() => ({
   startEvent: vi.fn(() => ({
     merge: vi.fn(),
@@ -53,6 +58,11 @@ vi.mock('../services/background-media-work', async () => {
     await import('../test-utils/background-media-work-test-mocks')
   return createBackgroundMediaWorkMocks(vi)
 })
+
+vi.mock('../utils/media-file-picker', () => ({
+  hasMediaFilePickerSupport: mediaFilePickerMocks.hasMediaFilePickerSupport,
+  showMediaFilePicker: mediaFilePickerMocks.showMediaFilePicker,
+}))
 
 vi.mock('../utils/validation', () => ({
   getMimeType: vi.fn((file: File) => file.type || 'application/octet-stream'),
@@ -199,6 +209,9 @@ describe('createImportActions', () => {
     mediaLibraryServiceMocks.waitForMediaPreparation.mockReset()
     mediaLibraryServiceMocks.waitForMediaPreparation.mockResolvedValue(undefined)
     mediaLibraryServiceMocks.getMediaFile.mockReset()
+    mediaFilePickerMocks.hasMediaFilePickerSupport.mockReset()
+    mediaFilePickerMocks.hasMediaFilePickerSupport.mockReturnValue(true)
+    mediaFilePickerMocks.showMediaFilePicker.mockReset()
     proxyServiceMocks.canGenerateProxy.mockImplementation((mimeType: string) =>
       mimeType.startsWith('video/'),
     )
@@ -524,28 +537,46 @@ describe('createImportActions', () => {
     })
   })
 
-  it('sets a browser support error when the picker API is unavailable', async () => {
-    const originalWindow = globalThis.window
-    const originalNavigator = globalThis.navigator
-    const mockWindow = {} as Window & typeof globalThis
-    const mockNavigator = {} as Navigator
+  it('uses the normal file-input fallback for copied media when FSA is unavailable', async () => {
+    const file = new File(['audio'], 'beat.mp3', { type: 'audio/mpeg' })
+    const handle = createHandle(file)
+    const imported = makeMedia({
+      id: 'beat-1',
+      storageType: 'workspace',
+      fileName: 'beat.mp3',
+      mimeType: 'audio/mpeg',
+    })
+    mediaFilePickerMocks.hasMediaFilePickerSupport.mockReturnValue(false)
+    mediaFilePickerMocks.showMediaFilePicker.mockResolvedValue([handle])
+    mediaLibraryServiceMocks.importMediaWithHandle.mockResolvedValue(imported)
 
-    vi.stubGlobal('window', mockWindow)
-    vi.stubGlobal('navigator', mockNavigator)
+    const harness = createImportActionsHarness()
+    const result = await harness.actions.importMedia({ storageMode: 'copy' })
 
-    try {
-      const harness = createImportActionsHarness()
-      const { actions } = harness
-      const result = await actions.importMedia()
+    expect(result).toEqual([imported])
+    expect(mediaFilePickerMocks.showMediaFilePicker).toHaveBeenCalledWith({
+      multiple: true,
+      allowFileInputFallback: true,
+    })
+    expect(mediaLibraryServiceMocks.importMediaWithHandle).toHaveBeenCalledWith(
+      handle,
+      'project-1',
+      { storageMode: 'copy' },
+    )
+    expect(harness.currentState.error).toBeNull()
+  })
 
-      expect(result).toEqual([])
-      expect(harness.currentState.error).toBe(
-        'File picker not supported in this browser. Use Chrome or Edge.',
-      )
-      expect(harness.currentState.errorLink).toBeNull()
-    } finally {
-      vi.stubGlobal('window', originalWindow)
-      vi.stubGlobal('navigator', originalNavigator)
-    }
+  it('explains that linked-file import needs persistent file-system access', async () => {
+    mediaFilePickerMocks.hasMediaFilePickerSupport.mockReturnValue(false)
+
+    const harness = createImportActionsHarness()
+    const result = await harness.actions.importMedia({ storageMode: 'link' })
+
+    expect(result).toEqual([])
+    expect(harness.currentState.error).toBe(
+      'Linked-file import needs direct file-system access in this browser. Use normal Import to copy the media into the Beatvideo workspace instead.',
+    )
+    expect(harness.currentState.errorLink).toBeNull()
+    expect(mediaFilePickerMocks.showMediaFilePicker).not.toHaveBeenCalled()
   })
 })

@@ -77,15 +77,14 @@ function ProjectsIndex() {
     let name = fileName.replace(/\.zip$/i, '')
     // Remove browser duplicate suffix like " (1)", " (2)", etc.
     name = name.replace(/\s*\(\d+\)$/, '')
-    // Remove .freecut suffix
-    name = name.replace(/\.freecut$/i, '')
+    // Remove Beatvideo suffix, or the legacy FreeCut suffix for old bundles.
+    name = name.replace(/\.(?:beatvideo|freecut)$/i, '')
     return name
   }
 
-  // Check if file is a valid bundle (handles browser-renamed files like "project.freecut (1).zip")
+  // Accept Beatvideo bundles and legacy FreeCut bundles for backwards compatibility.
   const isValidBundleFile = (fileName: string): boolean => {
-    // Match: anything.freecut.zip or anything.freecut (N).zip
-    return /\.freecut(\s*\(\d+\))?\.zip$/i.test(fileName)
+    return /\.(?:beatvideo|freecut)(\s*\(\d+\))?\.zip$/i.test(fileName)
   }
 
   const isLoading = useProjectsLoading()
