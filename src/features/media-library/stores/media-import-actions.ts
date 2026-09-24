@@ -430,14 +430,16 @@ export function createImportActions(
         return []
       }
 
-      // Check if File System Access API is supported
-      if (!hasMediaFilePickerSupport()) {
-        const isBrave = 'brave' in navigator
+      const storageMode = options?.storageMode ?? 'copy'
+
+      // Linked-file imports need a persistent FileSystemFileHandle. Copy imports
+      // can fall back to a normal <input type="file"> and immediately copy the
+      // selected bytes into the active Beatvideo workspace (including OPFS in Brave).
+      if (!hasMediaFilePickerSupport() && storageMode === 'link') {
         set({
-          error: isBrave
-            ? 'File System Access API is disabled in Brave. Copy the URL below, paste it in your address bar, set the flag to Enabled, and relaunch.'
-            : 'File picker not supported in this browser. Use Chrome or Edge.',
-          errorLink: isBrave ? 'brave://flags/#file-system-access-api' : null,
+          error:
+            'Linked-file import needs direct file-system access in this browser. Use normal Import to copy the media into the Beatvideo workspace instead.',
+          errorLink: null,
         })
         return []
       }
@@ -449,13 +451,15 @@ export function createImportActions(
 
       try {
         // Open file picker
-        const handles = await showMediaFilePicker({ multiple: true })
+        const handles = await showMediaFilePicker({
+          multiple: true,
+          allowFileInputFallback: storageMode === 'copy',
+        })
 
         event.set('fileCount', handles.length)
 
         // Create optimistic placeholders for all files immediately
         const serviceModulePromise = loadMediaLibraryService()
-        const storageMode = options?.storageMode ?? 'copy'
         const importTasks = await createOptimisticImportTasks(handles, storageMode)
         const importResults = await runImportTasks(
           importTasks,
