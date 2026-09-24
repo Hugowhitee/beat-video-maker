@@ -168,6 +168,11 @@ function scheduleDomSnapshot(state: PreviewScrubPerformanceState): void {
   if (typeof document === 'undefined' || snapshotTimer !== null) return
   snapshotTimer = setTimeout(() => {
     snapshotTimer = null
+    // The browser/test document can disappear while this debounced callback is
+    // waiting (for example when jsdom tears down after a test file). Treat the
+    // snapshot as best-effort profiling output rather than crashing the run.
+    if (typeof document === 'undefined') return
+
     let snapshot = document.getElementById(PERF_SNAPSHOT_ELEMENT_ID)
     if (!snapshot) {
       snapshot = document.createElement('script')
