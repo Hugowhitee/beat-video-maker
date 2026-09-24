@@ -1,6 +1,6 @@
 // @vitest-environment node
 
-import { beforeEach, describe, expect, it } from 'vite-plus/test'
+import { beforeEach, describe, expect, it, vi } from 'vite-plus/test'
 import {
   recordPreviewScrubPresentationQuality,
   recordPreviewScrubRequest,
@@ -25,6 +25,22 @@ function getState(): PerformanceState {
 beforeEach(() => getState().reset())
 
 describe('preview scrub fallback performance', () => {
+
+  it('ignores a pending DOM snapshot after the document is torn down', () => {
+    vi.useFakeTimers()
+    vi.stubGlobal('document', {} as Document)
+
+    try {
+      recordPreviewScrubRequest('color', 42, 1)
+      vi.unstubAllGlobals()
+
+      expect(() => vi.advanceTimersByTime(100)).not.toThrow()
+    } finally {
+      vi.unstubAllGlobals()
+      vi.useRealTimers()
+    }
+  })
+
   it('tracks first fallback visibility and later exact-frame replacement latency', () => {
     recordPreviewScrubRequest('color', 120, 1)
     recordPreviewScrubPresentationQuality(120, true)
