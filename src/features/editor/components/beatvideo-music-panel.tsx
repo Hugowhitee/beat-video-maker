@@ -204,8 +204,8 @@ export function BeatvideoMusicPanel() {
             Musical grid
           </div>
           <p className="mt-1.5 text-[10px] leading-relaxed text-muted-foreground">
-            The FreeCut timeline owns playback and seeking. Beatvideo only adds fixed musical
-            markers on that same time axis, so the grid cannot drift away from the waveform.
+            The main timeline owns playback and seeking. Beatvideo adds musical
+            markers on that same time axis, keeping waveform, playhead, and grid on one timeline.
           </p>
         </div>
 
