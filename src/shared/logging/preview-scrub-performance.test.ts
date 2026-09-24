@@ -25,7 +25,6 @@ function getState(): PerformanceState {
 beforeEach(() => getState().reset())
 
 describe('preview scrub fallback performance', () => {
-
   it('ignores a pending DOM snapshot after the document is torn down', () => {
     vi.useFakeTimers()
     vi.stubGlobal('document', {} as Document)
