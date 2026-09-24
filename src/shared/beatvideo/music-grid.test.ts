@@ -1,16 +1,18 @@
 import { describe, expect, it } from 'vite-plus/test'
 import type { BeatvideoMusicAnalysis } from '@/types/beatvideo'
-import { resolveBeatvideoMusicGrid } from './music-grid'
+import { getBeatvideoGridMode, resolveBeatvideoMusicGrid } from './music-grid'
 
 function fixture(): BeatvideoMusicAnalysis {
   return {
-    version: 1,
+    version: 2,
     mediaId: 'beat',
     analyzedAt: 1,
     detectedBarOneTime: 1,
     barOneTime: 1,
     barOneVerified: false,
     bpmOverride: null,
+    gridMode: 'detected',
+    correctionAnchors: [],
     musicMap: {
       duration: 5,
       bpm: 120,
@@ -34,7 +36,7 @@ describe('resolveBeatvideoMusicGrid', () => {
     expect(resolveBeatvideoMusicGrid(analysis)).toBe(analysis.musicMap)
   })
 
-  it('shifts every detected beat by the manual bar-one correction', () => {
+  it('shifts every detected beat by the source-domain bar-one correction', () => {
     const analysis = fixture()
     analysis.barOneTime = 1.25
     analysis.barOneVerified = true
@@ -44,8 +46,21 @@ describe('resolveBeatvideoMusicGrid', () => {
     expect(grid.beats.find((beat) => beat.downbeat)?.time).toBe(1.25)
   })
 
-  it('rebuilds an even beat grid around bar one for an explicit BPM override', () => {
+  it('warps detected timing piecewise between DJ-style correction anchors', () => {
     const analysis = fixture()
+    analysis.correctionAnchors = [
+      { id: 'a', sourceTime: 1.5, correctedTime: 1.6 },
+      { id: 'b', sourceTime: 2.5, correctedTime: 2.8 },
+    ]
+
+    const grid = resolveBeatvideoMusicGrid(analysis)
+    expect(grid.beats.map((beat) => beat.time)).toEqual([0.6, 1.1, 1.6, 2.2, 2.8, 3.3])
+    expect(grid.beats.map((beat) => beat.index)).toEqual([0, 1, 2, 3, 4, 5])
+  })
+
+  it('rebuilds an even grid only when fixed BPM mode is explicit', () => {
+    const analysis = fixture()
+    analysis.gridMode = 'fixed'
     analysis.barOneTime = 1
     analysis.barOneVerified = true
     analysis.bpmOverride = 100
@@ -56,5 +71,23 @@ describe('resolveBeatvideoMusicGrid', () => {
 
     const aroundBarOne = grid.beats.filter((beat) => beat.time >= 1).slice(0, 3)
     expect(aroundBarOne[1]!.time - aroundBarOne[0]!.time).toBeCloseTo(0.6, 6)
+  })
+
+  it('keeps v1 BPM overrides in fixed mode for backwards compatibility', () => {
+    const analysis = fixture()
+    analysis.version = 1
+    analysis.gridMode = undefined
+    analysis.bpmOverride = 100
+
+    expect(getBeatvideoGridMode(analysis)).toBe('fixed')
+    expect(resolveBeatvideoMusicGrid(analysis).bpm).toBe(100)
+  })
+
+  it('does not flatten detected timing when a v2 analysis stays in detected mode', () => {
+    const analysis = fixture()
+    analysis.bpmOverride = 100
+    analysis.gridMode = 'detected'
+
+    expect(resolveBeatvideoMusicGrid(analysis)).toBe(analysis.musicMap)
   })
 })
