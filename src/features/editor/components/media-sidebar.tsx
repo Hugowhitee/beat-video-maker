@@ -302,8 +302,8 @@ const PHOTO_QUICK_EFFECT_IDS = [
   'gpu-vignette',
   'gpu-glow',
   'gpu-sharpen',
-  'gpu-contrast',
-  'gpu-saturation',
+  'gpu-rgb-split',
+  'gpu-gaussian-blur',
 ] as const
 
 export const MediaSidebar = memo(function MediaSidebar({
