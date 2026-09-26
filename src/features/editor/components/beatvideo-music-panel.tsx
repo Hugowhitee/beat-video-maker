@@ -728,9 +728,7 @@ export function BeatvideoMusicPanel() {
             Musical grid
           </div>
           <p className="mt-1.5 text-[10px] leading-relaxed text-muted-foreground">
-            Analysis stays attached to the music source. Move, trim, or retime the
-            normal timeline clip and waveform, playhead, and beat grid stay on the
-            same time axis.
+            Analyze once; only open Grid correction when the detected timing needs help.
           </p>
         </div>
 
@@ -931,191 +929,202 @@ export function BeatvideoMusicPanel() {
               </div>
             </section>
 
-            <section className="space-y-2">
-              <div className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
-                Grid type
-              </div>
-              <div className="grid grid-cols-2 gap-1">
-                <Button
-                  type="button"
-                  size="sm"
-                  variant={gridMode === 'detected' ? 'default' : 'outline'}
-                  onClick={() => void setGridMode('detected')}
-                >
-                  Detected beatmap
-                </Button>
-                <Button
-                  type="button"
-                  size="sm"
-                  variant={gridMode === 'fixed' ? 'default' : 'outline'}
-                  onClick={() => void setGridMode('fixed')}
-                >
-                  Fixed BPM
-                </Button>
-              </div>
-              <p className="text-[10px] leading-relaxed text-muted-foreground">
-                Detected keeps Beat This beat timing. Fixed BPM intentionally makes
-                one even tempo grid.
-              </p>
-            </section>
+            <details className="border-t border-border pt-3">
+              <summary className="flex cursor-pointer list-none items-center justify-between gap-2 text-xs font-medium text-foreground marker:hidden [&::-webkit-details-marker]:hidden">
+                <span>Grid correction</span>
+                <span className="text-[10px] font-normal text-muted-foreground">
+                  {gridMode === 'fixed' ? 'Fixed BPM' : 'Detected beatmap'}
+                </span>
+              </summary>
+              <div className="mt-3 space-y-3">
+                <section className="space-y-2">
+                  <div className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+                    Grid type
+                  </div>
+                  <div className="grid grid-cols-2 gap-1">
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant={gridMode === 'detected' ? 'default' : 'outline'}
+                      onClick={() => void setGridMode('detected')}
+                    >
+                      Detected beatmap
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant={gridMode === 'fixed' ? 'default' : 'outline'}
+                      onClick={() => void setGridMode('fixed')}
+                    >
+                      Fixed BPM
+                    </Button>
+                  </div>
+                  <p className="text-[10px] leading-relaxed text-muted-foreground">
+                    Detected keeps Beat This beat timing. Fixed BPM intentionally makes
+                    one even tempo grid.
+                  </p>
+                </section>
 
-            {gridMode === 'fixed' ? (
-              <section className="space-y-2">
-                <div className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
-                  Fixed tempo
-                </div>
-                <div className="flex gap-1.5">
-                  <input
-                    type="number"
-                    min={40}
-                    max={300}
-                    step={0.01}
-                    value={bpmDraft}
-                    onChange={(event) => setBpmDraft(event.target.value)}
-                    onKeyDown={(event) => {
-                      if (event.key === 'Enter') void applyBpm()
-                    }}
-                    className="h-8 min-w-0 flex-1 rounded-md border border-input bg-secondary px-2 font-mono text-xs text-foreground"
-                    aria-label="Fixed BPM"
-                  />
+                {gridMode === 'fixed' ? (
+                  <section className="space-y-2">
+                    <div className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+                      Fixed tempo
+                    </div>
+                    <div className="flex gap-1.5">
+                      <input
+                        type="number"
+                        min={40}
+                        max={300}
+                        step={0.01}
+                        value={bpmDraft}
+                        onChange={(event) => setBpmDraft(event.target.value)}
+                        onKeyDown={(event) => {
+                          if (event.key === 'Enter') void applyBpm()
+                        }}
+                        className="h-8 min-w-0 flex-1 rounded-md border border-input bg-secondary px-2 font-mono text-xs text-foreground"
+                        aria-label="Fixed BPM"
+                      />
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        onClick={() => void applyBpm()}
+                      >
+                        Apply
+                      </Button>
+                      <Button
+                        type="button"
+                        size="icon"
+                        variant="ghost"
+                        className="h-8 w-8"
+                        onClick={() => void resetToDetected()}
+                        aria-label="Use detected timing"
+                        data-tooltip="Use detected timing"
+                      >
+                        <RotateCcw className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
+                  </section>
+                ) : null}
+
+                <section className="space-y-2 border-t border-border pt-3">
+                  <div className="flex items-center justify-between gap-2">
+                    <div>
+                      <div className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+                        Timeline link
+                      </div>
+                      <div className="mt-1 text-[10px] text-muted-foreground">
+                        {timelineGrid
+                          ? `Linked to ${timelineGrid.placement.label}`
+                          : 'Place this beat source on the timeline to show its grid.'}
+                      </div>
+                    </div>
+                    {timelineGrid ? (
+                      <LocateFixed className="h-3.5 w-3.5 text-primary" />
+                    ) : null}
+                  </div>
+                </section>
+
+                <section className="space-y-2">
+                  <div className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+                    Grid alignment
+                  </div>
+                  <div className="grid grid-cols-2 gap-1">
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      disabled={!timelineGrid}
+                      onClick={() => void nudgeGrid(-GRID_NUDGE_SECONDS)}
+                    >
+                      −10 ms
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      disabled={!timelineGrid}
+                      onClick={() => void nudgeGrid(GRID_NUDGE_SECONDS)}
+                    >
+                      +10 ms
+                    </Button>
+                  </div>
+                  {gridMode === 'detected' ? (
+                    <Button
+                      type="button"
+                      size="sm"
+                      className="w-full justify-start"
+                      disabled={!timelineGrid}
+                      onClick={() => void alignNearestBeatToPlayhead()}
+                    >
+                      <Crosshair className="h-3.5 w-3.5" />
+                      Align nearest beat to playhead
+                    </Button>
+                  ) : null}
+                  <div className="flex gap-1">
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="ghost"
+                      className="flex-1 justify-start"
+                      disabled={(effectiveAnalysis.correctionAnchors?.length ?? 0) === 0}
+                      onClick={() => void undoLastAnchor()}
+                    >
+                      <Undo2 className="h-3.5 w-3.5" />
+                      Undo anchor
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="ghost"
+                      className="flex-1"
+                      onClick={() => void resetCorrections()}
+                    >
+                      Reset grid
+                    </Button>
+                  </div>
+                </section>
+
+                <section className="space-y-2 border-t border-border pt-3">
+                  <div className="flex items-center justify-between gap-2">
+                    <div>
+                      <div className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+                        Bar 1
+                      </div>
+                      <div className="mt-1 font-mono text-sm text-foreground">
+                        {formatClock(timelineGrid?.barOneTimelineTime ?? null)}
+                      </div>
+                    </div>
+                    <span className="text-[9px] text-muted-foreground">
+                      {effectiveAnalysis.barOneVerified ? 'Verified' : 'Detected'}
+                    </span>
+                  </div>
+
+                  <Button
+                    type="button"
+                    size="sm"
+                    className="w-full justify-start"
+                    disabled={!timelineGrid}
+                    onClick={() => void setBarOneAtPlayhead()}
+                  >
+                    <Crosshair className="h-3.5 w-3.5" />
+                    Set bar 1 at playhead
+                  </Button>
                   <Button
                     type="button"
                     size="sm"
                     variant="outline"
-                    onClick={() => void applyBpm()}
+                    className="w-full justify-start"
+                    disabled={!timelineGrid || timelineGrid.barOneTimelineTime === null}
+                    onClick={jumpToBarOne}
                   >
-                    Apply
+                    <Play className="h-3.5 w-3.5" />
+                    Go to bar 1
                   </Button>
-                  <Button
-                    type="button"
-                    size="icon"
-                    variant="ghost"
-                    className="h-8 w-8"
-                    onClick={() => void resetToDetected()}
-                    aria-label="Use detected timing"
-                    data-tooltip="Use detected timing"
-                  >
-                    <RotateCcw className="h-3.5 w-3.5" />
-                  </Button>
-                </div>
-              </section>
-            ) : null}
+                </section>
 
-            <section className="space-y-2 border-t border-border pt-3">
-              <div className="flex items-center justify-between gap-2">
-                <div>
-                  <div className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
-                    Timeline link
-                  </div>
-                  <div className="mt-1 text-[10px] text-muted-foreground">
-                    {timelineGrid
-                      ? `Linked to ${timelineGrid.placement.label}`
-                      : 'Place this beat source on the timeline to show its grid.'}
-                  </div>
-                </div>
-                {timelineGrid ? (
-                  <LocateFixed className="h-3.5 w-3.5 text-primary" />
-                ) : null}
               </div>
-            </section>
-
-            <section className="space-y-2">
-              <div className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
-                Grid alignment
-              </div>
-              <div className="grid grid-cols-2 gap-1">
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="outline"
-                  disabled={!timelineGrid}
-                  onClick={() => void nudgeGrid(-GRID_NUDGE_SECONDS)}
-                >
-                  −10 ms
-                </Button>
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="outline"
-                  disabled={!timelineGrid}
-                  onClick={() => void nudgeGrid(GRID_NUDGE_SECONDS)}
-                >
-                  +10 ms
-                </Button>
-              </div>
-              {gridMode === 'detected' ? (
-                <Button
-                  type="button"
-                  size="sm"
-                  className="w-full justify-start"
-                  disabled={!timelineGrid}
-                  onClick={() => void alignNearestBeatToPlayhead()}
-                >
-                  <Crosshair className="h-3.5 w-3.5" />
-                  Align nearest beat to playhead
-                </Button>
-              ) : null}
-              <div className="flex gap-1">
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="ghost"
-                  className="flex-1 justify-start"
-                  disabled={(effectiveAnalysis.correctionAnchors?.length ?? 0) === 0}
-                  onClick={() => void undoLastAnchor()}
-                >
-                  <Undo2 className="h-3.5 w-3.5" />
-                  Undo anchor
-                </Button>
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="ghost"
-                  className="flex-1"
-                  onClick={() => void resetCorrections()}
-                >
-                  Reset grid
-                </Button>
-              </div>
-            </section>
-
-            <section className="space-y-2 border-t border-border pt-3">
-              <div className="flex items-center justify-between gap-2">
-                <div>
-                  <div className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
-                    Bar 1
-                  </div>
-                  <div className="mt-1 font-mono text-sm text-foreground">
-                    {formatClock(timelineGrid?.barOneTimelineTime ?? null)}
-                  </div>
-                </div>
-                <span className="text-[9px] text-muted-foreground">
-                  {effectiveAnalysis.barOneVerified ? 'Verified' : 'Detected'}
-                </span>
-              </div>
-
-              <Button
-                type="button"
-                size="sm"
-                className="w-full justify-start"
-                disabled={!timelineGrid}
-                onClick={() => void setBarOneAtPlayhead()}
-              >
-                <Crosshair className="h-3.5 w-3.5" />
-                Set bar 1 at playhead
-              </Button>
-              <Button
-                type="button"
-                size="sm"
-                variant="outline"
-                className="w-full justify-start"
-                disabled={!timelineGrid || timelineGrid.barOneTimelineTime === null}
-                onClick={jumpToBarOne}
-              >
-                <Play className="h-3.5 w-3.5" />
-                Go to bar 1
-              </Button>
-            </section>
+            </details>
           </>
         ) : null}
       </div>
