@@ -41,3 +41,17 @@ describe('resolveProducerTagRepeatFrames', () => {
     ).toEqual([0, 300])
   })
 })
+
+
+  it('does not place a repeated watermark when the full tag cannot fit', () => {
+    expect(
+      resolveProducerTagRepeatFrames({
+        beats: [{ time: 0, index: 0, downbeat: true, strength: 1 }],
+        fps: 30,
+        everyBars: 1,
+        startFrame: 0,
+        endFrame: 30,
+        tagDurationInFrames: 60,
+      }),
+    ).toEqual([])
+  })

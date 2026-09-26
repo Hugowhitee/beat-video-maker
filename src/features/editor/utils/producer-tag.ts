@@ -11,10 +11,9 @@ export function resolveProducerTagRepeatFrames(params: {
   const fps = Math.max(1, params.fps)
   const everyBars = Math.max(1, Math.round(params.everyBars))
   const startFrame = Math.max(0, Math.round(params.startFrame))
-  const lastFullStart = Math.max(
-    startFrame,
-    Math.round(params.endFrame) - Math.max(1, Math.round(params.tagDurationInFrames)),
-  )
+  const tagDurationInFrames = Math.max(1, Math.round(params.tagDurationInFrames))
+  const lastFullStart = Math.round(params.endFrame) - tagDurationInFrames
+  if (lastFullStart < startFrame) return []
 
   return params.beats
     .filter((beat) => beat.downbeat)
