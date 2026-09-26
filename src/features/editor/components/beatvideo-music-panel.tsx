@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   AudioLines,
   Crosshair,
+  Film,
   LocateFixed,
   Play,
   Repeat2,
@@ -43,6 +44,10 @@ import {
   DEFAULT_PROJECT_WIDTH,
 } from '@/shared/projects/defaults'
 import { resolveProducerTagRepeatFrames } from '../utils/producer-tag'
+import {
+  applyEditPlanToFreeCutTimeline,
+  createSingleClipLoopPlan,
+} from '@/features/editor/deps/auto-edit-contract'
 import type {
   BeatvideoGridCorrectionAnchor,
   BeatvideoGridMode,
@@ -140,6 +145,7 @@ export function BeatvideoMusicPanel() {
   )
 
   const [selectedMediaId, setSelectedMediaId] = useState('')
+  const [selectedLoopMediaId, setSelectedLoopMediaId] = useState('')
   const [selectedTagMediaId, setSelectedTagMediaId] = useState('')
   const [tagRepeatBars, setTagRepeatBars] = useState(16)
   const [progress, setProgress] = useState<MusicAnalysisProgress | null>(null)
@@ -163,6 +169,10 @@ export function BeatvideoMusicPanel() {
     : 'detected'
   const barCount =
     resolvedSourceGrid?.beats.filter((beat) => beat.downbeat).length ?? 0
+  const videoCandidates = useMemo(
+    () => mediaItems.filter((media) => media.mimeType.startsWith('video/')),
+    [mediaItems],
+  )
   const tagCandidates = useMemo(
     () =>
       mediaItems.filter(
@@ -181,6 +191,12 @@ export function BeatvideoMusicPanel() {
       setSelectedMediaId(candidates[0]?.id ?? '')
     }
   }, [analysis?.mediaId, candidates, selectedMediaId])
+
+  useEffect(() => {
+    if (!videoCandidates.some((media) => media.id === selectedLoopMediaId)) {
+      setSelectedLoopMediaId(videoCandidates[0]?.id ?? '')
+    }
+  }, [selectedLoopMediaId, videoCandidates])
 
   useEffect(() => {
     if (!tagCandidates.some((media) => media.id === selectedTagMediaId)) {
@@ -270,6 +286,52 @@ export function BeatvideoMusicPanel() {
       setProgress(null)
     }
   }, [analyzing, currentProject, persistAnalysis, selectedMediaId])
+
+  const loopVideoToBeat = useCallback(async () => {
+    const media = useMediaLibraryStore
+      .getState()
+      .mediaItems.find((candidate) => candidate.id === selectedLoopMediaId)
+    if (!media || !media.mimeType.startsWith('video/')) {
+      toast.error('Import and select one video clip first')
+      return
+    }
+
+    const timeline = useTimelineStore.getState()
+    const beatPlacement =
+      timelineGrid?.placement ??
+      [...timeline.items]
+        .filter((item) => item.type === 'audio')
+        .sort((left, right) => right.durationInFrames - left.durationInFrames)[0]
+
+    if (!beatPlacement) {
+      toast.error('Place the beat on the timeline first')
+      return
+    }
+
+    const timelineStart = beatPlacement.from / timeline.fps
+    const timelineDuration = beatPlacement.durationInFrames / timeline.fps
+
+    try {
+      const plan = createSingleClipLoopPlan({
+        sourceId: media.id,
+        sourceDuration: media.duration,
+        timelineStart,
+        timelineDuration,
+      })
+      const result = await applyEditPlanToFreeCutTimeline(plan)
+      useSelectionStore.getState().setActiveTrack(result.targetVideoTrackId)
+      useSelectionStore.getState().selectItems(result.itemIds)
+      toast.success(
+        result.itemIds.length === 1
+          ? 'Video fitted to beat'
+          : `Video looped across beat · ${result.itemIds.length} clips`,
+      )
+    } catch (error) {
+      toast.error('Could not build the video loop', {
+        description: error instanceof Error ? error.message : String(error),
+      })
+    }
+  }, [selectedLoopMediaId, timelineGrid])
 
   const insertProducerTags = useCallback(
     async (mode: 'playhead' | 'repeat') => {
@@ -727,6 +789,50 @@ export function BeatvideoMusicPanel() {
             </div>
           ) : null}
         </section>
+
+        {currentProject?.metadata.beatvideoMode === 'video' ? (
+          <section className="space-y-2 border-t border-border pt-3">
+            <div className="flex items-center gap-2">
+              <Film className="h-3.5 w-3.5 text-muted-foreground" />
+              <div className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+                Footage loop
+              </div>
+            </div>
+
+            {videoCandidates.length > 0 ? (
+              <>
+                <select
+                  value={selectedLoopMediaId}
+                  onChange={(event) => setSelectedLoopMediaId(event.target.value)}
+                  className="h-8 w-full rounded-md border border-input bg-secondary px-2 text-xs text-foreground"
+                >
+                  {videoCandidates.map((media) => (
+                    <option key={media.id} value={media.id}>
+                      {media.fileName}
+                    </option>
+                  ))}
+                </select>
+                <Button
+                  type="button"
+                  size="sm"
+                  className="w-full justify-start"
+                  onClick={() => void loopVideoToBeat()}
+                >
+                  <Repeat2 className="h-3.5 w-3.5" />
+                  Loop clip to beat
+                </Button>
+                <p className="text-[10px] leading-relaxed text-muted-foreground">
+                  Repeats the full clip with clean cuts, trims only the final repeat,
+                  fills the frame and keeps footage audio muted.
+                </p>
+              </>
+            ) : (
+              <div className="border-l-2 border-border pl-2 text-[10px] leading-relaxed text-muted-foreground">
+                Import one short video clip in Media first.
+              </div>
+            )}
+          </section>
+        ) : null}
 
         <section className="space-y-2 border-t border-border pt-3">
           <div className="flex items-center gap-2">

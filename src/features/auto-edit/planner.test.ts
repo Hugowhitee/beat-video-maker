@@ -1,5 +1,5 @@
 // @vitest-environment node\n\nimport { expect, test } from 'vite-plus/test'
-import { createEditPlan } from './planner';
+import { createEditPlan, createSingleClipLoopPlan } from './planner';
 import type {
   ClipMap,
   MusicMap,
@@ -411,3 +411,25 @@ test('effect transitions are omitted when adjacent source shots have no hidden h
   expect(plan.transitions.filter((transition) => transition.kind === 'film-burn'))
     .toHaveLength(0);
 });
+
+
+test('single clip loop repeats the full source cleanly and trims only the final repeat', () => {
+  const plan = createSingleClipLoopPlan({
+    sourceId: 'clip-a',
+    sourceDuration: 7.5,
+    timelineStart: 2,
+    timelineDuration: 20,
+  })
+
+  expect(plan.transitions).toHaveLength(0)
+  expect(plan.segments.map((segment) => [
+    segment.timelineStart,
+    segment.timelineEnd,
+    segment.sourceStart,
+    segment.sourceEnd,
+  ])).toEqual([
+    [2, 9.5, 0, 7.5],
+    [9.5, 17, 0, 7.5],
+    [17, 22, 0, 5],
+  ])
+})
