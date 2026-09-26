@@ -358,7 +358,7 @@ export const TimelineMediaDropZone = memo(function TimelineMediaDropZone({
         tracks: workingTracks,
       }
     },
-    [anchorTrackId, getCollisionTrackItemsMap, getCurrentCanvasSize, getProjectAwareDroppedDuration, zone],
+    [anchorTrackId, fps, getCollisionTrackItemsMap, getCurrentCanvasSize, getProjectAwareDroppedDuration, zone],
   )
 
   const buildGhostPreviewsForEntries = useCallback(
