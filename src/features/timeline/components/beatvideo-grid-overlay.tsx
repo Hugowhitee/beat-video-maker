@@ -1,7 +1,9 @@
 import { memo, useMemo } from 'react'
 import { useProjectStore } from '@/features/timeline/deps/projects'
+import { useItemsStore } from '../stores/items-store'
+import { useTimelineSettingsStore } from '../stores/timeline-settings-store'
 import { useZoomStore } from '../stores/zoom-store'
-import { resolveBeatvideoMusicGrid } from '@/shared/beatvideo/music-grid'
+import { resolveBeatvideoTimelineGrid } from '../utils/beatvideo-timeline-grid'
 
 interface BeatvideoGridOverlayProps {
   duration: number
@@ -13,31 +15,63 @@ function leftPercent(time: number, duration: number) {
   return Math.max(0, Math.min(100, (time / duration) * 100))
 }
 
+function median(values: number[]): number {
+  if (values.length === 0) return 0
+  const sorted = [...values].sort((left, right) => left - right)
+  const middle = Math.floor(sorted.length / 2)
+  if (sorted.length % 2 === 1) return sorted[middle] ?? 0
+  return ((sorted[middle - 1] ?? 0) + (sorted[middle] ?? 0)) / 2
+}
+
+function closestIndex(values: number[], target: number): number {
+  let bestIndex = -1
+  let bestDistance = Number.POSITIVE_INFINITY
+  values.forEach((value, index) => {
+    const distance = Math.abs(value - target)
+    if (distance < bestDistance) {
+      bestDistance = distance
+      bestIndex = index
+    }
+  })
+  return bestIndex
+}
+
 export const BeatvideoGridOverlay = memo(function BeatvideoGridOverlay({
   duration,
   variant,
 }: BeatvideoGridOverlayProps) {
   const analysis = useProjectStore((state) => state.currentProject?.beatvideoMusic)
+  const items = useItemsStore((state) => state.items)
+  const fps = useTimelineSettingsStore((state) => state.fps)
   const pixelsPerSecond = useZoomStore((state) => state.pixelsPerSecond)
 
-  const grid = useMemo(
-    () => (analysis ? resolveBeatvideoMusicGrid(analysis) : null),
-    [analysis],
+  const timelineGrid = useMemo(
+    () =>
+      analysis
+        ? resolveBeatvideoTimelineGrid(analysis, items, fps)
+        : null,
+    [analysis, fps, items],
   )
 
-  if (!analysis || !grid || grid.beats.length === 0 || duration <= 0) return null
+  if (!timelineGrid || timelineGrid.grid.beats.length === 0 || duration <= 0) return null
 
-  const bpm = grid.bpm
-  const beatSpacingPx = bpm && bpm > 0 ? pixelsPerSecond * (60 / bpm) : 0
+  const { grid, barOneTimelineTime } = timelineGrid
+  const beatIntervals = grid.beats
+    .slice(1)
+    .map((beat, index) => beat.time - (grid.beats[index]?.time ?? beat.time))
+    .filter((interval) => interval > 0)
+  const beatSpacingPx = median(beatIntervals) * pixelsPerSecond
   const showIndividualBeats = beatSpacingPx >= 7
-  const barDuration =
-    bpm && bpm > 0 ? (60 / bpm) * Math.max(1, grid.beatsPerBar) : null
-  const barOneTime = analysis.barOneTime
+
+  const downbeatTimes = grid.beats.filter((beat) => beat.downbeat).map((beat) => beat.time)
+  const barOneDownbeatIndex =
+    barOneTimelineTime === null ? -1 : closestIndex(downbeatTimes, barOneTimelineTime)
 
   return (
     <div
       aria-hidden="true"
       data-beatvideo-grid-overlay={variant}
+      data-beatvideo-grid-placement={timelineGrid.placement.id}
       className={
         variant === 'ruler'
           ? 'pointer-events-none absolute inset-0 z-[25] overflow-hidden'
@@ -48,19 +82,24 @@ export const BeatvideoGridOverlay = memo(function BeatvideoGridOverlay({
         if (!beat.downbeat && !showIndividualBeats) return null
 
         const isBarOne =
-          barOneTime !== null
-          && Math.abs(beat.time - barOneTime) <= Math.max(0.012, bpm ? 0.12 * (60 / bpm) : 0.02)
-        let barNumber: number | null = null
-        if (beat.downbeat && barOneTime !== null && barDuration && barDuration > 0) {
-          barNumber = Math.round((beat.time - barOneTime) / barDuration) + 1
-        }
+          barOneTimelineTime !== null &&
+          Math.abs(beat.time - barOneTimelineTime) <=
+            Math.max(0.012, median(beatIntervals) * 0.12)
+
+        const downbeatIndex = beat.downbeat
+          ? downbeatTimes.findIndex((time) => Math.abs(time - beat.time) <= 1e-6)
+          : -1
+        const barNumber =
+          beat.downbeat && barOneDownbeatIndex >= 0 && downbeatIndex >= 0
+            ? downbeatIndex - barOneDownbeatIndex + 1
+            : null
 
         const showBarLabel =
-          variant === 'ruler'
-          && beat.downbeat
-          && barNumber !== null
-          && barNumber >= 1
-          && (barNumber === 1 || (barNumber - 1) % 4 === 0)
+          variant === 'ruler' &&
+          beat.downbeat &&
+          barNumber !== null &&
+          barNumber >= 1 &&
+          (barNumber === 1 || (barNumber - 1) % 4 === 0)
 
         return (
           <div

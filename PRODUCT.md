@@ -54,14 +54,17 @@ The old standalone Beatvideo waveform/grid is not part of the product direction.
 The canonical rule is:
 
 - FreeCut owns the time axis, playhead, waveform and click/scrub behavior;
-- Beatvideo overlays musical evidence on that same geometry;
-- beats and bars remain fixed to time while the playhead moves;
-- bar 1 is visually unambiguous;
-- detected bar 1 is distinguished from a user-verified bar 1;
-- BPM and bar-1 corrections are explicit, reversible project state;
+- Beatvideo analysis is stored in **source-media time** and is mapped through the actual FreeCut timeline clip, including move, trim, speed and reverse;
+- never draw raw analysis seconds as absolute timeline seconds;
+- Beat This detected beat positions are the default **Detected beatmap** and keep their local timing;
+- **Fixed BPM** is a deliberate alternate mode that creates one mathematically even grid; entering a BPM must not silently flatten detected timing;
+- beats and bars remain fixed to their waveform while the playhead moves;
+- bar 1 is visually unambiguous and detected bar 1 is distinguished from a user-verified bar 1;
+- DJ-style corrections (phase nudge and correction anchors) are explicit, reversible source-domain project state;
+- multiple correction anchors form a piecewise timing map so long tracks can be corrected without forcing one global BPM;
 - analysis progress is visible while work is actually running.
 
-The grid should feel closer to DJ/DAW beat-grid tooling than a decorative waveform widget: stable phase, clear downbeats, direct seeking and obvious correction controls.
+The grid should feel closer to mature DJ/DAW beat-grid tooling than a decorative waveform widget: stable waveform lock, clear downbeats, direct seeking, obvious correction controls and no second hidden timeline.
 
 ## Automation
 
