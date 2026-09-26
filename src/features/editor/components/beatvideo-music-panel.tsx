@@ -4,7 +4,9 @@ import {
   Crosshair,
   LocateFixed,
   Play,
+  Repeat2,
   RotateCcw,
+  Tag,
   Undo2,
 } from 'lucide-react'
 import { toast } from 'sonner'
@@ -18,13 +20,29 @@ import {
   timelineFrameToSourceSeconds,
   type MusicAnalysisProgress,
 } from '@/features/editor/deps/beatvideo-music'
-import { useMediaLibraryStore } from '@/features/editor/deps/media-library'
+import {
+  resolveMediaUrl,
+  useMediaLibraryStore,
+} from '@/features/editor/deps/media-library'
 import { updateStoredProject, useProjectStore } from '@/features/editor/deps/projects'
 import {
   useItemsStore,
   useTimelineSettingsStore,
+  useTimelineStore,
 } from '@/features/editor/deps/timeline-store'
+import {
+  addItemsOnNewTracks,
+  buildDroppedMediaTimelineItems,
+  createClassicTrack,
+  getDroppedMediaDurationInFrames,
+} from '@/features/editor/deps/timeline-contract'
 import { usePlaybackStore } from '@/shared/state/playback'
+import { useSelectionStore } from '@/shared/state/selection'
+import {
+  DEFAULT_PROJECT_HEIGHT,
+  DEFAULT_PROJECT_WIDTH,
+} from '@/shared/projects/defaults'
+import { resolveProducerTagRepeatFrames } from '../utils/producer-tag'
 import type {
   BeatvideoGridCorrectionAnchor,
   BeatvideoGridMode,
@@ -122,6 +140,8 @@ export function BeatvideoMusicPanel() {
   )
 
   const [selectedMediaId, setSelectedMediaId] = useState('')
+  const [selectedTagMediaId, setSelectedTagMediaId] = useState('')
+  const [tagRepeatBars, setTagRepeatBars] = useState(16)
   const [progress, setProgress] = useState<MusicAnalysisProgress | null>(null)
   const [analyzing, setAnalyzing] = useState(false)
   const [bpmDraft, setBpmDraft] = useState('')
@@ -143,6 +163,13 @@ export function BeatvideoMusicPanel() {
     : 'detected'
   const barCount =
     resolvedSourceGrid?.beats.filter((beat) => beat.downbeat).length ?? 0
+  const tagCandidates = useMemo(
+    () =>
+      mediaItems.filter(
+        (media) => media.mimeType.startsWith('audio/') && media.id !== selectedMediaId,
+      ),
+    [mediaItems, selectedMediaId],
+  )
 
   useEffect(() => {
     const preferred = analysis?.mediaId
@@ -154,6 +181,12 @@ export function BeatvideoMusicPanel() {
       setSelectedMediaId(candidates[0]?.id ?? '')
     }
   }, [analysis?.mediaId, candidates, selectedMediaId])
+
+  useEffect(() => {
+    if (!tagCandidates.some((media) => media.id === selectedTagMediaId)) {
+      setSelectedTagMediaId(tagCandidates[0]?.id ?? '')
+    }
+  }, [selectedTagMediaId, tagCandidates])
 
   useEffect(() => {
     const bpm =
@@ -237,6 +270,118 @@ export function BeatvideoMusicPanel() {
       setProgress(null)
     }
   }, [analyzing, currentProject, persistAnalysis, selectedMediaId])
+
+  const insertProducerTags = useCallback(
+    async (mode: 'playhead' | 'repeat') => {
+      const media = useMediaLibraryStore
+        .getState()
+        .mediaItems.find((candidate) => candidate.id === selectedTagMediaId)
+      if (!media || !media.mimeType.startsWith('audio/')) {
+        toast.error('Import and select a producer tag audio file first')
+        return
+      }
+
+      const blobUrl = await resolveMediaUrl(media.id)
+      if (!blobUrl) {
+        toast.error('Could not load the producer tag audio')
+        return
+      }
+
+      const timeline = useTimelineStore.getState()
+      const tagDurationInFrames = getDroppedMediaDurationInFrames(media, 'audio', timeline.fps)
+      let frames =
+        mode === 'playhead'
+          ? [Math.max(0, Math.round(usePlaybackStore.getState().currentFrame))]
+          : timelineGrid
+            ? resolveProducerTagRepeatFrames({
+                beats: timelineGrid.grid.beats,
+                fps: timeline.fps,
+                everyBars: tagRepeatBars,
+                startFrame: timelineGrid.placement.from,
+                endFrame: timelineGrid.placement.from + timelineGrid.placement.durationInFrames,
+                tagDurationInFrames,
+              })
+            : []
+
+      if (mode === 'repeat' && !timelineGrid) {
+        toast.error('Analyze and place the beat first to repeat tags on musical bars')
+        return
+      }
+
+      const occupied = new Set(
+        timeline.items
+          .filter((item) => item.type === 'audio' && item.mediaId === media.id)
+          .map((item) => Math.round(item.from)),
+      )
+      frames = frames.filter((frame) => !occupied.has(frame))
+
+      if (frames.length === 0) {
+        toast.info(
+          mode === 'repeat'
+            ? 'Those producer-tag positions are already on the timeline'
+            : 'No producer-tag position available',
+        )
+        return
+      }
+
+      const existingTagTrack = timeline.tracks.find(
+        (track) => track.kind === 'audio' && track.name === 'Producer tags',
+      )
+      const maxOrder = timeline.tracks.reduce(
+        (max, track) => Math.max(max, track.order ?? 0),
+        0,
+      )
+      const tagTrack =
+        existingTagTrack ??
+        {
+          ...createClassicTrack({
+            tracks: timeline.tracks,
+            kind: 'audio',
+            order: maxOrder + 1,
+          }),
+          name: 'Producer tags',
+        }
+      const nextTracks = existingTagTrack
+        ? timeline.tracks
+        : [...timeline.tracks, tagTrack]
+      const canvasWidth = currentProject?.metadata.width ?? DEFAULT_PROJECT_WIDTH
+      const canvasHeight = currentProject?.metadata.height ?? DEFAULT_PROJECT_HEIGHT
+      const tagItems = frames.flatMap((from) =>
+        buildDroppedMediaTimelineItems({
+          media,
+          mediaId: media.id,
+          mediaType: 'audio',
+          label: `Producer tag: ${media.fileName}`,
+          timelineFps: timeline.fps,
+          blobUrl,
+          canvasWidth,
+          canvasHeight,
+          placement: {
+            primary: {
+              trackId: tagTrack.id,
+              from,
+              durationInFrames: tagDurationInFrames,
+            },
+          },
+        }),
+      )
+
+      if (existingTagTrack) {
+        timeline.addItems(tagItems)
+      } else {
+        addItemsOnNewTracks(tagItems, nextTracks)
+      }
+
+      useSelectionStore.getState().setActiveTrack(tagTrack.id)
+      useSelectionStore.getState().selectItems(tagItems.map((item) => item.id))
+      toast.success(
+        mode === 'repeat'
+          ? `Placed ${tagItems.length} producer tags every ${tagRepeatBars} bars`
+          : 'Producer tag added at playhead',
+      )
+    },
+    [currentProject?.metadata.height, currentProject?.metadata.width, selectedTagMediaId, tagRepeatBars, timelineGrid],
+  )
 
   const requirePlacementAtPlayhead = useCallback(() => {
     if (!timelineGrid) {
@@ -581,6 +726,74 @@ export function BeatvideoMusicPanel() {
               </div>
             </div>
           ) : null}
+        </section>
+
+        <section className="space-y-2 border-t border-border pt-3">
+          <div className="flex items-center gap-2">
+            <Tag className="h-3.5 w-3.5 text-muted-foreground" />
+            <div className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+              Producer tag
+            </div>
+          </div>
+
+          {tagCandidates.length > 0 ? (
+            <>
+              <select
+                value={selectedTagMediaId}
+                onChange={(event) => setSelectedTagMediaId(event.target.value)}
+                className="h-8 w-full rounded-md border border-input bg-secondary px-2 text-xs text-foreground"
+              >
+                {tagCandidates.map((media) => (
+                  <option key={media.id} value={media.id}>
+                    {media.fileName}
+                  </option>
+                ))}
+              </select>
+
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                className="w-full justify-start"
+                onClick={() => void insertProducerTags('playhead')}
+              >
+                <Tag className="h-3.5 w-3.5" />
+                Place at playhead
+              </Button>
+
+              <div className="grid grid-cols-[1fr_auto] gap-1.5">
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  className="justify-start"
+                  disabled={!timelineGrid}
+                  onClick={() => void insertProducerTags('repeat')}
+                >
+                  <Repeat2 className="h-3.5 w-3.5" />
+                  Repeat across beat
+                </Button>
+                <select
+                  value={tagRepeatBars}
+                  onChange={(event) => setTagRepeatBars(Number(event.target.value))}
+                  className="h-8 rounded-md border border-input bg-secondary px-2 text-xs text-foreground"
+                  aria-label="Producer tag repeat interval"
+                >
+                  <option value={8}>8 bars</option>
+                  <option value={16}>16 bars</option>
+                  <option value={32}>32 bars</option>
+                </select>
+              </div>
+              <p className="text-[10px] leading-relaxed text-muted-foreground">
+                Tags are normal audio clips on the Producer tags track. Move, trim,
+                change volume, fade or delete them like any other clip.
+              </p>
+            </>
+          ) : (
+            <div className="border-l-2 border-border pl-2 text-[10px] leading-relaxed text-muted-foreground">
+              Import a short producer-tag audio file in Media. The beat source itself is not used as a tag.
+            </div>
+          )}
         </section>
 
         {effectiveAnalysis && resolvedSourceGrid ? (
