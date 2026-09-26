@@ -54,6 +54,8 @@ import {
 } from '@/features/preview/deps/keyframes'
 import type { ItemKeyframes, SpatialBezierTangents } from '@/types/keyframe'
 import type { TimelineItem } from '@/types/timeline'
+import type { BeatvideoMusicAnalysis } from '@/types/beatvideo'
+import type { BeatvideoProjectMode } from '@/types/project'
 import type { BoundingBox, CoordinateParams, Transform, Point } from '../types/gizmo'
 import type { ResolvedTransform, TransformProperties } from '@/types/transform'
 import { normalizeCropSettings } from '@/shared/utils/media-crop'
@@ -80,6 +82,8 @@ interface GizmoOverlayProps {
   containerRect: DOMRect | null
   playerSize: { width: number; height: number }
   projectSize: { width: number; height: number }
+  beatvideoMode?: BeatvideoProjectMode
+  beatvideoMusic?: BeatvideoMusicAnalysis
   zoom: number
   /** Ref to the hit area element for marquee bounds checking */
   hitAreaRef?: React.RefObject<HTMLDivElement>
@@ -135,6 +139,8 @@ export function GizmoOverlay({
   containerRect,
   playerSize,
   projectSize,
+  beatvideoMode,
+  beatvideoMusic,
   zoom,
   hitAreaRef,
   overlayPadding = 100,
@@ -515,6 +521,8 @@ export function GizmoOverlay({
     useCanvasMediaDrop({
       coordParams,
       projectSize,
+      beatvideoMode,
+      beatvideoMusic,
     })
 
   const focusMotionPathFrame = useCallback((frame: number) => {
