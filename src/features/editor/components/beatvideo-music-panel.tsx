@@ -790,7 +790,7 @@ export function BeatvideoMusicPanel() {
           ) : null}
         </section>
 
-        {currentProject?.metadata.beatvideoMode === 'video' ? (
+        {currentProject?.beatvideoMode === 'video' ? (
           <section className="space-y-2 border-t border-border pt-3">
             <div className="flex items-center gap-2">
               <Film className="h-3.5 w-3.5 text-muted-foreground" />
