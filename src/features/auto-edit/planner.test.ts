@@ -1,4 +1,6 @@
-// @vitest-environment node\n\nimport { expect, test } from 'vite-plus/test'
+// @vitest-environment node
+
+import { expect, test } from 'vite-plus/test'
 import { createEditPlan, createSingleClipLoopPlan } from './planner';
 import type {
   ClipMap,
