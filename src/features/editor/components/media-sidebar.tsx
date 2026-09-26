@@ -22,8 +22,10 @@ import {
   Captions,
   Sticker,
   WandSparkles,
+  Maximize2,
 } from 'lucide-react'
 import { motion, useReducedMotion } from 'motion/react'
+import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/shared/ui/cn'
 import { useEditorStore } from '@/shared/state/editor'
@@ -64,6 +66,10 @@ import { useSettingsStore } from '@/features/editor/deps/settings'
 import { resolveGeneratedLayerCanvasSize } from '../utils/generated-layer-canvas-size'
 import type { BeatvideoProjectMode } from '@/types/project'
 import { isSidebarTabVisibleForBeatvideoMode } from '@/config/beatvideo'
+import {
+  buildBeatvideoPhotoCoverTransform,
+  resolveBeatvideoPhotoPublishRange,
+} from '../utils/beatvideo-photo-publish'
 const LazyBeatvideoMusicPanel = lazy(() =>
   import('./beatvideo-music-panel').then((module) => ({ default: module.BeatvideoMusicPanel })),
 )
@@ -392,12 +398,15 @@ export const MediaSidebar = memo(function MediaSidebar({
   // These change frequently and would cause re-renders cascading to MediaLibrary/MediaCards
   // Read from store directly in callbacks using getState()
 
-  // Add text item on its own new layer at the playhead, matching what dragging
-  // the same preset onto the canvas does (minus the cursor-driven position).
+  // Add text as normal FreeCut layers. In Photo mode, publishing text follows the
+  // beat range when one is available, so a two-minute beat never gets a 60-second title.
   const handleAddText = useCallback(
-    (presetId?: (typeof TEXT_STYLE_PRESETS)[number]['id']) => {
+    (
+      presetId?: (typeof TEXT_STYLE_PRESETS)[number]['id'],
+      options?: { text?: string; photoRole?: 'title' | 'subtitle' },
+    ) => {
       // Read all needed state from stores directly to avoid subscriptions
-      const { tracks, fps, addItemOnNewTrack } = useTimelineStore.getState()
+      const { tracks, items, fps, addItemOnNewTrack } = useTimelineStore.getState()
       const { activeTrackId, selectItems, setActiveTrack } = useSelectionStore.getState()
       const currentProject = useProjectStore.getState().currentProject
 
@@ -408,7 +417,19 @@ export const MediaSidebar = memo(function MediaSidebar({
         return
       }
 
-      const durationInFrames = getDefaultGeneratedLayerDurationInFrames(fps)
+      const photoPublishRange =
+        beatvideoMode === 'photo'
+          ? resolveBeatvideoPhotoPublishRange({
+              items,
+              fps,
+              beatMediaId: currentProject?.beatvideoMusic?.mediaId,
+              analyzedDurationSeconds: currentProject?.beatvideoMusic?.musicMap.duration,
+            })
+          : null
+      const durationInFrames =
+        photoPublishRange?.durationInFrames ?? getDefaultGeneratedLayerDurationInFrames(fps)
+      const from =
+        photoPublishRange?.from ?? Math.max(0, usePlaybackStore.getState().currentFrame)
 
       // Get canvas dimensions for initial transform
       const canvasWidth = currentProject?.metadata.width ?? DEFAULT_PROJECT_WIDTH
@@ -417,26 +438,104 @@ export const MediaSidebar = memo(function MediaSidebar({
       const textStylePreset = presetId
         ? TEXT_STYLE_PRESETS.find((preset) => preset.id === presetId)
         : undefined
-      const textItem: TextItem = createTextTemplateItem({
+      let textItem: TextItem = createTextTemplateItem({
         placement: {
           trackId: newTrack.trackId,
-          from: Math.max(0, usePlaybackStore.getState().currentFrame),
+          from,
           durationInFrames,
           canvasWidth,
           canvasHeight,
           fps,
         },
         label: textStylePreset?.label,
-        text: t('editor.textSection.defaultText'),
+        text: options?.text ?? t('editor.textSection.defaultText'),
         textStylePresetId: presetId,
       })
+
+      if (options?.photoRole === 'title') {
+        textItem = {
+          ...textItem,
+          transform: {
+            ...textItem.transform,
+            y: Math.round(canvasHeight * 0.07),
+            height: Math.round(canvasHeight * 0.22),
+          },
+        }
+      } else if (options?.photoRole === 'subtitle') {
+        textItem = {
+          ...textItem,
+          fontFamily: 'Inter Tight',
+          fontWeight: 'semibold',
+          fontSize: Math.max(30, Math.round(canvasHeight * 0.038)),
+          lineHeight: 1,
+          letterSpacing: 1.5,
+          textPadding: 0,
+          textShadow: {
+            offsetX: 0,
+            offsetY: 4,
+            blur: 14,
+            color: '#111827',
+          },
+          transform: {
+            ...textItem.transform,
+            width: Math.round(canvasWidth * 0.74),
+            height: Math.round(canvasHeight * 0.08),
+            y: Math.round(canvasHeight * 0.21),
+          },
+        }
+      }
 
       addItemOnNewTrack(textItem, newTrack.tracks)
       setActiveTrack(newTrack.trackId)
       selectItems([textItem.id])
     },
-    [t],
+    [beatvideoMode, t],
   )
+
+  const handleFitPhotoCoverToBeat = useCallback(() => {
+    const timeline = useTimelineStore.getState()
+    const selection = useSelectionStore.getState()
+    const currentProject = useProjectStore.getState().currentProject
+    const selectedCover = selection.selectedItemIds
+      .map((id) => timeline.items.find((item) => item.id === id))
+      .find((item) => item?.type === 'image')
+    const cover = selectedCover ?? timeline.items.find((item) => item.type === 'image')
+
+    if (!cover || cover.type !== 'image') {
+      toast.warning('Add a cover image first')
+      return
+    }
+
+    const canvasWidth = currentProject?.metadata.width ?? DEFAULT_PROJECT_WIDTH
+    const canvasHeight = currentProject?.metadata.height ?? DEFAULT_PROJECT_HEIGHT
+    const transform = buildBeatvideoPhotoCoverTransform(cover, canvasWidth, canvasHeight)
+    const publishRange = resolveBeatvideoPhotoPublishRange({
+      items: timeline.items,
+      fps: timeline.fps,
+      beatMediaId: currentProject?.beatvideoMusic?.mediaId,
+      analyzedDurationSeconds: currentProject?.beatvideoMusic?.musicMap.duration,
+    })
+
+    timeline.updateItem(cover.id, {
+      transform: transform ?? cover.transform,
+      ...(publishRange
+        ? {
+            from: publishRange.from,
+            durationInFrames: publishRange.durationInFrames,
+          }
+        : {}),
+    })
+    selection.selectItems([cover.id])
+    selection.setActiveTrack(cover.trackId)
+
+    if (publishRange) {
+      toast.success('Cover fitted to beat')
+    } else {
+      toast.success('Cover fitted to frame', {
+        description: 'Add the beat to the timeline to match its length.',
+      })
+    }
+  }, [])
 
   // Add shape item on its own new layer at the playhead, matching the canvas drop.
   const handleAddShape = useCallback((shapeType: ShapeType, shapePreset?: 'solid' | 'gradient') => {
@@ -745,7 +844,7 @@ export const MediaSidebar = memo(function MediaSidebar({
               <div className="flex h-full min-h-0 flex-col">
                 <div className="shrink-0 border-b border-border bg-secondary/15 px-3 py-2 text-[10px] leading-relaxed text-muted-foreground">
                   {beatvideoMode === 'photo'
-                    ? 'Photo: import a cover and beat. Drag the cover onto the timeline; use Beat to analyze the music.'
+                    ? 'Photo: add a cover and beat. Overlay handles the publishing frame and title; Beat is optional unless you need the musical grid.'
                     : 'Video: import footage and a beat. Drag clips onto the timeline; double-click a card to inspect it first.'}
                 </div>
                 <div className="min-h-0 flex-1 overflow-hidden">
@@ -771,92 +870,75 @@ export const MediaSidebar = memo(function MediaSidebar({
             >
               <div className="space-y-5">
                 <section className="space-y-2">
-                  <div>
-                    <div className="text-xs font-medium text-foreground">Text</div>
-                    <div className="mt-0.5 text-[10px] leading-relaxed text-muted-foreground">
-                      Add a title layer, then position and style it in Properties.
-                    </div>
-                  </div>
+                  <div className="text-xs font-medium text-foreground">Title</div>
                   <div className="grid grid-cols-3 gap-1.5">
+                    {(['clean-title', 'condensed-title'] as const).map((presetId) => {
+                      const preset = TEXT_STYLE_PRESETS.find((candidate) => candidate.id === presetId)
+                      if (!preset) return null
+                      return (
+                        <button
+                          key={preset.id}
+                          type="button"
+                          onClick={() =>
+                            handleAddText(preset.id, {
+                              text: 'BIJZAAK',
+                              photoRole: 'title',
+                            })
+                          }
+                          className="flex flex-col items-center gap-1 p-1.5 rounded-md border border-border bg-secondary/30 hover:bg-secondary/50 hover:border-primary/50 transition-[transform,background-color,border-color,color] duration-150 active:scale-[0.98] group"
+                        >
+                          {renderTextTemplatePreview(preset)}
+                          <span className="w-full truncate text-center text-[9px] text-muted-foreground group-hover:text-foreground">
+                            {presetId === 'clean-title' ? 'Bold' : 'Condensed'}
+                          </span>
+                        </button>
+                      )
+                    })}
                     <button
                       type="button"
-                      onClick={() => handleAddText()}
+                      onClick={() =>
+                        handleAddText(undefined, {
+                          text: 'KEVIN TYPE BEAT',
+                          photoRole: 'subtitle',
+                        })
+                      }
                       className="flex flex-col items-center gap-1 p-1.5 rounded-md border border-border bg-secondary/30 hover:bg-secondary/50 hover:border-primary/50 transition-[transform,background-color,border-color,color] duration-150 active:scale-[0.98] group"
                     >
-                      {renderTextTemplatePreview()}
-                      <span className="text-[9px] text-muted-foreground group-hover:text-foreground">
-                        Add text
+                      <div className={`${TEXT_TEMPLATE_PREVIEW_SHELL} flex items-center justify-center px-1.5`}>
+                        <div className="text-[7px] font-semibold tracking-[0.08em] text-slate-100 uppercase leading-none">
+                          KEVIN TYPE BEAT
+                        </div>
+                      </div>
+                      <span className="w-full truncate text-center text-[9px] text-muted-foreground group-hover:text-foreground">
+                        Type beat
                       </span>
                     </button>
-                    {TEXT_STYLE_PRESETS.slice(0, 2).map((preset) => (
-                      <button
-                        key={preset.id}
-                        type="button"
-                        onClick={() => handleAddText(preset.id)}
-                        className="flex flex-col items-center gap-1 p-1.5 rounded-md border border-border bg-secondary/30 hover:bg-secondary/50 hover:border-primary/50 transition-[transform,background-color,border-color,color] duration-150 active:scale-[0.98] group"
-                      >
-                        {renderTextTemplatePreview(preset)}
-                        <span className="w-full truncate text-center text-[9px] text-muted-foreground group-hover:text-foreground">
-                          {preset.label}
-                        </span>
-                      </button>
-                    ))}
                   </div>
                 </section>
 
                 <section className="space-y-2">
-                  <div>
-                    <div className="text-xs font-medium text-foreground">Image / logo</div>
-                    <div className="mt-0.5 text-[10px] leading-relaxed text-muted-foreground">
-                      Import your own PNG, SVG or image in Media, then drag it onto the composition.
-                    </div>
-                  </div>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    className="w-full justify-start gap-2"
-                    onClick={() => setActiveTab('media')}
-                  >
-                    <ImagePlus className="h-3.5 w-3.5" />
-                    Open Media
-                  </Button>
-                </section>
-
-                <section className="space-y-2">
-                  <div>
-                    <div className="text-xs font-medium text-foreground">Shape</div>
-                    <div className="mt-0.5 text-[10px] leading-relaxed text-muted-foreground">
-                      Simple graphic layers for bars, blocks and framing.
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-3 gap-1.5">
-                    <button
+                  <div className="text-xs font-medium text-foreground">Cover</div>
+                  <div className="grid grid-cols-2 gap-1.5">
+                    <Button
                       type="button"
-                      onClick={() => handleAddShape('rectangle', 'solid')}
-                      className="flex flex-col items-center justify-center gap-1.5 p-2 rounded-lg border border-border bg-secondary/30 hover:bg-secondary/50 hover:border-primary/50 transition-colors"
+                      variant="outline"
+                      size="sm"
+                      className="justify-start gap-2"
+                      onClick={() => setActiveTab('media')}
                     >
-                      <div className="h-7 w-7 rounded-sm border border-border bg-foreground/80" />
-                      <span className="text-[9px] text-muted-foreground">Solid</span>
-                    </button>
-                    <button
+                      <ImagePlus className="h-3.5 w-3.5" />
+                      Open Media
+                    </Button>
+                    <Button
                       type="button"
-                      onClick={() => handleAddShape('rectangle', 'gradient')}
-                      className="flex flex-col items-center justify-center gap-1.5 p-2 rounded-lg border border-border bg-secondary/30 hover:bg-secondary/50 hover:border-primary/50 transition-colors"
+                      variant="outline"
+                      size="sm"
+                      className="justify-start gap-2"
+                      onClick={handleFitPhotoCoverToBeat}
                     >
-                      <div className="h-7 w-7 rounded-sm border border-border bg-gradient-to-br from-muted-foreground/25 to-foreground/80" />
-                      <span className="text-[9px] text-muted-foreground">Gradient</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleAddShape('circle')}
-                      className="flex flex-col items-center justify-center gap-1.5 p-2 rounded-lg border border-border bg-secondary/30 hover:bg-secondary/50 hover:border-primary/50 transition-colors"
-                    >
-                      <div className="flex h-7 w-7 items-center justify-center rounded-sm border border-border">
-                        <Circle className="h-4 w-4 text-foreground/80" />
-                      </div>
-                      <span className="text-[9px] text-muted-foreground">Circle</span>
-                    </button>
+                      <Maximize2 className="h-3.5 w-3.5" />
+                      Fit to beat
+                    </Button>
                   </div>
                 </section>
               </div>

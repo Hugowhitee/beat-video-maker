@@ -1,5 +1,7 @@
 import type { TransformProperties } from '@/types/transform'
 
+export type InitialTransformFit = 'contain' | 'cover'
+
 /**
  * Compute initial fit-to-canvas transform for an item.
  * This locks in the initial size so it doesn't change when canvas changes.
@@ -9,10 +11,11 @@ export function computeInitialTransform(
   sourceHeight: number,
   canvasWidth: number,
   canvasHeight: number,
+  fit: InitialTransformFit = 'contain',
 ): TransformProperties {
   const scaleX = canvasWidth / sourceWidth
   const scaleY = canvasHeight / sourceHeight
-  const fitScale = Math.min(scaleX, scaleY)
+  const fitScale = fit === 'cover' ? Math.max(scaleX, scaleY) : Math.min(scaleX, scaleY)
 
   // Note: opacity is intentionally omitted - undefined means "use default (1.0)"
   // Only set opacity explicitly when user changes it, so we can distinguish

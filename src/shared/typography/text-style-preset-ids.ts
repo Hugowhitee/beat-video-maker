@@ -1,5 +1,6 @@
 export const TEXT_STYLE_PRESET_IDS = [
   'clean-title',
+  'condensed-title',
   'poster',
   'outline-pill',
   'lower-third',
