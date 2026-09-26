@@ -40,6 +40,7 @@ import {
   clearMediaDragData,
   MediaLibrary,
   setMediaDragData,
+  useMediaLibraryStore,
 } from '@/features/editor/deps/media-library'
 import { importTranscriptEditorPanel } from '@/features/editor/deps/timeline-panels'
 import { LottieBrowserPanel } from '@/features/editor/deps/lottie-browser'
@@ -51,6 +52,7 @@ import {
   createOverlayLayerTrack,
   createTextTemplateItem,
   getDefaultGeneratedLayerDurationInFrames,
+  resolvePhotoPublishingDurationInFrames,
 } from '@/features/editor/deps/timeline-utils'
 import { addAdjustmentLayer } from '../utils/add-adjustment-layer'
 import type { TextItem, ShapeItem, ShapeType } from '@/types/timeline'
@@ -438,6 +440,84 @@ export const MediaSidebar = memo(function MediaSidebar({
     [t],
   )
 
+  const handleAddPhotoText = useCallback((kind: 'display' | 'bold' | 'type-line') => {
+    const { tracks, fps, items, addItemOnNewTrack } = useTimelineStore.getState()
+    const { activeTrackId, selectItems, setActiveTrack } = useSelectionStore.getState()
+    const currentProject = useProjectStore.getState().currentProject
+    const newTrack = createOverlayLayerTrack({ tracks, activeTrackId })
+
+    if (!newTrack) {
+      logger.warn('No available track for Photo text item')
+      return
+    }
+
+    const publishDuration = resolvePhotoPublishingDurationInFrames(fps, {
+      beatvideoMode: currentProject?.beatvideoMode,
+      beatvideoMusic: currentProject?.beatvideoMusic,
+      projectMedia: useMediaLibraryStore.getState().mediaItems,
+      timelineItems: items,
+    })
+    const durationInFrames =
+      publishDuration > 0 ? publishDuration : getDefaultGeneratedLayerDurationInFrames(fps)
+    const canvasWidth = currentProject?.metadata.width ?? DEFAULT_PROJECT_WIDTH
+    const canvasHeight = currentProject?.metadata.height ?? DEFAULT_PROJECT_HEIGHT
+    const isTypeLine = kind === 'type-line'
+    const isDisplay = kind === 'display'
+    const text = isTypeLine ? 'TYPE BEAT' : 'BEAT TITLE'
+
+    const baseItem = createTextTemplateItem({
+      placement: {
+        trackId: newTrack.trackId,
+        from: 0,
+        durationInFrames,
+        canvasWidth,
+        canvasHeight,
+        fps,
+      },
+      label: isTypeLine ? 'Type beat' : isDisplay ? 'Display title' : 'Bold title',
+      text,
+    })
+
+    const textItem: TextItem = {
+      ...baseItem,
+      text,
+      fontFamily: isDisplay ? 'Anton' : 'Inter Tight',
+      fontWeight: isDisplay ? 'normal' : 'bold',
+      fontSize: Math.round(
+        Math.max(
+          isTypeLine ? 30 : 84,
+          Math.min(isTypeLine ? 64 : 180, canvasHeight * (isTypeLine ? 0.04 : isDisplay ? 0.14 : 0.115)),
+        ),
+      ),
+      color: '#ffffff',
+      backgroundColor: undefined,
+      backgroundRadius: 0,
+      textAlign: 'center',
+      verticalAlign: 'middle',
+      lineHeight: isTypeLine ? 1 : 0.94,
+      letterSpacing: isTypeLine ? 0.5 : isDisplay ? -1 : -0.5,
+      textPadding: 0,
+      textShadow: {
+        offsetX: 0,
+        offsetY: Math.max(2, Math.round(canvasHeight * 0.004)),
+        blur: Math.max(10, Math.round(canvasHeight * 0.014)),
+        color: '#000000',
+      },
+      stroke: undefined,
+      transform: {
+        ...baseItem.transform,
+        x: 0,
+        y: Math.round(canvasHeight * (isTypeLine ? 0.23 : 0.09)),
+        width: Math.round(canvasWidth * (isTypeLine ? 0.76 : 0.9)),
+        height: Math.round(canvasHeight * (isTypeLine ? 0.1 : 0.22)),
+      },
+    }
+
+    addItemOnNewTrack(textItem, newTrack.tracks)
+    setActiveTrack(newTrack.trackId)
+    selectItems([textItem.id])
+  }, [])
+
   // Add shape item on its own new layer at the playhead, matching the canvas drop.
   const handleAddShape = useCallback((shapeType: ShapeType, shapePreset?: 'solid' | 'gradient') => {
     // Read all needed state from stores directly to avoid subscriptions
@@ -745,7 +825,7 @@ export const MediaSidebar = memo(function MediaSidebar({
               <div className="flex h-full min-h-0 flex-col">
                 <div className="shrink-0 border-b border-border bg-secondary/15 px-3 py-2 text-[10px] leading-relaxed text-muted-foreground">
                   {beatvideoMode === 'photo'
-                    ? 'Photo: import a cover and beat. Drag the cover onto the timeline; use Beat to analyze the music.'
+                    ? 'Import a cover and beat, then drag both onto the timeline.'
                     : 'Video: import footage and a beat. Drag clips onto the timeline; double-click a card to inspect it first.'}
                 </div>
                 <div className="min-h-0 flex-1 overflow-hidden">
@@ -765,101 +845,66 @@ export const MediaSidebar = memo(function MediaSidebar({
               ) : null}
             </div>
 
-            {/* Beatvideo Photo overlay hub — composed from canonical FreeCut layers. */}
+            {/* Beatvideo Photo overlay hub — composed from canonical FreeCut text layers. */}
             <div
               className={`min-h-0 flex-1 overflow-y-auto p-3 ${activeTab === 'overlay' ? 'block' : 'hidden'}`}
             >
-              <div className="space-y-5">
-                <section className="space-y-2">
-                  <div>
-                    <div className="text-xs font-medium text-foreground">Text</div>
-                    <div className="mt-0.5 text-[10px] leading-relaxed text-muted-foreground">
-                      Add a title layer, then position and style it in Properties.
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-3 gap-1.5">
-                    <button
-                      type="button"
-                      onClick={() => handleAddText()}
-                      className="flex flex-col items-center gap-1 p-1.5 rounded-md border border-border bg-secondary/30 hover:bg-secondary/50 hover:border-primary/50 transition-[transform,background-color,border-color,color] duration-150 active:scale-[0.98] group"
-                    >
-                      {renderTextTemplatePreview()}
-                      <span className="text-[9px] text-muted-foreground group-hover:text-foreground">
-                        Add text
-                      </span>
-                    </button>
-                    {TEXT_STYLE_PRESETS.slice(0, 2).map((preset) => (
-                      <button
-                        key={preset.id}
-                        type="button"
-                        onClick={() => handleAddText(preset.id)}
-                        className="flex flex-col items-center gap-1 p-1.5 rounded-md border border-border bg-secondary/30 hover:bg-secondary/50 hover:border-primary/50 transition-[transform,background-color,border-color,color] duration-150 active:scale-[0.98] group"
-                      >
-                        {renderTextTemplatePreview(preset)}
-                        <span className="w-full truncate text-center text-[9px] text-muted-foreground group-hover:text-foreground">
-                          {preset.label}
-                        </span>
-                      </button>
-                    ))}
-                  </div>
-                </section>
-
-                <section className="space-y-2">
-                  <div>
-                    <div className="text-xs font-medium text-foreground">Image / logo</div>
-                    <div className="mt-0.5 text-[10px] leading-relaxed text-muted-foreground">
-                      Import your own PNG, SVG or image in Media, then drag it onto the composition.
-                    </div>
-                  </div>
-                  <Button
+              <section className="space-y-2">
+                <div className="text-xs font-medium text-foreground">Text</div>
+                <div className="grid grid-cols-3 gap-1.5">
+                  <button
                     type="button"
-                    variant="outline"
-                    size="sm"
-                    className="w-full justify-start gap-2"
-                    onClick={() => setActiveTab('media')}
+                    onClick={() => handleAddPhotoText('display')}
+                    className="flex flex-col items-center gap-1 rounded-md border border-border bg-secondary/30 p-1.5 transition-[transform,background-color,border-color,color] duration-150 hover:border-primary/50 hover:bg-secondary/50 active:scale-[0.98] group"
                   >
-                    <ImagePlus className="h-3.5 w-3.5" />
-                    Open Media
-                  </Button>
-                </section>
-
-                <section className="space-y-2">
-                  <div>
-                    <div className="text-xs font-medium text-foreground">Shape</div>
-                    <div className="mt-0.5 text-[10px] leading-relaxed text-muted-foreground">
-                      Simple graphic layers for bars, blocks and framing.
+                    <div className={`${TEXT_TEMPLATE_PREVIEW_SHELL} flex items-center justify-center px-1.5`}>
+                      <span
+                        className="text-[12px] leading-none text-white"
+                        style={{ fontFamily: 'Anton, sans-serif' }}
+                      >
+                        TITLE
+                      </span>
                     </div>
-                  </div>
-                  <div className="grid grid-cols-3 gap-1.5">
-                    <button
-                      type="button"
-                      onClick={() => handleAddShape('rectangle', 'solid')}
-                      className="flex flex-col items-center justify-center gap-1.5 p-2 rounded-lg border border-border bg-secondary/30 hover:bg-secondary/50 hover:border-primary/50 transition-colors"
-                    >
-                      <div className="h-7 w-7 rounded-sm border border-border bg-foreground/80" />
-                      <span className="text-[9px] text-muted-foreground">Solid</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleAddShape('rectangle', 'gradient')}
-                      className="flex flex-col items-center justify-center gap-1.5 p-2 rounded-lg border border-border bg-secondary/30 hover:bg-secondary/50 hover:border-primary/50 transition-colors"
-                    >
-                      <div className="h-7 w-7 rounded-sm border border-border bg-gradient-to-br from-muted-foreground/25 to-foreground/80" />
-                      <span className="text-[9px] text-muted-foreground">Gradient</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleAddShape('circle')}
-                      className="flex flex-col items-center justify-center gap-1.5 p-2 rounded-lg border border-border bg-secondary/30 hover:bg-secondary/50 hover:border-primary/50 transition-colors"
-                    >
-                      <div className="flex h-7 w-7 items-center justify-center rounded-sm border border-border">
-                        <Circle className="h-4 w-4 text-foreground/80" />
-                      </div>
-                      <span className="text-[9px] text-muted-foreground">Circle</span>
-                    </button>
-                  </div>
-                </section>
-              </div>
+                    <span className="text-[9px] text-muted-foreground group-hover:text-foreground">
+                      Display
+                    </span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleAddPhotoText('bold')}
+                    className="flex flex-col items-center gap-1 rounded-md border border-border bg-secondary/30 p-1.5 transition-[transform,background-color,border-color,color] duration-150 hover:border-primary/50 hover:bg-secondary/50 active:scale-[0.98] group"
+                  >
+                    <div className={`${TEXT_TEMPLATE_PREVIEW_SHELL} flex items-center justify-center px-1.5`}>
+                      <span
+                        className="text-[10px] font-bold leading-none text-white"
+                        style={{ fontFamily: 'Inter Tight, sans-serif' }}
+                      >
+                        TITLE
+                      </span>
+                    </div>
+                    <span className="text-[9px] text-muted-foreground group-hover:text-foreground">
+                      Bold
+                    </span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleAddPhotoText('type-line')}
+                    className="flex flex-col items-center gap-1 rounded-md border border-border bg-secondary/30 p-1.5 transition-[transform,background-color,border-color,color] duration-150 hover:border-primary/50 hover:bg-secondary/50 active:scale-[0.98] group"
+                  >
+                    <div className={`${TEXT_TEMPLATE_PREVIEW_SHELL} flex items-center justify-center px-1.5`}>
+                      <span
+                        className="text-[7px] font-bold leading-none text-white"
+                        style={{ fontFamily: 'Inter Tight, sans-serif' }}
+                      >
+                        TYPE BEAT
+                      </span>
+                    </div>
+                    <span className="text-[9px] text-muted-foreground group-hover:text-foreground">
+                      Type line
+                    </span>
+                  </button>
+                </div>
+              </section>
             </div>
 
             {/* Text Tab */}
