@@ -873,7 +873,9 @@ export const MediaSidebar = memo(function MediaSidebar({
                   <div className="text-xs font-medium text-foreground">Title</div>
                   <div className="grid grid-cols-3 gap-1.5">
                     {(['clean-title', 'condensed-title'] as const).map((presetId) => {
-                      const preset = TEXT_STYLE_PRESETS.find((candidate) => candidate.id === presetId)
+                      const preset = TEXT_STYLE_PRESETS.find(
+                        (candidate) => candidate.id === presetId,
+                      )
                       if (!preset) return null
                       return (
                         <button

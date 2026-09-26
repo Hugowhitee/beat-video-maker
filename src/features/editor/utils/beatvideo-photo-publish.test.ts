@@ -21,7 +21,7 @@ function audioItem(
     label: id,
     mediaId,
     type: 'audio',
-    src: `blob:\${id}`,
+    src: `blob:${id}`,
   }
 }
 
