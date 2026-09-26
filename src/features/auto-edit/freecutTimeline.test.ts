@@ -114,7 +114,11 @@ describe('buildEditPlanTimelineDraft', () => {
       sourceStart: 30,
       sourceEnd: 60,
       sourceFps: 30,
+      embeddedAudioMuted: true,
     })
+    expect(first?.transform?.width).toBe(1920)
+    expect(first?.transform?.height).toBe(1080)
+
     expect(second).toMatchObject({
       type: 'video',
       trackId: 'track-v1',
