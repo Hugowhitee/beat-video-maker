@@ -4,6 +4,8 @@ import { usePreviewBridgeStore } from '@/shared/state/preview-bridge'
 import { usePlaybackStore } from '@/shared/state/playback'
 import type { ItemEffect } from '@/types/effects'
 import type { TimelineItem } from '@/types/timeline'
+import type { BeatvideoMusicAnalysis } from '@/types/beatvideo'
+import type { BeatvideoProjectMode } from '@/types/project'
 import { GizmoOverlay } from './gizmo-overlay'
 import { MaskEditorContainer } from './mask-editor-container'
 import { CornerPinContainer } from './corner-pin-container'
@@ -56,6 +58,8 @@ interface VideoPreviewProps {
     width: number
     height: number
     backgroundColor?: string
+    beatvideoMode?: BeatvideoProjectMode
+    beatvideoMusic?: BeatvideoMusicAnalysis
   }
   containerSize: {
     width: number
@@ -813,6 +817,8 @@ const VideoPreviewBase = memo(function VideoPreviewBase({
           containerRect={playerContainerRect}
           playerSize={playerSize}
           projectSize={{ width: project.width, height: project.height }}
+          beatvideoMode={project.beatvideoMode}
+          beatvideoMusic={project.beatvideoMusic}
           zoom={zoom}
           hitAreaRef={backgroundRef as React.RefObject<HTMLDivElement>}
         />

@@ -43,7 +43,7 @@ Video mode exposes footage editing without changing engines:
 - cuts, slip/slide and transitions;
 - text/shapes/effects;
 - motion/keyframes and color;
-- Beatvideo Loop / Guided / Auto planning on top of the same timeline.
+- **Loop clip to beat** for the common single-footage workflow, materialized onto the same timeline.
 
 Importing footage should make the next action obvious: inspect it or drag it onto the timeline. Beatvideo automation may create timeline items, but it never creates a parallel hidden edit state.
 
@@ -73,7 +73,7 @@ Beatvideo's music intelligence owns:
 - Beat This beat/downbeat analysis;
 - MusicMap and musical sections;
 - TransNet/ClipMap evidence where required;
-- deterministic Loop / Guided / Auto edit planning;
+- deterministic edit-plan infrastructure for assisted multi-clip editing; only workflows that are fully wired into the product surface should be presented as user-facing modes;
 - beat/amplitude/phrase reactive modulation.
 
 Automation must remain inspectable and correctable. It produces normal FreeCut project/timeline data.

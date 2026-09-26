@@ -22,6 +22,8 @@ import { ErrorBoundary } from '@/app/error-boundary'
 import { useTranslation } from 'react-i18next'
 import { usePlaybackStore } from '@/shared/state/playback'
 import { ShuttleIndicator } from '@/shared/ui/shuttle-indicator'
+import type { BeatvideoMusicAnalysis } from '@/types/beatvideo'
+import type { BeatvideoProjectMode } from '@/types/project'
 
 interface PreviewAreaProps {
   project: {
@@ -115,6 +117,8 @@ const ProgramPreviewSurface = memo(function ProgramPreviewSurface({
     height: number
     fps: number
     backgroundColor?: string
+    beatvideoMode?: BeatvideoProjectMode
+    beatvideoMusic?: BeatvideoMusicAnalysis
   }
   containerSize: {
     width: number
@@ -218,6 +222,8 @@ export const PreviewArea = memo(function PreviewArea({
   const projectHeight = useProjectStore((s) => s.currentProject?.metadata.height)
   const projectFps = useProjectStore((s) => s.currentProject?.metadata.fps)
   const projectBgColor = useProjectStore((s) => s.currentProject?.metadata.backgroundColor)
+  const beatvideoMode = useProjectStore((s) => s.currentProject?.beatvideoMode)
+  const beatvideoMusic = useProjectStore((s) => s.currentProject?.beatvideoMusic)
 
   const width = preferProjectStoreMetadata ? (projectWidth ?? project.width) : project.width
   const height = preferProjectStoreMetadata ? (projectHeight ?? project.height) : project.height
@@ -309,8 +315,8 @@ export const PreviewArea = memo(function PreviewArea({
   }, [editorLayout.previewPadding])
 
   const liveProject = useMemo(
-    () => ({ width, height, fps, backgroundColor }),
-    [width, height, fps, backgroundColor],
+    () => ({ width, height, fps, backgroundColor, beatvideoMode, beatvideoMusic }),
+    [width, height, fps, backgroundColor, beatvideoMode, beatvideoMusic],
   )
 
   const sourcePreviewMediaId = useEditorStore((s) => s.sourcePreviewMediaId)

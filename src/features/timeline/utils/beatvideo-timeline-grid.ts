@@ -3,7 +3,6 @@ import type { TimelineItem } from '@/types/timeline'
 import { resolveBeatvideoMusicGrid } from '@/shared/beatvideo/music-grid'
 import {
   getItemSourceSpanSeconds,
-  sourceSecondsToTimelineFrame,
   timelineFrameToSourceSeconds,
 } from './media-item-frames'
 
@@ -104,14 +103,28 @@ export function normalizeBeatvideoAnalysisForPlacement(
   }
 }
 
+function sourceTimeToTimelineTime(
+  sourceTime: number,
+  placement: MediaTimelineItem,
+  timelineFps: number,
+  sourceSpan: { start: number; end: number },
+): number {
+  const speed = Math.max(EPSILON, placement.speed ?? 1)
+  const sourceDelta = placement.isReversed
+    ? sourceSpan.end - sourceTime
+    : sourceTime - sourceSpan.start
+  return placement.from / timelineFps + sourceDelta / speed
+}
+
 function mapBeatToTimeline(
   beat: MusicBeat,
   placement: MediaTimelineItem,
   timelineFps: number,
+  sourceSpan: { start: number; end: number },
 ): MusicBeat {
   return {
     ...beat,
-    time: sourceSecondsToTimelineFrame(placement, beat.time, timelineFps) / timelineFps,
+    time: sourceTimeToTimelineTime(beat.time, placement, timelineFps, sourceSpan),
   }
 }
 
@@ -136,7 +149,7 @@ export function resolveBeatvideoTimelineGrid(
         beat.time >= sourceSpan.start - EPSILON &&
         beat.time <= sourceSpan.end + EPSILON,
     )
-    .map((beat) => mapBeatToTimeline(beat, placement, timelineFps))
+    .map((beat) => mapBeatToTimeline(beat, placement, timelineFps, sourceSpan))
     .filter(
       (beat) =>
         beat.time >= placement.from / timelineFps - EPSILON &&
@@ -155,7 +168,7 @@ export function resolveBeatvideoTimelineGrid(
     barOneSourceTime !== null &&
     barOneSourceTime >= sourceSpan.start - EPSILON &&
     barOneSourceTime <= sourceSpan.end + EPSILON
-      ? sourceSecondsToTimelineFrame(placement, barOneSourceTime, timelineFps) / timelineFps
+      ? sourceTimeToTimelineTime(barOneSourceTime, placement, timelineFps, sourceSpan)
       : null
 
   return {

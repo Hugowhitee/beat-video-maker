@@ -35,7 +35,7 @@ The photo stays the visual hero. Photo mode reuses the same timeline, renderer a
 
 Footage + beat workflow. In addition to Media and Beat, Video exposes the mature FreeCut editing surface for clips, text, shapes, effects, transitions, motion/keyframes and export.
 
-Beatvideo's Loop / Guided / Auto planning produces the same canonical FreeCut timeline items. Manual corrections are therefore normal editor operations rather than a second custom timeline.
+For the common one-clip workflow, **Loop clip to beat** repeats one imported video across the placed beat using normal FreeCut timeline items. Multi-clip edits remain normal editor operations; there is no second hidden Beatvideo timeline.
 
 ## Musical grid
 

@@ -308,6 +308,22 @@ export const TimelineTrack = memo(function TimelineTrack({ track }: TimelineTrac
   const getMedia = useMediaLibraryStore((s) => s.mediaItems)
   const importHandlesForPlacement = useMediaLibraryStore((s) => s.importHandlesForPlacement)
 
+  const getProjectAwareDroppedDuration = useCallback(
+    (
+      media: Pick<MediaMetadata, 'duration'> & Partial<Pick<MediaMetadata, 'fps'>>,
+      mediaType: DroppableMediaType,
+    ) => {
+      const project = useProjectStore.getState().currentProject
+      return getDroppedMediaDurationInFrames(media, mediaType, fps, {
+        beatvideoMode: project?.beatvideoMode,
+        beatvideoMusic: project?.beatvideoMusic,
+        projectMedia: useMediaLibraryStore.getState().mediaItems,
+        timelineItems: useTimelineStore.getState().items,
+      })
+    },
+    [fps],
+  )
+
   const getDropFrame = useCallback((event: React.DragEvent): number | null => {
     if (!trackRef.current) {
       return null
@@ -374,7 +390,7 @@ export const TimelineTrack = memo(function TimelineTrack({ track }: TimelineTrac
           payload: entry,
           label: entry.label,
           mediaType: entry.mediaType,
-          durationInFrames: getDroppedMediaDurationInFrames(entry.media, entry.mediaType, fps),
+          durationInFrames: getProjectAwareDroppedDuration(entry.media, entry.mediaType),
           hasLinkedAudio: entry.mediaType === 'video' && !!entry.media.audioCodec,
         })),
         dropFrame,
@@ -433,6 +449,11 @@ export const TimelineTrack = memo(function TimelineTrack({ track }: TimelineTrac
                 : undefined,
             },
             linkVideoAudio: planned.linkVideoAudio,
+            initialFit:
+              useProjectStore.getState().currentProject?.beatvideoMode === 'photo' &&
+              entry.mediaType === 'image'
+                ? 'cover'
+                : undefined,
           })
         },
       )
@@ -442,7 +463,7 @@ export const TimelineTrack = memo(function TimelineTrack({ track }: TimelineTrac
         tracks: workingTracks,
       }
     },
-    [fps, getCollisionTrackItemsMap, getCurrentCanvasSize, track.id],
+    [fps, getCollisionTrackItemsMap, getCurrentCanvasSize, getProjectAwareDroppedDuration, track.id],
   )
 
   const buildGhostPreviewsForEntries = useCallback(
@@ -460,10 +481,9 @@ export const TimelineTrack = memo(function TimelineTrack({ track }: TimelineTrac
           payload: entry,
           label: entry.label,
           mediaType: entry.mediaType,
-          durationInFrames: getDroppedMediaDurationInFrames(
+          durationInFrames: getProjectAwareDroppedDuration(
             { duration: entry.duration ?? 0 } as Pick<MediaMetadata, 'duration'>,
             entry.mediaType,
-            fps,
           ),
           hasLinkedAudio: entry.hasLinkedAudio,
         })),

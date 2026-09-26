@@ -169,6 +169,22 @@ export const TimelineMediaDropZone = memo(function TimelineMediaDropZone({
   const importHandlesForPlacement = useMediaLibraryStore((s) => s.importHandlesForPlacement)
   const { frameToPixels } = useTimelineCommittedZoomContext()
 
+  const getProjectAwareDroppedDuration = useCallback(
+    (
+      media: Pick<MediaMetadata, 'duration'> & Partial<Pick<MediaMetadata, 'fps'>>,
+      mediaType: DroppableMediaType,
+    ) => {
+      const project = useProjectStore.getState().currentProject
+      return getDroppedMediaDurationInFrames(media, mediaType, fps, {
+        beatvideoMode: project?.beatvideoMode,
+        beatvideoMusic: project?.beatvideoMusic,
+        projectMedia: useMediaLibraryStore.getState().mediaItems,
+        timelineItems: useTimelineStore.getState().items,
+      })
+    },
+    [fps],
+  )
+
   const getDropFrame = useCallback((event: React.DragEvent): number | null => {
     if (!zoneRef.current) {
       return null
@@ -267,7 +283,7 @@ export const TimelineMediaDropZone = memo(function TimelineMediaDropZone({
           payload: entry,
           label: entry.label,
           mediaType: entry.mediaType,
-          durationInFrames: getDroppedMediaDurationInFrames(entry.media, entry.mediaType, fps),
+          durationInFrames: getProjectAwareDroppedDuration(entry.media, entry.mediaType),
           hasLinkedAudio: entry.mediaType === 'video' && !!entry.media.audioCodec,
         })),
         dropFrame,
@@ -328,6 +344,11 @@ export const TimelineMediaDropZone = memo(function TimelineMediaDropZone({
                 : undefined,
             },
             linkVideoAudio: planned.linkVideoAudio,
+            initialFit:
+              useProjectStore.getState().currentProject?.beatvideoMode === 'photo' &&
+              entry.mediaType === 'image'
+                ? 'cover'
+                : undefined,
           })
         },
       )
@@ -337,7 +358,7 @@ export const TimelineMediaDropZone = memo(function TimelineMediaDropZone({
         tracks: workingTracks,
       }
     },
-    [anchorTrackId, fps, getCollisionTrackItemsMap, getCurrentCanvasSize, zone],
+    [anchorTrackId, fps, getCollisionTrackItemsMap, getCurrentCanvasSize, getProjectAwareDroppedDuration, zone],
   )
 
   const buildGhostPreviewsForEntries = useCallback(
@@ -358,10 +379,9 @@ export const TimelineMediaDropZone = memo(function TimelineMediaDropZone({
           payload: entry,
           label: entry.label,
           mediaType: entry.mediaType,
-          durationInFrames: getDroppedMediaDurationInFrames(
+          durationInFrames: getProjectAwareDroppedDuration(
             { duration: entry.duration ?? 0 } as Pick<MediaMetadata, 'duration'>,
             entry.mediaType,
-            fps,
           ),
           hasLinkedAudio: entry.hasLinkedAudio,
         })),
@@ -379,7 +399,7 @@ export const TimelineMediaDropZone = memo(function TimelineMediaDropZone({
         frameToPixels,
       })
     },
-    [anchorTrackId, fps, frameToPixels, getCollisionTrackItemsMap, zone],
+    [anchorTrackId, frameToPixels, getCollisionTrackItemsMap, getProjectAwareDroppedDuration, zone],
   )
 
   const buildGenericExternalGhostPreviews = useCallback(

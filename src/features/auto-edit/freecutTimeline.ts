@@ -251,6 +251,7 @@ export function buildEditPlanTimelineDraft(
       },
       linkVideoAudio: false,
       createLinkedGroupId: false,
+      initialFit: 'cover',
     })
 
     const item = built[0]
@@ -258,6 +259,7 @@ export function buildEditPlanTimelineDraft(
       throw new Error(`Failed to materialize edit segment "${segment.id}" as video.`)
     }
 
+    item.embeddedAudioMuted = true
     items.push(item)
     itemIdBySegmentId[segment.id] = item.id
   }

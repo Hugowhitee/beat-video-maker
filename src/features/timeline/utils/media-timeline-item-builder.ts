@@ -1,5 +1,5 @@
 import type { AudioItem, ImageItem, LottieItem, TimelineItem, VideoItem } from '@/types/timeline'
-import { computeInitialTransform } from './transform-init'
+import { computeInitialTransform, type InitialTransformFitMode } from './transform-init'
 
 export type MediaTimelineItemType = 'video' | 'audio' | 'image' | 'lottie'
 
@@ -139,6 +139,7 @@ export function buildMediaTimelineItem(params: {
   sourceStart?: number
   sourceEnd?: number
   fallbackSourceFps?: number
+  initialFit?: InitialTransformFitMode
 }): TimelineItem {
   const baseItem = buildTimelineBaseItem(params)
 
@@ -162,6 +163,7 @@ export function buildMediaTimelineItem(params: {
       sourceHeight,
       params.canvasWidth,
       params.canvasHeight,
+      params.initialFit,
     ),
   }
 
@@ -208,6 +210,7 @@ export function buildMediaTimelineItems(params: {
   sourceEnd?: number
   fallbackSourceFps?: number
   createLinkedGroupId?: boolean
+  initialFit?: InitialTransformFitMode
 }): TimelineItem[] {
   const originId = crypto.randomUUID()
   const linkedGroupId =

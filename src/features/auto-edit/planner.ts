@@ -523,6 +523,52 @@ function validateInputs(music: MusicMap, clips: ClipMap) {
   }
 }
 
+export function createSingleClipLoopPlan(params: {
+  sourceId: string
+  sourceDuration: number
+  timelineStart?: number
+  timelineDuration: number
+}): EditPlan {
+  const sourceDuration = params.sourceDuration
+  const timelineStart = Math.max(0, params.timelineStart ?? 0)
+  const timelineDuration = params.timelineDuration
+
+  if (!Number.isFinite(sourceDuration) || sourceDuration <= 0) {
+    throw new Error('Loop source duration must be positive.')
+  }
+  if (!Number.isFinite(timelineDuration) || timelineDuration <= 0) {
+    throw new Error('Loop timeline duration must be positive.')
+  }
+
+  const segments: EditSegment[] = []
+  let elapsed = 0
+
+  while (elapsed < timelineDuration - EPSILON) {
+    const duration = Math.min(sourceDuration, timelineDuration - elapsed)
+    const index = segments.length + 1
+    segments.push({
+      id: `segment-${index}`,
+      timelineStart: timelineStart + elapsed,
+      timelineEnd: timelineStart + elapsed + duration,
+      sourceId: params.sourceId,
+      shotId: `single-loop-${index}`,
+      sourceStart: 0,
+      sourceEnd: duration,
+      reason: index === 1 ? 'single clip loop' : `single clip loop · repeat ${index}`,
+    })
+    elapsed += duration
+  }
+
+  return {
+    mode: 'loop',
+    duration: timelineDuration,
+    segments,
+    transitions: [],
+    motifs: [],
+    warnings: [],
+  }
+}
+
 export function createEditPlan(
   music: MusicMap,
   clips: ClipMap,

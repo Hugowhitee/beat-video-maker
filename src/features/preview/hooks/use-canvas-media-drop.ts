@@ -28,6 +28,8 @@ import {
 import { screenToCanvas } from '../utils/coordinate-transform'
 import type { CoordinateParams } from '../types/gizmo'
 import type { TimelineItem } from '@/types/timeline'
+import type { BeatvideoMusicAnalysis } from '@/types/beatvideo'
+import type { BeatvideoProjectMode } from '@/types/project'
 import type { MediaMetadata } from '@/types/storage'
 import {
   useProjectMediaMatchDialogStore,
@@ -46,6 +48,8 @@ interface CanvasDropState {
 interface UseCanvasMediaDropParams {
   coordParams: CoordinateParams | null
   projectSize: { width: number; height: number }
+  beatvideoMode?: BeatvideoProjectMode
+  beatvideoMusic?: BeatvideoMusicAnalysis
 }
 
 interface PlaceMediaOnCanvasParams {
@@ -216,7 +220,12 @@ function evaluateCanvasDrop(dataTransfer: DataTransfer): CanvasDropState | null 
   }
 }
 
-export function useCanvasMediaDrop({ coordParams, projectSize }: UseCanvasMediaDropParams) {
+export function useCanvasMediaDrop({
+  coordParams,
+  projectSize,
+  beatvideoMode,
+  beatvideoMusic,
+}: UseCanvasMediaDropParams) {
   const [dropState, setDropState] = useState<CanvasDropState | null>(null)
 
   const clearDropState = useCallback(() => {
@@ -261,7 +270,12 @@ export function useCanvasMediaDrop({ coordParams, projectSize }: UseCanvasMediaD
       const timelineState = useTimelineStore.getState()
       const playbackState = usePlaybackStore.getState()
       const selectionState = useSelectionStore.getState()
-      const durationInFrames = getDroppedMediaDurationInFrames(media, mediaType, timelineState.fps)
+      const durationInFrames = getDroppedMediaDurationInFrames(media, mediaType, timelineState.fps, {
+        beatvideoMode,
+        beatvideoMusic,
+        projectMedia: useMediaLibraryStore.getState().mediaItems,
+        timelineItems: timelineState.items,
+      })
       const placement = findBestCanvasDropPlacement({
         tracks: timelineState.tracks,
         items: timelineState.items,
@@ -299,6 +313,7 @@ export function useCanvasMediaDrop({ coordParams, projectSize }: UseCanvasMediaD
           from: placement.from,
           durationInFrames,
         },
+        initialFit: beatvideoMode === 'photo' && mediaType === 'image' ? 'cover' : undefined,
       })
 
       const placedItem = preserveInitialPlacement
@@ -320,7 +335,7 @@ export function useCanvasMediaDrop({ coordParams, projectSize }: UseCanvasMediaD
       selectionState.setActiveTrack(placement.trackId)
       selectionState.selectItems([placedItem.id])
     },
-    [coordParams, projectSize],
+    [beatvideoMode, beatvideoMusic, coordParams, projectSize],
   )
 
   const placeTemplateOnCanvas = useCallback(
