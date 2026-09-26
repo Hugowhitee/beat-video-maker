@@ -27,18 +27,18 @@ export interface DroppedMediaDurationContext {
   timelineItems?: readonly TimelineItem[]
 }
 
-function maxTimelineEnd(
+function maxTimelineDuration(
   items: readonly TimelineItem[] | undefined,
   predicate: (item: TimelineItem) => boolean,
 ): number {
   if (!items?.length) return 0
 
-  let maxEnd = 0
+  let maxDuration = 0
   for (const item of items) {
     if (!predicate(item)) continue
-    maxEnd = Math.max(maxEnd, item.from + item.durationInFrames)
+    maxDuration = Math.max(maxDuration, item.durationInFrames)
   }
-  return maxEnd
+  return maxDuration
 }
 
 export function resolvePhotoPublishingDurationInFrames(
@@ -48,7 +48,7 @@ export function resolvePhotoPublishingDurationInFrames(
   const beatMediaId = context.beatvideoMusic?.mediaId
 
   if (beatMediaId) {
-    const placedBeatEnd = maxTimelineEnd(
+    const placedBeatEnd = maxTimelineDuration(
       context.timelineItems,
       (item) =>
         (item.type === 'audio' || item.type === 'video') && item.mediaId === beatMediaId,
@@ -56,7 +56,7 @@ export function resolvePhotoPublishingDurationInFrames(
     if (placedBeatEnd > 0) return placedBeatEnd
   }
 
-  const placedAudioEnd = maxTimelineEnd(context.timelineItems, (item) => item.type === 'audio')
+  const placedAudioEnd = maxTimelineDuration(context.timelineItems, (item) => item.type === 'audio')
   if (placedAudioEnd > 0) return placedAudioEnd
 
   const analyzedDuration = context.beatvideoMusic?.musicMap.duration ?? 0

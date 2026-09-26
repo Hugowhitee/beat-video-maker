@@ -79,6 +79,45 @@ describe('getDroppedMediaDurationInFrames', () => {
       }),
     ).toBe(4260)
   })
+
+  it('uses beat clip duration rather than its absolute timeline end', () => {
+    expect(
+      getDroppedMediaDurationInFrames({ duration: 0 }, 'image', 30, {
+        beatvideoMode: 'photo',
+        beatvideoMusic: {
+          version: 2,
+          mediaId: 'beat-1',
+          analyzedAt: 1,
+          musicMap: {
+            duration: 60,
+            bpm: 120,
+            beatsPerBar: 4,
+            beats: [],
+            sections: [],
+          },
+          detectedBarOneTime: 0,
+          barOneTime: 0,
+          barOneVerified: true,
+          bpmOverride: null,
+          gridMode: 'detected',
+          correctionAnchors: [],
+        },
+        timelineItems: [
+          {
+            id: 'beat-item',
+            type: 'audio',
+            trackId: 'audio-1',
+            from: 900,
+            durationInFrames: 1800,
+            label: 'beat.wav',
+            mediaId: 'beat-1',
+            src: 'blob:beat',
+          },
+        ],
+      }),
+    ).toBe(1800)
+  })
+
 })
 
 describe('buildDroppedMediaTimelineItem', () => {
