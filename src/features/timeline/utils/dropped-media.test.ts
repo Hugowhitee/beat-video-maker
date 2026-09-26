@@ -31,8 +31,53 @@ function makeMedia(overrides: Partial<MediaMetadata> = {}): MediaMetadata {
 }
 
 describe('getDroppedMediaDurationInFrames', () => {
-  it('defaults still images to three seconds', () => {
+  it('defaults still images to three seconds outside the Photo publishing flow', () => {
     expect(getDroppedMediaDurationInFrames({ duration: 0 }, 'image', 30)).toBe(90)
+  })
+
+  it('matches a Photo still to the analyzed beat duration', () => {
+    expect(
+      getDroppedMediaDurationInFrames({ duration: 0 }, 'image', 30, {
+        beatvideoMode: 'photo',
+        beatvideoMusic: {
+          version: 2,
+          mediaId: 'beat-1',
+          analyzedAt: 1,
+          musicMap: {
+            duration: 150,
+            bpm: 128,
+            beatsPerBar: 4,
+            beats: [],
+            sections: [],
+          },
+          detectedBarOneTime: 0,
+          barOneTime: 0,
+          barOneVerified: true,
+          bpmOverride: null,
+          gridMode: 'detected',
+          correctionAnchors: [],
+        },
+      }),
+    ).toBe(4500)
+  })
+
+  it('uses an imported audio source when Photo mode has not been analyzed yet', () => {
+    const beat = makeMedia({
+      id: 'beat-1',
+      fileName: 'beat.wav',
+      mimeType: 'audio/wav',
+      duration: 142,
+      width: 0,
+      height: 0,
+      fps: 0,
+    })
+
+    expect(
+      getDroppedMediaDurationInFrames({ duration: 0 }, 'image', 30, {
+        beatvideoMode: 'photo',
+        projectMedia: [beat],
+      }),
+    ).toBe(4260)
   })
 })
 
@@ -65,6 +110,43 @@ describe('buildDroppedMediaTimelineItem', () => {
       y: 0,
       width: 1920,
       height: 1080,
+      rotation: 0,
+    })
+  })
+
+  it('can cover the canvas for a Photo hero still', () => {
+    const media = makeMedia({
+      mimeType: 'image/jpeg',
+      fileName: 'cover.jpg',
+      duration: 0,
+      width: 1200,
+      height: 1500,
+      fps: 0,
+    })
+    const item = buildDroppedMediaTimelineItem({
+      media,
+      mediaId: media.id,
+      mediaType: 'image',
+      label: media.fileName,
+      timelineFps: 30,
+      blobUrl: 'blob:test',
+      canvasWidth: 1920,
+      canvasHeight: 1080,
+      initialFit: 'cover',
+      placement: {
+        trackId: 'track-1',
+        from: 0,
+        durationInFrames: 4500,
+      },
+    })
+
+    expect(item.type).toBe('image')
+    expect(item.durationInFrames).toBe(4500)
+    expect(item.transform).toEqual({
+      x: 0,
+      y: 0,
+      width: 1920,
+      height: 2400,
       rotation: 0,
     })
   })
