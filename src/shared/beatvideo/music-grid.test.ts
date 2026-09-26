@@ -54,7 +54,10 @@ describe('resolveBeatvideoMusicGrid', () => {
     ]
 
     const grid = resolveBeatvideoMusicGrid(analysis)
-    expect(grid.beats.map((beat) => beat.time)).toEqual([0.6, 1.1, 1.6, 2.2, 2.8, 3.3])
+    const expectedTimes = [0.6, 1.1, 1.6, 2.2, 2.8, 3.3]
+    grid.beats.forEach((beat, index) => {
+      expect(beat.time).toBeCloseTo(expectedTimes[index]!, 8)
+    })
     expect(grid.beats.map((beat) => beat.index)).toEqual([0, 1, 2, 3, 4, 5])
   })
 

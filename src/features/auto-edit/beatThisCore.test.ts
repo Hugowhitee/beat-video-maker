@@ -54,6 +54,28 @@ describe('Beat This core', () => {
     expect(result.downbeats).toEqual(downbeats)
   })
 
+  it('averages Beat This frame jitter over long spans and recovers an integer DAW tempo', () => {
+    const period = 60 / 98
+    const beats = Array.from({ length: 129 }, (_, index) =>
+      index * period + (index % 3 === 0 ? 0.01 : index % 3 === 1 ? -0.01 : 0),
+    )
+    const downbeats = beats.filter((_, index) => index % 4 === 0)
+
+    const result = summarizeRhythm(beats, downbeats, [])
+
+    expect(result.bpm).toBe(98)
+  })
+
+  it('does not force a clearly fractional programmed tempo to an integer', () => {
+    const period = 60 / 97.5
+    const beats = Array.from({ length: 97 }, (_, index) => index * period)
+    const downbeats = beats.filter((_, index) => index % 4 === 0)
+
+    const result = summarizeRhythm(beats, downbeats, [])
+
+    expect(result.bpm).toBeCloseTo(97.5, 4)
+  })
+
   it('normalizes RMS energy without inventing values above one', () => {
     const audio = new Float32Array(100)
     audio.fill(1, 0, 50)

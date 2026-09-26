@@ -274,13 +274,45 @@ function withoutOutliers(intervals: number[]): number[] {
   return filtered.length > 0 ? filtered : intervals
 }
 
+function preferredBpmSpan(beatCount: number): number {
+  if (beatCount >= 33) return 16
+  if (beatCount >= 17) return 8
+  if (beatCount >= 9) return 4
+  if (beatCount >= 5) return 2
+  return 1
+}
+
 export function estimateBpm(beats: number[]): number {
   if (beats.length < MIN_BEATS) return 0
-  const intervals = differences(beats)
+
+  // Beat This peaks are quantized to 50 fps and can jitter by a frame. Measuring
+  // tempo across longer beat spans averages that timing noise away while the
+  // robust median/IQR rejection keeps occasional missed/extra peaks from
+  // dominating the estimate.
+  const span = preferredBpmSpan(beats.length)
+  const candidates: number[] = []
+
+  for (let index = 0; index + span < beats.length; index += 1) {
+    const duration = (beats[index + span] ?? 0) - (beats[index] ?? 0)
+    if (duration <= 0) continue
+    const bpm = (60 * span) / duration
+    if (Number.isFinite(bpm) && bpm > 0) candidates.push(bpm)
+  }
+
+  if (candidates.length === 0) return 0
   const kept =
-    intervals.length >= MIN_INTERVALS_FOR_IQR ? withoutOutliers(intervals) : intervals
-  const interval = median(kept)
-  return interval > 0 ? 60 / interval : 0
+    candidates.length >= MIN_INTERVALS_FOR_IQR ? withoutOutliers(candidates) : candidates
+  return median(kept)
+}
+
+function reconcileProgrammedTempo(bpm: number): number {
+  if (!Number.isFinite(bpm) || bpm <= 0) return bpm
+  const nearestInteger = Math.round(bpm)
+
+  // Modern programmed beats are commonly authored at integer DAW tempos. Only
+  // use that prior when the measured long-span tempo is already very close;
+  // real 97.5 BPM / live / automated material must remain fractional.
+  return Math.abs(bpm - nearestInteger) <= 0.35 ? nearestInteger : bpm
 }
 
 function mapProbeBpm(bpm: number): number {
@@ -383,7 +415,9 @@ export function summarizeRhythm(
   downbeats: number[]
   meter: number
 } {
-  const bpm = consensusBpm(probeBpms.length > 0 ? probeBpms : [estimateBpm(beats)])
+  const bpm = reconcileProgrammedTempo(
+    consensusBpm(probeBpms.length > 0 ? probeBpms : [estimateBpm(beats)]),
+  )
   const rawBpm = estimateBpm(beats)
 
   if (bpm <= 0 || rawBpm <= 0 || rawBpm / bpm < 1.5) {
