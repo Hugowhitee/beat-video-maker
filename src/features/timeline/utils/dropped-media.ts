@@ -41,7 +41,7 @@ function maxTimelineEnd(
   return maxEnd
 }
 
-function resolvePhotoBeatDurationInFrames(
+export function resolvePhotoPublishingDurationInFrames(
   timelineFps: number,
   context: DroppedMediaDurationContext,
 ): number {
@@ -96,7 +96,7 @@ export function getDroppedMediaDurationInFrames(
   }
 
   if (mediaType === 'image' && context.beatvideoMode === 'photo') {
-    const beatDurationInFrames = resolvePhotoBeatDurationInFrames(timelineFps, context)
+    const beatDurationInFrames = resolvePhotoPublishingDurationInFrames(timelineFps, context)
     if (beatDurationInFrames > 0) return beatDurationInFrames
   }
 
