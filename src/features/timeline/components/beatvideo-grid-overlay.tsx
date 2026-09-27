@@ -23,6 +23,80 @@ function median(values: number[]): number {
   return ((sorted[middle - 1] ?? 0) + (sorted[middle] ?? 0)) / 2
 }
 
+type AudioAccentBand = 'low' | 'mid' | 'high'
+
+function resolveAudioAccentBand(
+  transients: readonly {
+    time: number
+    strength: number
+    low: number
+    mid: number
+    high: number
+  }[],
+  time: number,
+  toleranceSeconds: number,
+): AudioAccentBand | null {
+  if (transients.length === 0) return null
+
+  let low = 0
+  let high = transients.length
+  while (low < high) {
+    const middle = low + ((high - low) >> 1)
+    if ((transients[middle]?.time ?? Number.POSITIVE_INFINITY) < time) {
+      low = middle + 1
+    } else {
+      high = middle
+    }
+  }
+
+  const right = transients[low]
+  const left = low > 0 ? transients[low - 1] : undefined
+  const nearest =
+    left && right
+      ? Math.abs(left.time - time) <= Math.abs(right.time - time)
+        ? left
+        : right
+      : (left ?? right)
+  if (!nearest || Math.abs(nearest.time - time) > toleranceSeconds || nearest.strength < 0.28) {
+    return null
+  }
+
+  const entries = [
+    ['low', nearest.low],
+    ['mid', nearest.mid],
+    ['high', nearest.high],
+  ] as const
+  const strongest = entries.reduce((best, entry) => entry[1] > best[1] ? entry : best)
+  return strongest[1] > 0.08 ? strongest[0] : null
+}
+
+function audioAccentClass(band: AudioAccentBand): string {
+  if (band === 'low') return 'bg-sky-400/85'
+  if (band === 'mid') return 'bg-amber-400/85'
+  return 'bg-fuchsia-400/85'
+}
+
+export function resolveBeatGridDensity(beatSpacingPx: number, barSpacingPx: number) {
+  const safeBeatSpacing = Math.max(0, beatSpacingPx)
+  const safeBarSpacing = Math.max(0, barSpacingPx)
+  const barStride =
+    safeBarSpacing >= 32 ? 1 :
+    safeBarSpacing >= 16 ? 2 :
+    safeBarSpacing >= 8 ? 4 :
+    safeBarSpacing >= 4 ? 8 : 16
+  const labelStride =
+    safeBarSpacing >= 64 ? 1 :
+    safeBarSpacing >= 32 ? 2 :
+    safeBarSpacing >= 16 ? 4 :
+    safeBarSpacing >= 8 ? 8 : 16
+
+  return {
+    showIndividualBeats: safeBeatSpacing >= 13 && safeBarSpacing >= 40 && barStride === 1,
+    barStride,
+    labelStride: Math.max(barStride, labelStride),
+  }
+}
+
 function closestIndex(values: number[], target: number): number {
   let bestIndex = -1
   let bestDistance = Number.POSITIVE_INFINITY
@@ -43,6 +117,7 @@ export const BeatvideoGridOverlay = memo(function BeatvideoGridOverlay({
   const analysis = useProjectStore((state) => state.currentProject?.beatvideoMusic)
   const items = useItemsStore((state) => state.items)
   const fps = useTimelineSettingsStore((state) => state.fps)
+  const beatGridVisible = useTimelineSettingsStore((state) => state.beatGridVisible)
   const pixelsPerSecond = useZoomStore((state) => state.pixelsPerSecond)
 
   const timelineGrid = useMemo(
@@ -53,7 +128,12 @@ export const BeatvideoGridOverlay = memo(function BeatvideoGridOverlay({
     [analysis, fps, items],
   )
 
-  if (!timelineGrid || timelineGrid.grid.beats.length === 0 || duration <= 0) return null
+  if (
+    !beatGridVisible ||
+    !timelineGrid ||
+    timelineGrid.grid.beats.length === 0 ||
+    duration <= 0
+  ) return null
 
   const { grid, barOneTimelineTime } = timelineGrid
   const beatIntervals = grid.beats
@@ -61,17 +141,30 @@ export const BeatvideoGridOverlay = memo(function BeatvideoGridOverlay({
     .map((beat, index) => beat.time - (grid.beats[index]?.time ?? beat.time))
     .filter((interval) => interval > 0)
   const beatSpacingPx = median(beatIntervals) * pixelsPerSecond
-  const showIndividualBeats = beatSpacingPx >= 7
 
   const downbeatTimes = grid.beats.filter((beat) => beat.downbeat).map((beat) => beat.time)
   const barIntervals = downbeatTimes
     .slice(1)
     .map((time, index) => time - (downbeatTimes[index] ?? time))
     .filter((interval) => interval > 0)
-  const barSpacingPx = median(barIntervals) * pixelsPerSecond
-  const labelEveryBars = barSpacingPx >= 42 ? 1 : barSpacingPx >= 20 ? 2 : 4
+  const measuredBarSpacingPx = median(barIntervals) * pixelsPerSecond
+  const barSpacingPx =
+    measuredBarSpacingPx > 0
+      ? measuredBarSpacingPx
+      : beatSpacingPx * Math.max(1, grid.beatsPerBar)
+  const {
+    showIndividualBeats,
+    barStride,
+    labelStride,
+  } = resolveBeatGridDensity(beatSpacingPx, barSpacingPx)
   const barOneDownbeatIndex =
     barOneTimelineTime === null ? -1 : closestIndex(downbeatTimes, barOneTimelineTime)
+  const beatIntervalSeconds = median(beatIntervals)
+  const audioAccentTolerance = Math.max(
+    0.035,
+    Math.min(0.11, beatIntervalSeconds > 0 ? beatIntervalSeconds * 0.22 : 0.06),
+  )
+  const audioTransients = grid.transients ?? []
 
   return (
     <div
@@ -99,13 +192,24 @@ export const BeatvideoGridOverlay = memo(function BeatvideoGridOverlay({
           beat.downbeat && barOneDownbeatIndex >= 0 && downbeatIndex >= 0
             ? downbeatIndex - barOneDownbeatIndex + 1
             : null
+        const barDistance =
+          downbeatIndex >= 0
+            ? Math.abs(downbeatIndex - Math.max(0, barOneDownbeatIndex))
+            : 0
+        if (beat.downbeat && !isBarOne && barDistance % barStride !== 0) {
+          return null
+        }
 
         const showBarLabel =
           variant === 'ruler' &&
           beat.downbeat &&
           barNumber !== null &&
           barNumber >= 1 &&
-          (barNumber === 1 || (barNumber - 1) % labelEveryBars === 0)
+          (barNumber === 1 || (barNumber - 1) % labelStride === 0)
+        const audioAccent =
+          variant === 'ruler' && (showIndividualBeats || beat.downbeat)
+            ? resolveAudioAccentBand(audioTransients, beat.time, audioAccentTolerance)
+            : null
 
         return (
           <div
@@ -122,6 +226,12 @@ export const BeatvideoGridOverlay = memo(function BeatvideoGridOverlay({
                     : 'h-full w-px bg-foreground/12'
               }
             />
+            {audioAccent ? (
+              <span
+                data-audio-accent={audioAccent}
+                className={`absolute -left-[2px] top-0 h-1 w-1 rounded-[1px] ${audioAccentClass(audioAccent)}`}
+              />
+            ) : null}
             {showBarLabel ? (
               <span
                 className={

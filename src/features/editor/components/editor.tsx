@@ -67,6 +67,11 @@ import {
 import { IoDragReadout } from '@/shared/timeline/io-range'
 const logger = createLogger('Editor')
 const LazyTimeline = lazy(() => importTimeline().then(({ Timeline }) => ({ default: Timeline })))
+const LazyProjectSettingsDialog = lazy(() =>
+  import('./project-settings-dialog').then(({ ProjectSettingsDialog }) => ({
+    default: ProjectSettingsDialog,
+  })),
+)
 const LazyColorGradingDock = lazy(() =>
   import('./color-grading-dock').then(({ ColorGradingDock }) => ({ default: ColorGradingDock })),
 )
@@ -173,6 +178,7 @@ interface EditorProps {
   project: {
     id: string
     name: string
+    description?: string
     width: number
     height: number
     fps: number
@@ -390,6 +396,7 @@ export const LoadedEditor = memo(function LoadedEditor({
   const [exportDialogOpen, setExportDialogOpen] = useState(false)
   const [bundleExportDialogOpen, setBundleExportDialogOpen] = useState(false)
   const [renderQueueOpen, setRenderQueueOpen] = useState(false)
+  const [projectSettingsOpen, setProjectSettingsOpen] = useState(false)
   const [beatvideoMode, setBeatvideoMode] = useState<
     import('@/types/project').BeatvideoProjectMode
   >(project.beatvideoMode ?? 'video')
@@ -485,7 +492,7 @@ export const LoadedEditor = memo(function LoadedEditor({
     setCurrentProject({
       id: project.id,
       name: project.name,
-      description: '',
+      description: project.description ?? '',
       beatvideoMode,
       beatvideoMusic: project.beatvideoMusic,
       duration: 0,
@@ -545,6 +552,7 @@ export const LoadedEditor = memo(function LoadedEditor({
     project.height,
     project.id,
     project.name,
+    project.description,
     project.width,
     projectId,
     router,
@@ -626,6 +634,18 @@ export const LoadedEditor = memo(function LoadedEditor({
     setExportDialogOpen(true)
   }, [])
 
+  const handleProjectSettingsSaved = useCallback(
+    async (updated: import('@/types/project').Project) => {
+      setBeatvideoMode(updated.beatvideoMode ?? 'video')
+      useProjectStore.getState().setCurrentProject(updated)
+      await router.invalidate({
+        filter: (match) =>
+          match.routeId === EDITOR_PROJECT_ROUTE_ID && match.params.projectId === projectId,
+      })
+    },
+    [projectId, router],
+  )
+
   const handleOpenRenderQueue = useCallback(() => {
     void importExportsDialog()
     setRenderQueueOpen(true)
@@ -699,6 +719,7 @@ export const LoadedEditor = memo(function LoadedEditor({
           onSave={handleSave}
           onExport={handleExport}
           onExportBundle={handleExportBundle}
+          onProjectSettings={() => setProjectSettingsOpen(true)}
           onOpenRenderQueue={handleOpenRenderQueue}
           renderQueueCount={renderQueueActiveCount}
         />
@@ -822,6 +843,15 @@ export const LoadedEditor = memo(function LoadedEditor({
       </div>
 
       <Suspense fallback={null}>
+        {projectSettingsOpen ? (
+          <LazyProjectSettingsDialog
+            open={projectSettingsOpen}
+            onOpenChange={setProjectSettingsOpen}
+            project={project}
+            onSaved={handleProjectSettingsSaved}
+          />
+        ) : null}
+
         {/* Export Dialog */}
         {exportDialogOpen && (
           <LazyExportDialog

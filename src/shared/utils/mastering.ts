@@ -248,6 +248,35 @@ export function createSaturationCurve(
   return curve
 }
 
+/**
+ * Build one saturation curve that already contains the dry/wet blend.
+ *
+ * Mixing an oversampled WaveShaper in parallel with an unprocessed dry branch
+ * can introduce a small phase/group-delay difference and audible comb filtering.
+ * Folding the blend into one transfer curve keeps Mix deterministic without a
+ * second time path, while preview and OfflineAudioContext export stay identical.
+ */
+export function createSaturationMixCurve(
+  driveDb: number,
+  mix: number,
+  outputGainDb: number,
+  size = 2048,
+): Float32Array<ArrayBuffer> {
+  const length = Math.max(64, size)
+  const curve = new Float32Array(new ArrayBuffer(length * Float32Array.BYTES_PER_ELEMENT))
+  const wet = Math.max(0, Math.min(1, mix))
+  const wetGain = Math.pow(10, outputGainDb / 20)
+  const drive = Math.pow(10, Math.max(0, driveDb) / 20)
+  const norm = driveDb <= 0.0001 ? 1 : Math.tanh(drive)
+
+  for (let i = 0; i < curve.length; i++) {
+    const x = (i / (curve.length - 1)) * 2 - 1
+    const saturated = driveDb <= 0.0001 ? x : Math.tanh(x * drive) / norm
+    curve[i] = (1 - wet) * x + wet * saturated * wetGain
+  }
+  return curve
+}
+
 export function createCeilingCurve(
   ceilingDb: number,
   size = 2048,

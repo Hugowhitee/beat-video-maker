@@ -24,6 +24,7 @@ import {
   summarizeRhythm,
   type BeatThisBackend,
 } from './beatThisCore'
+import { deriveSpectralTransients } from './spectral-transients'
 
 type AnalyzeMessage = {
   type: 'analyze'
@@ -446,6 +447,12 @@ async function analyze(audio: Float32Array) {
   try {
     const { spectrogram, frames } = computeLogMelSpectrogram(audio, filterbank)
     const logits = await runModel(runtime.session, spectrogram, frames)
+    const transients = deriveSpectralTransients({
+      spectrogram,
+      frames,
+      fps: BEAT_THIS_FPS,
+      melBins: BEAT_THIS_MEL_BINS,
+    })
 
     progress('finalize', 0.3, 'Building musical grid')
     const picked = pickBeatFrames(logits.beat, logits.downbeat)
@@ -470,6 +477,7 @@ async function analyze(audio: Float32Array) {
           beats: summary.beats,
           downbeats: summary.downbeats,
           beatStrengths,
+          transients,
           meter: summary.meter,
           backend: runtime.backend satisfies BeatThisBackend,
           energy: envelope.energy.buffer,

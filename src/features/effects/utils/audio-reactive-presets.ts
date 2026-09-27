@@ -6,7 +6,10 @@ import type {
 } from '@/types/beatvideo'
 import type { ItemEffect } from '@/types/effects'
 import type { TimelineItem } from '@/types/timeline'
-import { projectAudioReactiveBeatsToItem } from '@/shared/beatvideo/beat-reactive'
+import {
+  projectAudioReactiveBeatsToItem,
+  projectAudioReactiveTransientsToItem,
+} from '@/shared/beatvideo/beat-reactive'
 
 export type AudioReactivePresetId =
   | 'gentle-punch'
@@ -79,6 +82,7 @@ function upsertBinding(
 function ensureGpuEffect(
   effects: readonly ItemEffect[],
   gpuEffectType: string,
+  neutralParamKey?: string,
 ): { effects: ItemEffect[]; effect: ItemEffect } {
   const existing = effects.find(
     (entry) =>
@@ -94,16 +98,29 @@ function ensureGpuEffect(
     }
   }
 
+  const defaultParams = getGpuEffectDefaultParams(gpuEffectType)
   const effect: ItemEffect = {
     id: crypto.randomUUID(),
     enabled: true,
     effect: {
       type: 'gpu-effect',
       gpuEffectType,
-      params: getGpuEffectDefaultParams(gpuEffectType),
+      params:
+        neutralParamKey && typeof defaultParams[neutralParamKey] === 'number'
+          ? { ...defaultParams, [neutralParamKey]: 0 }
+          : defaultParams,
     },
   }
   return { effects: [...effects, effect], effect }
+}
+
+function audioDriver(
+  grid: MusicMap,
+  preferred: AudioReactiveBinding['driver'],
+  fallback: AudioReactiveBinding['driver'],
+): AudioReactiveBinding['driver'] {
+  if (preferred === 'beat' || preferred === 'downbeat') return preferred
+  return (grid.transients?.length ?? 0) > 0 ? preferred : fallback
 }
 
 function baseBinding(
@@ -124,6 +141,87 @@ function baseBinding(
     everyNthBeat: 1,
     useStrength: true,
     ...overrides,
+  }
+}
+
+function bindingMatchesPreset(
+  binding: AudioReactiveBinding,
+  presetId: AudioReactivePresetId,
+): boolean {
+  if (presetId === 'gentle-punch') {
+    return binding.target.kind === 'transform' && binding.target.property === 'scale'
+  }
+  if (presetId === 'subtle-shake') {
+    return binding.target.kind === 'transform-shake'
+  }
+  if (binding.target.kind !== 'effect-param' || binding.target.paramKey !== 'amount') {
+    return false
+  }
+
+  const effectType =
+    presetId === 'beat-flash'
+      ? 'gpu-brightness'
+      : presetId === 'glow-hit'
+        ? 'gpu-glow'
+        : 'gpu-rgb-split'
+  return binding.target.gpuEffectType === effectType
+}
+
+export function isAudioReactivePresetApplied(
+  item: TimelineItem,
+  presetId: AudioReactivePresetId,
+): boolean {
+  return item.audioReactive?.bindings.some((binding) => bindingMatchesPreset(binding, presetId)) ?? false
+}
+
+export function buildAudioReactivePresetRemovalUpdate(params: {
+  item: TimelineItem
+  presetId: AudioReactivePresetId
+}): {
+  itemId: string
+  effects: ItemEffect[]
+  audioReactive?: AudioReactiveState
+} | null {
+  const { item, presetId } = params
+  const current = item.audioReactive
+  if (!current) return null
+
+  const removedBindings = current.bindings.filter((binding) =>
+    bindingMatchesPreset(binding, presetId),
+  )
+  if (removedBindings.length === 0) return null
+
+  const remainingBindings = current.bindings.filter(
+    (binding) => !bindingMatchesPreset(binding, presetId),
+  )
+  const removedEffectIds = new Set(
+    removedBindings.flatMap((binding) =>
+      binding.target.kind === 'effect-param' ? [binding.target.effectId] : [],
+    ),
+  )
+  const remainingBoundEffectIds = new Set(
+    remainingBindings.flatMap((binding) =>
+      binding.target.kind === 'effect-param' ? [binding.target.effectId] : [],
+    ),
+  )
+
+  const effects = (item.effects ?? []).filter((effect) => {
+    if (!removedEffectIds.has(effect.id) || remainingBoundEffectIds.has(effect.id)) return true
+    if (effect.effect.type !== 'gpu-effect') return true
+    const amount = effect.effect.params.amount
+    // Quick-start-created visual effects have a neutral zero baseline. Remove
+    // those shells when their final reactive binding is removed, while
+    // preserving any authored effect with a non-neutral base value.
+    return typeof amount !== 'number' || Math.abs(amount) > 1e-9
+  })
+
+  return {
+    itemId: item.id,
+    effects,
+    audioReactive:
+      remainingBindings.length > 0
+        ? { ...current, bindings: remainingBindings }
+        : undefined,
   }
 }
 
@@ -150,7 +248,7 @@ export function buildAudioReactivePresetUpdate(params: {
       { kind: 'transform', property: 'scale' },
       fps,
       {
-        driver: 'beat',
+        driver: audioDriver(grid, 'low', 'beat'),
         amount: 0.018,
         threshold: 0.58,
         releaseFrames: Math.max(1, Math.round(fps * 0.1)),
@@ -162,7 +260,7 @@ export function buildAudioReactivePresetUpdate(params: {
       { kind: 'transform-shake' },
       fps,
       {
-        driver: 'downbeat',
+        driver: audioDriver(grid, 'low', 'downbeat'),
         amount: 0.14,
         threshold: 0.72,
         releaseFrames: Math.max(1, Math.round(fps * 0.09)),
@@ -175,7 +273,7 @@ export function buildAudioReactivePresetUpdate(params: {
         : presetId === 'glow-hit'
           ? 'gpu-glow'
           : 'gpu-rgb-split'
-    const ensured = ensureGpuEffect(effects, effectType)
+    const ensured = ensureGpuEffect(effects, effectType, 'amount')
     effects = ensured.effects
 
     if (ensured.effect.effect.type !== 'gpu-effect') return null
@@ -196,7 +294,12 @@ export function buildAudioReactivePresetUpdate(params: {
       },
       fps,
       {
-        driver: presetId === 'glow-hit' ? 'beat' : 'downbeat',
+        driver:
+          presetId === 'glow-hit'
+            ? audioDriver(grid, 'high', 'beat')
+            : presetId === 'chromatic-hit'
+              ? audioDriver(grid, 'mid', 'downbeat')
+              : 'downbeat',
         amount,
         threshold:
           presetId === 'beat-flash'
@@ -221,6 +324,7 @@ export function buildAudioReactivePresetUpdate(params: {
       version: 1,
       enabled: true,
       beats: projectAudioReactiveBeatsToItem(grid, item, fps),
+      transients: projectAudioReactiveTransientsToItem(grid, item, fps),
       bindings,
     },
   }

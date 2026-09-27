@@ -89,6 +89,8 @@ export const Timeline = memo(function Timeline({ duration, beatvideoMode = 'vide
   const editorDensity = useSettingsStore((s) => s.editorDensity)
   const editorLayout = getEditorLayout(editorDensity)
   const workspace = useEditorStore((s) => s.workspace)
+  const simplifiedBeatvideoTimeline =
+    workspace === 'beat' || workspace === 'edit' || workspace === 'master'
   const {
     tracks,
     addTrack,
@@ -311,6 +313,7 @@ export const Timeline = memo(function Timeline({ duration, beatvideoMode = 'vide
       const zone = sectionEl?.dataset.trackSectionScroll as 'video' | 'audio' | undefined
 
       if (event.altKey) {
+        if (simplifiedBeatvideoTimeline) return
         event.preventDefault()
         if (!zone) return
         const delta = event.deltaY > 0 ? -4 : 4
@@ -336,11 +339,11 @@ export const Timeline = memo(function Timeline({ duration, beatvideoMode = 'vide
 
     el.addEventListener('wheel', handler, { passive: false })
     return () => el.removeEventListener('wheel', handler)
-  }, [hasTrackSections])
+  }, [hasTrackSections, simplifiedBeatvideoTimeline])
 
   const handleSectionDividerMouseDown = useCallback(
     (event: React.MouseEvent) => {
-      if (!hasTrackSections) return
+      if (!hasTrackSections || simplifiedBeatvideoTimeline) return
 
       event.preventDefault()
       event.stopPropagation()
@@ -432,6 +435,7 @@ export const Timeline = memo(function Timeline({ duration, beatvideoMode = 'vide
       clampedSectionDividerPosition,
       editorLayout.timelineClipLabelRowHeight,
       hasTrackSections,
+      simplifiedBeatvideoTimeline,
       trackRowsViewportHeight,
       videoDisplayHeight,
       visibleTracks,
@@ -916,6 +920,7 @@ export const Timeline = memo(function Timeline({ duration, beatvideoMode = 'vide
       {/* Timeline Header */}
       <TimelineHeader
         beatvideoMode={beatvideoMode}
+        simplifiedBeatvideo={simplifiedBeatvideoTimeline}
         onZoomChange={zoomHandlers?.handleZoomChange}
         onZoomIn={zoomHandlers?.handleZoomIn}
         onZoomOut={zoomHandlers?.handleZoomOut}
@@ -940,84 +945,89 @@ export const Timeline = memo(function Timeline({ duration, beatvideoMode = 'vide
           className="border-r border-border panel-bg flex-shrink-0 flex flex-col overflow-x-hidden"
           style={{ width: EDITOR_LAYOUT_CSS_VALUES.timelineSidebarWidth }}
         >
-          {/* Tracks label with controls */}
+          {/* Beatvideo keeps layer creation in Visual instead of exposing raw track plumbing. */}
           <div
             className="flex items-center justify-between px-3 border-b border-border bg-secondary/20 flex-shrink-0"
             style={{ height: EDITOR_LAYOUT_CSS_VALUES.timelineTracksHeaderHeight }}
           >
-            {/* Track size flyout */}
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-6 w-6"
-                  title={t('timeline.trackSize.label')}
-                >
-                  <ActiveTrackSizeIcon className="w-3 h-3" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="start" className="min-w-[10rem]">
-                {TRACK_SIZE_OPTIONS.map((option) => {
-                  const OptionIcon = option.icon
-                  const isActive = trackSizePreset === option.id
-                  return (
-                    <DropdownMenuItem
-                      key={option.id}
-                      onSelect={() => handleSelectTrackSize(option)}
+            {simplifiedBeatvideoTimeline ? (
+              <span className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+                Layers
+              </span>
+            ) : (
+              <>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-6 w-6"
+                      title={t('timeline.trackSize.label')}
                     >
-                      <OptionIcon className="w-4 h-4" />
-                      <span className="flex-1">{t(option.labelKey)}</span>
-                      {isActive ? <Check className="w-4 h-4" /> : null}
-                    </DropdownMenuItem>
-                  )
-                })}
-              </DropdownMenuContent>
-            </DropdownMenu>
-            <div className="flex items-center gap-1">
-              {/* Add track flyout */}
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
+                      <ActiveTrackSizeIcon className="w-3 h-3" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="start" className="min-w-[10rem]">
+                    {TRACK_SIZE_OPTIONS.map((option) => {
+                      const OptionIcon = option.icon
+                      const isActive = trackSizePreset === option.id
+                      return (
+                        <DropdownMenuItem
+                          key={option.id}
+                          onSelect={() => handleSelectTrackSize(option)}
+                        >
+                          <OptionIcon className="w-4 h-4" />
+                          <span className="flex-1">{t(option.labelKey)}</span>
+                          {isActive ? <Check className="w-4 h-4" /> : null}
+                        </DropdownMenuItem>
+                      )
+                    })}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+                <div className="flex items-center gap-1">
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-6 w-6"
+                        title={t('timeline.addTrack.label')}
+                      >
+                        <Plus className="w-3 h-3" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="min-w-[10rem]">
+                      <DropdownMenuItem onSelect={() => addVideoTrackToTop()}>
+                        <Video className="w-4 h-4" />
+                        <span className="flex-1">{t('timeline.addTrack.video')}</span>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onSelect={() => appendAudioTrackToSection()}>
+                        <AudioLines className="w-4 h-4" />
+                        <span className="flex-1">{t('timeline.addTrack.audio')}</span>
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                   <Button
                     variant="ghost"
                     size="icon"
                     className="h-6 w-6"
-                    title={t('timeline.addTrack.label')}
+                    onClick={handleRemoveTracks}
+                    disabled={tracks.length === 0 || (!activeTrackId && selectedTrackIds.length === 0)}
+                    title={
+                      tracks.length === 0
+                        ? t('timeline.noTracksToRemove')
+                        : !activeTrackId && selectedTrackIds.length === 0
+                          ? t('timeline.selectTrackToRemove')
+                          : selectedTrackIds.length > 0
+                            ? t('timeline.removeSelectedTracks', { count: selectedTrackIds.length })
+                            : t('timeline.removeActiveTrack')
+                    }
                   >
-                    <Plus className="w-3 h-3" />
+                    <Minus className="w-3 h-3" />
                   </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="min-w-[10rem]">
-                  <DropdownMenuItem onSelect={() => addVideoTrackToTop()}>
-                    <Video className="w-4 h-4" />
-                    <span className="flex-1">{t('timeline.addTrack.video')}</span>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onSelect={() => appendAudioTrackToSection()}>
-                    <AudioLines className="w-4 h-4" />
-                    <span className="flex-1">{t('timeline.addTrack.audio')}</span>
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-              {/* Remove track button */}
-              <Button
-                variant="ghost"
-                size="icon"
-                className="h-6 w-6"
-                onClick={handleRemoveTracks}
-                disabled={tracks.length === 0 || (!activeTrackId && selectedTrackIds.length === 0)}
-                title={
-                  tracks.length === 0
-                    ? t('timeline.noTracksToRemove')
-                    : !activeTrackId && selectedTrackIds.length === 0
-                      ? t('timeline.selectTrackToRemove')
-                      : selectedTrackIds.length > 0
-                        ? t('timeline.removeSelectedTracks', { count: selectedTrackIds.length })
-                        : t('timeline.removeActiveTrack')
-                }
-              >
-                <Minus className="w-3 h-3" />
-              </Button>
-            </div>
+                </div>
+              </>
+            )}
           </div>
 
           {/* Track labels - synced scroll (no scrollbar) */}

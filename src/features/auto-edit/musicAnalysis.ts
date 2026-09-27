@@ -1,4 +1,5 @@
 import type { MusicMap } from './types'
+import type { MusicTransient } from '@/types/beatvideo'
 import {
   BEAT_THIS_SAMPLE_RATE,
   type BeatThisBackend,
@@ -58,6 +59,7 @@ type WorkerResultMessage = {
     beats: number[]
     downbeats: number[]
     beatStrengths: number[]
+    transients: MusicTransient[]
     meter: number
     backend: BeatThisBackend
     energy: ArrayBuffer

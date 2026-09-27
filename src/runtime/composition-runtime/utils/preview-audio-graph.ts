@@ -8,7 +8,7 @@ import {
 import type { MasterFxSettings, ResolvedAudioEqSettings } from '@/types/audio'
 import {
   createCeilingCurve,
-  createSaturationCurve,
+  createSaturationMixCurve,
   resolveMasterFxSettings,
 } from '@/shared/utils/mastering'
 
@@ -590,15 +590,17 @@ export function syncPreviewMasterAudioGraph(
 
   const saturatorEnabled = active && resolved.saturator.enabled
   const wet = saturatorEnabled ? resolved.saturator.mix : 0
-  write(graph.saturatorDryNode.gain, 1 - wet)
-  write(
-    graph.saturatorWetNode.gain,
-    wet * dbToGain(saturatorEnabled ? resolved.saturator.outputGainDb : 0),
-  )
-  graph.saturatorNode.curve = createSaturationCurve(
+  // Keep saturation on one time path. The old parallel dry/wet topology could
+  // comb-filter when WaveShaper oversampling added group delay to only the wet path.
+  write(graph.saturatorDryNode.gain, 0)
+  write(graph.saturatorWetNode.gain, 1)
+  graph.saturatorNode.curve = createSaturationMixCurve(
     saturatorEnabled ? resolved.saturator.driveDb : 0,
+    wet,
+    saturatorEnabled ? resolved.saturator.outputGainDb : 0,
   )
-  graph.saturatorNode.oversample = saturatorEnabled ? resolved.saturator.oversample : 'none'
+  graph.saturatorNode.oversample =
+    saturatorEnabled && wet > 0.0001 ? resolved.saturator.oversample : 'none'
 
   const limiterEnabled = active && resolved.limiter.enabled
   write(graph.limiterNode.threshold, limiterEnabled ? resolved.limiter.thresholdDb : 0)

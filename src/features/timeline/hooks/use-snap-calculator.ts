@@ -89,9 +89,11 @@ export function useSnapCalculator(
     const { fps } = useTimelineSettingsStore.getState()
     const { items } = useItemsStore.getState()
     const analysis = useProjectStore.getState().currentProject?.beatvideoMusic
-    const musicalFrames = analysis
-      ? resolveBeatvideoTimelineSnapFrames(analysis, items, fps)
-      : []
+    const beatGridSnapEnabled = useTimelineSettingsStore.getState().beatGridSnapEnabled
+    const musicalFrames =
+      analysis && beatGridSnapEnabled
+        ? resolveBeatvideoTimelineSnapFrames(analysis, items, fps)
+        : []
     const gridFrames =
       musicalFrames.length > 0
         ? musicalFrames

@@ -306,7 +306,8 @@ describe('VisibleWaveformCanvas', () => {
     expect(canvas.style.left).toBe('11113px')
     expect(canvas.style.width).toBe('2531px')
     expect(canvas.width).toBe(backingWidth)
-    expect(renderWindow).toHaveBeenCalledTimes(redrawCount)
+    expect(renderWindow).toHaveBeenCalledTimes(redrawCount + 1)
+    expect(renderWindow).toHaveBeenLastCalledWith(ctx, 11_113, 2531)
 
     await act(async () => {
       useZoomStore.setState({ pixelsPerSecond: 180, isZoomInteracting: true })
@@ -317,7 +318,7 @@ describe('VisibleWaveformCanvas', () => {
     expect(canvas.style.left).toBe('20113px')
     expect(canvas.style.width).toBe('2531px')
     expect(canvas.width).toBe(backingWidth)
-    expect(renderWindow).toHaveBeenCalledTimes(redrawCount + 1)
+    expect(renderWindow).toHaveBeenCalledTimes(redrawCount + 2)
     expect(renderWindow).toHaveBeenLastCalledWith(ctx, 20_113, 2531)
     expect(getBoundingClientRect).not.toHaveBeenCalled()
   })

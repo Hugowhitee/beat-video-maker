@@ -1352,8 +1352,9 @@ export const TimelineContent = memo(function TimelineContent({
     // Musical beats. Beatvideo's source-mapped grid is the timing grid the
     // user can actually see and hear, so Shift-snap must use those same points.
     const analysis = useProjectStore.getState().currentProject?.beatvideoMusic
-    if (analysis) {
-      const fps = useTimelineSettingsStore.getState().fps
+    const timelineSettings = useTimelineSettingsStore.getState()
+    if (analysis && timelineSettings.beatGridSnapEnabled) {
+      const fps = timelineSettings.fps
       for (const frame of resolveBeatvideoTimelineSnapFrames(analysis, items, fps)) {
         targets.push({ frame, type: 'grid' })
       }

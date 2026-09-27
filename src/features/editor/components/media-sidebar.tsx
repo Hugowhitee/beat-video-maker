@@ -80,8 +80,10 @@ import { EFFECT_PRESETS } from '@/types/effects'
 import { getGpuEffectDefaultParams } from '@/infrastructure/gpu-effects'
 import {
   AUDIO_REACTIVE_PRESETS,
+  buildAudioReactivePresetRemovalUpdate,
   buildAudioReactivePresetUpdate,
   EffectThumbnail,
+  isAudioReactivePresetApplied,
   isAudioReactiveParam,
   useGpuEffectPreviewData,
   type AudioReactivePresetId,
@@ -126,6 +128,9 @@ function isSidebarTabVisibleForWorkspace(
   if (workspace === 'master') return tab === 'master'
   if (workspace === 'color') return tab === 'effects'
   if (workspace === 'motion') return tab === 'media'
+  if (workspace === 'edit') {
+    return tab !== 'beat' && tab !== 'master' && tab !== 'effects'
+  }
   return tab !== 'beat' && tab !== 'master'
 }
 
@@ -830,13 +835,18 @@ export const MediaSidebar = memo(function MediaSidebar({
         return
       }
 
+      const removePreset = targets.every((item) =>
+        isAudioReactivePresetApplied(item, presetId),
+      )
       const updates = targets.flatMap((item) => {
-        const update = buildAudioReactivePresetUpdate({
-          item,
-          grid: timelineGrid.grid,
-          fps: timeline.fps,
-          presetId,
-        })
+        const update = removePreset
+          ? buildAudioReactivePresetRemovalUpdate({ item, presetId })
+          : buildAudioReactivePresetUpdate({
+              item,
+              grid: timelineGrid.grid,
+              fps: timeline.fps,
+              presetId,
+            })
         return update ? [update] : []
       })
 
@@ -849,9 +859,14 @@ export const MediaSidebar = memo(function MediaSidebar({
       revealAppliedEffects(updates.map((update) => update.itemId))
 
       const preset = AUDIO_REACTIVE_PRESETS.find((candidate) => candidate.id === presetId)
-      toast.success(`${preset?.label ?? 'Reactive look'} applied`, {
-        description: 'Tune its orange React controls in Applied effects.',
-      })
+      toast.success(
+        removePreset
+          ? `${preset?.label ?? 'Reactive look'} removed`
+          : `${preset?.label ?? 'Reactive look'} applied`,
+        removePreset
+          ? undefined
+          : { description: 'Click the quick start again to remove it, or fine-tune it in Applied effects.' },
+      )
     },
     [beatvideoMode, openBeatWorkspace, revealAppliedEffects],
   )
@@ -1666,9 +1681,8 @@ export const MediaSidebar = memo(function MediaSidebar({
                     </span>
                   </div>
                   <p className="mt-1.5 text-[10px] leading-relaxed text-muted-foreground">
-                    These are shortcuts, not the limit. Any effect marked React below can follow the
-                    beat on each compatible slider. Applied effects expose Beat/Downbeat, Threshold,
-                    Amount and Release.
+                    Quick starts are reversible: click one again to remove it. Applied effects show
+                    the real effect and a compact React control; advanced timing stays under Fine tune.
                   </p>
 
                   {hasBeatAnalysis ? (

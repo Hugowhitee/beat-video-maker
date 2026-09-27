@@ -2,6 +2,7 @@ import type {
   AudioReactiveBeat,
   AudioReactiveBinding,
   AudioReactiveState,
+  AudioReactiveTransient,
   MusicMap,
 } from '@/types/beatvideo'
 import type { TimelineItem } from '@/types/timeline'
@@ -31,6 +32,23 @@ function clampDelta(value: number, binding: AudioReactiveBinding): number {
   if (binding.minOutput !== undefined) next = Math.max(binding.minOutput, next)
   if (binding.maxOutput !== undefined) next = Math.min(binding.maxOutput, next)
   return next
+}
+
+function lowerBoundFrame(
+  events: readonly { frame: number }[],
+  targetFrame: number,
+): number {
+  let low = 0
+  let high = events.length
+  while (low < high) {
+    const middle = low + ((high - low) >> 1)
+    if ((events[middle]?.frame ?? Number.POSITIVE_INFINITY) < targetFrame) {
+      low = middle + 1
+    } else {
+      high = middle
+    }
+  }
+  return low
 }
 
 export function hasEnabledAudioReactiveBindings(
@@ -67,6 +85,30 @@ export function projectAudioReactiveBeatsToItem(
   })
 }
 
+export function projectAudioReactiveTransientsToItem(
+  grid: MusicMap,
+  item: Pick<TimelineItem, 'from' | 'durationInFrames'>,
+  fps: number,
+): AudioReactiveTransient[] {
+  if (!Number.isFinite(fps) || fps <= 0 || item.durationInFrames <= 0) return []
+
+  const start = item.from
+  const end = item.from + item.durationInFrames
+
+  return (grid.transients ?? []).flatMap((transient) => {
+    const timelineFrame = Math.round(transient.time * fps)
+    if (timelineFrame < start || timelineFrame >= end) return []
+    return [{
+      frame: timelineFrame - start,
+      index: transient.index,
+      strength: clamp01(transient.strength),
+      low: clamp01(transient.low),
+      mid: clamp01(transient.mid),
+      high: clamp01(transient.high),
+    }]
+  })
+}
+
 /**
  * Evaluate one binding against sparse Beat This evidence. The authored/keyframed
  * value is deliberately not part of this function: callers compose its delta
@@ -84,24 +126,30 @@ export function evaluateAudioReactiveBinding(
     beatFrame: null,
     downbeat: false,
   }
-  if (!state?.enabled || !binding.enabled || state.beats.length === 0) return rest
+  if (!state?.enabled || !binding.enabled) return rest
 
   const threshold = clamp01(binding.threshold)
   const sensitivity = Math.max(0, binding.sensitivity)
   const attackFrames = Math.max(0, Math.round(binding.attackFrames))
   const releaseFrames = Math.max(1, Math.round(binding.releaseFrames))
   const everyNthBeat = Math.max(1, Math.round(binding.everyNthBeat))
+  const earliestFrame = relativeFrame - attackFrames - releaseFrames
+  const direction = binding.invert ? -1 : 1
   let winner = rest
 
-  for (const beat of state.beats) {
-    if (binding.driver === 'downbeat' && !beat.downbeat) continue
-    if (beat.index % everyNthBeat !== 0) continue
+  const considerEvent = (
+    frame: number,
+    index: number,
+    sourceStrength: number,
+    downbeat: boolean,
+  ) => {
+    if (index % everyNthBeat !== 0) return
 
-    const strength = clamp01(beat.strength)
-    if (strength < threshold) continue
+    const strength = clamp01(sourceStrength)
+    if (strength < threshold) return
 
-    const elapsed = relativeFrame - beat.frame
-    if (elapsed < 0 || elapsed > attackFrames + releaseFrames) continue
+    const elapsed = relativeFrame - frame
+    if (elapsed < 0 || elapsed > attackFrames + releaseFrames) return
 
     const envelope =
       attackFrames > 0 && elapsed < attackFrames
@@ -111,16 +159,43 @@ export function evaluateAudioReactiveBinding(
       ? clamp01(((strength - threshold) / Math.max(0.001, 1 - threshold)) * sensitivity)
       : clamp01(sensitivity)
     const pulse = clamp01(envelope * gatedStrength)
-    if (pulse <= winner.pulse) continue
+    if (pulse <= winner.pulse) return
 
-    const direction = binding.invert ? -1 : 1
     winner = {
       pulse,
       delta: clampDelta(binding.amount * pulse * direction, binding),
       sourceStrength: strength,
-      beatFrame: beat.frame,
-      downbeat: beat.downbeat,
+      beatFrame: frame,
+      downbeat,
     }
+  }
+
+  if (binding.driver === 'beat' || binding.driver === 'downbeat') {
+    const beats = state.beats
+    let index = lowerBoundFrame(beats, earliestFrame)
+    for (; index < beats.length; index += 1) {
+      const beat = beats[index]!
+      if (beat.frame > relativeFrame) break
+      if (binding.driver === 'downbeat' && !beat.downbeat) continue
+      considerEvent(beat.frame, beat.index, beat.strength, beat.downbeat)
+    }
+    return winner
+  }
+
+  const transients = state.transients ?? []
+  let index = lowerBoundFrame(transients, earliestFrame)
+  for (; index < transients.length; index += 1) {
+    const transient = transients[index]!
+    if (transient.frame > relativeFrame) break
+    const strength =
+      binding.driver === 'audio'
+        ? transient.strength
+        : binding.driver === 'low'
+          ? transient.low
+          : binding.driver === 'mid'
+            ? transient.mid
+            : transient.high
+    considerEvent(transient.frame, transient.index, strength, false)
   }
 
   return winner

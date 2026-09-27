@@ -1,3 +1,5 @@
+import type { MusicTransient } from '@/types/beatvideo'
+
 /**
  * Beat This! browser runtime primitives.
  *
@@ -48,6 +50,7 @@ export type BeatThisRhythmResult = {
   beats: number[]
   downbeats: number[]
   beatStrengths: number[]
+  transients?: MusicTransient[]
   meter: number
   backend: BeatThisBackend
   energy: Float32Array

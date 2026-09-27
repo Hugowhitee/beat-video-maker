@@ -7,6 +7,7 @@ import {
   applyAudioReactiveTransform,
   evaluateAudioReactiveBinding,
   projectAudioReactiveBeatsToItem,
+  projectAudioReactiveTransientsToItem,
 } from './beat-reactive'
 
 function binding(overrides: Partial<AudioReactiveBinding> = {}): AudioReactiveBinding {
@@ -63,6 +64,50 @@ describe('audio reactive modulation', () => {
     expect(evaluateAudioReactiveBinding(s, b, 30).pulse).toBeGreaterThan(0)
   })
 
+  it('can react to low-frequency audio transients independently from the beat grid', () => {
+    const b = binding({
+      driver: 'low',
+      threshold: 0.4,
+      useStrength: true,
+      amount: 0.1,
+      releaseFrames: 4,
+    })
+    const s: AudioReactiveState = {
+      ...state([b]),
+      transients: [
+        { frame: 12, index: 0, strength: 0.95, low: 0.9, mid: 0.2, high: 0.1 },
+        { frame: 18, index: 1, strength: 0.9, low: 0.2, mid: 0.8, high: 0.3 },
+      ],
+    }
+
+    expect(evaluateAudioReactiveBinding(s, b, 12).delta).toBeGreaterThan(0)
+    expect(evaluateAudioReactiveBinding(s, b, 18).pulse).toBe(0)
+  })
+
+  it('only scans the active event window while preserving the strongest current hit', () => {
+    const b = binding({
+      driver: 'audio',
+      threshold: 0,
+      releaseFrames: 4,
+      useStrength: true,
+      amount: 0.1,
+    })
+    const s: AudioReactiveState = {
+      ...state([b]),
+      transients: [
+        { frame: 2, index: 0, strength: 1, low: 1, mid: 0, high: 0 },
+        { frame: 18, index: 1, strength: 0.5, low: 0.5, mid: 0, high: 0 },
+        { frame: 20, index: 2, strength: 0.9, low: 0.9, mid: 0, high: 0 },
+        { frame: 99, index: 3, strength: 1, low: 1, mid: 0, high: 0 },
+      ],
+    }
+
+    const evaluated = evaluateAudioReactiveBinding(s, b, 20)
+    expect(evaluated.beatFrame).toBe(20)
+    expect(evaluated.sourceStrength).toBeCloseTo(0.9)
+    expect(evaluated.delta).toBeGreaterThan(0)
+  })
+
   it('adds modulation to the authored effect value instead of replacing it', () => {
     const b = binding({
       target: {
@@ -115,6 +160,28 @@ describe('audio reactive modulation', () => {
     expect(first.height).toBeCloseTo(1030)
     expect(Math.abs(first.x)).toBeLessThanOrEqual(1080 * 0.004 * 0.25)
   })
+  it('projects spectral transients into the same item-local timeline', () => {
+    const transients = projectAudioReactiveTransientsToItem(
+      {
+        duration: 4,
+        bpm: 120,
+        beatsPerBar: 4,
+        beats: [],
+        sections: [],
+        transients: [
+          { time: 0.5, index: 0, strength: 1, low: 0.9, mid: 0.2, high: 0.1 },
+          { time: 1.5, index: 1, strength: 0.8, low: 0.1, mid: 0.4, high: 0.8 },
+        ],
+      },
+      { from: 30, durationInFrames: 60 },
+      30,
+    )
+
+    expect(transients).toEqual([
+      { frame: 15, index: 1, strength: 0.8, low: 0.1, mid: 0.4, high: 0.8 },
+    ])
+  })
+
   it('projects corrected timeline beats into item-local frames', () => {
     const beats = projectAudioReactiveBeatsToItem(
       {

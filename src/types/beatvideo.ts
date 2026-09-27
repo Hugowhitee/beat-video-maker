@@ -15,6 +15,19 @@ export type MusicBeat = {
   strength: number
 }
 
+/**
+ * Source-audio transient evidence derived from Beat This' log-mel features.
+ * Bands are perceptual frequency regions, not guessed instrument labels.
+ */
+export type MusicTransient = {
+  time: number
+  index: number
+  strength: number
+  low: number
+  mid: number
+  high: number
+}
+
 export type AudioReactiveBeat = {
   /** Frame relative to the visual item's start. */
   frame: number
@@ -25,7 +38,17 @@ export type AudioReactiveBeat = {
   downbeat: boolean
 }
 
-export type AudioReactiveDriver = 'beat' | 'downbeat'
+export type AudioReactiveTransient = {
+  /** Frame relative to the visual item's start. */
+  frame: number
+  index: number
+  strength: number
+  low: number
+  mid: number
+  high: number
+}
+
+export type AudioReactiveDriver = 'audio' | 'beat' | 'downbeat' | 'low' | 'mid' | 'high'
 
 export type AudioReactiveTransformProperty = 'scale' | 'x' | 'y' | 'rotation' | 'opacity'
 
@@ -76,6 +99,8 @@ export type AudioReactiveState = {
   enabled: boolean
   /** Beat evidence projected onto the target visual item's local timeline. */
   beats: AudioReactiveBeat[]
+  /** Source-audio transient evidence for frequency-band drivers. */
+  transients?: AudioReactiveTransient[]
   /** Reusable property bindings. Presets only create/edit these records. */
   bindings: AudioReactiveBinding[]
 }
@@ -94,6 +119,8 @@ export type MusicMap = {
   bpm: number | null
   beatsPerBar: number
   beats: MusicBeat[]
+  /** Optional in older projects; populated by new Beat This analyses. */
+  transients?: MusicTransient[]
   sections: MusicSection[]
 }
 

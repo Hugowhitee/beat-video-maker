@@ -369,12 +369,14 @@ export const ColorGradeSection = memo(function ColorGradeSection({
       const type = resolveGradeType(effectId)
       if (!type) return
       pendingParamsRef.current[type] = undefined
+      // Never let a transient live-preview override survive the committed delete.
+      clearPreview()
       visualItems.forEach((item) => {
         const entry = findGradeEntry(item, type)
         if (entry) removeEffect(item.id, entry.id)
       })
     },
-    [removeEffect, resolveGradeType, visualItems],
+    [clearPreview, removeEffect, resolveGradeType, visualItems],
   )
 
   const getKeyframeProperty = useCallback(

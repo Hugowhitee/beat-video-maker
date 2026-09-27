@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button'
 import type { TimelineItem } from '@/types/timeline'
 import type { ItemEffect, GpuEffect, VisualEffect } from '@/types/effects'
 import type { AudioReactiveBinding } from '@/types/beatvideo'
-import type { EffectParam, GpuEffectDefinition } from '@/infrastructure/gpu-effects/types'
+import type { EffectParam } from '@/infrastructure/gpu-effects/types'
 import { EFFECT_PRESETS } from '@/types/effects'
 import { useTimelineStore } from '@/features/effects/deps/timeline-contract'
 import {
@@ -39,7 +39,6 @@ import { buildEffectAnimatableProperty, type AnimatableProperty } from '@/types/
 import {
   getEffectCategoryLabel,
   getEffectDefinitionName,
-  getEffectParamLabel,
 } from '@/features/effects/utils/effect-i18n'
 import {
   getGpuEffectKeyframeProperty,
@@ -49,14 +48,21 @@ import {
 import { useKeyframesByItemId } from '../hooks/use-keyframes-by-item-id'
 import {
   projectAudioReactiveBeatsToItem,
+  projectAudioReactiveTransientsToItem,
   resolveBeatvideoTimelineGrid,
   useProjectStore,
 } from '@/features/effects/deps/beatvideo-contract'
 import {
   createDefaultAudioReactiveEffectBinding,
   getAudioReactiveBindingForParam,
-  isAudioReactiveParam,
 } from '@/features/effects/utils/audio-reactive-bindings'
+import {
+  AUDIO_REACTIVE_PRESETS,
+  buildAudioReactivePresetRemovalUpdate,
+  buildAudioReactivePresetUpdate,
+  isAudioReactivePresetApplied,
+  type AudioReactivePresetId,
+} from '@/features/effects/utils/audio-reactive-presets'
 
 interface EffectsSectionProps {
   /** Visual items (already filtered to exclude audio) */
@@ -93,6 +99,27 @@ function getMotionReactiveLabel(binding: AudioReactiveBinding): string {
   }
 
   return 'Motion'
+}
+
+function sameReactiveTarget(
+  left: AudioReactiveBinding['target'],
+  right: AudioReactiveBinding['target'],
+): boolean {
+  if (left.kind !== right.kind) return false
+  if (left.kind === 'transform' && right.kind === 'transform') {
+    return left.property === right.property
+  }
+  if (left.kind === 'transform-shake' && right.kind === 'transform-shake') {
+    return true
+  }
+  if (left.kind === 'effect-param' && right.kind === 'effect-param') {
+    return (
+      left.effectId === right.effectId &&
+      left.gpuEffectType === right.gpuEffectType &&
+      left.paramKey === right.paramKey
+    )
+  }
+  return false
 }
 
 function getMotionReactiveAmountRange(
@@ -142,6 +169,9 @@ export const EffectsSection = memo(function EffectsSection({
   const removeEffect = useTimelineStore((s) => s.removeEffect)
   const toggleEffect = useTimelineStore((s) => s.toggleEffect)
   const setItemEffects = useTimelineStore((s) => s.setItemEffects)
+  const setItemEffectsAndAudioReactive = useTimelineStore(
+    (s) => s.setItemEffectsAndAudioReactive,
+  )
   const applyAutoKeyframeOperations = useTimelineStore((s) => s.applyAutoKeyframeOperations)
   const setAudioReactiveStates = useTimelineStore((s) => s.setAudioReactiveStates)
   const timelineItems = useTimelineStore((s) => s.items)
@@ -224,6 +254,34 @@ export const EffectsSection = memo(function EffectsSection({
     [displayItem, setAudioReactiveStates],
   )
 
+  const handleRemoveMotionReactiveBinding = useCallback(
+    (bindingId: string) => {
+      const sourceBinding = displayItem?.audioReactive?.bindings.find(
+        (binding) => binding.id === bindingId,
+      )
+      if (!sourceBinding) return
+
+      const updates = visualItems.flatMap((item) => {
+        if (!item.audioReactive) return []
+        const bindings = item.audioReactive.bindings.filter(
+          (binding) => !sameReactiveTarget(binding.target, sourceBinding.target),
+        )
+        if (bindings.length === item.audioReactive.bindings.length) return []
+        return [{
+          itemId: item.id,
+          audioReactive:
+            bindings.length > 0
+              ? { ...item.audioReactive, enabled: true, bindings }
+              : undefined,
+        }]
+      })
+      if (updates.length > 0) {
+        setAudioReactiveStates(updates)
+      }
+    },
+    [displayItem, setAudioReactiveStates, visualItems],
+  )
+
   const getMappedEffectEntry = useCallback(
     (item: TimelineItem, displayEffectId: string): ItemEffect | null => {
       return getMappedSelectionEffectEntry(
@@ -273,6 +331,10 @@ export const EffectsSection = memo(function EffectsSection({
                 paramKey,
                 param,
                 fps: timelineFps,
+                driver:
+                  (audioReactiveGrid.grid.transients?.length ?? 0) > 0
+                    ? 'audio'
+                    : 'beat',
               }),
             ].filter((binding): binding is AudioReactiveBinding => binding !== null)
 
@@ -282,6 +344,11 @@ export const EffectsSection = memo(function EffectsSection({
                 version: 1 as const,
                 enabled: true,
                 beats: projectAudioReactiveBeatsToItem(
+                  audioReactiveGrid.grid,
+                  item,
+                  timelineFps,
+                ),
+                transients: projectAudioReactiveTransientsToItem(
                   audioReactiveGrid.grid,
                   item,
                   timelineFps,
@@ -342,6 +409,11 @@ export const EffectsSection = memo(function EffectsSection({
               item,
               timelineFps,
             ),
+            transients: projectAudioReactiveTransientsToItem(
+              audioReactiveGrid.grid,
+              item,
+              timelineFps,
+            ),
             bindings,
           },
         }]
@@ -355,89 +427,6 @@ export const EffectsSection = memo(function EffectsSection({
       setAudioReactiveStates,
       timelineFps,
       visualItems,
-    ],
-  )
-
-  const renderStandaloneAudioReactiveControls = useCallback(
-    (effect: ItemEffect, definition: GpuEffectDefinition) => {
-      const params = Object.entries(definition.params).filter(([, param]) =>
-        isAudioReactiveParam(param),
-      )
-      if (params.length === 0) return null
-
-      return (
-        <div className="border-b border-border/70 bg-primary/[0.035] px-2 py-2">
-          <div className="mb-1.5 flex items-center gap-1.5">
-            <AudioLines className="h-3.5 w-3.5 text-primary" aria-hidden="true" />
-            <span className="text-[10px] font-semibold uppercase tracking-wide text-foreground">
-              Audio Reactive
-            </span>
-            <span className="ml-auto text-[9px] text-muted-foreground">
-              compatible sliders
-            </span>
-          </div>
-
-          <div className="space-y-1">
-            {params.map(([paramKey, param]) => {
-              const binding = getAudioReactiveBinding(effect.id, paramKey)
-              const label = getEffectParamLabel(t, definition, paramKey)
-              const toggleLabel = binding
-                ? `Disable audio reaction for ${label}`
-                : audioReactiveAvailable
-                  ? `Make ${label} audio reactive`
-                  : 'Set up the beat first'
-
-              return (
-                <div key={paramKey}>
-                  <div className="flex h-7 items-center gap-2">
-                    <span className="min-w-0 flex-1 truncate text-[10px] text-muted-foreground">
-                      {label}
-                    </span>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      className={
-                        binding
-                          ? 'h-6 shrink-0 gap-1 bg-primary/10 px-1.5 text-[9px] font-semibold text-primary hover:bg-primary/20 hover:text-primary'
-                          : 'h-6 shrink-0 gap-1 px-1.5 text-[9px] text-muted-foreground'
-                      }
-                      disabled={!effect.enabled || !audioReactiveAvailable}
-                      aria-pressed={Boolean(binding)}
-                      aria-label={toggleLabel}
-                      title={toggleLabel}
-                      onClick={() => handleToggleAudioReactive(effect.id, paramKey, param)}
-                    >
-                      <AudioLines className="h-3 w-3" />
-                      React
-                    </Button>
-                  </div>
-
-                  {binding ? (
-                    <AudioReactiveParamControls
-                      binding={binding}
-                      param={param}
-                      label={label}
-                      fps={timelineFps}
-                      onChange={(patch) =>
-                        handleUpdateAudioReactiveBinding(effect.id, paramKey, patch)
-                      }
-                    />
-                  ) : null}
-                </div>
-              )
-            })}
-          </div>
-        </div>
-      )
-    },
-    [
-      audioReactiveAvailable,
-      getAudioReactiveBinding,
-      handleToggleAudioReactive,
-      handleUpdateAudioReactiveBinding,
-      t,
-      timelineFps,
     ],
   )
 
@@ -802,6 +791,9 @@ export const EffectsSection = memo(function EffectsSection({
   // Remove effect
   const handleRemove = useCallback(
     (effectId: string) => {
+      // A live slider preview can outlive the committed effect stack. Clear it
+      // before deleting so preview/undo always render canonical timeline state.
+      clearPreview()
       visualItems.forEach((item) => {
         const targetEffect = getMappedEffectEntry(item, effectId)
         if (targetEffect) {
@@ -809,7 +801,7 @@ export const EffectsSection = memo(function EffectsSection({
         }
       })
     },
-    [getMappedEffectEntry, removeEffect, visualItems],
+    [clearPreview, getMappedEffectEntry, removeEffect, visualItems],
   )
 
   // Effect picker popover state
@@ -1094,6 +1086,65 @@ export const EffectsSection = memo(function EffectsSection({
     </div>
   )
 
+  const handleReactiveQuickStart = useCallback(
+    (presetId: AudioReactivePresetId) => {
+      if (!audioReactiveGrid || visualItems.length === 0) return
+
+      const removePreset = visualItems.every((item) =>
+        isAudioReactivePresetApplied(item, presetId),
+      )
+      const updates = visualItems.flatMap((item) => {
+        const update = removePreset
+          ? buildAudioReactivePresetRemovalUpdate({ item, presetId })
+          : buildAudioReactivePresetUpdate({
+              item,
+              grid: audioReactiveGrid.grid,
+              fps: timelineFps,
+              presetId,
+            })
+        return update ? [update] : []
+      })
+      if (updates.length > 0) setItemEffectsAndAudioReactive(updates)
+    },
+    [audioReactiveGrid, setItemEffectsAndAudioReactive, timelineFps, visualItems],
+  )
+
+  const reactiveQuickStarts = !isDock ? (
+    <div className="mx-2 mb-2 rounded-md border border-border bg-secondary/20 p-2">
+      <div className="mb-1.5 flex items-center gap-1.5">
+        <AudioLines className="h-3.5 w-3.5 text-primary" aria-hidden="true" />
+        <span className="text-[10px] font-semibold uppercase tracking-wide text-foreground">
+          React to audio
+        </span>
+        <span className="ml-auto text-[9px] text-muted-foreground">
+          {audioReactiveAvailable ? 'Audio ready' : 'Analyze beat first'}
+        </span>
+      </div>
+      <div className="flex flex-wrap gap-1">
+        {AUDIO_REACTIVE_PRESETS.map((preset) => {
+          const applied =
+            visualItems.length > 0 &&
+            visualItems.every((item) => isAudioReactivePresetApplied(item, preset.id))
+          return (
+            <Button
+              key={preset.id}
+              type="button"
+              size="sm"
+              variant={applied ? 'secondary' : 'outline'}
+              className="h-6 px-2 text-[9px]"
+              disabled={!audioReactiveAvailable}
+              aria-pressed={applied}
+              title={applied ? `Remove ${preset.label}` : preset.description}
+              onClick={() => handleReactiveQuickStart(preset.id)}
+            >
+              {preset.label}
+            </Button>
+          )
+        })}
+      </div>
+    </div>
+  ) : null
+
   const motionReactiveControls = motionReactiveBindings.length > 0 ? (
     <div className="mx-2 mb-2 rounded-md border border-primary/25 bg-primary/5 py-2">
       <div className="flex items-center gap-1.5 px-2 pb-1">
@@ -1106,20 +1157,33 @@ export const EffectsSection = memo(function EffectsSection({
         Transform reactions from a reactive look. These stay editable instead of becoming baked animation.
       </p>
       {motionReactiveBindings.map((binding) => (
-        <AudioReactiveParamControls
-          key={binding.id}
-          binding={binding}
-          label={getMotionReactiveLabel(binding)}
-          amountRange={getMotionReactiveAmountRange(binding)}
-          fps={timelineFps}
-          onChange={(patch) => handleUpdateMotionReactiveBinding(binding.id, patch)}
-        />
+        <div key={binding.id} className="relative">
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="absolute right-3 top-1.5 z-10 h-6 w-6 text-muted-foreground hover:text-destructive"
+            aria-label={`Remove ${getMotionReactiveLabel(binding)} reaction`}
+            title={`Remove ${getMotionReactiveLabel(binding)} reaction`}
+            onClick={() => handleRemoveMotionReactiveBinding(binding.id)}
+          >
+            <X className="h-3 w-3" />
+          </Button>
+          <AudioReactiveParamControls
+            binding={binding}
+            label={getMotionReactiveLabel(binding)}
+            amountRange={getMotionReactiveAmountRange(binding)}
+            fps={timelineFps}
+            onChange={(patch) => handleUpdateMotionReactiveBinding(binding.id, patch)}
+          />
+        </div>
       ))}
     </div>
   ) : null
 
   const effectList = (
     <div className="space-y-0">
+      {reactiveQuickStarts}
       {motionReactiveControls}
       {effects.map((effect, effectIndex) => {
         if (effect.effect.type === 'gpu-effect') {
@@ -1149,7 +1213,6 @@ export const EffectsSection = memo(function EffectsSection({
                   canMoveUp={effectIndex > 0}
                   canMoveDown={effectIndex < effects.length - 1}
                 />
-                {renderStandaloneAudioReactiveControls(effect, def)}
               </div>
             )
           }
@@ -1174,7 +1237,6 @@ export const EffectsSection = memo(function EffectsSection({
                   canMoveUp={effectIndex > 0}
                   canMoveDown={effectIndex < effects.length - 1}
                 />
-                {renderStandaloneAudioReactiveControls(effect, def)}
               </div>
             )
           }
@@ -1202,7 +1264,6 @@ export const EffectsSection = memo(function EffectsSection({
                   canMoveUp={effectIndex > 0}
                   canMoveDown={effectIndex < effects.length - 1}
                 />
-                {renderStandaloneAudioReactiveControls(effect, def)}
               </div>
             )
           }
@@ -1226,7 +1287,6 @@ export const EffectsSection = memo(function EffectsSection({
                   canMoveUp={effectIndex > 0}
                   canMoveDown={effectIndex < effects.length - 1}
                 />
-                {renderStandaloneAudioReactiveControls(effect, def)}
               </div>
             )
           }
@@ -1250,7 +1310,6 @@ export const EffectsSection = memo(function EffectsSection({
                   canMoveUp={effectIndex > 0}
                   canMoveDown={effectIndex < effects.length - 1}
                 />
-                {renderStandaloneAudioReactiveControls(effect, def)}
               </div>
             )
           }
@@ -1274,7 +1333,6 @@ export const EffectsSection = memo(function EffectsSection({
                   canMoveUp={effectIndex > 0}
                   canMoveDown={effectIndex < effects.length - 1}
                 />
-                {renderStandaloneAudioReactiveControls(effect, def)}
               </div>
             )
           }

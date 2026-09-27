@@ -202,7 +202,9 @@ export const useEditorStore = create<EditorState & EditorActions>((set) => ({
         rightSidebarOpen:
           workspace === 'beat' || workspace === 'master'
             ? false
-            : state.rightSidebarOpen,
+            : workspace === 'edit'
+              ? true
+              : state.rightSidebarOpen,
       }
     }),
   setActiveTab: (tab) =>

@@ -190,6 +190,8 @@ export const PropertiesSidebar = memo(function PropertiesSidebar() {
         : t('editor.propertiesSidebar.title')
   const headerContext = activeClipHeader?.text ?? motionCompositionHeader
   const headerTitle = activeClipHeader?.title ?? motionCompositionHeader ?? undefined
+  const producerWorkspace =
+    workspace === 'beat' || workspace === 'edit' || workspace === 'master'
 
   // Keep the panel content mounted + visible while the collapse animation plays
   // so it slides out smoothly instead of blinking away. Only switch Activity to
@@ -274,33 +276,35 @@ export const PropertiesSidebar = memo(function PropertiesSidebar() {
               style={{ height: EDITOR_LAYOUT_CSS_VALUES.sidebarHeaderHeight }}
             >
               <div className="min-w-0 flex items-center gap-1">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="shrink-0"
-                  style={{
-                    width: EDITOR_LAYOUT_CSS_VALUES.sidebarHeaderButtonSize,
-                    height: EDITOR_LAYOUT_CSS_VALUES.sidebarHeaderButtonSize,
-                  }}
-                  onClick={togglePropertiesFullColumn}
-                  aria-label={
-                    propertiesFullColumn
-                      ? t('editor.propertiesSidebar.dockToPreview')
-                      : t('editor.propertiesSidebar.expandFullColumn')
-                  }
-                  data-tooltip={
-                    propertiesFullColumn
-                      ? t('editor.propertiesSidebar.dockToPreview')
-                      : t('editor.propertiesSidebar.expandFullColumn')
-                  }
-                  data-tooltip-side="bottom"
-                >
-                  {propertiesFullColumn ? (
-                    <ChevronUp className="w-3 h-3" />
-                  ) : (
-                    <ChevronDown className="w-3 h-3" />
-                  )}
-                </Button>
+                {!producerWorkspace ? (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="shrink-0"
+                    style={{
+                      width: EDITOR_LAYOUT_CSS_VALUES.sidebarHeaderButtonSize,
+                      height: EDITOR_LAYOUT_CSS_VALUES.sidebarHeaderButtonSize,
+                    }}
+                    onClick={togglePropertiesFullColumn}
+                    aria-label={
+                      propertiesFullColumn
+                        ? t('editor.propertiesSidebar.dockToPreview')
+                        : t('editor.propertiesSidebar.expandFullColumn')
+                    }
+                    data-tooltip={
+                      propertiesFullColumn
+                        ? t('editor.propertiesSidebar.dockToPreview')
+                        : t('editor.propertiesSidebar.expandFullColumn')
+                    }
+                    data-tooltip-side="bottom"
+                  >
+                    {propertiesFullColumn ? (
+                      <ChevronUp className="w-3 h-3" />
+                    ) : (
+                      <ChevronDown className="w-3 h-3" />
+                    )}
+                  </Button>
+                ) : null}
                 <Settings2 className="w-3 h-3 shrink-0 text-muted-foreground" />
                 <h2 className="min-w-0 flex items-center gap-1.5 text-xs font-semibold text-muted-foreground">
                   <span className="shrink-0 uppercase tracking-wide">
@@ -319,18 +323,20 @@ export const PropertiesSidebar = memo(function PropertiesSidebar() {
                   )}
                 </h2>
               </div>
-              <Button
-                variant="ghost"
-                size="icon"
-                style={{
-                  width: EDITOR_LAYOUT_CSS_VALUES.sidebarHeaderButtonSize,
-                  height: EDITOR_LAYOUT_CSS_VALUES.sidebarHeaderButtonSize,
-                }}
-                onClick={toggleRightSidebar}
-                aria-label={t('editor.mediaSidebar.collapsePanel')}
-              >
-                <ChevronRight className="w-3.5 h-3.5" />
-              </Button>
+              {!producerWorkspace ? (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  style={{
+                    width: EDITOR_LAYOUT_CSS_VALUES.sidebarHeaderButtonSize,
+                    height: EDITOR_LAYOUT_CSS_VALUES.sidebarHeaderButtonSize,
+                  }}
+                  onClick={toggleRightSidebar}
+                  aria-label={t('editor.mediaSidebar.collapsePanel')}
+                >
+                  <ChevronRight className="w-3.5 h-3.5" />
+                </Button>
+              ) : null}
             </div>
 
             {/* Properties Panel */}
@@ -391,7 +397,7 @@ export const PropertiesSidebar = memo(function PropertiesSidebar() {
           size, chevron, and top alignment so the arrow stays in the same place
           and size when toggling (mirrors the always-present arrow on the left
           sidebar rail). Edge-attached rounded tab keeps it discoverable. */}
-      {!rightSidebarOpen && (
+      {!rightSidebarOpen && !producerWorkspace && (
         <button
           onClick={toggleRightSidebar}
           className="absolute right-0 top-2 z-10 flex items-center justify-center rounded-l-md border border-r-0 border-border bg-secondary/50 hover:bg-secondary transition-colors"

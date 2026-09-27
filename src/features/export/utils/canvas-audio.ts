@@ -52,7 +52,7 @@ import {
 } from '@/shared/utils/audio-eq'
 import {
   createCeilingCurve,
-  createSaturationCurve,
+  createSaturationMixCurve,
   isMasterFxActive,
   resolveMasterFxSettings,
 } from '@/shared/utils/mastering'
@@ -2182,11 +2182,17 @@ async function applyMasterFxToMix(
   const saturatorSum = context.createGain()
   const saturatorEnabled = resolved.saturator.enabled
   const wet = saturatorEnabled ? resolved.saturator.mix : 0
-  saturatorDry.gain.value = 1 - wet
-  saturatorWet.gain.value =
-    wet * dbToGain(saturatorEnabled ? resolved.saturator.outputGainDb : 0)
-  saturator.curve = createSaturationCurve(saturatorEnabled ? resolved.saturator.driveDb : 0)
-  saturator.oversample = saturatorEnabled ? resolved.saturator.oversample : 'none'
+  // Match preview's single-path dry/wet transfer curve. This avoids parallel
+  // phase cancellation from oversampling only the wet WaveShaper branch.
+  saturatorDry.gain.value = 0
+  saturatorWet.gain.value = 1
+  saturator.curve = createSaturationMixCurve(
+    saturatorEnabled ? resolved.saturator.driveDb : 0,
+    wet,
+    saturatorEnabled ? resolved.saturator.outputGainDb : 0,
+  )
+  saturator.oversample =
+    saturatorEnabled && wet > 0.0001 ? resolved.saturator.oversample : 'none'
 
   const limiter = context.createDynamicsCompressor()
   const limiterEnabled = resolved.limiter.enabled
