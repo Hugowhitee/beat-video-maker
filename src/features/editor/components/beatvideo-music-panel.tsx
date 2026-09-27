@@ -3,8 +3,11 @@ import {
   AudioLines,
   CheckCircle2,
   Crosshair,
+  Eye,
+  EyeOff,
   Film,
   LocateFixed,
+  Magnet,
   Play,
   Repeat2,
   Sparkles,
@@ -146,6 +149,10 @@ export function BeatvideoMusicPanel() {
   const items = useItemsStore((state) => state.items)
   const currentFrame = usePlaybackStore((state) => state.currentFrame)
   const fps = useTimelineSettingsStore((state) => state.fps)
+  const beatGridVisible = useTimelineSettingsStore((state) => state.beatGridVisible)
+  const toggleBeatGridVisible = useTimelineSettingsStore((state) => state.toggleBeatGridVisible)
+  const beatGridSnapEnabled = useTimelineSettingsStore((state) => state.beatGridSnapEnabled)
+  const toggleBeatGridSnap = useTimelineSettingsStore((state) => state.toggleBeatGridSnap)
   const selectedItemIds = useSelectionStore((state) => state.selectedItemIds)
   const setItemEffectsAndAudioReactive = useTimelineStore(
     (state) => state.setItemEffectsAndAudioReactive,
@@ -1334,6 +1341,37 @@ export function BeatvideoMusicPanel() {
                   }}
                 />
               </div>
+            </div>
+          ) : null}
+
+          {effectiveAnalysis ? (
+            <div className="grid grid-cols-2 gap-1.5">
+              <Button
+                type="button"
+                size="sm"
+                variant={beatGridVisible ? 'secondary' : 'outline'}
+                aria-pressed={beatGridVisible}
+                onClick={toggleBeatGridVisible}
+                className="justify-start"
+              >
+                {beatGridVisible ? (
+                  <Eye className="h-3.5 w-3.5" />
+                ) : (
+                  <EyeOff className="h-3.5 w-3.5" />
+                )}
+                Beat grid
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant={beatGridSnapEnabled ? 'secondary' : 'outline'}
+                aria-pressed={beatGridSnapEnabled}
+                onClick={toggleBeatGridSnap}
+                className="justify-start"
+              >
+                <Magnet className="h-3.5 w-3.5" />
+                Beat snap
+              </Button>
             </div>
           ) : null}
 
