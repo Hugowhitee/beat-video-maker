@@ -166,7 +166,7 @@ export const EffectsSection = memo(function EffectsSection({
   const addEffect = useTimelineStore((s) => s.addEffect)
   const addEffects = useTimelineStore((s) => s.addEffects)
   const updateEffect = useTimelineStore((s) => s.updateEffect)
-  const removeEffect = useTimelineStore((s) => s.removeEffect)
+  const removeEffects = useTimelineStore((s) => s.removeEffects)
   const toggleEffect = useTimelineStore((s) => s.toggleEffect)
   const setItemEffects = useTimelineStore((s) => s.setItemEffects)
   const setItemEffectsAndAudioReactive = useTimelineStore(
@@ -794,14 +794,13 @@ export const EffectsSection = memo(function EffectsSection({
       // A live slider preview can outlive the committed effect stack. Clear it
       // before deleting so preview/undo always render canonical timeline state.
       clearPreview()
-      visualItems.forEach((item) => {
+      const removals = visualItems.flatMap((item) => {
         const targetEffect = getMappedEffectEntry(item, effectId)
-        if (targetEffect) {
-          removeEffect(item.id, targetEffect.id)
-        }
+        return targetEffect ? [{ itemId: item.id, effectId: targetEffect.id }] : []
       })
+      removeEffects(removals)
     },
-    [clearPreview, getMappedEffectEntry, removeEffect, visualItems],
+    [clearPreview, getMappedEffectEntry, removeEffects, visualItems],
   )
 
   // Effect picker popover state
