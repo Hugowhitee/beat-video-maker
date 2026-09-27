@@ -36,7 +36,7 @@ type DisposeMessage = {
 
 type WorkerMessage = AnalyzeMessage | DisposeMessage
 
-const MODEL_CACHE = 'beatvideo-rhythm-model-v1'
+const MODEL_CACHE = 'beatvideo-rhythm-model-v2'
 const EMPTY_LOGIT = -1_000
 const FFT_SCALE = 1 / Math.sqrt(BEAT_THIS_N_FFT)
 
@@ -127,29 +127,36 @@ async function fetchPinnedAsset(
   phaseStart: number,
   phaseSpan: number,
 ) {
-  let cached: Response | undefined
-
+  // CacheStorage is an optimization, never a trust boundary. Older builds
+  // cached the response before verifying its digest, so one truncated/stale
+  // download could poison Beat This until the user manually cleared site data.
   try {
     const cache = await caches.open(MODEL_CACHE)
-    cached = (await cache.match(url)) ?? undefined
+    const cached = await cache.match(url)
+    if (cached) {
+      const cachedBytes = await readResponseWithProgress(
+        cached,
+        'model-download',
+        phaseStart,
+        phaseSpan,
+      )
+      try {
+        await verifySha256(cachedBytes, expectedSha256, label)
+        return cachedBytes
+      } catch {
+        await cache.delete(url)
+        progress('model-download', phaseStart, `Refreshing ${label}`)
+      }
+    }
   } catch {
-    cached = undefined
+    // Private mode/quota restrictions can make CacheStorage unavailable.
   }
 
-  let response = cached
-  if (!response) {
-    response = await fetch(url, { cache: 'force-cache' })
-    if (!response.ok) {
-      throw new Error(`${label} download failed with HTTP ${response.status}.`)
-    }
-
-    try {
-      const cache = await caches.open(MODEL_CACHE)
-      await cache.put(url, response.clone())
-    } catch {
-      // Browser cache is only an optimization. Analysis remains functional
-      // when storage quota/private mode prevents CacheStorage writes.
-    }
+  // Explicitly bypass the browser HTTP cache after a CacheStorage miss or
+  // checksum failure. Verify first; only trusted bytes are written back.
+  const response = await fetch(url, { cache: 'no-store' })
+  if (!response.ok) {
+    throw new Error(`${label} download failed with HTTP ${response.status}.`)
   }
 
   const bytes = await readResponseWithProgress(
@@ -159,6 +166,26 @@ async function fetchPinnedAsset(
     phaseSpan,
   )
   await verifySha256(bytes, expectedSha256, label)
+
+  try {
+    const cache = await caches.open(MODEL_CACHE)
+    const contentType = response.headers.get('content-type') ?? 'application/octet-stream'
+    const cachedBody = new ArrayBuffer(bytes.byteLength)
+    new Uint8Array(cachedBody).set(bytes)
+    await cache.put(
+      url,
+      new Response(cachedBody, {
+        headers: {
+          'content-type': contentType,
+          'content-length': String(bytes.byteLength),
+        },
+      }),
+    )
+  } catch {
+    // Browser cache is only an optimization. Analysis remains functional
+    // when storage quota/private mode prevents CacheStorage writes.
+  }
+
   return bytes
 }
 

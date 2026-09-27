@@ -88,6 +88,7 @@ export const Timeline = memo(function Timeline({ duration, beatvideoMode = 'vide
   const { t } = useTranslation()
   const editorDensity = useSettingsStore((s) => s.editorDensity)
   const editorLayout = getEditorLayout(editorDensity)
+  const workspace = useEditorStore((s) => s.workspace)
   const {
     tracks,
     addTrack,
@@ -921,10 +922,12 @@ export const Timeline = memo(function Timeline({ duration, beatvideoMode = 'vide
         onZoomToFit={zoomHandlers?.handleZoomToFit}
       />
 
-      {/* Standalone-timeline (sequence) tabs — Main + top-level sequences */}
-      <SequenceTabs />
+      {/* Multi-sequence authoring is an Advanced/Motion concern. Keeping the
+          Main/+ strip out of Beat, Visual and Master makes the producer path
+          read like one song instead of a generic NLE project graph. */}
+      {workspace === 'motion' ? <SequenceTabs /> : null}
 
-      {/* Composition Breadcrumbs - shown when inside a sub-composition */}
+      {/* Composition Breadcrumbs - shown when actually inside a sub-composition */}
       <CompositionBreadcrumbs />
 
       {/* Timeline Content */}

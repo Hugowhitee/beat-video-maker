@@ -1,7 +1,7 @@
 import { useCallback, useMemo, memo, useRef, useState, useEffect, type CSSProperties } from 'react'
 import { useTranslation } from 'react-i18next'
 import { createPortal } from 'react-dom'
-import { Sparkles, Plus, Eye, EyeOff, Search, X } from 'lucide-react'
+import { AudioLines, Sparkles, Plus, Eye, EyeOff, Search, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import type { TimelineItem } from '@/types/timeline'
 import type { ItemEffect, GpuEffect, VisualEffect } from '@/types/effects'
@@ -25,6 +25,10 @@ import {
   GpuPowerWindowPanel,
   GpuSecondaryQualifierPanel,
 } from './panels'
+import {
+  AudioReactiveParamControls,
+  type AudioReactiveAmountRange,
+} from './panels/audio-reactive-param-controls'
 import { getGpuEffect, getGpuEffectDefaultParams } from '@/infrastructure/gpu-effects'
 import { useGpuEffectPreviewData } from '../hooks/use-gpu-effect-preview-data'
 import { EffectThumbnail } from './effect-thumbnail'
@@ -68,6 +72,51 @@ interface EffectsSectionProps {
 }
 
 const EMPTY_HIDDEN_GPU_EFFECT_TYPES: readonly string[] = []
+
+function getMotionReactiveLabel(binding: AudioReactiveBinding): string {
+  if (binding.target.kind === 'transform-shake') return 'Shake'
+  if (binding.target.kind !== 'transform') return 'Motion'
+
+  switch (binding.target.property) {
+    case 'scale':
+      return 'Zoom'
+    case 'x':
+      return 'Horizontal'
+    case 'y':
+      return 'Vertical'
+    case 'rotation':
+      return 'Rotation'
+    case 'opacity':
+      return 'Opacity'
+  }
+
+  return 'Motion'
+}
+
+function getMotionReactiveAmountRange(
+  binding: AudioReactiveBinding,
+): AudioReactiveAmountRange {
+  if (binding.target.kind === 'transform-shake') {
+    return { min: 0, max: 1, step: 0.01 }
+  }
+  if (binding.target.kind !== 'transform') {
+    return { min: -1, max: 1, step: 0.01 }
+  }
+
+  switch (binding.target.property) {
+    case 'scale':
+      return { min: -0.15, max: 0.15, step: 0.002 }
+    case 'x':
+    case 'y':
+      return { min: -80, max: 80, step: 1 }
+    case 'rotation':
+      return { min: -12, max: 12, step: 0.1 }
+    case 'opacity':
+      return { min: -0.8, max: 0.8, step: 0.01 }
+  }
+
+  return { min: -1, max: 1, step: 0.01 }
+}
 
 /**
  * Effects section - GPU shader effects for visual items.
@@ -140,7 +189,38 @@ export const EffectsSection = memo(function EffectsSection({
     [isHiddenEffectEntry, visualItems],
   )
   const displayItem = visualItems[0] ?? null
+  const motionReactiveBindings = useMemo(
+    () =>
+      displayItem?.audioReactive?.bindings.filter(
+        (binding) =>
+          binding.target.kind === 'transform' ||
+          binding.target.kind === 'transform-shake',
+      ) ?? [],
+    [displayItem],
+  )
   const keyframesByItemId = useKeyframesByItemId(itemIds)
+
+  const handleUpdateMotionReactiveBinding = useCallback(
+    (bindingId: string, patch: Partial<AudioReactiveBinding>) => {
+      if (!displayItem?.audioReactive) return
+
+      setAudioReactiveStates([
+        {
+          itemId: displayItem.id,
+          audioReactive: {
+            ...displayItem.audioReactive,
+            enabled: true,
+            bindings: displayItem.audioReactive.bindings.map((binding) =>
+              binding.id === bindingId
+                ? { ...binding, ...patch, id: binding.id, target: binding.target }
+                : binding,
+            ),
+          },
+        },
+      ])
+    },
+    [displayItem, setAudioReactiveStates],
+  )
 
   const getMappedEffectEntry = useCallback(
     (item: TimelineItem, displayEffectId: string): ItemEffect | null => {
@@ -929,8 +1009,33 @@ export const EffectsSection = memo(function EffectsSection({
     </div>
   )
 
+  const motionReactiveControls = motionReactiveBindings.length > 0 ? (
+    <div className="mx-2 mb-2 rounded-md border border-primary/25 bg-primary/5 py-2">
+      <div className="flex items-center gap-1.5 px-2 pb-1">
+        <AudioLines className="h-3.5 w-3.5 text-primary" aria-hidden="true" />
+        <span className="text-[10px] font-semibold uppercase tracking-wide text-foreground">
+          Audio Reactive Motion
+        </span>
+      </div>
+      <p className="px-2 pb-1 text-[9px] leading-relaxed text-muted-foreground">
+        Transform reactions from a reactive look. These stay editable instead of becoming baked animation.
+      </p>
+      {motionReactiveBindings.map((binding) => (
+        <AudioReactiveParamControls
+          key={binding.id}
+          binding={binding}
+          label={getMotionReactiveLabel(binding)}
+          amountRange={getMotionReactiveAmountRange(binding)}
+          fps={timelineFps}
+          onChange={(patch) => handleUpdateMotionReactiveBinding(binding.id, patch)}
+        />
+      ))}
+    </div>
+  ) : null
+
   const effectList = (
     <div className="space-y-0">
+      {motionReactiveControls}
       {effects.map((effect, effectIndex) => {
         if (effect.effect.type === 'gpu-effect') {
           const gpuEff = effect.effect as GpuEffect

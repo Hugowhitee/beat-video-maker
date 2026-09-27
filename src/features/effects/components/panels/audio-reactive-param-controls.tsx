@@ -12,9 +12,17 @@ import {
 } from '@/components/ui/select'
 import { getAudioReactiveAmountRange } from '@/features/effects/utils/audio-reactive-bindings'
 
+export type AudioReactiveAmountRange = {
+  min: number
+  max: number
+  step: number
+}
+
 interface AudioReactiveParamControlsProps {
   binding: AudioReactiveBinding
-  param: EffectParam
+  param?: EffectParam
+  amountRange?: AudioReactiveAmountRange
+  label?: string
   fps: number
   onChange: (patch: Partial<AudioReactiveBinding>) => void
 }
@@ -22,10 +30,16 @@ interface AudioReactiveParamControlsProps {
 export const AudioReactiveParamControls = memo(function AudioReactiveParamControls({
   binding,
   param,
+  amountRange,
+  label = 'Reactive',
   fps,
   onChange,
 }: AudioReactiveParamControlsProps) {
-  const amountRange = getAudioReactiveAmountRange(param)
+  const resolvedAmountRange =
+    amountRange ??
+    (param
+      ? getAudioReactiveAmountRange(param)
+      : { min: -1, max: 1, step: 0.01 })
   const releaseMs = Math.max(10, Math.round((binding.releaseFrames / Math.max(1, fps)) * 1000))
   const noLiveCommit = () => {}
 
@@ -34,7 +48,7 @@ export const AudioReactiveParamControls = memo(function AudioReactiveParamContro
       <div className="mb-2 flex items-center gap-1.5">
         <AudioLines className="h-3.5 w-3.5 text-primary" aria-hidden="true" />
         <span className="text-[10px] font-semibold uppercase tracking-wide text-foreground">
-          Reactive
+          {label}
         </span>
         <Select
           value={binding.driver}
@@ -67,9 +81,9 @@ export const AudioReactiveParamControls = memo(function AudioReactiveParamContro
         <span className="text-[10px] text-muted-foreground">Amount</span>
         <SliderInput
           value={binding.amount}
-          min={amountRange.min}
-          max={amountRange.max}
-          step={amountRange.step}
+          min={resolvedAmountRange.min}
+          max={resolvedAmountRange.max}
+          step={resolvedAmountRange.step}
           onLiveChange={noLiveCommit}
           onChange={(amount) => onChange({ amount })}
         />
