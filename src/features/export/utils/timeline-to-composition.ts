@@ -1,6 +1,6 @@
 import type { TimelineTrack, TimelineItem } from '@/types/timeline'
 import type { Transition } from '@/types/transition'
-import type { AudioEqSettings } from '@/types/audio'
+import type { AudioEqSettings, MasterFxSettings } from '@/types/audio'
 import type { CompositionInputProps } from '@/types/export'
 import type {
   ItemKeyframes,
@@ -50,6 +50,7 @@ export function convertTimelineToComposition(
   backgroundColor?: string,
   busAudioEq?: AudioEqSettings,
   masterBusDb?: number,
+  masterFx?: MasterFxSettings,
 ): CompositionInputProps {
   items = items.map((item) =>
     item.type === 'video' ? resolveReverseConformedVideoItem(item, fps, { mode: 'export' }) : item,
@@ -257,6 +258,7 @@ export function convertTimelineToComposition(
     backgroundColor,
     busAudioEq,
     masterBusDb,
+    masterFx,
   }
 }
 
