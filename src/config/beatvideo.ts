@@ -11,8 +11,8 @@ const PHOTO_SIDEBAR_TABS = new Set<EditorSidebarTab>([
   'media',
   'beat',
   'master',
-  'overlay',
-  'effects',
+  'text',
+  'shapes',
 ])
 const VIDEO_SIDEBAR_TABS = new Set<EditorSidebarTab>([
   'media',
@@ -20,9 +20,7 @@ const VIDEO_SIDEBAR_TABS = new Set<EditorSidebarTab>([
   'master',
   'text',
   'shapes',
-  'effects',
   'transitions',
-  'lottie',
 ])
 
 export function isSidebarTabVisibleForBeatvideoMode(
