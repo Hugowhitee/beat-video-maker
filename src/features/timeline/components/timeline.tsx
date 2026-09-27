@@ -853,6 +853,7 @@ export const Timeline = memo(function Timeline({ duration, beatvideoMode = 'vide
                   isSelected={selectedTrackIdsSet.has(track.id)}
                   canDeleteTrack={tracks.length > 1}
                   canDeleteEmptyTracks={canDeleteEmptyTracks}
+                  simplified={simplifiedBeatvideoTimeline}
                   onToggleLock={() => toggleTrackLock(track.id)}
                   onToggleSyncLock={() => toggleTrackSyncLock(track.id)}
                   onToggleDisabled={() => toggleTrackDisabled(track.id)}

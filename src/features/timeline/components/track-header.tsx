@@ -23,6 +23,7 @@ interface TrackHeaderProps {
   isSelected: boolean
   canDeleteTrack: boolean
   canDeleteEmptyTracks: boolean
+  simplified?: boolean
   onToggleLock: () => void
   onToggleSyncLock: () => void
   onToggleDisabled: () => void
@@ -44,7 +45,8 @@ function areTrackHeaderPropsEqual(prev: TrackHeaderProps, next: TrackHeaderProps
     prev.isActive === next.isActive &&
     prev.isSelected === next.isSelected &&
     prev.canDeleteTrack === next.canDeleteTrack &&
-    prev.canDeleteEmptyTracks === next.canDeleteEmptyTracks
+    prev.canDeleteEmptyTracks === next.canDeleteEmptyTracks &&
+    prev.simplified === next.simplified
   )
   // Callbacks (onToggleLock, etc.) are ignored - they're recreated each render but functionality is same
 }
@@ -64,6 +66,7 @@ export const TrackHeader = memo(function TrackHeader({
   isSelected,
   canDeleteTrack,
   canDeleteEmptyTracks,
+  simplified = false,
   onToggleLock,
   onToggleSyncLock,
   onToggleDisabled,
@@ -85,7 +88,9 @@ export const TrackHeader = memo(function TrackHeader({
       ? '#38bdf8'
       : track.name === 'Producer tags'
         ? '#f59e0b'
-        : undefined)
+        : track.name === 'Watermarks'
+          ? '#14b8a6'
+          : undefined)
 
   // Use track drag hook (visuals handled centrally by timeline.tsx via DOM)
   const { handleDragStart } = useTrackDrag(track)
@@ -117,6 +122,33 @@ export const TrackHeader = memo(function TrackHeader({
             onClick={onSelect}
             onMouseDown={handleDragStart}
           >
+            {simplified ? (
+              <div className="flex h-full min-h-0 items-center gap-1.5 px-1.5">
+                {displayTrackColor ? (
+                  <span
+                    className="h-2 w-2 shrink-0 rounded-[2px]"
+                    style={{ backgroundColor: displayTrackColor }}
+                    aria-hidden="true"
+                  />
+                ) : null}
+                <span className="min-w-0 flex-1 truncate font-mono text-xs font-semibold">
+                  {track.name}
+                </span>
+                <span className="shrink-0 text-[10px] text-muted-foreground">
+                  {itemCountLabel}
+                </span>
+                {track.solo ? (
+                  <span className="shrink-0 text-[9px] font-semibold text-primary">S</span>
+                ) : null}
+                {track.locked ? (
+                  <span className="shrink-0 text-[9px] font-semibold text-muted-foreground">L</span>
+                ) : null}
+                {trackDisabled ? (
+                  <span className="shrink-0 text-[9px] font-semibold text-muted-foreground">Off</span>
+                ) : null}
+              </div>
+            ) : (
+              <>
             <div className="flex h-6 shrink-0 items-center gap-0.5 overflow-hidden border-b border-border/60">
               <div className="flex h-5 w-4 shrink-0 items-center justify-center">
                 <GripVertical className="w-3.5 h-3.5 text-muted-foreground" aria-hidden="true" />
@@ -270,12 +302,35 @@ export const TrackHeader = memo(function TrackHeader({
               <span className="shrink-0 text-[10px] leading-none text-muted-foreground">
                 {itemCountLabel}
               </span>
+              </>
+            )}
             </div>
           </div>
         </div>
       </ContextMenuTrigger>
 
       <ContextMenuContent className="w-52">
+        <ContextMenuItem onClick={onToggleDisabled}>
+          {trackDisabled
+            ? t('timeline.trackHeader.enableTrack')
+            : t('timeline.trackHeader.disableTrack')}
+        </ContextMenuItem>
+        <ContextMenuItem onClick={onToggleSolo}>
+          {track.solo
+            ? t('timeline.trackHeader.unsoloTrack')
+            : t('timeline.trackHeader.soloTrack')}
+        </ContextMenuItem>
+        <ContextMenuItem onClick={onToggleLock}>
+          {track.locked
+            ? t('timeline.trackHeader.unlockTrack')
+            : t('timeline.trackHeader.lockTrack')}
+        </ContextMenuItem>
+        <ContextMenuItem onClick={onToggleSyncLock}>
+          {syncLockEnabled
+            ? t('timeline.trackHeader.disableSyncLock')
+            : t('timeline.trackHeader.enableSyncLock')}
+        </ContextMenuItem>
+        <ContextMenuSeparator />
         <ContextMenuItem onClick={onCloseGaps}>
           {t('timeline.trackHeader.closeAllGaps')}
         </ContextMenuItem>

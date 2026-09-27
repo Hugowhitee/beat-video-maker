@@ -1,19 +1,10 @@
-import { memo, useEffect, useMemo, useRef, useState } from 'react'
+import { memo, useMemo, useState } from 'react'
 import { useNavigate } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
 import {
   ArrowLeft,
   Bug,
   ChevronDown,
-  Download,
-  FolderArchive,
-  FolderCog,
-  Keyboard,
-  ListVideo,
-  PanelRight,
-  Save,
-  Settings,
-  Video,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
@@ -36,8 +27,6 @@ import { useEditorStore } from '@/shared/state/editor'
 import { useItemsStore, useTimelineStore } from '@/features/editor/deps/timeline-store'
 import { useMediaLibraryStore } from '@/features/editor/deps/media-library'
 import type { BeatvideoProjectMode } from '@/types/project'
-
-const SAVE_ANIMATION_MIN_MS = 1800
 
 const SaveDirtyIndicator = memo(function SaveDirtyIndicator() {
   const isDirty = useTimelineStore((state) => state.isDirty)
@@ -88,9 +77,6 @@ export const Toolbar = memo(function Toolbar({
   const [showUnsavedDialog, setShowUnsavedDialog] = useState(false)
   const [showShortcutsDialog, setShowShortcutsDialog] = useState(false)
   const [showSettingsDialog, setShowSettingsDialog] = useState(false)
-  const [isSaveAnimating, setIsSaveAnimating] = useState(false)
-  const [saveAnimationKey, setSaveAnimationKey] = useState(0)
-  const saveAnimationTimeoutRef = useRef<number | undefined>(undefined)
   const itemCount = useItemsStore((state) => state.items.length)
   const maxItemEndFrame = useItemsStore((state) => state.maxItemEndFrame)
   const mediaDependencyIds = useItemsStore((state) => state.mediaDependencyIds)
@@ -111,14 +97,6 @@ export const Toolbar = memo(function Toolbar({
     [brokenMediaIds, itemCount, maxItemEndFrame, mediaDependencyIds, project.fps],
   )
 
-  useEffect(() => {
-    return () => {
-      if (saveAnimationTimeoutRef.current !== undefined) {
-        window.clearTimeout(saveAnimationTimeoutRef.current)
-      }
-    }
-  }, [])
-
   const handleBackClick = () => {
     if (useTimelineStore.getState().isDirty) {
       setShowUnsavedDialog(true)
@@ -128,32 +106,7 @@ export const Toolbar = memo(function Toolbar({
   }
 
   const handleSave = async () => {
-    const startedAt = performance.now()
-    const finishSaveAnimation = () => {
-      const remainingMs = Math.max(0, SAVE_ANIMATION_MIN_MS - (performance.now() - startedAt))
-
-      saveAnimationTimeoutRef.current = window.setTimeout(() => {
-        setIsSaveAnimating(false)
-        saveAnimationTimeoutRef.current = undefined
-      }, remainingMs)
-    }
-
-    if (saveAnimationTimeoutRef.current !== undefined) {
-      window.clearTimeout(saveAnimationTimeoutRef.current)
-    }
-
-    setSaveAnimationKey((key) => key + 1)
-    setIsSaveAnimating(true)
-
-    if (onSave) {
-      try {
-        await onSave()
-      } finally {
-        finishSaveAnimation()
-      }
-    } else {
-      finishSaveAnimation()
-    }
+    await onSave?.()
   }
 
   return (
@@ -207,12 +160,10 @@ export const Toolbar = memo(function Toolbar({
             type="button"
             variant="ghost"
             size="sm"
-            className="h-7 shrink-0 gap-1.5 px-2 text-[11px] text-muted-foreground hover:text-foreground"
+            className="h-7 shrink-0 px-2 text-[11px] text-muted-foreground hover:text-foreground"
             onClick={onProjectSettings}
             aria-label="Project settings"
-            data-tooltip="Project settings"
           >
-            <FolderCog className="h-3.5 w-3.5" />
             Project settings
           </Button>
         ) : null}
@@ -231,100 +182,69 @@ export const Toolbar = memo(function Toolbar({
           <DebugPopover projectId={projectId} />
         )}
 
-        {/* Editor utilities */}
+        {/* Keep only the producer-critical surfaces permanently visible. */}
         {workspace === 'edit' ? (
           <Button
             variant={rightSidebarOpen ? 'secondary' : 'outline'}
             size="sm"
-            className="h-7 gap-1.5 px-2"
+            className="h-7 px-2"
             onClick={toggleRightSidebar}
             aria-pressed={rightSidebarOpen}
-            data-tooltip={rightSidebarOpen ? 'Hide inspector' : 'Show inspector'}
-            data-tooltip-side="bottom"
             aria-label={rightSidebarOpen ? 'Hide inspector' : 'Show inspector'}
           >
-            <PanelRight className="h-3.5 w-3.5" />
-            <span className="hidden lg:inline">Inspector</span>
+            Inspector
           </Button>
         ) : null}
-        <Button
-          variant="outline"
-          size="icon"
-          className="h-7 w-7"
-          onClick={() => setShowSettingsDialog(true)}
-          data-tooltip={t('toolbar.settings')}
-          data-tooltip-side="bottom"
-          aria-label={t('toolbar.settings')}
-        >
-          <Settings className="h-4 w-4" />
-        </Button>
-        <Button
-          variant="outline"
-          size="icon"
-          className="h-7 w-7"
-          onClick={() => setShowShortcutsDialog(true)}
-          data-tooltip={t('toolbar.keyboardShortcuts')}
-          data-tooltip-side="bottom"
-          aria-label={t('toolbar.keyboardShortcutsAria')}
-        >
-          <Keyboard className="h-4 w-4" />
-        </Button>
-        <Separator orientation="vertical" className="h-5" />
+
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="outline" size="sm" className="h-7 gap-1 px-2">
+              More
+              <ChevronDown className="h-3 w-3" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem onClick={() => setShowSettingsDialog(true)}>
+              Settings
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => setShowShortcutsDialog(true)}>
+              Keyboard shortcuts
+            </DropdownMenuItem>
+            {onOpenRenderQueue ? (
+              <DropdownMenuItem onClick={onOpenRenderQueue}>
+                Render queue{renderQueueCount > 0 ? ` (${renderQueueCount})` : ''}
+              </DropdownMenuItem>
+            ) : null}
+            {onExportBundle ? (
+              <DropdownMenuItem onClick={onExportBundle}>
+                Download project ZIP
+              </DropdownMenuItem>
+            ) : null}
+          </DropdownMenuContent>
+        </DropdownMenu>
 
         {/* Actions */}
         <Button
           variant="outline"
           size="sm"
-          className="gap-1.5"
+          className="relative h-7 px-3"
           onClick={handleSave}
           aria-label={t('toolbar.saveAria')}
         >
-          <div className="relative">
-            {isSaveAnimating ? (
-              <SaveAnimationIcon key={saveAnimationKey} className="h-5 w-5" />
-            ) : (
-              <Save className="h-4 w-4" />
-            )}
-            <SaveDirtyIndicator />
-          </div>
           {t('toolbar.save')}
+          <SaveDirtyIndicator />
         </Button>
-
-        {onOpenRenderQueue && (
-          <Button
-            variant="outline"
-            size="icon"
-            className="h-7 w-7 relative"
-            onClick={onOpenRenderQueue}
-            data-tooltip={t('toolbar.renderQueue')}
-            data-tooltip-side="bottom"
-            aria-label={t('toolbar.renderQueueAria')}
-          >
-            <ListVideo className="h-4 w-4" />
-            {renderQueueCount > 0 && (
-              <span className="absolute -right-1 -top-1 flex h-3.5 min-w-3.5 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-medium leading-none text-primary-foreground">
-                {renderQueueCount}
-              </span>
-            )}
-          </Button>
-        )}
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button size="sm" className="gap-1.5">
-              <Download className="h-4 w-4" />
               {t('toolbar.export')}
               <ChevronDown className="h-3 w-3" />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            <DropdownMenuItem onClick={onExport} className="gap-2">
-              <Video className="h-4 w-4" />
+            <DropdownMenuItem onClick={onExport}>
               {t('toolbar.exportVideo')}
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={onExportBundle} className="gap-2">
-              <FolderArchive className="h-4 w-4" />
-              {t('toolbar.downloadProjectZip')}
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
@@ -332,48 +252,6 @@ export const Toolbar = memo(function Toolbar({
     </div>
   )
 })
-
-function SaveAnimationIcon({ className }: { className?: string }) {
-  return (
-    <svg
-      className={className}
-      version="1.1"
-      id="L6"
-      xmlns="http://www.w3.org/2000/svg"
-      x="0px"
-      y="0px"
-      viewBox="12 12 76 76"
-      enableBackground="new 12 12 76 76"
-      xmlSpace="preserve"
-      aria-hidden="true"
-    >
-      <rect fill="none" stroke="currentColor" strokeWidth="4" x="25" y="25" width="50" height="50">
-        <animateTransform
-          attributeName="transform"
-          dur="0.5s"
-          from="0 50 50"
-          to="180 50 50"
-          type="rotate"
-          id="strokeBox"
-          attributeType="XML"
-          begin="rectBox.end"
-        />
-      </rect>
-      <rect x="27" y="27" fill="currentColor" width="46" height="50">
-        <animate
-          attributeName="height"
-          dur="1.3s"
-          attributeType="XML"
-          from="50"
-          to="0"
-          id="rectBox"
-          fill="freeze"
-          begin="0s;strokeBox.end"
-        />
-      </rect>
-    </svg>
-  )
-}
 
 function DebugPopover({ projectId }: { projectId: string }) {
   const { t } = useTranslation()
