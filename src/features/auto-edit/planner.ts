@@ -523,6 +523,28 @@ function validateInputs(music: MusicMap, clips: ClipMap) {
   }
 }
 
+export function offsetEditPlanTimeline(plan: EditPlan, offsetSeconds: number): EditPlan {
+  const offset = Number.isFinite(offsetSeconds) ? offsetSeconds : 0
+  if (Math.abs(offset) <= EPSILON) return plan
+
+  return {
+    ...plan,
+    segments: plan.segments.map((segment) => ({
+      ...segment,
+      timelineStart: segment.timelineStart + offset,
+      timelineEnd: segment.timelineEnd + offset,
+    })),
+    transitions: plan.transitions.map((transition) => ({
+      ...transition,
+      cutTime: transition.cutTime + offset,
+    })),
+    motifs: plan.motifs.map((motif) => ({
+      ...motif,
+      start: motif.start + offset,
+    })),
+  }
+}
+
 export function createSingleClipLoopPlan(params: {
   sourceId: string
   sourceDuration: number
