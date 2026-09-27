@@ -117,6 +117,8 @@ For YouTube:
 - use resumable uploads with visible progress/retry state;
 - let the user review title, description, tags, thumbnail and privacy before upload;
 - reuse Beatvideo's publication metadata/templates where available instead of asking for the same information twice;
+- support a local **Publication profile** rather than hard-coding one producer brand into the public app: reusable title/description/tag templates may use confirmed project fields such as artist lane, beat name, year, producer name and BPM while keeping per-project overrides;
+- never invent metadata to fill a template: BPM may come from a user-confirmed/manual or trusted analyzed grid, while musical key stays absent unless a real key-analysis/verification source exists;
 - keep local export usable without a Google/YouTube connection;
 - treat API-project verification/audit requirements as a deployment constraint rather than hiding them behind a non-working Publish button.
 
