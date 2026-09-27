@@ -123,7 +123,7 @@ export const useEditorStore = create<EditorState & EditorActions>((set) => ({
   // State
   activePanel: null,
   leftSidebarOpen: true,
-  rightSidebarOpen: true,
+  rightSidebarOpen: initialWorkspace !== 'beat' && initialWorkspace !== 'master',
   keyframeEditorShortcutScopeActive: false,
   transcriptEditorShortcutScopeActive: false,
   workspace: initialWorkspace,
@@ -196,7 +196,14 @@ export const useEditorStore = create<EditorState & EditorActions>((set) => ({
         /* noop */
       }
 
-      return { workspace, ...loadEditorWorkspaceLayout(workspace) }
+      return {
+        workspace,
+        ...loadEditorWorkspaceLayout(workspace),
+        rightSidebarOpen:
+          workspace === 'beat' || workspace === 'master'
+            ? false
+            : state.rightSidebarOpen,
+      }
     }),
   setActiveTab: (tab) =>
     set((state) => {
