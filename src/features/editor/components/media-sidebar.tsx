@@ -79,16 +79,10 @@ import type { VisualEffect, GpuEffect } from '@/types/effects'
 import { EFFECT_PRESETS } from '@/types/effects'
 import { getGpuEffectDefaultParams } from '@/infrastructure/gpu-effects'
 import {
-  AUDIO_REACTIVE_PRESETS,
-  buildAudioReactivePresetRemovalUpdate,
-  buildAudioReactivePresetUpdate,
   EffectThumbnail,
-  isAudioReactivePresetApplied,
   isAudioReactiveParam,
   useGpuEffectPreviewData,
-  type AudioReactivePresetId,
 } from '@/features/editor/deps/effects-contract'
-import { resolveBeatvideoTimelineGrid } from '@/features/editor/deps/beatvideo-music'
 import { createLogger } from '@/shared/logging/logger'
 import { useSettingsStore } from '@/features/editor/deps/settings'
 import { resolveGeneratedLayerCanvasSize } from '../utils/generated-layer-canvas-size'
@@ -375,7 +369,6 @@ export const MediaSidebar = memo(function MediaSidebar({
   const setActiveTab = useEditorStore((s) => s.setActiveTab)
   const sidebarWidth = useEditorStore((s) => s.sidebarWidth)
   const setSidebarWidth = useEditorStore((s) => s.setSidebarWidth)
-  const hasBeatAnalysis = useProjectStore((s) => Boolean(s.currentProject?.beatvideoMusic))
   const prefersReducedMotion = useReducedMotion()
 
   const [beatTabActivated, setBeatTabActivated] = useState(activeTab === 'beat')
@@ -779,97 +772,6 @@ export const MediaSidebar = memo(function MediaSidebar({
     editor.setRightSidebarOpen(true)
     editor.setClipInspectorTab('effects')
   }, [])
-
-  const openBeatWorkspace = useCallback(() => {
-    const editor = useEditorStore.getState()
-    editor.setWorkspace('beat')
-    editor.setActiveTab('beat')
-    editor.setLeftSidebarOpen(true)
-  }, [])
-
-  const handleApplyReactivePreset = useCallback(
-    (presetId: AudioReactivePresetId) => {
-      const analysis = useProjectStore.getState().currentProject?.beatvideoMusic
-      if (!analysis) {
-        toast.info('Analyze the beat or enter its BPM first')
-        openBeatWorkspace()
-        return
-      }
-
-      const timeline = useTimelineStore.getState()
-      const timelineGrid = resolveBeatvideoTimelineGrid(
-        analysis,
-        timeline.items,
-        timeline.fps,
-      )
-      if (!timelineGrid || timelineGrid.grid.beats.length === 0) {
-        toast.error('The beat grid is not linked to the timeline yet')
-        openBeatWorkspace()
-        return
-      }
-
-      const selectedIds = new Set(useSelectionStore.getState().selectedItemIds)
-      const selectedVisuals = timeline.items.filter(
-        (item) =>
-          selectedIds.has(item.id) &&
-          item.type !== 'audio' &&
-          item.type !== 'adjustment',
-      )
-      const photoCover =
-        beatvideoMode === 'photo'
-          ? timeline.items.find((item) => item.type === 'image')
-          : undefined
-      const targets =
-        selectedVisuals.length > 0
-          ? selectedVisuals
-          : photoCover
-            ? [photoCover]
-            : []
-
-      if (targets.length === 0) {
-        toast.info(
-          beatvideoMode === 'photo'
-            ? 'Import the cover first'
-            : 'Select the visual layer that should react to the beat',
-        )
-        return
-      }
-
-      const removePreset = targets.every((item) =>
-        isAudioReactivePresetApplied(item, presetId),
-      )
-      const updates = targets.flatMap((item) => {
-        const update = removePreset
-          ? buildAudioReactivePresetRemovalUpdate({ item, presetId })
-          : buildAudioReactivePresetUpdate({
-              item,
-              grid: timelineGrid.grid,
-              fps: timeline.fps,
-              presetId,
-            })
-        return update ? [update] : []
-      })
-
-      if (updates.length === 0) {
-        toast.info('This reactive look does not apply to the selected layer')
-        return
-      }
-
-      timeline.setItemEffectsAndAudioReactive(updates)
-      revealAppliedEffects(updates.map((update) => update.itemId))
-
-      const preset = AUDIO_REACTIVE_PRESETS.find((candidate) => candidate.id === presetId)
-      toast.success(
-        removePreset
-          ? `${preset?.label ?? 'Reactive look'} removed`
-          : `${preset?.label ?? 'Reactive look'} applied`,
-        removePreset
-          ? undefined
-          : { description: 'Click the quick start again to remove it, or fine-tune it in Applied effects.' },
-      )
-    },
-    [beatvideoMode, openBeatWorkspace, revealAppliedEffects],
-  )
 
   // Add adjustment layer to timeline at the best available position.
   // Selection is created by addAdjustmentLayer; immediately expose its applied
@@ -1672,63 +1574,6 @@ export const MediaSidebar = memo(function MediaSidebar({
               className={`min-h-0 flex-1 overflow-y-auto p-3 ${activeTab === 'effects' ? 'block' : 'hidden'}`}
             >
               <div className="space-y-3">
-                <section className="rounded-md border border-primary/30 bg-primary/5 p-2.5">
-                  <div className="flex items-center gap-2">
-                    <AudioLines className="h-3.5 w-3.5 text-primary" />
-                    <div className="text-xs font-semibold text-foreground">Reactive quick starts</div>
-                    <span className="ml-auto font-mono text-[9px] uppercase tracking-wide text-muted-foreground">
-                      {hasBeatAnalysis ? 'Beat ready' : 'Needs beat'}
-                    </span>
-                  </div>
-                  <p className="mt-1.5 text-[10px] leading-relaxed text-muted-foreground">
-                    Quick starts are reversible: click one again to remove it. Applied effects show
-                    the real effect and a compact React control; advanced timing stays under Fine tune.
-                  </p>
-
-                  {hasBeatAnalysis ? (
-                    <div className="mt-2 grid grid-cols-2 gap-1.5">
-                      {AUDIO_REACTIVE_PRESETS.map((preset) => (
-                        <button
-                          key={preset.id}
-                          type="button"
-                          onClick={() => handleApplyReactivePreset(preset.id)}
-                          className="rounded-sm border border-border bg-secondary/35 px-2 py-1.5 text-left transition-colors hover:border-primary/60 hover:bg-secondary/60"
-                          title={preset.description}
-                        >
-                          <div className="text-[10px] font-medium text-foreground">
-                            {preset.label}
-                          </div>
-                          <div className="mt-0.5 line-clamp-2 text-[9px] leading-tight text-muted-foreground">
-                            {preset.description}
-                          </div>
-                        </button>
-                      ))}
-                    </div>
-                  ) : (
-                    <Button
-                      type="button"
-                      size="sm"
-                      className="mt-2 h-7 w-full justify-center gap-1.5 text-xs"
-                      onClick={openBeatWorkspace}
-                    >
-                      <AudioLines className="h-3.5 w-3.5" />
-                      Set up beat
-                    </Button>
-                  )}
-
-                  {hasBeatAnalysis ? (
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="ghost"
-                      className="mt-1.5 h-6 w-full text-[10px] text-muted-foreground"
-                      onClick={openBeatWorkspace}
-                    >
-                      Edit beat grid
-                    </Button>
-                  ) : null}
-                </section>
-
                 {beatvideoMode === 'photo' ? (
                   <div className="space-y-2">
                     <div className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">

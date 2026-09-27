@@ -25,27 +25,27 @@ export const AUDIO_REACTIVE_PRESETS: ReadonlyArray<{
 }> = [
   {
     id: 'gentle-punch',
-    label: 'Gentle punch',
+    label: 'Pulse',
     description: 'Small scale hit on strong beats.',
   },
   {
     id: 'beat-flash',
-    label: 'Beat flash',
+    label: 'Flash',
     description: 'Short brightness lift on strong downbeats.',
   },
   {
     id: 'glow-hit',
-    label: 'Glow hit',
+    label: 'Glow',
     description: 'Adds a restrained glow pulse on strong beats.',
   },
   {
     id: 'subtle-shake',
-    label: 'Subtle shake',
+    label: 'Shake',
     description: 'Barely perceptible deterministic movement on downbeats.',
   },
   {
     id: 'chromatic-hit',
-    label: 'Chromatic hit',
+    label: 'RGB',
     description: 'Brief RGB separation on strong downbeats.',
   },
 ]

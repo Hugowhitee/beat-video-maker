@@ -1609,18 +1609,25 @@ export function BeatvideoMusicPanel() {
                         />
                       </label>
                       <label className="space-y-1 text-[10px] text-muted-foreground">
-                        <span>Every</span>
-                        <select
+                        <span>Every bars</span>
+                        <input
+                          type="number"
+                          min={1}
+                          step={1}
+                          list="watermark-repeat-presets"
                           value={tagRepeatBars}
-                          onChange={(event) => setTagRepeatBars(Number(event.target.value))}
-                          className="h-8 w-full rounded-md border border-input bg-secondary px-2 text-xs text-foreground"
+                          onChange={(event) =>
+                            setTagRepeatBars(Math.max(1, Number(event.target.value) || 1))
+                          }
+                          className="h-8 w-full rounded-md border border-input bg-secondary px-2 font-mono text-xs text-foreground"
                           aria-label="Watermark repeat interval"
-                        >
-                          <option value={8}>8 bars</option>
-                          <option value={16}>16 bars</option>
-                          <option value={32}>32 bars</option>
-                          <option value={64}>64 bars</option>
-                        </select>
+                        />
+                        <datalist id="watermark-repeat-presets">
+                          <option value="8" />
+                          <option value="16" />
+                          <option value="32" />
+                          <option value="64" />
+                        </datalist>
                       </label>
                     </div>
                     <Button
