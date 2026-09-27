@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Activity, Equalizer, Flame, Gauge, Power, RotateCcw, Shield } from 'lucide-react'
+import { Activity, Flame, Gauge, Power, RotateCcw, Shield, SlidersHorizontal } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
   captureSnapshot,
@@ -16,7 +16,7 @@ import { getSparseAudioEqSettings } from '@/shared/utils/audio-eq'
 import type { MasterFxSettings, MasteringPresetId } from '@/types/audio'
 import { AudioEqPanelContent } from './properties-sidebar/clip-panel/audio-eq-panel-content'
 import type { AudioEqPatch } from './properties-sidebar/clip-panel/audio-eq-curve-editor'
-import { getPreviewMasterReduction } from '@/runtime/composition-runtime/utils/preview-audio-graph'
+import { getPreviewMasterReduction } from '@/features/editor/deps/composition-runtime'
 import { cn } from '@/shared/ui/cn'
 
 type MasterSlot = 'eq' | 'compressor' | 'saturator' | 'limiter'
@@ -25,9 +25,9 @@ const SLOT_META: ReadonlyArray<{
   id: MasterSlot
   label: string
   hint: string
-  icon: typeof Equalizer
+  icon: typeof SlidersHorizontal
 }> = [
-  { id: 'eq', label: 'EQ', hint: 'Tone and cleanup', icon: Equalizer },
+  { id: 'eq', label: 'EQ', hint: 'Tone and cleanup', icon: SlidersHorizontal },
   { id: 'compressor', label: 'Compressor', hint: 'Glue and punch', icon: Activity },
   { id: 'saturator', label: 'Saturator', hint: 'Harmonics and density', icon: Flame },
   { id: 'limiter', label: 'Peak limiter', hint: 'Final peak control', icon: Shield },
