@@ -135,21 +135,30 @@ async function renderMonoAtBeatThisRate(
 ): Promise<Float32Array> {
   throwIfAborted(signal)
 
+  // Beat This' published frontend contract requires an arithmetic-mean
+  // channel downmix *before* resampling. Letting Web Audio collapse a stereo
+  // source into a one-channel OfflineAudioContext can use speaker-layout
+  // mixing gains instead, which changes log-mel magnitudes and can move
+  // marginal beat peaks.
+  const mono = downmixToMono(buffer)
   if (buffer.sampleRate === BEAT_THIS_SAMPLE_RATE) {
-    return downmixToMono(buffer)
+    return mono
   }
 
   const frameCount = Math.max(
     1,
-    Math.round(buffer.duration * BEAT_THIS_SAMPLE_RATE),
+    Math.round((mono.length / buffer.sampleRate) * BEAT_THIS_SAMPLE_RATE),
   )
   const context = new OfflineAudioContext(
     1,
     frameCount,
     BEAT_THIS_SAMPLE_RATE,
   )
+  const monoBuffer = context.createBuffer(1, mono.length, buffer.sampleRate)
+  monoBuffer.getChannelData(0).set(mono)
+
   const source = context.createBufferSource()
-  source.buffer = buffer
+  source.buffer = monoBuffer
   source.connect(context.destination)
   source.start()
 
