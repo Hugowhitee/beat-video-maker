@@ -180,6 +180,7 @@ export function BeatvideoMusicPanel() {
   const [tagDuckDb, setTagDuckDb] = useState(-3)
   const [progress, setProgress] = useState<MusicAnalysisProgress | null>(null)
   const [importingBeat, setImportingBeat] = useState(false)
+  const [importingTag, setImportingTag] = useState(false)
   const [autoArranging, setAutoArranging] = useState(false)
   const [autoArrangeProgress, setAutoArrangeProgress] = useState<string | null>(null)
   const [analyzing, setAnalyzing] = useState(false)
@@ -307,6 +308,32 @@ export function BeatvideoMusicPanel() {
       setImportingBeat(false)
     }
   }, [importingBeat])
+
+  const importProducerTag = useCallback(async () => {
+    if (importingTag) return
+    setImportingTag(true)
+    try {
+      const imported = await useMediaLibraryStore.getState().importMedia()
+      if (imported.length === 0) return
+      const tag = imported.find(
+        (media) => media.mimeType.startsWith('audio/') && media.id !== selectedMediaId,
+      )
+      if (!tag) {
+        toast.error('Choose a short audio file for the producer tag')
+        return
+      }
+      setSelectedTagMediaId(tag.id)
+      toast.success('Producer tag imported', {
+        description: 'It will be placed on the dedicated Producer tags track.',
+      })
+    } catch (error) {
+      toast.error('Could not import producer tag', {
+        description: error instanceof Error ? error.message : String(error),
+      })
+    } finally {
+      setImportingTag(false)
+    }
+  }, [importingTag, selectedMediaId])
 
   const ensureBeatPlacement = useCallback(
     async (mediaId = selectedMediaId) => {
@@ -1540,6 +1567,20 @@ export function BeatvideoMusicPanel() {
             </span>
           </summary>
           <div className="mt-3 space-y-2">
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            className="w-full justify-start"
+            disabled={importingTag}
+            onClick={() => void importProducerTag()}
+          >
+            <Tag className="h-3.5 w-3.5" />
+            {importingTag ? 'Importing producer tag…' : 'Import producer tag'}
+          </Button>
+          <p className="text-[9px] leading-relaxed text-muted-foreground">
+            Audio tags use one dedicated Producer tags track; importing one never replaces the project beat.
+          </p>
 
           {tagCandidates.length > 0 ? (
             <>
@@ -1678,7 +1719,7 @@ export function BeatvideoMusicPanel() {
             </>
           ) : (
             <div className="border-l-2 border-border pl-2 text-[10px] leading-relaxed text-muted-foreground">
-              Import a short producer-tag audio file in Media. The beat source itself is not used as a tag.
+              Import a short producer-tag audio file above. The beat source itself is never reused as a tag.
             </div>
           )}
           </div>
