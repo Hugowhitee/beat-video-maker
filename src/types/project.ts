@@ -1,5 +1,5 @@
 import type { ItemKeyframes } from './keyframe'
-import type { AudioEqSettings } from './audio'
+import type { AudioEqSettings, MasterFxSettings } from './audio'
 import type { Transition } from './transition'
 import type { CropSettings } from './transform'
 import type { TextStylePresetId } from '@/shared/typography/text-style-preset-ids'
@@ -62,6 +62,8 @@ export interface ProjectTimeline {
    * (unity) when absent.
    */
   masterBusDb?: number
+  /** Ordered post-mix mastering processors for the root project output. */
+  masterFx?: MasterFxSettings
   tracks: Array<{
     id: string
     name: string
