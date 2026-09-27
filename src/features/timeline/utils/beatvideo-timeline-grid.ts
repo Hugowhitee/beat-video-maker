@@ -1,4 +1,10 @@
-import type { BeatvideoMusicAnalysis, MusicBeat, MusicMap, MusicSection } from '@/types/beatvideo'
+import type {
+  BeatvideoMusicAnalysis,
+  MusicBeat,
+  MusicMap,
+  MusicSection,
+  MusicTransient,
+} from '@/types/beatvideo'
 import type { TimelineItem } from '@/types/timeline'
 import { resolveBeatvideoMusicGrid } from '@/shared/beatvideo/music-grid'
 import {
@@ -128,6 +134,18 @@ function mapBeatToTimeline(
   }
 }
 
+function mapTransientToTimeline(
+  transient: MusicTransient,
+  placement: MediaTimelineItem,
+  timelineFps: number,
+  sourceSpan: { start: number; end: number },
+): MusicTransient {
+  return {
+    ...transient,
+    time: sourceTimeToTimelineTime(transient.time, placement, timelineFps, sourceSpan),
+  }
+}
+
 function mapSectionToTimeline(
   section: MusicSection,
   placement: MediaTimelineItem,
@@ -198,6 +216,22 @@ export function resolveBeatvideoTimelineGrid(
       bpm: sourceGrid.bpm ? sourceGrid.bpm * placementSpeed : sourceGrid.bpm,
       duration: placement.durationInFrames / timelineFps,
       beats,
+      transients: (sourceGrid.transients ?? [])
+        .filter(
+          (transient) =>
+            transient.time >= sourceSpan.start - EPSILON &&
+            transient.time <= sourceSpan.end + EPSILON,
+        )
+        .map((transient) =>
+          mapTransientToTimeline(transient, placement, timelineFps, sourceSpan),
+        )
+        .filter(
+          (transient) =>
+            transient.time >= placement.from / timelineFps - EPSILON &&
+            transient.time <=
+              (placement.from + placement.durationInFrames) / timelineFps + EPSILON,
+        )
+        .sort((left, right) => left.time - right.time),
       sections: sourceGrid.sections
         .map((section) => mapSectionToTimeline(section, placement, timelineFps, sourceSpan))
         .filter((section): section is MusicSection => section !== null)
