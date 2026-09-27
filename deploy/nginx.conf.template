@@ -1,0 +1,25 @@
+server {
+  listen ${PORT};
+  listen [::]:${PORT};
+  server_name _;
+
+  root /usr/share/nginx/html;
+  index index.html;
+
+  # The editor uses browser media/worker features that require cross-origin isolation.
+  add_header Cross-Origin-Opener-Policy "same-origin" always;
+  add_header Cross-Origin-Embedder-Policy "require-corp" always;
+  add_header X-Content-Type-Options "nosniff" always;
+
+  # The service worker is version-stamped by the build. Revalidate it on each visit
+  # so deploys are picked up without users getting stuck on an old application shell.
+  location = /sw.js {
+    expires -1;
+    try_files $uri =404;
+  }
+
+  # TanStack Router is client-side: unknown application routes fall back to index.html.
+  location / {
+    try_files $uri $uri/ /index.html;
+  }
+}
