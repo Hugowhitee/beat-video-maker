@@ -33,7 +33,9 @@ import {
 import { updateStoredProject, useProjectStore } from '@/features/editor/deps/projects'
 import {
   AUDIO_REACTIVE_PRESETS,
+  buildAudioReactivePresetRemovalUpdate,
   buildAudioReactivePresetUpdate,
+  isAudioReactivePresetApplied,
   type AudioReactivePresetId,
 } from '@/features/editor/deps/effects-contract'
 import {
@@ -1206,28 +1208,40 @@ export function BeatvideoMusicPanel() {
         return
       }
 
+      const removePreset = reactiveTargets.every((item) =>
+        isAudioReactivePresetApplied(item, presetId),
+      )
       const updates = reactiveTargets.flatMap((item) => {
-        const update = buildAudioReactivePresetUpdate({
-          item,
-          grid: timelineGrid.grid,
-          fps,
-          presetId,
-        })
+        const update = removePreset
+          ? buildAudioReactivePresetRemovalUpdate({ item, presetId })
+          : buildAudioReactivePresetUpdate({
+              item,
+              grid: timelineGrid.grid,
+              fps,
+              presetId,
+            })
         return update ? [update] : []
       })
       if (updates.length === 0) {
-        toast.error('This reactive look cannot be applied to the current selection')
+        toast.error('This reactive look cannot be changed for the current selection')
         return
       }
 
       setItemEffectsAndAudioReactive(updates)
       const preset = AUDIO_REACTIVE_PRESETS.find((candidate) => candidate.id === presetId)
-      toast.success(`${preset?.label ?? 'Reactive look'} applied`, {
-        description:
-          updates.length === 1
-            ? 'The layer stays fully editable in Applied effects.'
-            : `${updates.length} layers updated as one edit.`,
-      })
+      toast.success(
+        removePreset
+          ? `${preset?.label ?? 'Reactive look'} removed`
+          : `${preset?.label ?? 'Reactive look'} applied`,
+        removePreset
+          ? undefined
+          : {
+              description:
+                updates.length === 1
+                  ? 'The layer stays fully editable in Applied effects.'
+                  : `${updates.length} layers updated as one edit.`,
+            },
+      )
     },
     [
       currentProject?.beatvideoMode,
@@ -1415,20 +1429,28 @@ export function BeatvideoMusicPanel() {
                 : 'Place the analyzed beat on the timeline before applying reactive looks.'}
             </p>
             <div className="grid grid-cols-2 gap-1.5">
-              {AUDIO_REACTIVE_PRESETS.map((preset) => (
-                <Button
-                  key={preset.id}
-                  type="button"
-                  size="sm"
-                  variant="outline"
-                  className="h-auto min-h-8 justify-start whitespace-normal px-2 py-1.5 text-left text-[10px]"
-                  disabled={!timelineGrid || reactiveTargets.length === 0}
-                  title={preset.description}
-                  onClick={() => applyReactivePreset(preset.id)}
-                >
-                  {preset.label}
-                </Button>
-              ))}
+              {AUDIO_REACTIVE_PRESETS.map((preset) => {
+                const applied =
+                  reactiveTargets.length > 0 &&
+                  reactiveTargets.every((item) =>
+                    isAudioReactivePresetApplied(item, preset.id),
+                  )
+                return (
+                  <Button
+                    key={preset.id}
+                    type="button"
+                    size="sm"
+                    variant={applied ? 'secondary' : 'outline'}
+                    className="h-auto min-h-8 justify-start whitespace-normal px-2 py-1.5 text-left text-[10px]"
+                    disabled={!timelineGrid || reactiveTargets.length === 0}
+                    aria-pressed={applied}
+                    title={applied ? `Remove ${preset.label}` : preset.description}
+                    onClick={() => applyReactivePreset(preset.id)}
+                  >
+                    {applied ? `${preset.label} · Remove` : preset.label}
+                  </Button>
+                )
+              })}
             </div>
           </section>
         ) : null}
