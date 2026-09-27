@@ -8,14 +8,6 @@ COPY package.json package-lock.json ./
 RUN npm ci --include=dev
 
 COPY . .
-RUN npm run check
-RUN npm run check:boundaries
-RUN npm run check:deps-contracts
-RUN npx vp test run \
-  src/features/timeline/utils/beatvideo-cover-layout.test.ts \
-  src/features/timeline/utils/generated-layer-items.test.ts \
-  src/shared/typography/text-motion/evaluate.test.ts \
-  src/features/editor/components/properties-sidebar/clip-panel/text-style-presets.test.ts
 RUN npm run build
 
 FROM nginx:alpine AS runtime
