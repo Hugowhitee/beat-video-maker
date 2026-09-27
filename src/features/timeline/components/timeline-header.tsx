@@ -549,108 +549,113 @@ export const TimelineHeader = memo(function TimelineHeader({
 
             {!isPhotoMode ? (
               <>
-              {!isSimplified ? (
+                {!isSimplified ? (
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    style={btnSize}
+                    className={
+                      activeTool === 'trim-edit'
+                        ? 'bg-primary text-primary-foreground hover:bg-primary/90'
+                        : ''
+                    }
+                    onClick={() =>
+                      setActiveTool(activeTool === 'trim-edit' ? 'select' : 'trim-edit')
+                    }
+                    aria-label={t('timeline.header.trimEditTool')}
+                    data-tooltip={t('timeline.header.trimEditToolTooltip')}
+                  >
+                    <TrimEditIcon className="w-3.5 h-3.5" />
+                  </Button>
+                ) : null}
+
                 <Button
                   variant="ghost"
                   size="icon"
                   style={btnSize}
                   className={
-                    activeTool === 'trim-edit'
+                    activeTool === 'razor'
                       ? 'bg-primary text-primary-foreground hover:bg-primary/90'
                       : ''
                   }
-                  onClick={() => setActiveTool(activeTool === 'trim-edit' ? 'select' : 'trim-edit')}
-                  aria-label={t('timeline.header.trimEditTool')}
-                  data-tooltip={t('timeline.header.trimEditToolTooltip')}
+                  onClick={() => setActiveTool(activeTool === 'razor' ? 'select' : 'razor')}
+                  aria-label={t('timeline.header.razorTool')}
+                  data-tooltip={t('timeline.header.razorToolTooltip')}
                 >
-                  <TrimEditIcon className="w-3.5 h-3.5" />
+                  <Scissors className="w-3.5 h-3.5 -rotate-90" />
                 </Button>
-              ) : null}
-  
-              <Button
-                variant="ghost"
-                size="icon"
-                style={btnSize}
-                className={
-                  activeTool === 'razor'
-                    ? 'bg-primary text-primary-foreground hover:bg-primary/90'
-                    : ''
-                }
-                onClick={() => setActiveTool(activeTool === 'razor' ? 'select' : 'razor')}
-                aria-label={t('timeline.header.razorTool')}
-                data-tooltip={t('timeline.header.razorToolTooltip')}
-              >
-                <Scissors className="w-3.5 h-3.5 -rotate-90" />
-              </Button>
-  
-              {!isSimplified ? (
-                <>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  style={btnSize}
-                  className={
-                    activeTool === 'rate-stretch'
-                      ? 'bg-primary text-primary-foreground hover:bg-primary/90'
-                      : ''
-                  }
-                  onClick={() =>
-                    setActiveTool(activeTool === 'rate-stretch' ? 'select' : 'rate-stretch')
-                  }
-                  aria-label={t('timeline.header.rateStretchTool')}
-                  data-tooltip={t('timeline.header.rateStretchToolTooltip')}
-                >
-                  <Gauge className="w-3.5 h-3.5" />
-                </Button>
-    
-                {SLIP_SLIDE_TOOLS_ENABLED ? (
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        style={{ height: EDITOR_LAYOUT_CSS_VALUES.toolbarButtonSize }}
-                        className={`gap-1 px-2 ${
-                          activeTool === 'slip' || activeTool === 'slide'
-                            ? 'bg-primary text-primary-foreground hover:bg-primary/90'
-                            : ''
-                        }`}
-                        aria-label={t('timeline.header.slipSlideTools')}
-                        data-tooltip={t('timeline.header.slipSlideToolsTooltip')}
-                      >
-                        <span className="flex items-center gap-1">
-                          <span className="inline-flex items-center justify-center">
-                            <SlipSlideFlyoutIcon className="w-3.5 h-3.5" />
-                          </span>
-                          <ChevronDown className="w-3 h-3 opacity-70" />
-                        </span>
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="start">
-                      <DropdownMenuItem
-                        onClick={() => setActiveTool(activeTool === 'slip' ? 'select' : 'slip')}
-                      >
-                        <ArrowRightLeft className="w-3.5 h-3.5" />
-                        <span className="flex-1">{t('timeline.header.slipTool')}</span>
-                        <span className="text-xs text-muted-foreground">
-                          {formatHotkeyBinding(hotkeys.SLIP_TOOL)}
-                        </span>
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        onClick={() => setActiveTool(activeTool === 'slide' ? 'select' : 'slide')}
-                      >
-                        <BetweenHorizontalEnd className="w-3.5 h-3.5" />
-                        <span className="flex-1">{t('timeline.header.slideTool')}</span>
-                        <span className="text-xs text-muted-foreground">
-                          {formatHotkeyBinding(hotkeys.SLIDE_TOOL)}
-                        </span>
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-  
-                </>
-              ) : null}
-              ) : null}
-                </>
+
+                {!isSimplified ? (
+                  <>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      style={btnSize}
+                      className={
+                        activeTool === 'rate-stretch'
+                          ? 'bg-primary text-primary-foreground hover:bg-primary/90'
+                          : ''
+                      }
+                      onClick={() =>
+                        setActiveTool(activeTool === 'rate-stretch' ? 'select' : 'rate-stretch')
+                      }
+                      aria-label={t('timeline.header.rateStretchTool')}
+                      data-tooltip={t('timeline.header.rateStretchToolTooltip')}
+                    >
+                      <Gauge className="w-3.5 h-3.5" />
+                    </Button>
+
+                    {SLIP_SLIDE_TOOLS_ENABLED ? (
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            style={{ height: EDITOR_LAYOUT_CSS_VALUES.toolbarButtonSize }}
+                            className={`gap-1 px-2 ${
+                              activeTool === 'slip' || activeTool === 'slide'
+                                ? 'bg-primary text-primary-foreground hover:bg-primary/90'
+                                : ''
+                            }`}
+                            aria-label={t('timeline.header.slipSlideTools')}
+                            data-tooltip={t('timeline.header.slipSlideToolsTooltip')}
+                          >
+                            <span className="flex items-center gap-1">
+                              <span className="inline-flex items-center justify-center">
+                                <SlipSlideFlyoutIcon className="w-3.5 h-3.5" />
+                              </span>
+                              <ChevronDown className="w-3 h-3 opacity-70" />
+                            </span>
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="start">
+                          <DropdownMenuItem
+                            onClick={() =>
+                              setActiveTool(activeTool === 'slip' ? 'select' : 'slip')
+                            }
+                          >
+                            <ArrowRightLeft className="w-3.5 h-3.5" />
+                            <span className="flex-1">{t('timeline.header.slipTool')}</span>
+                            <span className="text-xs text-muted-foreground">
+                              {formatHotkeyBinding(hotkeys.SLIP_TOOL)}
+                            </span>
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={() =>
+                              setActiveTool(activeTool === 'slide' ? 'select' : 'slide')
+                            }
+                          >
+                            <BetweenHorizontalEnd className="w-3.5 h-3.5" />
+                            <span className="flex-1">{t('timeline.header.slideTool')}</span>
+                            <span className="text-xs text-muted-foreground">
+                              {formatHotkeyBinding(hotkeys.SLIDE_TOOL)}
+                            </span>
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    ) : null}
+                  </>
+                ) : null}
+              </>
             ) : null}
           </div>
 
