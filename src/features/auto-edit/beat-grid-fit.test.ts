@@ -54,6 +54,61 @@ describe('stabilizeBeatGrid', () => {
     expect(result.rhythm.beats[0]).toBeCloseTo(0.495, 2)
   })
 
+  it('repairs a stable 95 BPM grid when tempo is right but beat phase is far off', () => {
+    const period = 60 / 95
+    const audiblePhase = 0.31
+    const detectorPhase = audiblePhase + 0.21
+    const beats = Array.from({ length: 48 }, (_, index) => detectorPhase + index * period)
+    const transients = Array.from({ length: 48 }, (_, index) => ({
+      time: audiblePhase + index * period,
+      index,
+      strength: 0.94,
+      low: 0.92,
+      mid: 0.24,
+      high: 0.08,
+    }))
+
+    const result = stabilizeBeatGrid(
+      rhythm({ beats, bpm: 95, downbeats: beats.filter((_, index) => index % 4 === 0), transients }),
+      31,
+    )
+
+    expect(result.fit.mode).toBe('fixed')
+    expect(result.rhythm.bpm).toBeCloseTo(95, 1)
+    expect(result.fit.phaseShiftMs).toBeLessThan(-170)
+    expect(result.rhythm.beats[0]).toBeCloseTo(audiblePhase, 2)
+  })
+
+  it('does not let strong off-beat hats steal the grid from low-end beat onsets', () => {
+    const period = 0.5
+    const phase = 0.4
+    const beats = Array.from({ length: 48 }, (_, index) => phase + index * period)
+    const transients = beats.flatMap((time, index) => [
+      {
+        time,
+        index: index * 2,
+        strength: 0.84,
+        low: 0.9,
+        mid: 0.22,
+        high: 0.08,
+      },
+      {
+        time: time + period / 2,
+        index: index * 2 + 1,
+        strength: 1,
+        low: 0.04,
+        mid: 0.24,
+        high: 0.98,
+      },
+    ])
+
+    const result = stabilizeBeatGrid(rhythm({ beats, bpm: 120, transients }), 25)
+
+    expect(result.fit.mode).toBe('fixed')
+    expect(Math.abs(result.fit.phaseShiftMs)).toBeLessThan(40)
+    expect(result.rhythm.beats[0]).toBeCloseTo(phase, 2)
+  })
+
   it('keeps a drifting live-tempo sequence as a variable beat map', () => {
     const beats: number[] = []
     let time = 0.4
