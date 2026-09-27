@@ -22,8 +22,10 @@ import {
   Captions,
   Sticker,
   WandSparkles,
+  Maximize2,
 } from 'lucide-react'
 import { motion, useReducedMotion } from 'motion/react'
+import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/shared/ui/cn'
 import { useEditorStore } from '@/shared/state/editor'
@@ -53,6 +55,7 @@ import {
   createTextTemplateItem,
   getDefaultGeneratedLayerDurationInFrames,
   resolvePhotoPublishingDurationInFrames,
+  computeInitialTransform,
 } from '@/features/editor/deps/timeline-utils'
 import { addAdjustmentLayer } from '../utils/add-adjustment-layer'
 import type { TextItem, ShapeItem, ShapeType } from '@/types/timeline'
@@ -294,6 +297,14 @@ const TEXT_TEMPLATE_GROUPS: ReadonlyArray<{
 
 const DEFAULT_TEXT_TEMPLATE_LABEL = 'Text'
 const ADD_TEXT_TEMPLATE_LABEL = 'Add Text'
+const PHOTO_QUICK_EFFECT_IDS = [
+  'gpu-grain',
+  'gpu-vignette',
+  'gpu-glow',
+  'gpu-sharpen',
+  'gpu-rgb-split',
+  'gpu-gaussian-blur',
+] as const
 
 export const MediaSidebar = memo(function MediaSidebar({
   beatvideoMode = 'video',
@@ -316,6 +327,7 @@ export const MediaSidebar = memo(function MediaSidebar({
 
   const [beatTabActivated, setBeatTabActivated] = useState(activeTab === 'beat')
   const [aiTabActivated, setAiTabActivated] = useState(activeTab === 'ai')
+  const [showAllPhotoEffects, setShowAllPhotoEffects] = useState(false)
   // The Lottie panel hits an external API on mount, so keep it unmounted until
   // the tab is first opened; it then stays mounted (state preserved).
   const [lottieTabActivated, setLottieTabActivated] = useState(activeTab === 'lottie')
@@ -518,6 +530,52 @@ export const MediaSidebar = memo(function MediaSidebar({
     selectItems([textItem.id])
   }, [])
 
+  const handleFitPhotoCoverToBeat = useCallback(() => {
+    const timeline = useTimelineStore.getState()
+    const selection = useSelectionStore.getState()
+    const currentProject = useProjectStore.getState().currentProject
+    const selectedCover = selection.selectedItemIds
+      .map((id) => timeline.items.find((item) => item.id === id))
+      .find((item) => item?.type === 'image')
+    const cover = selectedCover ?? timeline.items.find((item) => item.type === 'image')
+
+    if (!cover || cover.type !== 'image') {
+      toast.warning('Add a cover image first')
+      return
+    }
+
+    const canvasWidth = currentProject?.metadata.width ?? DEFAULT_PROJECT_WIDTH
+    const canvasHeight = currentProject?.metadata.height ?? DEFAULT_PROJECT_HEIGHT
+    const sourceWidth = cover.sourceWidth ?? canvasWidth
+    const sourceHeight = cover.sourceHeight ?? canvasHeight
+    const fitted = computeInitialTransform(
+      sourceWidth,
+      sourceHeight,
+      canvasWidth,
+      canvasHeight,
+      'cover',
+    )
+    const publishDuration = resolvePhotoPublishingDurationInFrames(timeline.fps, {
+      beatvideoMode: 'photo',
+      beatvideoMusic: currentProject?.beatvideoMusic,
+      projectMedia: useMediaLibraryStore.getState().mediaItems,
+      timelineItems: timeline.items,
+    })
+
+    timeline.updateItem(cover.id, {
+      transform: {
+        ...cover.transform,
+        ...fitted,
+      },
+      from: 0,
+      ...(publishDuration > 0 ? { durationInFrames: publishDuration } : {}),
+    })
+    selection.setActiveTrack(cover.trackId)
+    selection.selectItems([cover.id])
+
+    toast.success(publishDuration > 0 ? 'Cover fitted to beat' : 'Cover fitted to frame')
+  }, [])
+
   // Add shape item on its own new layer at the playhead, matching the canvas drop.
   const handleAddShape = useCallback((shapeType: ShapeType, shapePreset?: 'solid' | 'gradient') => {
     // Read all needed state from stores directly to avoid subscriptions
@@ -573,9 +631,34 @@ export const MediaSidebar = memo(function MediaSidebar({
     (presetId: string) => {
       const preset = EFFECT_PRESETS.find((p) => p.id === presetId)
       if (!preset) return
+
+      if (beatvideoMode === 'photo') {
+        const { selectedItemIds } = useSelectionStore.getState()
+        const { items, addEffect } = useTimelineStore.getState()
+        const selectedVisualIds = selectedItemIds.filter((id) => {
+          const item = items.find((candidate) => candidate.id === id)
+          return item && (item.type === 'image' || item.type === 'video')
+        })
+        const coverId = items.find((item) => item.type === 'image')?.id
+        const visualIds =
+          selectedVisualIds.length > 0
+            ? selectedVisualIds
+            : coverId
+              ? [coverId]
+              : []
+
+        if (visualIds.length > 0) {
+          preset.effects.forEach((effect) => {
+            visualIds.forEach((id) => addEffect(id, effect))
+          })
+          useSelectionStore.getState().selectItems(visualIds)
+          return
+        }
+      }
+
       handleAddAdjustmentLayer(preset.effects, preset.name)
     },
-    [handleAddAdjustmentLayer],
+    [beatvideoMode, handleAddAdjustmentLayer],
   )
 
   // Add a single GPU effect ââ‚¬” to selected clips, or as adjustment layer if nothing selected
@@ -585,10 +668,25 @@ export const MediaSidebar = memo(function MediaSidebar({
       const { items, addEffect } = useTimelineStore.getState()
 
       // Find selected visual items (not audio)
-      const visualIds = selectedItemIds.filter((id) => {
+      const selectedVisualIds = selectedItemIds.filter((id) => {
         const item = items.find((i) => i.id === id)
-        return item && item.type !== 'audio'
+        return (
+          item &&
+          (beatvideoMode === 'photo'
+            ? item.type === 'image' || item.type === 'video'
+            : item.type !== 'audio')
+        )
       })
+      const photoCoverId =
+        beatvideoMode === 'photo'
+          ? items.find((item) => item.type === 'image')?.id
+          : undefined
+      const visualIds =
+        selectedVisualIds.length > 0
+          ? selectedVisualIds
+          : photoCoverId
+            ? [photoCoverId]
+            : []
 
       if (visualIds.length > 0) {
         const defaults = getGpuEffectDefaultParams(gpuEffectId)
@@ -606,10 +704,17 @@ export const MediaSidebar = memo(function MediaSidebar({
         ])
       }
     },
-    [handleAddAdjustmentLayer],
+    [beatvideoMode, handleAddAdjustmentLayer],
   )
 
   const { gpuCategories, triggerPreviews } = useGpuEffectPreviewData()
+  const photoQuickEffects = useMemo(() => {
+    const allEffects = gpuCategories.flatMap(({ effects }) => effects)
+    return PHOTO_QUICK_EFFECT_IDS.flatMap((id) => {
+      const effect = allEffects.find((candidate) => candidate.id === id)
+      return effect ? [effect] : []
+    })
+  }, [gpuCategories])
   // Which effect/preset tile is hovered — drives its live sweep animation.
   const [hoveredEffectKey, setHoveredEffectKey] = useState<string | null>(null)
   const textTemplatesByLayout = useMemo(() => {
@@ -849,7 +954,21 @@ export const MediaSidebar = memo(function MediaSidebar({
             <div
               className={`min-h-0 flex-1 overflow-y-auto p-3 ${activeTab === 'overlay' ? 'block' : 'hidden'}`}
             >
-              <section className="space-y-2">
+              <section className="space-y-2 border-b border-border pb-3">
+                <div className="text-xs font-medium text-foreground">Cover</div>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  className="w-full justify-start"
+                  onClick={handleFitPhotoCoverToBeat}
+                >
+                  <Maximize2 className="h-3.5 w-3.5" />
+                  Fit cover to beat
+                </Button>
+              </section>
+
+              <section className="space-y-2 pt-3">
                 <div className="text-xs font-medium text-foreground">Text</div>
                 <div className="grid grid-cols-3 gap-1.5">
                   <button
@@ -1205,6 +1324,53 @@ export const MediaSidebar = memo(function MediaSidebar({
               className={`min-h-0 flex-1 overflow-y-auto p-3 ${activeTab === 'effects' ? 'block' : 'hidden'}`}
             >
               <div className="space-y-3">
+                {beatvideoMode === 'photo' ? (
+                  <div className="space-y-2">
+                    <div className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+                      Essentials
+                    </div>
+                    <div className="grid grid-cols-3 gap-1.5">
+                      {photoQuickEffects.map((def) => (
+                        <button
+                          key={def.id}
+                          type="button"
+                          onMouseEnter={() => setHoveredEffectKey(def.id)}
+                          onMouseLeave={() =>
+                            setHoveredEffectKey((key) => (key === def.id ? null : key))
+                          }
+                          onClick={() => handleAddGpuEffect(def.id)}
+                          className="flex flex-col items-center gap-1 rounded-md border border-border bg-secondary/30 p-1.5 transition-[transform,background-color,border-color,color] duration-150 hover:border-primary/50 hover:bg-secondary/50 active:scale-[0.98] group"
+                        >
+                          <EffectThumbnail
+                            effectId={def.id}
+                            active={hoveredEffectKey === def.id}
+                            className="w-full aspect-video rounded-sm"
+                          />
+                          <span className="w-full truncate text-center text-[10px] leading-tight text-muted-foreground group-hover:text-foreground">
+                            {def.name}
+                          </span>
+                        </button>
+                      ))}
+                    </div>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="ghost"
+                      className="w-full justify-between px-2 text-xs"
+                      onClick={() => setShowAllPhotoEffects((value) => !value)}
+                    >
+                      {showAllPhotoEffects ? 'Hide advanced effects' : 'All effects'}
+                      {showAllPhotoEffects ? (
+                        <ChevronUp className="h-3.5 w-3.5" />
+                      ) : (
+                        <ChevronDown className="h-3.5 w-3.5" />
+                      )}
+                    </Button>
+                  </div>
+                ) : null}
+
+                {beatvideoMode !== 'photo' || showAllPhotoEffects ? (
+                  <>
                 {/* Blank Adjustment Layer */}
                 <button
                   draggable={true}
@@ -1312,6 +1478,8 @@ export const MediaSidebar = memo(function MediaSidebar({
                     </div>
                   </div>
                 ))}
+                  </>
+                ) : null}
               </div>
             </div>
 

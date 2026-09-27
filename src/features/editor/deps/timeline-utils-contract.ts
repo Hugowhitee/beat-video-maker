@@ -17,6 +17,7 @@ export { createScrubThrottleState, shouldCommitScrubFrame } from '@/features/tim
 export { findCompatibleTrackForItemType } from '@/features/timeline/utils/track-item-compatibility'
 export { findNearestAvailableSpace } from '@/features/timeline/utils/collision-utils'
 export { resolvePhotoPublishingDurationInFrames } from '@/features/timeline/utils/dropped-media'
+export { computeInitialTransform } from '@/features/timeline/utils/transform-init'
 export { resolveEffectiveTrackStates } from '@/features/timeline/utils/group-utils'
 export { getMaxTransitionDurationForHandles } from '@/features/timeline/utils/transition-utils'
 export { resolveTransitionTargetFromSelection } from '@/features/timeline/utils/transition-targets'

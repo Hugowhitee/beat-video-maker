@@ -206,7 +206,7 @@ function ChangelogPage() {
             </div>
             <Button asChild className="gap-2">
               <Link to="/projects">
-                {t('changelog.openFreeCut')}
+                Open Beatvideo Maker
                 <ArrowRight className="h-4 w-4" />
               </Link>
             </Button>
