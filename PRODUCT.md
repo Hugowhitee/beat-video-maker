@@ -15,7 +15,7 @@ Music producers and creators who already understand timelines, beats, bars and b
 The app is project-first globally and **beat-first inside a project**.
 
 1. **Projects** — open an existing project or create one.
-2. **New project** — keep setup minimal: name, Photo/Video type and only output settings that must be known up front.
+2. **New project** — keep setup minimal: name, Photo/Video type and only output settings that must be known up front. Photo/Video is project configuration: change it from project settings when needed, not from a persistent editor-toolbar toggle.
 3. **Beat** — import/select the beat, enter a known BPM or analyze it, verify the musical grid and place producer tags/watermarks.
 4. **Visual** — add the hero cover or footage, then use beat-reactive looks, Auto Arrange/manual timeline editing, text and effects.
 5. **Master** — finish the stereo beat through the project master rack while preview and export use the same processing model.
@@ -35,6 +35,8 @@ Photo mode is the fastest path for a beat visual:
 - generic video-only controls stay out of the normal path.
 
 Overlay means real timeline/compositor layers built from FreeCut primitives: text, imported logo/image and simple shapes. It is not a renamed preset/look menu.
+
+Audio reactivity is a capability of effect parameters, not a small preset category. Quick reactive looks are shortcuts only. Any GPU-effect numeric parameter marked safe/animatable by the effect definition should expose the same Beat/Downbeat, Threshold, Amount and Release controls. Non-numeric choices, quality-only controls and parameters that cannot be modulated deterministically do not expose React.
 
 ## Video mode
 
