@@ -1,4 +1,4 @@
-import type { BeatvideoMusicAnalysis, MusicBeat, MusicMap } from '@/types/beatvideo'
+import type { BeatvideoMusicAnalysis, MusicBeat, MusicMap, MusicSection } from '@/types/beatvideo'
 import type { TimelineItem } from '@/types/timeline'
 import { resolveBeatvideoMusicGrid } from '@/shared/beatvideo/music-grid'
 import {
@@ -128,6 +128,25 @@ function mapBeatToTimeline(
   }
 }
 
+function mapSectionToTimeline(
+  section: MusicSection,
+  placement: MediaTimelineItem,
+  timelineFps: number,
+  sourceSpan: { start: number; end: number },
+): MusicSection | null {
+  const sourceStart = Math.max(sourceSpan.start, section.start)
+  const sourceEnd = Math.min(sourceSpan.end, section.end)
+  if (sourceEnd <= sourceStart + EPSILON) return null
+
+  const mappedStart = sourceTimeToTimelineTime(sourceStart, placement, timelineFps, sourceSpan)
+  const mappedEnd = sourceTimeToTimelineTime(sourceEnd, placement, timelineFps, sourceSpan)
+  return {
+    ...section,
+    start: Math.min(mappedStart, mappedEnd),
+    end: Math.max(mappedStart, mappedEnd),
+  }
+}
+
 export function resolveBeatvideoTimelineGrid(
   analysis: BeatvideoMusicAnalysis,
   items: readonly TimelineItem[],
@@ -179,9 +198,10 @@ export function resolveBeatvideoTimelineGrid(
       bpm: sourceGrid.bpm ? sourceGrid.bpm * placementSpeed : sourceGrid.bpm,
       duration: placement.durationInFrames / timelineFps,
       beats,
-      // Music sections remain source-domain analysis evidence for now. The
-      // timeline overlay consumes beats/downbeats only.
-      sections: [],
+      sections: sourceGrid.sections
+        .map((section) => mapSectionToTimeline(section, placement, timelineFps, sourceSpan))
+        .filter((section): section is MusicSection => section !== null)
+        .sort((left, right) => left.start - right.start),
     },
     barOneTimelineTime,
   }
