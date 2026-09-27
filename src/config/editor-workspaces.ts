@@ -7,11 +7,12 @@
  * panel inside a workspace, and their per-workspace tweaks are persisted
  * by the editor store (`editor:workspaceLayout:<id>` in localStorage).
  */
-export type EditorWorkspaceId = 'edit' | 'color' | 'motion'
+export type EditorWorkspaceId = 'beat' | 'edit' | 'master' | 'color' | 'motion'
 
 export type EditorSidebarTab =
   | 'media'
   | 'beat'
+  | 'master'
   | 'overlay'
   | 'text'
   | 'shapes'
@@ -31,10 +32,22 @@ export interface EditorWorkspaceLayout {
 }
 
 const EDITOR_WORKSPACE_PRESETS: Record<EditorWorkspaceId, EditorWorkspaceLayout> = {
+  beat: {
+    colorScopesOpen: false,
+    clipInspectorTab: 'audio',
+    activeTab: 'beat',
+    propertiesFullColumn: false,
+  },
   edit: {
     colorScopesOpen: false,
     clipInspectorTab: 'video',
     activeTab: 'media',
+    propertiesFullColumn: false,
+  },
+  master: {
+    colorScopesOpen: false,
+    clipInspectorTab: 'audio',
+    activeTab: 'master',
     propertiesFullColumn: false,
   },
   color: {
@@ -59,15 +72,20 @@ const EDITOR_WORKSPACE_PRESETS: Record<EditorWorkspaceId, EditorWorkspaceLayout>
  * rather than editing them, so the color workspace shrinks the timeline.
  */
 export const EDITOR_WORKSPACE_TIMELINE_SIZE: Record<EditorWorkspaceId, number | null> = {
+  beat: null,
   edit: null,
+  master: 18,
   color: 18,
   // Motion reuses the standard split and swaps only the timeline surface.
   motion: null,
 }
 
-const DEFAULT_EDITOR_WORKSPACE: EditorWorkspaceId = 'edit'
+const DEFAULT_EDITOR_WORKSPACE: EditorWorkspaceId = 'beat'
 
 export function normalizeEditorWorkspaceId(value: unknown): EditorWorkspaceId {
+  if (value === 'beat') return 'beat'
+  if (value === 'master') return 'master'
+  if (value === 'edit') return 'edit'
   if (value === 'color') return 'color'
   // Animate and Compose were separate historical surfaces. Both now migrate
   // into the single Motion workspace so persisted sessions cannot reopen the
@@ -79,6 +97,7 @@ export function normalizeEditorWorkspaceId(value: unknown): EditorWorkspaceId {
 const SIDEBAR_TABS: readonly EditorSidebarTab[] = [
   'media',
   'beat',
+  'master',
   'overlay',
   'text',
   'shapes',
