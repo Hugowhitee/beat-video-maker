@@ -32,7 +32,9 @@ import {
 } from '@/features/editor/deps/media-library'
 import { updateStoredProject, useProjectStore } from '@/features/editor/deps/projects'
 import {
+  captureSnapshot,
   useItemsStore,
+  useTimelineCommandStore,
   useTimelineSettingsStore,
   useTimelineStore,
 } from '@/features/editor/deps/timeline-store'
@@ -215,6 +217,7 @@ export function BeatvideoMusicPanel() {
   const mediaItems = useMediaLibraryStore((state) => state.mediaItems)
   const currentProject = useProjectStore((state) => state.currentProject)
   const items = useItemsStore((state) => state.items)
+  const tracks = useItemsStore((state) => state.tracks)
   const currentFrame = usePlaybackStore((state) => state.currentFrame)
   const fps = useTimelineSettingsStore((state) => state.fps)
   const beatGridVisible = useTimelineSettingsStore((state) => state.beatGridVisible)
@@ -250,6 +253,7 @@ export function BeatvideoMusicPanel() {
   const [bpmDraft, setBpmDraft] = useState('')
   const abortRef = useRef<AbortController | null>(null)
   const autoEditAbortRef = useRef<AbortController | null>(null)
+  const tagMixSnapshotRef = useRef<ReturnType<typeof captureSnapshot> | null>(null)
 
   const selectedAnalysis =
     analysis?.mediaId === selectedMediaId ? analysis : null
@@ -269,6 +273,14 @@ export function BeatvideoMusicPanel() {
     : 'detected'
   const barCount =
     resolvedSourceGrid?.beats.filter((beat) => beat.downbeat).length ?? 0
+  const producerTrack = useMemo(
+    () => tracks.find((track) => track.kind === 'audio' && track.name === 'Producer tags') ?? null,
+    [tracks],
+  )
+  const watermarkTrack = useMemo(
+    () => tracks.find((track) => track.kind === 'audio' && track.name === 'Watermarks') ?? null,
+    [tracks],
+  )
   const videoCandidates = useMemo(
     () => mediaItems.filter((media) => media.mimeType.startsWith('video/')),
     [mediaItems],
@@ -346,6 +358,80 @@ export function BeatvideoMusicPanel() {
     [currentProject],
   )
 
+  const ensureTagTrack = useCallback((kind: 'producer' | 'watermark') => {
+    const timeline = useTimelineStore.getState()
+    const trackName = kind === 'producer' ? 'Producer tags' : 'Watermarks'
+    const existing = timeline.tracks.find(
+      (track) => track.kind === 'audio' && track.name === trackName,
+    )
+    if (existing) return existing
+
+    const before = captureSnapshot()
+    const maxOrder = timeline.tracks.reduce(
+      (max, track) => Math.max(max, track.order ?? 0),
+      0,
+    )
+    const track = {
+      ...createClassicTrack({
+        tracks: timeline.tracks,
+        kind: 'audio',
+        order: maxOrder + 1,
+      }),
+      name: trackName,
+      color: kind === 'producer' ? '#f59e0b' : '#14b8a6',
+    }
+    timeline.setTracks([...timeline.tracks, track])
+    timeline.markDirty()
+    useTimelineCommandStore.getState().addUndoEntry(
+      { type: 'CREATE_TAG_TRACK', payload: { kind } },
+      before,
+    )
+    return track
+  }, [])
+
+  const beginTagMixGesture = useCallback(() => {
+    tagMixSnapshotRef.current ??= captureSnapshot()
+  }, [])
+
+  const patchTagTrack = useCallback(
+    (
+      kind: 'producer' | 'watermark',
+      patch: { volume?: number; muted?: boolean },
+    ) => {
+      beginTagMixGesture()
+      const timeline = useTimelineStore.getState()
+      const trackName = kind === 'producer' ? 'Producer tags' : 'Watermarks'
+      const nextTracks = timeline.tracks.map((track) =>
+        track.kind === 'audio' && track.name === trackName
+          ? { ...track, ...patch }
+          : track,
+      )
+      timeline.setTracks(nextTracks)
+      timeline.markDirty()
+    },
+    [beginTagMixGesture],
+  )
+
+  const endTagMixGesture = useCallback(() => {
+    const before = tagMixSnapshotRef.current
+    tagMixSnapshotRef.current = null
+    if (!before) return
+    useTimelineCommandStore.getState().addUndoEntry(
+      { type: 'UPDATE_TAG_TRACK_MIX', payload: {} },
+      before,
+    )
+  }, [])
+
+  const toggleTagTrackMute = useCallback(
+    (kind: 'producer' | 'watermark') => {
+      const track = kind === 'producer' ? producerTrack : watermarkTrack
+      if (!track) return
+      patchTagTrack(kind, { muted: !track.muted })
+      endTagMixGesture()
+    },
+    [endTagMixGesture, patchTagTrack, producerTrack, watermarkTrack],
+  )
+
   const importBeat = useCallback(async () => {
     if (importingBeat) return
     setImportingBeat(true)
@@ -387,6 +473,7 @@ export function BeatvideoMusicPanel() {
 
         if (kind === 'producer') setSelectedTagMediaId(tag.id)
         else setSelectedWatermarkMediaId(tag.id)
+        ensureTagTrack(kind)
         setTagTool(kind)
         toast.success(kind === 'producer' ? 'Producer tag imported' : 'Watermark imported', {
           description:
@@ -402,7 +489,7 @@ export function BeatvideoMusicPanel() {
         setImportingTag(false)
       }
     },
-    [importingTag, selectedMediaId],
+    [ensureTagTrack, importingTag, selectedMediaId],
   )
 
   const ensureBeatPlacement = useCallback(
