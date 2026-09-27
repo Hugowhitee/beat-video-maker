@@ -60,6 +60,7 @@ export const AudioReactiveParamControls = memo(function AudioReactiveParamContro
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
+            <SelectItem value="audio">Audio hit</SelectItem>
             <SelectItem value="beat">Beat grid</SelectItem>
             <SelectItem value="downbeat">Downbeat</SelectItem>
             <SelectItem value="low">Low / bass</SelectItem>
