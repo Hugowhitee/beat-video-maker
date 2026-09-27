@@ -173,6 +173,13 @@ export interface TimelineActions {
   removeEffect: (itemId: string, effectId: string) => void
   toggleEffect: (itemId: string, effectId: string) => void
   setItemEffects: (updates: Array<{ itemId: string; effects: ItemEffect[] }>) => void
+  setItemEffectsAndAudioReactive: (
+    updates: Array<{
+      itemId: string
+      effects: ItemEffect[]
+      audioReactive?: AudioReactiveState
+    }>,
+  ) => void
   // Transition actions
   addTransition: (
     leftClipId: string,

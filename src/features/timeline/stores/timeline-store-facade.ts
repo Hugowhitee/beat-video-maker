@@ -158,6 +158,7 @@ function getSnapshot(): TimelineState & TimelineActions {
       removeEffect: timelineActions.removeEffect,
       toggleEffect: timelineActions.toggleEffect,
       setItemEffects: timelineActions.setItemEffects,
+      setItemEffectsAndAudioReactive: timelineActions.setItemEffectsAndAudioReactive,
       addTransition: timelineActions.addTransition,
       updateTransition: timelineActions.updateTransition,
       updateTransitions: timelineActions.updateTransitions,
