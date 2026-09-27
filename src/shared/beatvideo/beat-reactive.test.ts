@@ -70,6 +70,7 @@ describe('audio reactive modulation', () => {
       threshold: 0.4,
       useStrength: true,
       amount: 0.1,
+      releaseFrames: 4,
     })
     const s: AudioReactiveState = {
       ...state([b]),
