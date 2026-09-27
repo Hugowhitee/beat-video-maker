@@ -662,20 +662,51 @@ export function BeatvideoMusicPanel() {
   )
 
   const applyBpm = useCallback(async () => {
-    if (!effectiveAnalysis) return
     const nextBpm = Number(bpmDraft)
     if (!Number.isFinite(nextBpm) || nextBpm < 40 || nextBpm > 300) {
       toast.error('Enter a BPM between 40 and 300')
       return
     }
-    await persistAnalysis({
-      ...effectiveAnalysis,
+
+    if (effectiveAnalysis) {
+      await persistAnalysis({
+        ...effectiveAnalysis,
+        version: 2,
+        bpmOverride: nextBpm,
+        gridMode: 'fixed',
+        correctionAnchors: effectiveAnalysis.correctionAnchors ?? [],
+      })
+      toast.success(`Fixed grid set to ${nextBpm} BPM`)
+      return
+    }
+
+    const media = mediaItems.find((candidate) => candidate.id === selectedMediaId)
+    if (!media || media.duration <= 0) {
+      toast.error('Select a beat with a known duration first')
+      return
+    }
+
+    const next: BeatvideoMusicAnalysis = {
       version: 2,
+      mediaId: media.id,
+      analyzedAt: Date.now(),
+      musicMap: {
+        duration: media.duration,
+        bpm: nextBpm,
+        beatsPerBar: 4,
+        beats: [],
+        sections: [],
+      },
+      detectedBarOneTime: null,
+      barOneTime: 0,
+      barOneVerified: false,
       bpmOverride: nextBpm,
       gridMode: 'fixed',
-      correctionAnchors: effectiveAnalysis.correctionAnchors ?? [],
-    })
-  }, [bpmDraft, effectiveAnalysis, persistAnalysis])
+      correctionAnchors: [],
+    }
+    await persistAnalysis(next)
+    toast.success(`Fixed grid set to ${nextBpm} BPM`)
+  }, [bpmDraft, effectiveAnalysis, mediaItems, persistAnalysis, selectedMediaId])
 
   const resetToDetected = useCallback(async () => {
     if (!effectiveAnalysis) return
@@ -951,6 +982,33 @@ export function BeatvideoMusicPanel() {
                 ? 'Analyze / replace grid'
                 : 'Analyze beat'}
           </Button>
+
+          <div className="flex items-center gap-1.5">
+            <input
+              type="number"
+              min={40}
+              max={300}
+              step={0.01}
+              value={bpmDraft}
+              placeholder="BPM"
+              disabled={!selectedMediaId || analyzing}
+              onChange={(event) => setBpmDraft(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter') void applyBpm()
+              }}
+              className="h-8 min-w-0 flex-1 rounded-md border border-input bg-secondary px-2 font-mono text-xs text-foreground"
+              aria-label="Manual fixed BPM"
+            />
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              disabled={!selectedMediaId || analyzing || bpmDraft.trim() === ''}
+              onClick={() => void applyBpm()}
+            >
+              Use BPM
+            </Button>
+          </div>
 
           {analyzing && progress ? (
             <div className="space-y-1.5">
