@@ -79,6 +79,7 @@ The canonical rule is:
 - low/mid/high transient-energy evidence drives reactive effects and is visualized in a compact DJ-style analysis strip in Beat; that strip overlays the actual beat/downbeat/Bar-1 positions so the user can inspect spectral evidence against the grid without pretending low/mid/high are a kick/snare/hat classifier; do not scatter decorative color dots over the ruler;
 - bar 1 is visually unambiguous, is never assumed to be 0:00, and detected bar 1 is distinguished from a user-verified bar 1;
 - DJ-style corrections (phase nudge and correction anchors) are explicit, reversible source-domain project state;
+- precision alignment deliberately reuses the canonical timeline waveform: focusing Bar 1 or a nearby beat zooms and centers the normal timeline to onset detail, shows playhead-to-grid offset, and applies whole-grid/Bar-1/local-anchor correction from there; never introduce a second correction waveform or hidden time axis;
 - multiple correction anchors form a piecewise timing map so long tracks can be corrected without forcing one global BPM;
 - analysis progress is visible while work is actually running.
 
