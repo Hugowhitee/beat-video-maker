@@ -651,6 +651,11 @@ export function BeatvideoMusicPanel() {
         return
       }
 
+      if (effectiveAnalysis.musicMap.beats.length === 0) {
+        toast.info('Run beat analysis first to use detected timing')
+        return
+      }
+
       await persistAnalysis({
         ...effectiveAnalysis,
         version: 2,
@@ -710,6 +715,10 @@ export function BeatvideoMusicPanel() {
 
   const resetToDetected = useCallback(async () => {
     if (!effectiveAnalysis) return
+    if (effectiveAnalysis.musicMap.beats.length === 0) {
+      toast.info('Run beat analysis first to restore detected timing')
+      return
+    }
     await persistAnalysis({
       ...effectiveAnalysis,
       version: 2,
@@ -1325,6 +1334,7 @@ export function BeatvideoMusicPanel() {
                       type="button"
                       size="sm"
                       variant={gridMode === 'detected' ? 'default' : 'outline'}
+                      disabled={effectiveAnalysis.musicMap.beats.length === 0}
                       onClick={() => void setGridMode('detected')}
                     >
                       Detected beatmap
@@ -1343,48 +1353,6 @@ export function BeatvideoMusicPanel() {
                     one even tempo grid.
                   </p>
                 </section>
-
-                {gridMode === 'fixed' ? (
-                  <section className="space-y-2">
-                    <div className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
-                      Fixed tempo
-                    </div>
-                    <div className="flex gap-1.5">
-                      <input
-                        type="number"
-                        min={40}
-                        max={300}
-                        step={0.01}
-                        value={bpmDraft}
-                        onChange={(event) => setBpmDraft(event.target.value)}
-                        onKeyDown={(event) => {
-                          if (event.key === 'Enter') void applyBpm()
-                        }}
-                        className="h-8 min-w-0 flex-1 rounded-md border border-input bg-secondary px-2 font-mono text-xs text-foreground"
-                        aria-label="Fixed BPM"
-                      />
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="outline"
-                        onClick={() => void applyBpm()}
-                      >
-                        Apply
-                      </Button>
-                      <Button
-                        type="button"
-                        size="icon"
-                        variant="ghost"
-                        className="h-8 w-8"
-                        onClick={() => void resetToDetected()}
-                        aria-label="Use detected timing"
-                        data-tooltip="Use detected timing"
-                      >
-                        <RotateCcw className="h-3.5 w-3.5" />
-                      </Button>
-                    </div>
-                  </section>
-                ) : null}
 
                 <section className="space-y-2 border-t border-border pt-3">
                   <div className="flex items-center justify-between gap-2">
