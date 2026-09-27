@@ -1226,6 +1226,40 @@ export function BeatvideoMusicPanel() {
     [persistAnalysis, timelineGrid],
   )
 
+  const alignGridToPlayhead = useCallback(async () => {
+    if (!timelineGrid || fps <= 0) {
+      toast.error('Place the analyzed beat source on the timeline first')
+      return
+    }
+    if (!frameInsidePlacement(currentFrame, timelineGrid.placement)) {
+      toast.error('Move the playhead onto the beat source first')
+      return
+    }
+
+    const nearest = timelineGrid.grid.beats.reduce<
+      (typeof timelineGrid.grid.beats)[number] | null
+    >((best, beat) => {
+      if (!best) return beat
+      return Math.abs(beat.time * fps - currentFrame) <
+        Math.abs(best.time * fps - currentFrame)
+        ? beat
+        : best
+    }, null)
+    if (!nearest) {
+      toast.error('No beat is visible at this timeline position')
+      return
+    }
+
+    const timelineDeltaSeconds = currentFrame / fps - nearest.time
+    if (Math.abs(timelineDeltaSeconds) < 0.0005) {
+      toast.info('Grid is already aligned to the playhead')
+      return
+    }
+
+    await nudgeGrid(timelineDeltaSeconds)
+    toast.success('Whole beat grid aligned to playhead')
+  }, [currentFrame, fps, nudgeGrid, timelineGrid])
+
   const alignNearestBeatToPlayhead = useCallback(async () => {
     const mapped = requirePlacementAtPlayhead()
     if (!mapped) return
@@ -1364,7 +1398,7 @@ export function BeatvideoMusicPanel() {
             Musical grid
           </div>
           <p className="mt-1.5 text-[10px] leading-relaxed text-muted-foreground">
-            Analyze once; only open Grid correction when the detected timing needs help.
+            Analyze once. If the tempo is right but the lines are offset, place the playhead on a real beat and align the whole grid.
           </p>
         </div>
 
@@ -1510,6 +1544,18 @@ export function BeatvideoMusicPanel() {
                   ? `Grid linked to ${timelineGrid.placement.label}. Reactive effects can use it now.`
                   : 'Analysis is saved. Analyze again or set BPM to link this source as the project beat.'}
               </div>
+              {timelineGrid ? (
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  className="mt-2 w-full justify-start"
+                  onClick={() => void alignGridToPlayhead()}
+                >
+                  <Crosshair className="h-3.5 w-3.5" />
+                  Align whole grid to playhead
+                </Button>
+              ) : null}
               <BeatAnalysisStrip map={resolvedSourceGrid} />
               {resolvedSourceGrid.gridFit ? (
                 <div className="mt-1.5 font-mono text-[9px] leading-relaxed text-muted-foreground">
@@ -1825,7 +1871,7 @@ export function BeatvideoMusicPanel() {
 
             <details className="border-t border-border pt-3">
               <summary className="flex cursor-pointer list-none items-center justify-between gap-2 text-xs font-medium text-foreground marker:hidden [&::-webkit-details-marker]:hidden">
-                <span>Grid correction</span>
+                <span>Manual grid tools</span>
                 <span className="text-[10px] font-normal text-muted-foreground">
                   {gridMode === 'fixed' ? 'Fixed BPM' : 'Detected beatmap'}
                 </span>
@@ -1911,7 +1957,7 @@ export function BeatvideoMusicPanel() {
                       onClick={() => void alignNearestBeatToPlayhead()}
                     >
                       <Crosshair className="h-3.5 w-3.5" />
-                      Align nearest beat to playhead
+                      Pin local beat to playhead
                     </Button>
                   ) : null}
                   <div className="flex gap-1">
