@@ -196,9 +196,16 @@ export const useEditorStore = create<EditorState & EditorActions>((set) => ({
         /* noop */
       }
 
+      const producerWorkspace =
+        workspace === 'beat' ||
+        workspace === 'edit' ||
+        workspace === 'color' ||
+        workspace === 'master'
+
       return {
         workspace,
         ...loadEditorWorkspaceLayout(workspace),
+        leftSidebarOpen: producerWorkspace ? true : state.leftSidebarOpen,
         rightSidebarOpen:
           workspace === 'beat' || workspace === 'master'
             ? false
