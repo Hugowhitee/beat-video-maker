@@ -17,7 +17,7 @@ The app is project-first globally and **beat-first inside a project**.
 1. **Projects** — open an existing project or create one.
 2. **New project** — keep setup minimal: name, Photo/Video type and only output settings that must be known up front. Photo/Video is project configuration: change it from project settings when needed, not from a persistent editor-toolbar toggle.
 3. **Beat** — import/select the beat, enter a known BPM or analyze it, verify the musical grid and place producer tags/watermarks.
-4. **Visual** — add the hero cover or footage, then use beat-reactive looks, Auto Arrange/manual timeline editing, text and effects.
+4. **Visual** — add the hero cover or footage, then use Auto Arrange/manual timeline editing, text, overlays and one canonical effects inspector. Audio-reactive quick starts and per-parameter React controls live with the applied effects rather than being duplicated in Beat or a second effects browser.
 5. **Master** — finish the stereo beat through the project master rack while preview and export use the same processing model.
 6. **Publish** — render locally, review publication metadata and optionally continue to YouTube.
 
@@ -30,13 +30,13 @@ Photo mode is the fastest path for a beat visual:
 - still image is the hero;
 - beat audio drives the musical grid;
 - Beat, Visual and Master are the primary workflow pages;
-- overlay/effect controls live under Visual rather than competing with the musical setup;
+- Visual's left rail is for media/layer creation; effect browsing, applied effects and audio-reactive controls live together in the visible Inspector on the right;
 - motion/color remain available through FreeCut as advanced workspaces/properties;
 - generic video-only controls stay out of the normal path.
 
 Overlay means real timeline/compositor layers built from FreeCut primitives: text, imported logo/image and simple shapes. It is not a renamed preset/look menu.
 
-Audio reactivity is a capability of effect parameters, not a small preset category. Quick reactive looks are shortcuts only. Any GPU-effect numeric parameter marked safe/animatable by the effect definition should expose the same Beat/Downbeat, Threshold, Amount and Release controls. Non-numeric choices, quality-only controls and parameters that cannot be modulated deterministically do not expose React.
+Audio reactivity is a capability of effect parameters, not a small preset category. Quick reactive looks are shortcuts only and belong in the same Inspector as applied effects. Any GPU-effect numeric parameter marked safe/animatable by the effect definition should expose a compact React control next to the real parameter; advanced driver/timing controls stay progressively disclosed. Audio-hit/low/mid/high drivers use analyzed transient evidence, while Beat/Downbeat drivers use the corrected musical grid. Non-numeric choices, quality-only controls and parameters that cannot be modulated deterministically do not expose React. Do not duplicate a second generic “Audio Reactive” panel underneath specialized effect editors.
 
 ## Video mode
 
@@ -63,8 +63,11 @@ The canonical rule is:
 - never draw raw analysis seconds as absolute timeline seconds;
 - Beat This detected beat positions are the default **Detected beatmap** and keep their local timing;
 - **Fixed BPM** is a deliberate alternate mode that creates one mathematically even grid; entering a BPM must not silently flatten detected timing;
-- beats and bars remain fixed to their waveform while the playhead moves;
-- when timeline snapping is enabled and a musical grid exists, move/trim/razor edits snap to those exact mapped beat positions; generic seconds-based snapping is only the fallback before a beat grid exists;
+- beats and bars remain fixed to their waveform while the playhead moves; viewport waveform canvases must redraw when their absolute timeline window moves so horizontal scrolling can never make waveform pixels drift under a fixed grid;
+- grid density is zoom-aware: close zoom may show individual beats, medium zoom prioritizes bars, and wide zoom steps through 2/4/8/16-bar phrase landmarks instead of drawing a fence of lines;
+- **Beat grid** visibility and **Beat snap** are separate user controls;
+- when Beat snap is enabled and a musical grid exists, move/trim/razor edits snap to those exact mapped beat positions; generic seconds-based snapping is only the fallback before a beat grid exists or musical snapping is explicitly disabled;
+- low/mid/high transient-energy evidence may add subtle ruler accents and drive effects, but the UI must not label those accents as kick/snare/hat detection unless a real classifier provides that evidence;
 - bar 1 is visually unambiguous and detected bar 1 is distinguished from a user-verified bar 1;
 - DJ-style corrections (phase nudge and correction anchors) are explicit, reversible source-domain project state;
 - multiple correction anchors form a piecewise timing map so long tracks can be corrected without forcing one global BPM;
@@ -105,7 +108,9 @@ The default Master surface is a small ordered insert rack rather than a generic 
 
 Each processor is selectable, bypassable and visibly editable. The mental model may borrow the useful part of a DAW insert rack—ordered slots and one focused plugin editor—without importing a full channel rack, patch graph or arbitrary plugin-host complexity into the common workflow.
 
-Presets such as **Clean, Punch, Hard, 808 Punch and Warm** are recipes over this same canonical chain, never separate engines or hidden magic. A preset must expose the resulting real parameters so it stays understandable and editable.
+Presets such as **Clean, Punch, Hard, 808 Punch and Warm** are complete deterministic recipes over this same canonical chain, never deltas over hidden leftover EQ/output state and never separate engines or hidden magic. A preset must expose the resulting real parameters so it stays understandable and editable. Users may save/load their own local presets from the same visible parameters.
+
+Saturation dry/wet must remain phase-safe. Do not mix an oversampled waveshaper wet path in parallel with an uncompensated dry path; fold the dry/wet blend into one transfer path (or explicitly compensate latency) so preview and export cannot produce comb-filtered “hollow” tone.
 
 Preview audio must be summed into one shared project master bus before compressor/saturation/limiting. Monitor/listening volume sits after that DSP so changing speaker volume cannot change compression behavior. Export applies the equivalent chain to the final mixed stereo buffer; optimizations that would reset dynamics state at chunk boundaries must be disabled while mastering is active.
 
