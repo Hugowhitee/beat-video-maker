@@ -5,12 +5,9 @@ import {
   Crosshair,
   Eye,
   EyeOff,
-  Film,
   LocateFixed,
   Magnet,
   Play,
-  Repeat2,
-  Sparkles,
   Undo2,
 } from 'lucide-react'
 import { toast } from 'sonner'
@@ -51,14 +48,6 @@ import {
   DEFAULT_PROJECT_WIDTH,
 } from '@/shared/projects/defaults'
 import { resolveProducerTagRepeatFrames } from '../utils/producer-tag'
-import {
-  applyEditPlanToFreeCutTimeline,
-  buildClipMapForMedia,
-  createEditPlan,
-  createSingleClipLoopPlan,
-  offsetEditPlanTimeline,
-  type ClipMapBuildProgress,
-} from '@/features/editor/deps/auto-edit-contract'
 import type {
   BeatvideoGridCorrectionAnchor,
   BeatvideoGridMode,
@@ -217,7 +206,6 @@ export function BeatvideoMusicPanel() {
   const mediaItems = useMediaLibraryStore((state) => state.mediaItems)
   const currentProject = useProjectStore((state) => state.currentProject)
   const items = useItemsStore((state) => state.items)
-  const tracks = useItemsStore((state) => state.tracks)
   const currentFrame = usePlaybackStore((state) => state.currentFrame)
   const fps = useTimelineSettingsStore((state) => state.fps)
   const beatGridVisible = useTimelineSettingsStore((state) => state.beatGridVisible)
@@ -234,7 +222,6 @@ export function BeatvideoMusicPanel() {
   )
 
   const [selectedMediaId, setSelectedMediaId] = useState('')
-  const [selectedLoopMediaId, setSelectedLoopMediaId] = useState('')
   const [selectedTagMediaId, setSelectedTagMediaId] = useState('')
   const [selectedWatermarkMediaId, setSelectedWatermarkMediaId] = useState('')
   const [tagTool, setTagTool] = useState<'producer' | 'watermark'>('producer')
@@ -247,13 +234,9 @@ export function BeatvideoMusicPanel() {
   const [progress, setProgress] = useState<MusicAnalysisProgress | null>(null)
   const [importingBeat, setImportingBeat] = useState(false)
   const [importingTag, setImportingTag] = useState(false)
-  const [autoArranging, setAutoArranging] = useState(false)
-  const [autoArrangeProgress, setAutoArrangeProgress] = useState<string | null>(null)
   const [analyzing, setAnalyzing] = useState(false)
   const [bpmDraft, setBpmDraft] = useState('')
   const abortRef = useRef<AbortController | null>(null)
-  const autoEditAbortRef = useRef<AbortController | null>(null)
-  const tagMixSnapshotRef = useRef<ReturnType<typeof captureSnapshot> | null>(null)
 
   const selectedAnalysis =
     analysis?.mediaId === selectedMediaId ? analysis : null
@@ -273,18 +256,6 @@ export function BeatvideoMusicPanel() {
     : 'detected'
   const barCount =
     resolvedSourceGrid?.beats.filter((beat) => beat.downbeat).length ?? 0
-  const producerTrack = useMemo(
-    () => tracks.find((track) => track.kind === 'audio' && track.name === 'Producer tags') ?? null,
-    [tracks],
-  )
-  const watermarkTrack = useMemo(
-    () => tracks.find((track) => track.kind === 'audio' && track.name === 'Watermarks') ?? null,
-    [tracks],
-  )
-  const videoCandidates = useMemo(
-    () => mediaItems.filter((media) => media.mimeType.startsWith('video/')),
-    [mediaItems],
-  )
   const tagCandidates = useMemo(
     () =>
       mediaItems.filter(
@@ -303,12 +274,6 @@ export function BeatvideoMusicPanel() {
     }
     setSelectedMediaId(candidates[0]?.id ?? '')
   }, [analysis?.mediaId, candidates, selectedMediaId])
-
-  useEffect(() => {
-    if (!videoCandidates.some((media) => media.id === selectedLoopMediaId)) {
-      setSelectedLoopMediaId(videoCandidates[0]?.id ?? '')
-    }
-  }, [selectedLoopMediaId, videoCandidates])
 
   useEffect(() => {
     if (!tagCandidates.some((media) => media.id === selectedTagMediaId)) {
@@ -339,13 +304,7 @@ export function BeatvideoMusicPanel() {
     setBpmDraft(bpm ? bpm.toFixed(2).replace(/\.00$/, '') : '')
   }, [effectiveAnalysis])
 
-  useEffect(
-    () => () => {
-      abortRef.current?.abort()
-      autoEditAbortRef.current?.abort()
-    },
-    [],
-  )
+  useEffect(() => () => abortRef.current?.abort(), [])
 
   const persistAnalysis = useCallback(
     async (next: BeatvideoMusicAnalysis) => {
@@ -388,49 +347,6 @@ export function BeatvideoMusicPanel() {
     )
     return track
   }, [])
-
-  const beginTagMixGesture = useCallback(() => {
-    tagMixSnapshotRef.current ??= captureSnapshot()
-  }, [])
-
-  const patchTagTrack = useCallback(
-    (
-      kind: 'producer' | 'watermark',
-      patch: { volume?: number; muted?: boolean },
-    ) => {
-      beginTagMixGesture()
-      const timeline = useTimelineStore.getState()
-      const trackName = kind === 'producer' ? 'Producer tags' : 'Watermarks'
-      const nextTracks = timeline.tracks.map((track) =>
-        track.kind === 'audio' && track.name === trackName
-          ? { ...track, ...patch }
-          : track,
-      )
-      timeline.setTracks(nextTracks)
-      timeline.markDirty()
-    },
-    [beginTagMixGesture],
-  )
-
-  const endTagMixGesture = useCallback(() => {
-    const before = tagMixSnapshotRef.current
-    tagMixSnapshotRef.current = null
-    if (!before) return
-    useTimelineCommandStore.getState().addUndoEntry(
-      { type: 'UPDATE_TAG_TRACK_MIX', payload: {} },
-      before,
-    )
-  }, [])
-
-  const toggleTagTrackMute = useCallback(
-    (kind: 'producer' | 'watermark') => {
-      const track = kind === 'producer' ? producerTrack : watermarkTrack
-      if (!track) return
-      patchTagTrack(kind, { muted: !track.muted })
-      endTagMixGesture()
-    },
-    [endTagMixGesture, patchTagTrack, producerTrack, watermarkTrack],
-  )
 
   const importBeat = useCallback(async () => {
     if (importingBeat) return
@@ -710,154 +626,6 @@ export function BeatvideoMusicPanel() {
     persistAnalysis,
     selectedMediaId,
   ])
-
-  const loopVideoToBeat = useCallback(async () => {
-    const media = useMediaLibraryStore
-      .getState()
-      .mediaItems.find((candidate) => candidate.id === selectedLoopMediaId)
-    if (!media || !media.mimeType.startsWith('video/')) {
-      toast.error('Import and select one video clip first')
-      return
-    }
-
-    const timeline = useTimelineStore.getState()
-    const beatPlacement =
-      timelineGrid?.placement ??
-      [...timeline.items]
-        .filter((item) => item.type === 'audio')
-        .sort((left, right) => right.durationInFrames - left.durationInFrames)[0]
-
-    if (!beatPlacement) {
-      toast.error('Place the beat on the timeline first')
-      return
-    }
-
-    const timelineStart = beatPlacement.from / timeline.fps
-    const timelineDuration = beatPlacement.durationInFrames / timeline.fps
-
-    try {
-      const plan = createSingleClipLoopPlan({
-        sourceId: media.id,
-        sourceDuration: media.duration,
-        timelineStart,
-        timelineDuration,
-      })
-      const result = await applyEditPlanToFreeCutTimeline(plan)
-      useSelectionStore.getState().setActiveTrack(result.targetVideoTrackId)
-      useSelectionStore.getState().selectItems(result.itemIds)
-      toast.success(
-        result.itemIds.length === 1
-          ? 'Video fitted to beat'
-          : `Video looped across beat · ${result.itemIds.length} clips`,
-      )
-    } catch (error) {
-      toast.error('Could not build the video loop', {
-        description: error instanceof Error ? error.message : String(error),
-      })
-    }
-  }, [selectedLoopMediaId, timelineGrid])
-
-  const autoArrangeFootage = useCallback(async () => {
-    if (autoArranging) return
-    if (!timelineGrid) {
-      toast.error('Analyze and place the beat before Auto Arrange')
-      return
-    }
-    if (videoCandidates.length === 0) {
-      toast.error('Import one or more footage clips first')
-      return
-    }
-
-    const timeline = useTimelineStore.getState()
-    const timelineStart = timelineGrid.placement.from / timeline.fps
-    const timelineDuration = timelineGrid.placement.durationInFrames / timeline.fps
-    const rangeEnd = timelineStart + timelineDuration
-
-    const relativeMusic: MusicMap = {
-      ...timelineGrid.grid,
-      duration: timelineDuration,
-      beats: timelineGrid.grid.beats
-        .filter((beat) => beat.time >= timelineStart - 1e-6 && beat.time <= rangeEnd + 1e-6)
-        .map((beat) => ({ ...beat, time: Math.max(0, beat.time - timelineStart) })),
-      sections: timelineGrid.grid.sections
-        .filter(
-          (section) =>
-            section.end > timelineStart + 1e-6 && section.start < rangeEnd - 1e-6,
-        )
-        .map((section) => ({
-          ...section,
-          start: Math.max(0, section.start - timelineStart),
-          end: Math.min(timelineDuration, section.end - timelineStart),
-        }))
-        .filter((section) => section.end > section.start + 1e-6),
-    }
-
-    if (relativeMusic.beats.length === 0) {
-      toast.error('The placed beat has no usable grid points for Auto Arrange')
-      return
-    }
-
-    autoEditAbortRef.current?.abort()
-    const controller = new AbortController()
-    autoEditAbortRef.current = controller
-    setAutoArranging(true)
-    setAutoArrangeProgress('Preparing footage…')
-
-    const describeProgress = (next: ClipMapBuildProgress) => {
-      const sourceNumber = Math.min(next.totalSources, next.completedSources + 1)
-      if (next.phase === 'analyzing') {
-        setAutoArrangeProgress(
-          `Analyzing ${sourceNumber}/${next.totalSources} · ${next.fileName} · ${Math.round(next.analysisPercent ?? 0)}%`,
-        )
-      } else if (next.phase === 'ready') {
-        setAutoArrangeProgress(
-          `Footage ${next.completedSources}/${next.totalSources} ready`,
-        )
-      } else {
-        setAutoArrangeProgress(
-          `Reading footage ${sourceNumber}/${next.totalSources} · ${next.fileName}`,
-        )
-      }
-    }
-
-    try {
-      const clipMap = await buildClipMapForMedia({
-        media: videoCandidates,
-        signal: controller.signal,
-        analyzeMissing: true,
-        onProgress: describeProgress,
-      })
-      const relativePlan = createEditPlan(relativeMusic, clipMap, {
-        mode: 'auto',
-        transitionProfile: 'mixed',
-        seed: 1,
-      })
-      const plan = offsetEditPlanTimeline(relativePlan, timelineStart)
-      const result = await applyEditPlanToFreeCutTimeline(plan)
-
-      useSelectionStore.getState().setActiveTrack(result.targetVideoTrackId)
-      useSelectionStore.getState().selectItems(result.itemIds)
-      toast.success(
-        `Auto arranged ${result.itemIds.length} clip${result.itemIds.length === 1 ? '' : 's'}`,
-        {
-          description:
-            result.warnings.length > 0
-              ? result.warnings[0]
-              : `Built from ${clipMap.sources.length} footage source${clipMap.sources.length === 1 ? '' : 's'} on the verified beat grid.`,
-        },
-      )
-    } catch (error) {
-      if (!(error instanceof DOMException && error.name === 'AbortError')) {
-        toast.error('Could not auto arrange footage', {
-          description: error instanceof Error ? error.message : String(error),
-        })
-      }
-    } finally {
-      if (autoEditAbortRef.current === controller) autoEditAbortRef.current = null
-      setAutoArranging(false)
-      setAutoArrangeProgress(null)
-    }
-  }, [autoArranging, timelineGrid, videoCandidates])
 
   const insertTagAudio = useCallback(
     async (kind: 'producer' | 'watermark') => {
@@ -1568,80 +1336,6 @@ export function BeatvideoMusicPanel() {
           ) : null}
         </section>
 
-        {currentProject?.beatvideoMode === 'video' ? (
-          <section className="space-y-2 border-t border-border pt-3">
-            <div className="flex items-center gap-2">
-              <Film className="h-3.5 w-3.5 text-muted-foreground" />
-              <div className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
-                Footage arrangement
-              </div>
-            </div>
-
-            {videoCandidates.length > 0 ? (
-              <>
-                <Button
-                  type="button"
-                  size="sm"
-                  className="w-full justify-start"
-                  disabled={!timelineGrid || autoArranging}
-                  onClick={() => void autoArrangeFootage()}
-                >
-                  <Sparkles className="h-3.5 w-3.5" />
-                  {autoArranging ? 'Auto arranging…' : 'Auto arrange footage'}
-                </Button>
-                <p className="text-[10px] leading-relaxed text-muted-foreground">
-                  Uses all imported footage. Existing FreeCut scene detection supplies
-                  shot boundaries; the verified beat grid and music sections choose the
-                  cut cadence. It does not cut on every beat.
-                </p>
-                {autoArrangeProgress ? (
-                  <div className="border-l-2 border-border pl-2 font-mono text-[10px] leading-relaxed text-muted-foreground">
-                    {autoArrangeProgress}
-                  </div>
-                ) : null}
-
-                <details className="border-t border-border pt-2">
-                  <summary className="cursor-pointer list-none text-[10px] font-medium text-foreground marker:hidden [&::-webkit-details-marker]:hidden">
-                    Simple loop
-                  </summary>
-                  <div className="mt-2 space-y-1.5">
-                    <select
-                      value={selectedLoopMediaId}
-                      onChange={(event) => setSelectedLoopMediaId(event.target.value)}
-                      disabled={autoArranging}
-                      className="h-8 w-full rounded-md border border-input bg-secondary px-2 text-xs text-foreground"
-                    >
-                      {videoCandidates.map((media) => (
-                        <option key={media.id} value={media.id}>
-                          {media.fileName}
-                        </option>
-                      ))}
-                    </select>
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="outline"
-                      className="w-full justify-start"
-                      disabled={autoArranging}
-                      onClick={() => void loopVideoToBeat()}
-                    >
-                      <Repeat2 className="h-3.5 w-3.5" />
-                      Loop one clip across beat
-                    </Button>
-                    <p className="text-[10px] leading-relaxed text-muted-foreground">
-                      Repeats the full source cleanly and trims only the last repeat.
-                    </p>
-                  </div>
-                </details>
-              </>
-            ) : (
-              <div className="border-l-2 border-border pl-2 text-[10px] leading-relaxed text-muted-foreground">
-                Import one or more footage clips in Media first.
-              </div>
-            )}
-          </section>
-        ) : null}
-
         <section className="space-y-3 border-t border-border pt-3">
           <div className="flex items-start justify-between gap-3">
             <div>
@@ -1684,95 +1378,6 @@ export function BeatvideoMusicPanel() {
                 Repeat across bars
               </span>
             </button>
-          </div>
-
-          <div className="rounded-md border border-border bg-secondary/20 p-2">
-            <div className="mb-2 flex items-center justify-between gap-2">
-              <span className="text-[10px] font-medium text-foreground">Track mix</span>
-              <span className="text-[9px] text-muted-foreground">Affects every clip on the track</span>
-            </div>
-
-            <div className="space-y-2">
-              <div className="grid grid-cols-[68px_minmax(0,1fr)_42px_26px] items-center gap-1.5">
-                <span className="truncate text-[9px] text-muted-foreground">Producer</span>
-                <input
-                  type="range"
-                  min={-60}
-                  max={12}
-                  step={0.5}
-                  value={producerTrack?.volume ?? 0}
-                  disabled={!producerTrack}
-                  onPointerDown={beginTagMixGesture}
-                  onPointerUp={endTagMixGesture}
-                  onPointerCancel={endTagMixGesture}
-                  onKeyDown={beginTagMixGesture}
-                  onKeyUp={endTagMixGesture}
-                  onBlur={endTagMixGesture}
-                  onChange={(event) =>
-                    patchTagTrack('producer', { volume: Number(event.target.value) })
-                  }
-                  className="min-w-0 accent-foreground disabled:opacity-35"
-                  aria-label="Producer tags master volume"
-                />
-                <span className="text-right font-mono text-[9px] tabular-nums text-muted-foreground">
-                  {producerTrack ? `${(producerTrack.volume ?? 0).toFixed(1)} dB` : '—'}
-                </span>
-                <button
-                  type="button"
-                  disabled={!producerTrack}
-                  aria-label="Mute producer tags"
-                  aria-pressed={producerTrack?.muted ?? false}
-                  onClick={() => toggleTagTrackMute('producer')}
-                  className={`h-6 rounded border text-[9px] font-semibold transition-colors disabled:opacity-30 ${
-                    producerTrack?.muted
-                      ? 'border-red-500/60 bg-red-500/15 text-red-300'
-                      : 'border-border bg-background/50 text-muted-foreground hover:text-foreground'
-                  }`}
-                >
-                  M
-                </button>
-              </div>
-
-              <div className="grid grid-cols-[68px_minmax(0,1fr)_42px_26px] items-center gap-1.5">
-                <span className="truncate text-[9px] text-muted-foreground">Watermark</span>
-                <input
-                  type="range"
-                  min={-60}
-                  max={12}
-                  step={0.5}
-                  value={watermarkTrack?.volume ?? 0}
-                  disabled={!watermarkTrack}
-                  onPointerDown={beginTagMixGesture}
-                  onPointerUp={endTagMixGesture}
-                  onPointerCancel={endTagMixGesture}
-                  onKeyDown={beginTagMixGesture}
-                  onKeyUp={endTagMixGesture}
-                  onBlur={endTagMixGesture}
-                  onChange={(event) =>
-                    patchTagTrack('watermark', { volume: Number(event.target.value) })
-                  }
-                  className="min-w-0 accent-foreground disabled:opacity-35"
-                  aria-label="Watermarks master volume"
-                />
-                <span className="text-right font-mono text-[9px] tabular-nums text-muted-foreground">
-                  {watermarkTrack ? `${(watermarkTrack.volume ?? 0).toFixed(1)} dB` : '—'}
-                </span>
-                <button
-                  type="button"
-                  disabled={!watermarkTrack}
-                  aria-label="Mute watermarks"
-                  aria-pressed={watermarkTrack?.muted ?? false}
-                  onClick={() => toggleTagTrackMute('watermark')}
-                  className={`h-6 rounded border text-[9px] font-semibold transition-colors disabled:opacity-30 ${
-                    watermarkTrack?.muted
-                      ? 'border-red-500/60 bg-red-500/15 text-red-300'
-                      : 'border-border bg-background/50 text-muted-foreground hover:text-foreground'
-                  }`}
-                >
-                  M
-                </button>
-              </div>
-            </div>
           </div>
 
           <div className="space-y-2">
