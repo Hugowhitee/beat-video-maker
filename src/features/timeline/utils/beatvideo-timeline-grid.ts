@@ -206,3 +206,28 @@ export function resolveBeatvideoTimelineGrid(
     barOneTimelineTime,
   }
 }
+
+
+/**
+ * Timeline snap points for Beatvideo editing.
+ *
+ * Uses the same source-time → timeline mapping as the visible musical grid, so
+ * moving/trimming the beat, changing speed, reversing it, or using correction
+ * anchors cannot make snapping drift away from the waveform.
+ */
+export function resolveBeatvideoTimelineSnapFrames(
+  analysis: BeatvideoMusicAnalysis,
+  items: readonly TimelineItem[],
+  timelineFps: number,
+): number[] {
+  const timelineGrid = resolveBeatvideoTimelineGrid(analysis, items, timelineFps)
+  if (!timelineGrid) return []
+
+  return [
+    ...new Set(
+      timelineGrid.grid.beats.map((beat) =>
+        Math.max(0, Math.round(beat.time * timelineFps)),
+      ),
+    ),
+  ].sort((left, right) => left - right)
+}
