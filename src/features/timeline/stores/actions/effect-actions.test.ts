@@ -94,4 +94,30 @@ describe('effect actions', () => {
     useTimelineCommandStore.getState().undo()
     expect(getEffects('a')).toHaveLength(0)
   })
+
+  it('undo and redo preserve the last edited effect values across removal', () => {
+    addEffect('a', makeBrightness(0.5))
+    const effectId = getEffects('a')[0]!.id
+
+    updateEffect('a', effectId, { effect: makeBrightness(0.9) })
+    expect(getEffects('a')[0]?.effect.params.brightness).toBe(0.9)
+
+    removeEffect('a', effectId)
+    expect(getEffects('a')).toHaveLength(0)
+
+    useTimelineCommandStore.getState().undo()
+    expect(getEffects('a')).toHaveLength(1)
+    expect(getEffects('a')[0]?.id).toBe(effectId)
+    expect(getEffects('a')[0]?.effect.params.brightness).toBe(0.9)
+
+    useTimelineCommandStore.getState().undo()
+    expect(getEffects('a')[0]?.effect.params.brightness).toBe(0.5)
+
+    useTimelineCommandStore.getState().redo()
+    expect(getEffects('a')[0]?.effect.params.brightness).toBe(0.9)
+
+    useTimelineCommandStore.getState().redo()
+    expect(getEffects('a')).toHaveLength(0)
+  })
+
 })

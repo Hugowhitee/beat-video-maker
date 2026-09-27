@@ -23,10 +23,17 @@ import {
   Sticker,
   WandSparkles,
   Maximize2,
+  Plus,
 } from 'lucide-react'
 import { motion, useReducedMotion } from 'motion/react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 import { cn } from '@/shared/ui/cn'
 import { useEditorStore } from '@/shared/state/editor'
 import {
@@ -620,11 +627,26 @@ export const MediaSidebar = memo(function MediaSidebar({
     selectItems([shapeItem.id])
   }, [])
 
-  // Add adjustment layer to timeline at the best available position
-  // Optionally with pre-applied effects and custom label
-  const handleAddAdjustmentLayer = useCallback((effects?: VisualEffect[], label?: string) => {
-    addAdjustmentLayer(effects, label)
+  const revealAppliedEffects = useCallback((itemIds?: string[]) => {
+    if (itemIds && itemIds.length > 0) {
+      useSelectionStore.getState().selectItems(itemIds)
+    }
+    const editor = useEditorStore.getState()
+    editor.setRightSidebarOpen(true)
+    editor.setClipInspectorTab('effects')
   }, [])
+
+  // Add adjustment layer to timeline at the best available position.
+  // Selection is created by addAdjustmentLayer; immediately expose its applied
+  // effect stack so adding an effect never feels like a silent action.
+  const handleAddAdjustmentLayer = useCallback(
+    (effects?: VisualEffect[], label?: string) => {
+      if (addAdjustmentLayer(effects, label)) {
+        revealAppliedEffects()
+      }
+    },
+    [revealAppliedEffects],
+  )
 
   // Create adjustment layer with preset effects
   const handleAddPreset = useCallback(
@@ -651,14 +673,14 @@ export const MediaSidebar = memo(function MediaSidebar({
           preset.effects.forEach((effect) => {
             visualIds.forEach((id) => addEffect(id, effect))
           })
-          useSelectionStore.getState().selectItems(visualIds)
+          revealAppliedEffects(visualIds)
           return
         }
       }
 
       handleAddAdjustmentLayer(preset.effects, preset.name)
     },
-    [beatvideoMode, handleAddAdjustmentLayer],
+    [beatvideoMode, handleAddAdjustmentLayer, revealAppliedEffects],
   )
 
   // Add a single GPU effect ââ‚¬” to selected clips, or as adjustment layer if nothing selected
@@ -696,6 +718,7 @@ export const MediaSidebar = memo(function MediaSidebar({
           params: defaults,
         }
         visualIds.forEach((id) => addEffect(id, effect))
+        revealAppliedEffects(visualIds)
       } else {
         // No visual selection ââ‚¬” create adjustment layer with this effect
         const defaults = getGpuEffectDefaultParams(gpuEffectId)
@@ -704,7 +727,7 @@ export const MediaSidebar = memo(function MediaSidebar({
         ])
       }
     },
-    [beatvideoMode, handleAddAdjustmentLayer],
+    [beatvideoMode, handleAddAdjustmentLayer, revealAppliedEffects],
   )
 
   const { gpuCategories, triggerPreviews } = useGpuEffectPreviewData()
@@ -894,6 +917,43 @@ export const MediaSidebar = memo(function MediaSidebar({
               <span className="text-sm font-medium text-foreground">
                 {categories.find((c) => c.id === activeTab)?.label}
               </span>
+              <div className="flex items-center gap-1">
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="h-7 gap-1 px-2 text-xs"
+                      aria-label="Add layer"
+                      data-tooltip="Add layer"
+                      data-tooltip-side="bottom"
+                    >
+                      <Plus className="h-3.5 w-3.5" />
+                      Layer
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="min-w-40">
+                    <DropdownMenuItem
+                      onSelect={() =>
+                        beatvideoMode === 'photo'
+                          ? handleAddPhotoText('bold')
+                          : handleAddText()
+                      }
+                    >
+                      <Type className="mr-2 h-3.5 w-3.5" />
+                      Text layer
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onSelect={() => handleAddShape('rectangle')}>
+                      <Square className="mr-2 h-3.5 w-3.5" />
+                      Shape layer
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onSelect={() => handleAddAdjustmentLayer()}>
+                      <Layers className="mr-2 h-3.5 w-3.5" />
+                      Adjustment layer
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               <Button
                 variant="ghost"
                 size="icon"
@@ -921,6 +981,7 @@ export const MediaSidebar = memo(function MediaSidebar({
                   <ChevronDown className="w-3 h-3" />
                 )}
               </Button>
+              </div>
             </div>
 
             {/* Media Tab - Full Media Library */}

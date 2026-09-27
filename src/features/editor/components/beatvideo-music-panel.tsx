@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   AudioLines,
+  CheckCircle2,
   Crosshair,
   Film,
   LocateFixed,
@@ -249,6 +250,10 @@ export function BeatvideoMusicPanel() {
         signal: controller.signal,
         onProgress: setProgress,
       })
+      if (result.musicMap.beats.length === 0) {
+        throw new Error('No usable beats were detected. Try a clean music file or re-run analysis.')
+      }
+
       const detectedBarOneTime =
         result.musicMap.beats.find((beat) => beat.downbeat)?.time ??
         result.musicMap.beats[0]?.time ??
@@ -267,6 +272,19 @@ export function BeatvideoMusicPanel() {
       }
 
       await persistAnalysis(next)
+
+      if (currentProject.beatvideoMode === 'photo') {
+        const timeline = useTimelineStore.getState()
+        const covers = timeline.items.filter((item) => item.type === 'image')
+        if (covers.length === 1) {
+          const cover = covers[0]!
+          const durationInFrames = Math.max(1, Math.round(result.musicMap.duration * timeline.fps))
+          if (cover.from !== 0 || cover.durationInFrames !== durationInFrames) {
+            timeline.updateItem(cover.id, { from: 0, durationInFrames })
+          }
+        }
+      }
+
       if (result.warnings.length > 0) {
         toast.warning('Beat analysis finished with warnings', {
           description: result.warnings[0],
@@ -783,6 +801,27 @@ export function BeatvideoMusicPanel() {
                     width: `${Math.max(2, progress.overallProgress * 100)}%`,
                   }}
                 />
+              </div>
+            </div>
+          ) : null}
+
+          {!analyzing && effectiveAnalysis && resolvedSourceGrid ? (
+            <div className="rounded-md border border-border bg-secondary/35 p-2.5">
+              <div className="flex items-center gap-1.5 text-xs font-semibold text-foreground">
+                <CheckCircle2 className="h-3.5 w-3.5 text-primary" />
+                Beat analysis ready
+              </div>
+              <div className="mt-1 font-mono text-[11px] text-foreground">
+                {resolvedSourceGrid.bpm?.toFixed(2).replace(/\.00$/, '') ?? '—'} BPM
+                <span className="mx-1.5 text-muted-foreground">·</span>
+                {resolvedSourceGrid.beats.length} beats
+                <span className="mx-1.5 text-muted-foreground">·</span>
+                {barCount} bars
+              </div>
+              <div className="mt-1 text-[10px] leading-relaxed text-muted-foreground">
+                {timelineGrid
+                  ? `Grid linked to ${timelineGrid.placement.label}. Reactive effects can use it now.`
+                  : 'Analysis is saved. Place this beat on the timeline to show the grid and drive reactive effects.'}
               </div>
             </div>
           ) : null}
