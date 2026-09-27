@@ -121,7 +121,10 @@ export function evaluateAudioReactiveBinding(
     : (state.transients ?? []).map((transient) => ({
         frame: transient.frame,
         index: transient.index,
-        strength: transient[binding.driver],
+        strength:
+          binding.driver === 'audio'
+            ? transient.strength
+            : transient[binding.driver],
         downbeat: false,
       }))
   if (sourceEvents.length === 0) return rest
