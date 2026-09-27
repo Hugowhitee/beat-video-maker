@@ -52,12 +52,17 @@ import {
 import { resolveProducerTagRepeatFrames } from '../utils/producer-tag'
 import {
   applyEditPlanToFreeCutTimeline,
+  buildClipMapForMedia,
+  createEditPlan,
   createSingleClipLoopPlan,
+  offsetEditPlanTimeline,
+  type ClipMapBuildProgress,
 } from '@/features/editor/deps/auto-edit-contract'
 import type {
   BeatvideoGridCorrectionAnchor,
   BeatvideoGridMode,
   BeatvideoMusicAnalysis,
+  MusicMap,
 } from '@/types/beatvideo'
 
 const GRID_NUDGE_SECONDS = 0.01
@@ -164,9 +169,12 @@ export function BeatvideoMusicPanel() {
   const [tagAnchorSeconds, setTagAnchorSeconds] = useState('0')
   const [tagDuckDb, setTagDuckDb] = useState(-3)
   const [progress, setProgress] = useState<MusicAnalysisProgress | null>(null)
+  const [autoArranging, setAutoArranging] = useState(false)
+  const [autoArrangeProgress, setAutoArrangeProgress] = useState<string | null>(null)
   const [analyzing, setAnalyzing] = useState(false)
   const [bpmDraft, setBpmDraft] = useState('')
   const abortRef = useRef<AbortController | null>(null)
+  const autoEditAbortRef = useRef<AbortController | null>(null)
 
   const timelineGrid = useMemo(
     () =>
@@ -247,6 +255,7 @@ export function BeatvideoMusicPanel() {
   useEffect(
     () => () => {
       abortRef.current?.abort()
+      autoEditAbortRef.current?.abort()
     },
     [],
   )
@@ -401,6 +410,108 @@ export function BeatvideoMusicPanel() {
       })
     }
   }, [selectedLoopMediaId, timelineGrid])
+
+  const autoArrangeFootage = useCallback(async () => {
+    if (autoArranging) return
+    if (!timelineGrid) {
+      toast.error('Analyze and place the beat before Auto Arrange')
+      return
+    }
+    if (videoCandidates.length === 0) {
+      toast.error('Import one or more footage clips first')
+      return
+    }
+
+    const timeline = useTimelineStore.getState()
+    const timelineStart = timelineGrid.placement.from / timeline.fps
+    const timelineDuration = timelineGrid.placement.durationInFrames / timeline.fps
+    const rangeEnd = timelineStart + timelineDuration
+
+    const relativeMusic: MusicMap = {
+      ...timelineGrid.grid,
+      duration: timelineDuration,
+      beats: timelineGrid.grid.beats
+        .filter((beat) => beat.time >= timelineStart - 1e-6 && beat.time <= rangeEnd + 1e-6)
+        .map((beat) => ({ ...beat, time: Math.max(0, beat.time - timelineStart) })),
+      sections: timelineGrid.grid.sections
+        .filter(
+          (section) =>
+            section.end > timelineStart + 1e-6 && section.start < rangeEnd - 1e-6,
+        )
+        .map((section) => ({
+          ...section,
+          start: Math.max(0, section.start - timelineStart),
+          end: Math.min(timelineDuration, section.end - timelineStart),
+        }))
+        .filter((section) => section.end > section.start + 1e-6),
+    }
+
+    if (relativeMusic.beats.length === 0) {
+      toast.error('The placed beat has no usable grid points for Auto Arrange')
+      return
+    }
+
+    autoEditAbortRef.current?.abort()
+    const controller = new AbortController()
+    autoEditAbortRef.current = controller
+    setAutoArranging(true)
+    setAutoArrangeProgress('Preparing footage…')
+
+    const describeProgress = (next: ClipMapBuildProgress) => {
+      const sourceNumber = Math.min(next.totalSources, next.completedSources + 1)
+      if (next.phase === 'analyzing') {
+        setAutoArrangeProgress(
+          `Analyzing ${sourceNumber}/${next.totalSources} · ${next.fileName} · ${Math.round(next.analysisPercent ?? 0)}%`,
+        )
+      } else if (next.phase === 'ready') {
+        setAutoArrangeProgress(
+          `Footage ${next.completedSources}/${next.totalSources} ready`,
+        )
+      } else {
+        setAutoArrangeProgress(
+          `Reading footage ${sourceNumber}/${next.totalSources} · ${next.fileName}`,
+        )
+      }
+    }
+
+    try {
+      const clipMap = await buildClipMapForMedia({
+        media: videoCandidates,
+        signal: controller.signal,
+        analyzeMissing: true,
+        onProgress: describeProgress,
+      })
+      const relativePlan = createEditPlan(relativeMusic, clipMap, {
+        mode: 'auto',
+        transitionProfile: 'mixed',
+        seed: 1,
+      })
+      const plan = offsetEditPlanTimeline(relativePlan, timelineStart)
+      const result = await applyEditPlanToFreeCutTimeline(plan)
+
+      useSelectionStore.getState().setActiveTrack(result.targetVideoTrackId)
+      useSelectionStore.getState().selectItems(result.itemIds)
+      toast.success(
+        `Auto arranged ${result.itemIds.length} clip${result.itemIds.length === 1 ? '' : 's'}`,
+        {
+          description:
+            result.warnings.length > 0
+              ? result.warnings[0]
+              : `Built from ${clipMap.sources.length} footage source${clipMap.sources.length === 1 ? '' : 's'} on the verified beat grid.`,
+        },
+      )
+    } catch (error) {
+      if (!(error instanceof DOMException && error.name === 'AbortError')) {
+        toast.error('Could not auto arrange footage', {
+          description: error instanceof Error ? error.message : String(error),
+        })
+      }
+    } finally {
+      if (autoEditAbortRef.current === controller) autoEditAbortRef.current = null
+      setAutoArranging(false)
+      setAutoArrangeProgress(null)
+    }
+  }, [autoArranging, timelineGrid, videoCandidates])
 
   const insertProducerTags = useCallback(
     async (mode: 'playhead' | 'repeat') => {
@@ -1115,40 +1226,70 @@ export function BeatvideoMusicPanel() {
             <div className="flex items-center gap-2">
               <Film className="h-3.5 w-3.5 text-muted-foreground" />
               <div className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
-                Footage loop
+                Footage arrangement
               </div>
             </div>
 
             {videoCandidates.length > 0 ? (
               <>
-                <select
-                  value={selectedLoopMediaId}
-                  onChange={(event) => setSelectedLoopMediaId(event.target.value)}
-                  className="h-8 w-full rounded-md border border-input bg-secondary px-2 text-xs text-foreground"
-                >
-                  {videoCandidates.map((media) => (
-                    <option key={media.id} value={media.id}>
-                      {media.fileName}
-                    </option>
-                  ))}
-                </select>
                 <Button
                   type="button"
                   size="sm"
                   className="w-full justify-start"
-                  onClick={() => void loopVideoToBeat()}
+                  disabled={!timelineGrid || autoArranging}
+                  onClick={() => void autoArrangeFootage()}
                 >
-                  <Repeat2 className="h-3.5 w-3.5" />
-                  Loop clip to beat
+                  <Sparkles className="h-3.5 w-3.5" />
+                  {autoArranging ? 'Auto arranging…' : 'Auto arrange footage'}
                 </Button>
                 <p className="text-[10px] leading-relaxed text-muted-foreground">
-                  Repeats the full clip with clean cuts, trims only the final repeat,
-                  fills the frame and keeps footage audio muted.
+                  Uses all imported footage. Existing FreeCut scene detection supplies
+                  shot boundaries; the verified beat grid and music sections choose the
+                  cut cadence. It does not cut on every beat.
                 </p>
+                {autoArrangeProgress ? (
+                  <div className="border-l-2 border-border pl-2 font-mono text-[10px] leading-relaxed text-muted-foreground">
+                    {autoArrangeProgress}
+                  </div>
+                ) : null}
+
+                <details className="border-t border-border pt-2">
+                  <summary className="cursor-pointer list-none text-[10px] font-medium text-foreground marker:hidden [&::-webkit-details-marker]:hidden">
+                    Simple loop
+                  </summary>
+                  <div className="mt-2 space-y-1.5">
+                    <select
+                      value={selectedLoopMediaId}
+                      onChange={(event) => setSelectedLoopMediaId(event.target.value)}
+                      disabled={autoArranging}
+                      className="h-8 w-full rounded-md border border-input bg-secondary px-2 text-xs text-foreground"
+                    >
+                      {videoCandidates.map((media) => (
+                        <option key={media.id} value={media.id}>
+                          {media.fileName}
+                        </option>
+                      ))}
+                    </select>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      className="w-full justify-start"
+                      disabled={autoArranging}
+                      onClick={() => void loopVideoToBeat()}
+                    >
+                      <Repeat2 className="h-3.5 w-3.5" />
+                      Loop one clip across beat
+                    </Button>
+                    <p className="text-[10px] leading-relaxed text-muted-foreground">
+                      Repeats the full source cleanly and trims only the last repeat.
+                    </p>
+                  </div>
+                </details>
               </>
             ) : (
               <div className="border-l-2 border-border pl-2 text-[10px] leading-relaxed text-muted-foreground">
-                Import one short video clip in Media first.
+                Import one or more footage clips in Media first.
               </div>
             )}
           </section>
