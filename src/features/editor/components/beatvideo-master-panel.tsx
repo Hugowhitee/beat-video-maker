@@ -315,9 +315,29 @@ export function BeatvideoMasterPanel() {
             type="button"
             size="icon"
             variant="ghost"
-            className="ml-auto h-7 w-7"
+            className={cn(
+              'ml-auto h-7 w-7',
+              resolved.enabled && 'bg-secondary text-foreground',
+            )}
+            onClick={() =>
+              commitMasterFx(
+                { ...resolved, enabled: !resolved.enabled },
+                'TOGGLE_MASTER_BYPASS',
+              )
+            }
+            aria-label={resolved.enabled ? 'Bypass master FX' : 'Enable master FX'}
+            data-tooltip={resolved.enabled ? 'Bypass master FX' : 'Enable master FX'}
+          >
+            <Power className="h-3.5 w-3.5" />
+          </Button>
+          <Button
+            type="button"
+            size="icon"
+            variant="ghost"
+            className="h-7 w-7"
             onClick={resetAll}
             data-tooltip="Reset master chain"
+            aria-label="Reset master chain"
           >
             <RotateCcw className="h-3.5 w-3.5" />
           </Button>
@@ -435,6 +455,7 @@ export function BeatvideoMasterPanel() {
             />
             <MasterRange label="Threshold" value={resolved.compressor.thresholdDb} min={-40} max={0} step={0.5} unit=" dB" onGestureStart={beginGesture} onGestureEnd={endGesture} onChange={(thresholdDb) => patchMaster({ enabled: true, compressor: { ...resolved.compressor, enabled: true, thresholdDb } })} />
             <MasterRange label="Ratio" value={resolved.compressor.ratio} min={1} max={12} step={0.1} onGestureStart={beginGesture} onGestureEnd={endGesture} onChange={(ratio) => patchMaster({ enabled: true, compressor: { ...resolved.compressor, enabled: true, ratio } })} />
+            <MasterRange label="Knee" value={resolved.compressor.kneeDb} min={0} max={40} step={0.5} unit=" dB" onGestureStart={beginGesture} onGestureEnd={endGesture} onChange={(kneeDb) => patchMaster({ enabled: true, compressor: { ...resolved.compressor, enabled: true, kneeDb } })} />
             <MasterRange label="Attack" value={resolved.compressor.attackSec * 1000} min={0} max={200} step={1} unit=" ms" onGestureStart={beginGesture} onGestureEnd={endGesture} onChange={(ms) => patchMaster({ enabled: true, compressor: { ...resolved.compressor, enabled: true, attackSec: ms / 1000 } })} />
             <MasterRange label="Release" value={resolved.compressor.releaseSec * 1000} min={20} max={800} step={5} unit=" ms" onGestureStart={beginGesture} onGestureEnd={endGesture} onChange={(ms) => patchMaster({ enabled: true, compressor: { ...resolved.compressor, enabled: true, releaseSec: ms / 1000 } })} />
             <MasterRange label="Makeup" value={resolved.compressor.makeupGainDb} min={-6} max={12} step={0.1} unit=" dB" onGestureStart={beginGesture} onGestureEnd={endGesture} onChange={(makeupGainDb) => patchMaster({ enabled: true, compressor: { ...resolved.compressor, enabled: true, makeupGainDb } })} />
