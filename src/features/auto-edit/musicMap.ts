@@ -203,6 +203,22 @@ export function buildMusicMapFromRhythm(
     bpm: result.bpm > 0 ? result.bpm : null,
     beatsPerBar,
     beats,
+    transients: (result.transients ?? [])
+      .filter(
+        (transient) =>
+          Number.isFinite(transient.time) &&
+          transient.time >= 0 &&
+          transient.time <= duration + EPSILON,
+      )
+      .map((transient, index) => ({
+        ...transient,
+        index,
+        time: Math.min(duration, Math.max(0, transient.time)),
+        strength: clamp01(transient.strength),
+        low: clamp01(transient.low),
+        mid: clamp01(transient.mid),
+        high: clamp01(transient.high),
+      })),
     sections: buildSections(result, duration, beatsPerBar),
   }
 }
