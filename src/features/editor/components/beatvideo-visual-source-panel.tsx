@@ -74,6 +74,7 @@ export function BeatvideoVisualSourcePanel({
     null,
   )
   const [loopBlocksGrouped, setLoopBlocksGrouped] = useState(false)
+  const [groupedLoopWrapperIds, setGroupedLoopWrapperIds] = useState<string[]>([])
   const abortRef = useRef<AbortController | null>(null)
 
   const analysis = currentProject?.beatvideoMusic
@@ -114,7 +115,7 @@ export function BeatvideoVisualSourcePanel({
           .filter(
             (candidate) =>
               candidate.end - candidate.start >= duration - 1e-6 &&
-              !excludedShotIds.includes(candidate.id),
+              (!excludedShotIds.includes(candidate.id) || candidate.id === segment.shotId),
           )
           .map((candidate) => ({
             ...candidate,
@@ -147,6 +148,22 @@ export function BeatvideoVisualSourcePanel({
   }, [selectedLoopMediaId, videoCandidates])
 
   useEffect(() => () => abortRef.current?.abort(), [])
+
+  useEffect(() => {
+    if (!loopBlocksGrouped || groupedLoopWrapperIds.length === 0) return
+    const rootIds = new Set(items.map((item) => item.id))
+    const wrappersGone = groupedLoopWrapperIds.every((id) => !rootIds.has(id))
+    const originalCutsRestored = lastAppliedItemIds.some((id) => rootIds.has(id))
+    if (wrappersGone && originalCutsRestored) {
+      setLoopBlocksGrouped(false)
+      setGroupedLoopWrapperIds([])
+    }
+  }, [
+    groupedLoopWrapperIds,
+    items,
+    lastAppliedItemIds,
+    loopBlocksGrouped,
+  ])
 
   const describeProgress = useCallback((next: ClipMapBuildProgress) => {
     const sourceNumber = Math.min(next.totalSources, next.completedSources + 1)
@@ -257,6 +274,7 @@ export function BeatvideoVisualSourcePanel({
       setLastItemIdBySegmentId(result.itemIdBySegmentId)
       setLastTargetVideoTrackId(result.targetVideoTrackId)
       setLoopBlocksGrouped(false)
+      setGroupedLoopWrapperIds([])
 
       useSelectionStore.getState().setActiveTrack(result.targetVideoTrackId)
       useSelectionStore.getState().selectItems(result.itemIds)
@@ -398,8 +416,7 @@ export function BeatvideoVisualSourcePanel({
     )
     if (wrappers.length === 0) return
 
-    setLastAppliedItemIds(wrappers.map((wrapper) => wrapper.id))
-    setLastItemIdBySegmentId({})
+    setGroupedLoopWrapperIds(wrappers.map((wrapper) => wrapper.id))
     setLoopBlocksGrouped(true)
     useSelectionStore.getState().selectItems(wrappers.map((wrapper) => wrapper.id))
     toast.success(
@@ -586,7 +603,7 @@ export function BeatvideoVisualSourcePanel({
               type="button"
               size="sm"
               className="mt-2 w-full justify-start"
-              disabled={!timelineGrid || preparingFootage || autoArranging}
+              disabled={!timelineGrid || preparingFootage || autoArranging || loopBlocksGrouped}
               onClick={() => void autoArrangeFootage()}
             >
               <Sparkles className="h-3.5 w-3.5" />
@@ -676,8 +693,8 @@ export function BeatvideoVisualSourcePanel({
 
           {loopBlocksGrouped ? (
             <div className="rounded-md border border-primary/30 bg-primary/5 px-2 py-1.5 text-[9px] leading-relaxed text-muted-foreground">
-              Repeats are now real compound clips. Open a Loop block on the timeline to edit
-              its individual cuts.
+              Repeats are now real compound clips. Open a Loop block to edit its cuts.
+              Undo once to return to the editable generated arrangement before rebuilding.
             </div>
           ) : null}
 
