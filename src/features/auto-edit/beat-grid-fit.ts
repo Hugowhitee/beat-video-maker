@@ -98,6 +98,33 @@ function uniqueCycleObservations(
   return [...byCycle.values()].sort((left, right) => left.cycle - right.cycle)
 }
 
+function rawTempoDriftRatio(
+  beats: readonly number[],
+  expectedPeriod: number,
+): number {
+  if (beats.length < MIN_FIXED_BEATS || expectedPeriod <= 0) return 0
+
+  const normalizedPeriods: number[] = []
+  for (let index = 1; index < beats.length; index += 1) {
+    const delta = (beats[index] ?? 0) - (beats[index - 1] ?? 0)
+    if (!Number.isFinite(delta) || delta <= 0) continue
+
+    // Beat trackers can occasionally skip one or more beats. Fold gaps of up
+    // to four expected beats back to a one-beat period before comparing local
+    // tempo, instead of treating a missed detection as real tempo drift.
+    const multiple = Math.max(1, Math.min(4, Math.round(delta / expectedPeriod)))
+    const normalized = delta / multiple
+    const deviation = Math.abs(normalized - expectedPeriod) / expectedPeriod
+    if (deviation <= 0.22) normalizedPeriods.push(normalized)
+  }
+
+  if (normalizedPeriods.length < 8) return 0
+  const third = Math.max(3, Math.floor(normalizedPeriods.length / 3))
+  const firstPeriod = median(normalizedPeriods.slice(0, third))
+  const lastPeriod = median(normalizedPeriods.slice(-third))
+  return Math.abs(firstPeriod - lastPeriod) / Math.max(EPSILON, expectedPeriod)
+}
+
 function robustGridFit(
   beats: readonly number[],
   strengths: readonly number[],
@@ -145,10 +172,14 @@ function robustGridFit(
   const third = Math.max(4, Math.floor(observations.length / 3))
   const firstFit = linearFit(observations.slice(0, third))
   const lastFit = linearFit(observations.slice(-third))
-  const localDriftRatio =
+  const fittedLocalDriftRatio =
     firstFit && lastFit
       ? Math.abs(firstFit.period - lastFit.period) / Math.max(EPSILON, fit.period)
       : 0
+  const localDriftRatio = Math.max(
+    fittedLocalDriftRatio,
+    rawTempoDriftRatio(beats, expectedPeriod),
+  )
 
   const expectedDeviation =
     Math.abs(fit.period - expectedPeriod) / Math.max(EPSILON, expectedPeriod)
