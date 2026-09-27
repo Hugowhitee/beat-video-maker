@@ -224,6 +224,7 @@ export function BeatvideoMusicPanel() {
   const [selectedMediaId, setSelectedMediaId] = useState('')
   const [selectedTagMediaId, setSelectedTagMediaId] = useState('')
   const [selectedWatermarkMediaId, setSelectedWatermarkMediaId] = useState('')
+  const [beatTool, setBeatTool] = useState<'grid' | 'tags'>('grid')
   const [tagTool, setTagTool] = useState<'producer' | 'watermark'>('producer')
   const [tagRepeatBars, setTagRepeatBars] = useState(16)
   const [tagFirstBar, setTagFirstBar] = useState(1)
@@ -1163,14 +1164,41 @@ export function BeatvideoMusicPanel() {
         <div className="border-b border-border pb-3">
           <div className="flex items-center gap-2 text-xs font-medium text-foreground">
             <AudioLines className="h-4 w-4" />
-            Musical grid
+            Beat
           </div>
           <p className="mt-1.5 text-[10px] leading-relaxed text-muted-foreground">
-            Analyze once. If the tempo is right but the lines are offset, place the playhead on a real beat and align the whole grid.
+            One project beat owns the grid, snapping, reactive timing and tag placement.
           </p>
         </div>
 
-        <section className="space-y-2">
+        <div className="grid grid-cols-2 gap-1 rounded-md border border-border bg-secondary/20 p-1">
+          <button
+            type="button"
+            aria-pressed={beatTool === 'grid'}
+            onClick={() => setBeatTool('grid')}
+            className={`h-8 rounded text-[10px] font-semibold transition-colors ${
+              beatTool === 'grid'
+                ? 'bg-primary text-primary-foreground'
+                : 'text-muted-foreground hover:bg-background/60 hover:text-foreground'
+            }`}
+          >
+            Grid
+          </button>
+          <button
+            type="button"
+            aria-pressed={beatTool === 'tags'}
+            onClick={() => setBeatTool('tags')}
+            className={`h-8 rounded text-[10px] font-semibold transition-colors ${
+              beatTool === 'tags'
+                ? 'bg-primary text-primary-foreground'
+                : 'text-muted-foreground hover:bg-background/60 hover:text-foreground'
+            }`}
+          >
+            Tags
+          </button>
+        </div>
+
+        <section className={beatTool === 'grid' ? 'space-y-2' : 'hidden'}>
           <label className="block text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
             Beat source
           </label>
@@ -1336,7 +1364,13 @@ export function BeatvideoMusicPanel() {
           ) : null}
         </section>
 
-        <section className="space-y-3 border-t border-border pt-3">
+        <section
+          className={
+            beatTool === 'tags'
+              ? 'space-y-3 border-t border-border pt-3'
+              : 'hidden'
+          }
+        >
           <div className="flex items-start justify-between gap-3">
             <div>
               <div className="text-xs font-medium text-foreground">Tag audio</div>
@@ -1549,7 +1583,7 @@ export function BeatvideoMusicPanel() {
           </div>
         </section>
 
-        {effectiveAnalysis && resolvedSourceGrid ? (
+        {beatTool === 'grid' && effectiveAnalysis && resolvedSourceGrid ? (
           <>
             <section className="grid grid-cols-3 gap-1.5">
               <div className="border-t border-border pt-2">
