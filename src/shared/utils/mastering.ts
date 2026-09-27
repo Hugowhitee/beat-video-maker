@@ -181,6 +181,26 @@ export const MASTERING_PRESETS: ReadonlyArray<{
     },
   },
   {
+    id: 'detroit',
+    label: 'Detroit',
+    description: 'Dry rap-beat punch with fast recovery, restrained harmonics and safe peaks.',
+    settings: {
+      enabled: true,
+      inputGainDb: 1.2,
+      compressor: {
+        enabled: true,
+        thresholdDb: -16.5,
+        ratio: 2.2,
+        kneeDb: 8,
+        attackSec: 0.035,
+        releaseSec: 0.11,
+        makeupGainDb: 0.7,
+      },
+      saturator: { enabled: true, driveDb: 4.2, mix: 0.24, outputGainDb: -0.6, oversample: '4x' },
+      limiter: { enabled: true, thresholdDb: -2.1, releaseSec: 0.075, ceilingDb: -0.8 },
+    },
+  },
+  {
     id: '808-punch',
     label: '808 Punch',
     description: 'Low-end-friendly dynamics on the full stereo beat, not stem remixing.',
@@ -224,6 +244,81 @@ export const MASTERING_PRESETS: ReadonlyArray<{
 
 export function getMasteringPreset(id: MasteringPresetId) {
   return MASTERING_PRESETS.find((preset) => preset.id === id) ?? MASTERING_PRESETS[0]!
+}
+
+export interface ProgramLevelAnalysis {
+  /** Gated program RMS in dBFS. This is deliberately not labelled LUFS. */
+  rmsDb: number
+  /** Highest absolute sample peak in dBFS. This is not a true-peak estimate. */
+  peakDb: number
+  analyzedBlocks: number
+}
+
+function amplitudeToDb(value: number): number {
+  return value > 1e-9 ? 20 * Math.log10(value) : -120
+}
+
+/**
+ * Estimate practical stereo program level from PCM without pretending to be
+ * BS.1770/LUFS. 400 ms blocks below a relative/absolute gate are excluded so
+ * long intros or silence do not make Auto level over-amplify the beat.
+ */
+export function analyzeProgramLevel(
+  channels: readonly Float32Array[],
+  sampleRate: number,
+): ProgramLevelAnalysis {
+  if (channels.length === 0 || !Number.isFinite(sampleRate) || sampleRate <= 0) {
+    return { rmsDb: -120, peakDb: -120, analyzedBlocks: 0 }
+  }
+
+  const length = Math.max(...channels.map((channel) => channel.length), 0)
+  if (length === 0) return { rmsDb: -120, peakDb: -120, analyzedBlocks: 0 }
+
+  const blockSize = Math.max(1, Math.round(sampleRate * 0.4))
+  const blockEnergies: number[] = []
+  let peak = 0
+
+  for (let start = 0; start < length; start += blockSize) {
+    const end = Math.min(length, start + blockSize)
+    let sumSquares = 0
+    let sampleCount = 0
+    for (const channel of channels) {
+      const channelEnd = Math.min(end, channel.length)
+      for (let index = start; index < channelEnd; index += 1) {
+        const sample = channel[index] ?? 0
+        peak = Math.max(peak, Math.abs(sample))
+        sumSquares += sample * sample
+        sampleCount += 1
+      }
+    }
+    if (sampleCount > 0) blockEnergies.push(sumSquares / sampleCount)
+  }
+
+  if (blockEnergies.length === 0) {
+    return { rmsDb: -120, peakDb: amplitudeToDb(peak), analyzedBlocks: 0 }
+  }
+
+  const loudestEnergy = Math.max(...blockEnergies)
+  const loudestRmsDb = amplitudeToDb(Math.sqrt(loudestEnergy))
+  const gateDb = Math.max(-50, loudestRmsDb - 20)
+  const gateEnergy = Math.pow(10, gateDb / 10)
+  const accepted = blockEnergies.filter((energy) => energy >= gateEnergy)
+  const programEnergy =
+    accepted.reduce((sum, energy) => sum + energy, 0) / Math.max(1, accepted.length)
+
+  return {
+    rmsDb: amplitudeToDb(Math.sqrt(programEnergy)),
+    peakDb: amplitudeToDb(peak),
+    analyzedBlocks: accepted.length,
+  }
+}
+
+export function resolveAutoLevelInputGainDb(
+  analysis: ProgramLevelAnalysis,
+  targetRmsDb = -11,
+): number {
+  if (!Number.isFinite(analysis.rmsDb) || analysis.rmsDb <= -100) return 0
+  return clamp(targetRmsDb - analysis.rmsDb, -12, 12)
 }
 
 export function createSaturationCurve(
