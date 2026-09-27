@@ -2,6 +2,7 @@ import type {
   AudioReactiveBeat,
   AudioReactiveBinding,
   AudioReactiveState,
+  AudioReactiveTransient,
   MusicMap,
 } from '@/types/beatvideo'
 import type { TimelineItem } from '@/types/timeline'
@@ -67,6 +68,30 @@ export function projectAudioReactiveBeatsToItem(
   })
 }
 
+export function projectAudioReactiveTransientsToItem(
+  grid: MusicMap,
+  item: Pick<TimelineItem, 'from' | 'durationInFrames'>,
+  fps: number,
+): AudioReactiveTransient[] {
+  if (!Number.isFinite(fps) || fps <= 0 || item.durationInFrames <= 0) return []
+
+  const start = item.from
+  const end = item.from + item.durationInFrames
+
+  return (grid.transients ?? []).flatMap((transient) => {
+    const timelineFrame = Math.round(transient.time * fps)
+    if (timelineFrame < start || timelineFrame >= end) return []
+    return [{
+      frame: timelineFrame - start,
+      index: transient.index,
+      strength: clamp01(transient.strength),
+      low: clamp01(transient.low),
+      mid: clamp01(transient.mid),
+      high: clamp01(transient.high),
+    }]
+  })
+}
+
 /**
  * Evaluate one binding against sparse Beat This evidence. The authored/keyframed
  * value is deliberately not part of this function: callers compose its delta
@@ -84,7 +109,22 @@ export function evaluateAudioReactiveBinding(
     beatFrame: null,
     downbeat: false,
   }
-  if (!state?.enabled || !binding.enabled || state.beats.length === 0) return rest
+  if (!state?.enabled || !binding.enabled) return rest
+  const usesMusicalGrid = binding.driver === 'beat' || binding.driver === 'downbeat'
+  const sourceEvents = usesMusicalGrid
+    ? state.beats.map((beat) => ({
+        frame: beat.frame,
+        index: beat.index,
+        strength: beat.strength,
+        downbeat: beat.downbeat,
+      }))
+    : (state.transients ?? []).map((transient) => ({
+        frame: transient.frame,
+        index: transient.index,
+        strength: transient[binding.driver],
+        downbeat: false,
+      }))
+  if (sourceEvents.length === 0) return rest
 
   const threshold = clamp01(binding.threshold)
   const sensitivity = Math.max(0, binding.sensitivity)
@@ -93,14 +133,14 @@ export function evaluateAudioReactiveBinding(
   const everyNthBeat = Math.max(1, Math.round(binding.everyNthBeat))
   let winner = rest
 
-  for (const beat of state.beats) {
-    if (binding.driver === 'downbeat' && !beat.downbeat) continue
-    if (beat.index % everyNthBeat !== 0) continue
+  for (const event of sourceEvents) {
+    if (binding.driver === 'downbeat' && !event.downbeat) continue
+    if (event.index % everyNthBeat !== 0) continue
 
-    const strength = clamp01(beat.strength)
+    const strength = clamp01(event.strength)
     if (strength < threshold) continue
 
-    const elapsed = relativeFrame - beat.frame
+    const elapsed = relativeFrame - event.frame
     if (elapsed < 0 || elapsed > attackFrames + releaseFrames) continue
 
     const envelope =
@@ -118,8 +158,8 @@ export function evaluateAudioReactiveBinding(
       pulse,
       delta: clampDelta(binding.amount * pulse * direction, binding),
       sourceStrength: strength,
-      beatFrame: beat.frame,
-      downbeat: beat.downbeat,
+      beatFrame: event.frame,
+      downbeat: event.downbeat,
     }
   }
 
