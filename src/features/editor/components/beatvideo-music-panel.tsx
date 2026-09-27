@@ -33,13 +33,6 @@ import {
 } from '@/features/editor/deps/media-library'
 import { updateStoredProject, useProjectStore } from '@/features/editor/deps/projects'
 import {
-  AUDIO_REACTIVE_PRESETS,
-  buildAudioReactivePresetRemovalUpdate,
-  buildAudioReactivePresetUpdate,
-  isAudioReactivePresetApplied,
-  type AudioReactivePresetId,
-} from '@/features/editor/deps/effects-contract'
-import {
   useItemsStore,
   useTimelineSettingsStore,
   useTimelineStore,
@@ -51,7 +44,6 @@ import {
   replaceItemsOnTrack,
 } from '@/features/editor/deps/timeline-contract'
 import { usePlaybackStore } from '@/shared/state/playback'
-import { useSelectionStore } from '@/shared/state/selection'
 import {
   DEFAULT_PROJECT_HEIGHT,
   DEFAULT_PROJECT_WIDTH,
@@ -156,11 +148,6 @@ export function BeatvideoMusicPanel() {
   const toggleBeatGridVisible = useTimelineSettingsStore((state) => state.toggleBeatGridVisible)
   const beatGridSnapEnabled = useTimelineSettingsStore((state) => state.beatGridSnapEnabled)
   const toggleBeatGridSnap = useTimelineSettingsStore((state) => state.toggleBeatGridSnap)
-  const selectedItemIds = useSelectionStore((state) => state.selectedItemIds)
-  const setItemEffectsAndAudioReactive = useTimelineStore(
-    (state) => state.setItemEffectsAndAudioReactive,
-  )
-
   const analysis = currentProject?.beatvideoMusic
   const candidates = useMemo(
     () =>
@@ -198,17 +185,6 @@ export function BeatvideoMusicPanel() {
         : null,
     [fps, items, selectedAnalysis],
   )
-  const reactiveTargets = useMemo(() => {
-    const selected = new Set(selectedItemIds)
-    const selectedVisuals = items.filter(
-      (item) => selected.has(item.id) && item.type !== 'audio',
-    )
-    if (selectedVisuals.length > 0) return selectedVisuals
-    if (currentProject?.beatvideoMode === 'photo') {
-      return items.filter((item) => item.type === 'image')
-    }
-    return []
-  }, [currentProject?.beatvideoMode, items, selectedItemIds])
   const effectiveAnalysis = timelineGrid?.analysis ?? selectedAnalysis
   const resolvedSourceGrid = effectiveAnalysis
     ? resolveBeatvideoMusicGrid(effectiveAnalysis)
@@ -1228,65 +1204,6 @@ export function BeatvideoMusicPanel() {
     )
   }, [effectiveAnalysis, persistAnalysis])
 
-  const applyReactivePreset = useCallback(
-    (presetId: AudioReactivePresetId) => {
-      if (!timelineGrid) {
-        toast.error('Analyze and place the beat first')
-        return
-      }
-      if (reactiveTargets.length === 0) {
-        toast.error(
-          currentProject?.beatvideoMode === 'photo'
-            ? 'Add a cover image first'
-            : 'Select one or more visual clips first',
-        )
-        return
-      }
-
-      const removePreset = reactiveTargets.every((item) =>
-        isAudioReactivePresetApplied(item, presetId),
-      )
-      const updates = reactiveTargets.flatMap((item) => {
-        const update = removePreset
-          ? buildAudioReactivePresetRemovalUpdate({ item, presetId })
-          : buildAudioReactivePresetUpdate({
-              item,
-              grid: timelineGrid.grid,
-              fps,
-              presetId,
-            })
-        return update ? [update] : []
-      })
-      if (updates.length === 0) {
-        toast.error('This reactive look cannot be changed for the current selection')
-        return
-      }
-
-      setItemEffectsAndAudioReactive(updates)
-      const preset = AUDIO_REACTIVE_PRESETS.find((candidate) => candidate.id === presetId)
-      toast.success(
-        removePreset
-          ? `${preset?.label ?? 'Reactive look'} removed`
-          : `${preset?.label ?? 'Reactive look'} applied`,
-        removePreset
-          ? undefined
-          : {
-              description:
-                updates.length === 1
-                  ? 'The layer stays fully editable in Applied effects.'
-                  : `${updates.length} layers updated as one edit.`,
-            },
-      )
-    },
-    [
-      currentProject?.beatvideoMode,
-      fps,
-      reactiveTargets,
-      setItemEffectsAndAudioReactive,
-      timelineGrid,
-    ],
-  )
-
   return (
     <div className="h-full overflow-y-auto p-3">
       <div className="space-y-4">
@@ -1445,50 +1362,6 @@ export function BeatvideoMusicPanel() {
             </div>
           ) : null}
         </section>
-
-        {effectiveAnalysis ? (
-          <section className="space-y-2 border-t border-border pt-3">
-            <div className="flex items-center gap-2">
-              <Sparkles className="h-3.5 w-3.5 text-primary" />
-              <div className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
-                Reactive looks
-              </div>
-            </div>
-            <p className="text-[10px] leading-relaxed text-muted-foreground">
-              {timelineGrid
-                ? reactiveTargets.length > 0
-                  ? currentProject?.beatvideoMode === 'photo'
-                    ? 'Applies to the cover. Fine-tune the same bindings later in Applied effects.'
-                    : `Applies to ${reactiveTargets.length} selected visual layer${reactiveTargets.length === 1 ? '' : 's'}.`
-                  : 'Select a visual layer to apply a look.'
-                : 'Place the analyzed beat on the timeline before applying reactive looks.'}
-            </p>
-            <div className="grid grid-cols-2 gap-1.5">
-              {AUDIO_REACTIVE_PRESETS.map((preset) => {
-                const applied =
-                  reactiveTargets.length > 0 &&
-                  reactiveTargets.every((item) =>
-                    isAudioReactivePresetApplied(item, preset.id),
-                  )
-                return (
-                  <Button
-                    key={preset.id}
-                    type="button"
-                    size="sm"
-                    variant={applied ? 'secondary' : 'outline'}
-                    className="h-auto min-h-8 justify-start whitespace-normal px-2 py-1.5 text-left text-[10px]"
-                    disabled={!timelineGrid || reactiveTargets.length === 0}
-                    aria-pressed={applied}
-                    title={applied ? `Remove ${preset.label}` : preset.description}
-                    onClick={() => applyReactivePreset(preset.id)}
-                  >
-                    {applied ? `${preset.label} · Remove` : preset.label}
-                  </Button>
-                )
-              })}
-            </div>
-          </section>
-        ) : null}
 
         {currentProject?.beatvideoMode === 'video' ? (
           <section className="space-y-2 border-t border-border pt-3">

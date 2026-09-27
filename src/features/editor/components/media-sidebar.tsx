@@ -128,6 +128,9 @@ function isSidebarTabVisibleForWorkspace(
   if (workspace === 'master') return tab === 'master'
   if (workspace === 'color') return tab === 'effects'
   if (workspace === 'motion') return tab === 'media'
+  if (workspace === 'edit') {
+    return tab !== 'beat' && tab !== 'master' && tab !== 'effects'
+  }
   return tab !== 'beat' && tab !== 'master'
 }
 

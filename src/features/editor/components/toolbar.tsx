@@ -10,6 +10,7 @@ import {
   FolderCog,
   Keyboard,
   ListVideo,
+  PanelRight,
   Save,
   Settings,
   Video,
@@ -31,6 +32,7 @@ import { WorkspaceSwitcher } from './workspace-switcher'
 import { EDITOR_LAYOUT_CSS_VALUES } from '@/config/editor-layout'
 import { cn } from '@/shared/ui/cn'
 import { useDebugStore } from '@/features/editor/stores/debug-store'
+import { useEditorStore } from '@/shared/state/editor'
 import { useItemsStore, useTimelineStore } from '@/features/editor/deps/timeline-store'
 import { useMediaLibraryStore } from '@/features/editor/deps/media-library'
 import type { BeatvideoProjectMode } from '@/types/project'
@@ -93,6 +95,9 @@ export const Toolbar = memo(function Toolbar({
   const maxItemEndFrame = useItemsStore((state) => state.maxItemEndFrame)
   const mediaDependencyIds = useItemsStore((state) => state.mediaDependencyIds)
   const brokenMediaIds = useMediaLibraryStore((state) => state.brokenMediaIds)
+  const workspace = useEditorStore((state) => state.workspace)
+  const rightSidebarOpen = useEditorStore((state) => state.rightSidebarOpen)
+  const toggleRightSidebar = useEditorStore((state) => state.toggleRightSidebar)
   const projectSummary = useMemo(
     () => {
       const projectMediaIds = new Set(mediaDependencyIds)
@@ -227,6 +232,21 @@ export const Toolbar = memo(function Toolbar({
         )}
 
         {/* Editor utilities */}
+        {workspace === 'edit' ? (
+          <Button
+            variant={rightSidebarOpen ? 'secondary' : 'outline'}
+            size="sm"
+            className="h-7 gap-1.5 px-2"
+            onClick={toggleRightSidebar}
+            aria-pressed={rightSidebarOpen}
+            data-tooltip={rightSidebarOpen ? 'Hide inspector' : 'Show inspector'}
+            data-tooltip-side="bottom"
+            aria-label={rightSidebarOpen ? 'Hide inspector' : 'Show inspector'}
+          >
+            <PanelRight className="h-3.5 w-3.5" />
+            <span className="hidden lg:inline">Inspector</span>
+          </Button>
+        ) : null}
         <Button
           variant="outline"
           size="icon"

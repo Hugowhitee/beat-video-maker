@@ -58,6 +58,13 @@ import {
   getAudioReactiveBindingForParam,
   isAudioReactiveParam,
 } from '@/features/effects/utils/audio-reactive-bindings'
+import {
+  AUDIO_REACTIVE_PRESETS,
+  buildAudioReactivePresetRemovalUpdate,
+  buildAudioReactivePresetUpdate,
+  isAudioReactivePresetApplied,
+  type AudioReactivePresetId,
+} from '@/features/effects/utils/audio-reactive-presets'
 
 interface EffectsSectionProps {
   /** Visual items (already filtered to exclude audio) */
@@ -164,6 +171,9 @@ export const EffectsSection = memo(function EffectsSection({
   const removeEffect = useTimelineStore((s) => s.removeEffect)
   const toggleEffect = useTimelineStore((s) => s.toggleEffect)
   const setItemEffects = useTimelineStore((s) => s.setItemEffects)
+  const setItemEffectsAndAudioReactive = useTimelineStore(
+    (s) => s.setItemEffectsAndAudioReactive,
+  )
   const applyAutoKeyframeOperations = useTimelineStore((s) => s.applyAutoKeyframeOperations)
   const setAudioReactiveStates = useTimelineStore((s) => s.setAudioReactiveStates)
   const timelineItems = useTimelineStore((s) => s.items)
@@ -1078,6 +1088,65 @@ export const EffectsSection = memo(function EffectsSection({
     </div>
   )
 
+  const handleReactiveQuickStart = useCallback(
+    (presetId: AudioReactivePresetId) => {
+      if (!audioReactiveGrid || visualItems.length === 0) return
+
+      const removePreset = visualItems.every((item) =>
+        isAudioReactivePresetApplied(item, presetId),
+      )
+      const updates = visualItems.flatMap((item) => {
+        const update = removePreset
+          ? buildAudioReactivePresetRemovalUpdate({ item, presetId })
+          : buildAudioReactivePresetUpdate({
+              item,
+              grid: audioReactiveGrid.grid,
+              fps: timelineFps,
+              presetId,
+            })
+        return update ? [update] : []
+      })
+      if (updates.length > 0) setItemEffectsAndAudioReactive(updates)
+    },
+    [audioReactiveGrid, setItemEffectsAndAudioReactive, timelineFps, visualItems],
+  )
+
+  const reactiveQuickStarts = !isDock ? (
+    <div className="mx-2 mb-2 rounded-md border border-border bg-secondary/20 p-2">
+      <div className="mb-1.5 flex items-center gap-1.5">
+        <AudioLines className="h-3.5 w-3.5 text-primary" aria-hidden="true" />
+        <span className="text-[10px] font-semibold uppercase tracking-wide text-foreground">
+          React to audio
+        </span>
+        <span className="ml-auto text-[9px] text-muted-foreground">
+          {audioReactiveAvailable ? 'Audio ready' : 'Analyze beat first'}
+        </span>
+      </div>
+      <div className="flex flex-wrap gap-1">
+        {AUDIO_REACTIVE_PRESETS.map((preset) => {
+          const applied =
+            visualItems.length > 0 &&
+            visualItems.every((item) => isAudioReactivePresetApplied(item, preset.id))
+          return (
+            <Button
+              key={preset.id}
+              type="button"
+              size="sm"
+              variant={applied ? 'secondary' : 'outline'}
+              className="h-6 px-2 text-[9px]"
+              disabled={!audioReactiveAvailable}
+              aria-pressed={applied}
+              title={applied ? `Remove ${preset.label}` : preset.description}
+              onClick={() => handleReactiveQuickStart(preset.id)}
+            >
+              {preset.label}
+            </Button>
+          )
+        })}
+      </div>
+    </div>
+  ) : null
+
   const motionReactiveControls = motionReactiveBindings.length > 0 ? (
     <div className="mx-2 mb-2 rounded-md border border-primary/25 bg-primary/5 py-2">
       <div className="flex items-center gap-1.5 px-2 pb-1">
@@ -1116,6 +1185,7 @@ export const EffectsSection = memo(function EffectsSection({
 
   const effectList = (
     <div className="space-y-0">
+      {reactiveQuickStarts}
       {motionReactiveControls}
       {effects.map((effect, effectIndex) => {
         if (effect.effect.type === 'gpu-effect') {
