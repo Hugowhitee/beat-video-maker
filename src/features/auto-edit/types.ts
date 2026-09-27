@@ -1,5 +1,6 @@
 export type EditMode = 'loop' | 'guided' | 'auto';
 export type TransitionProfile = 'clean' | 'mixed';
+export type EditPace = 'relaxed' | 'balanced' | 'energetic';
 export type EditTransitionKind = 'film-burn';
 
 export type {
@@ -84,5 +85,6 @@ export type EditPlannerOptions = {
   mode: EditMode;
   loopBars?: number;
   transitionProfile?: TransitionProfile;
+  pace?: EditPace;
   seed?: number;
 };
