@@ -1150,7 +1150,7 @@ export function BeatvideoMusicPanel() {
           <div className="flex items-center gap-2">
             <Tag className="h-3.5 w-3.5 text-muted-foreground" />
             <div className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
-              Producer tag
+              Tags & watermark
             </div>
           </div>
 
