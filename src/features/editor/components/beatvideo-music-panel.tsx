@@ -11,7 +11,6 @@ import {
   Play,
   Repeat2,
   Sparkles,
-  Tag,
   Undo2,
 } from 'lucide-react'
 import { toast } from 'sonner'
