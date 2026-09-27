@@ -39,6 +39,7 @@ import { buildEffectAnimatableProperty, type AnimatableProperty } from '@/types/
 import {
   getEffectCategoryLabel,
   getEffectDefinitionName,
+  getEffectParamLabel,
 } from '@/features/effects/utils/effect-i18n'
 import {
   getGpuEffectKeyframeProperty,
