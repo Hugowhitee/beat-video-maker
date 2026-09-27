@@ -1154,13 +1154,17 @@ export function BeatvideoMusicPanel() {
           </section>
         ) : null}
 
-        <section className="space-y-2 border-t border-border pt-3">
-          <div className="flex items-center gap-2">
-            <Tag className="h-3.5 w-3.5 text-muted-foreground" />
-            <div className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+        <details className="border-t border-border pt-3">
+          <summary className="flex cursor-pointer list-none items-center justify-between gap-2 text-xs font-medium text-foreground marker:hidden [&::-webkit-details-marker]:hidden">
+            <span className="flex items-center gap-2">
+              <Tag className="h-3.5 w-3.5 text-muted-foreground" />
               Tags & watermark
-            </div>
-          </div>
+            </span>
+            <span className="text-[10px] font-normal text-muted-foreground">
+              Optional
+            </span>
+          </summary>
+          <div className="mt-3 space-y-2">
 
           {tagCandidates.length > 0 ? (
             <>
@@ -1293,8 +1297,8 @@ export function BeatvideoMusicPanel() {
               </details>
 
               <p className="text-[10px] leading-relaxed text-muted-foreground">
-                Repeats stay as normal timeline clips, so any one can be moved, trimmed,
-                faded, turned down or deleted.
+                Repeats stay as normal timeline clips. Move, trim, fade, mute at −60 dB
+                or delete any occurrence without changing the rest.
               </p>
             </>
           ) : (
@@ -1302,7 +1306,8 @@ export function BeatvideoMusicPanel() {
               Import a short producer-tag audio file in Media. The beat source itself is not used as a tag.
             </div>
           )}
-        </section>
+          </div>
+        </details>
 
         {effectiveAnalysis && resolvedSourceGrid ? (
           <>
