@@ -74,6 +74,7 @@ export {
   removeKeyframe,
   removeKeyframes,
   removeItems,
+  replaceItemsOnTrack,
   resolveDroppedMediaEntriesFromPayload,
   setInOutPointsWithoutHistory,
   resolveEffectiveTrackStates,
