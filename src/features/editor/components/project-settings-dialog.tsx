@@ -8,6 +8,7 @@ import {
 } from '@/components/ui/dialog'
 import {
   EditProjectForm,
+  updateStoredProject,
   useProjectStore,
   type ProjectFormData,
 } from '@/features/editor/deps/projects'
@@ -20,6 +21,7 @@ interface ProjectSettingsDialogProps {
   project: {
     id: string
     name: string
+    description: string
     width: number
     height: number
     fps: number
@@ -36,14 +38,14 @@ export function ProjectSettingsDialog({
   onSaved,
 }: ProjectSettingsDialogProps) {
   const currentProject = useProjectStore((state) => state.currentProject)
-  const updateProject = useProjectStore((state) => state.updateProject)
+  const setCurrentProject = useProjectStore((state) => state.setCurrentProject)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const liveProject = currentProject?.id === project.id ? currentProject : null
 
   const defaultValues = useMemo<Partial<ProjectFormData>>(
     () => ({
       name: liveProject?.name ?? project.name,
-      description: liveProject?.description ?? '',
+      description: liveProject?.description ?? project.description,
       beatvideoMode: liveProject?.beatvideoMode ?? project.beatvideoMode ?? 'video',
       width: liveProject?.metadata.width ?? project.width,
       height: liveProject?.metadata.height ?? project.height,
@@ -57,7 +59,18 @@ export function ProjectSettingsDialog({
   const handleSubmit = async (data: ProjectFormData) => {
     setIsSubmitting(true)
     try {
-      const updated = await updateProject(project.id, data)
+      const updated = await updateStoredProject(project.id, {
+        name: data.name,
+        description: data.description ?? '',
+        beatvideoMode: data.beatvideoMode,
+        metadata: {
+          width: data.width,
+          height: data.height,
+          fps: data.fps,
+          backgroundColor: data.backgroundColor,
+        },
+      })
+      setCurrentProject(updated)
       await onSaved?.(updated)
       toast.success('Project settings saved')
       onOpenChange(false)

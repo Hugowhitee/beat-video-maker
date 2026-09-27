@@ -26,6 +26,7 @@ export const Route = createFileRoute('/editor/$projectId')({
       project: {
         id: project.id,
         name: project.name,
+        description: project.description,
         width: project.metadata.width,
         height: project.metadata.height,
         fps: project.metadata.fps,

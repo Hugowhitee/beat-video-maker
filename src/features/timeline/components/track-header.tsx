@@ -79,6 +79,13 @@ export const TrackHeader = memo(function TrackHeader({
   const itemCount = useItemsStore((s) => s.itemsByTrackId[track.id]?.length ?? 0)
   const syncLockEnabled = isTrackSyncLockActive(track)
   const trackDisabled = isTrackDisabled(track)
+  const displayTrackColor =
+    track.color ??
+    (track.name === 'Beat'
+      ? '#38bdf8'
+      : track.name === 'Producer tags'
+        ? '#f59e0b'
+        : undefined)
 
   // Use track drag hook (visuals handled centrally by timeline.tsx via DOM)
   const { handleDragStart } = useTrackDrag(track)
@@ -250,10 +257,10 @@ export const TrackHeader = memo(function TrackHeader({
             </div>
 
             <div className="flex min-h-0 flex-1 items-center gap-1.5 overflow-hidden px-1.5">
-              {track.color ? (
+              {displayTrackColor ? (
                 <span
                   className="h-2 w-2 shrink-0 rounded-[2px]"
-                  style={{ backgroundColor: track.color }}
+                  style={{ backgroundColor: displayTrackColor }}
                   aria-hidden="true"
                 />
               ) : null}

@@ -178,6 +178,7 @@ interface EditorProps {
   project: {
     id: string
     name: string
+    description: string
     width: number
     height: number
     fps: number
@@ -491,7 +492,7 @@ export const LoadedEditor = memo(function LoadedEditor({
     setCurrentProject({
       id: project.id,
       name: project.name,
-      description: '',
+      description: project.description,
       beatvideoMode,
       beatvideoMusic: project.beatvideoMusic,
       duration: 0,
@@ -551,6 +552,7 @@ export const LoadedEditor = memo(function LoadedEditor({
     project.height,
     project.id,
     project.name,
+    project.description,
     project.width,
     projectId,
     router,
