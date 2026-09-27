@@ -89,3 +89,52 @@ export interface ResolvedAudioEqSettings {
   highCutFrequencyHz: number
   highCutSlopeDbPerOct: AudioEqCutSlopeDbPerOct
 }
+
+
+export interface MasterCompressorSettings {
+  enabled?: boolean
+  thresholdDb?: number
+  ratio?: number
+  kneeDb?: number
+  attackSec?: number
+  releaseSec?: number
+  makeupGainDb?: number
+}
+
+export interface MasterSaturatorSettings {
+  enabled?: boolean
+  /** Pre-shaper drive. 0 dB is neutral; positive values increase harmonic saturation. */
+  driveDb?: number
+  /** Parallel wet amount from 0..1. */
+  mix?: number
+  outputGainDb?: number
+  oversample?: 'none' | '2x' | '4x'
+}
+
+export interface MasterLimiterSettings {
+  enabled?: boolean
+  /** Dynamics threshold before the safety ceiling stage. */
+  thresholdDb?: number
+  releaseSec?: number
+  /** Absolute safety ceiling in dBFS. */
+  ceilingDb?: number
+}
+
+export interface MasterFxSettings {
+  enabled?: boolean
+  /** Gain before dynamics/saturation. Output gain remains project masterBusDb. */
+  inputGainDb?: number
+  compressor?: MasterCompressorSettings
+  saturator?: MasterSaturatorSettings
+  limiter?: MasterLimiterSettings
+}
+
+export interface ResolvedMasterFxSettings {
+  enabled: boolean
+  inputGainDb: number
+  compressor: Required<MasterCompressorSettings>
+  saturator: Required<MasterSaturatorSettings>
+  limiter: Required<MasterLimiterSettings>
+}
+
+export type MasteringPresetId = 'clean' | 'punch' | 'hard' | '808-punch' | 'warm'
