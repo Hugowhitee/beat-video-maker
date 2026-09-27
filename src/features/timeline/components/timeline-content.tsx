@@ -11,6 +11,7 @@ import { registerZoomTo100, useZoomStore } from '../stores/zoom-store'
 import { usePlaybackStore } from '@/shared/state/playback'
 import { useEditorStore } from '@/shared/state/editor'
 import { useSelectionStore } from '@/shared/state/selection'
+import { useProjectStore } from '@/features/timeline/deps/projects'
 
 // Hooks
 import { useMarqueeSelection } from '@/shared/marquee/use-marquee-selection'
@@ -74,6 +75,7 @@ import { resolveTimelineMarqueeItems } from '../utils/timeline-marquee-geometry'
 import { setTimelineDensityMarqueePreview } from '../utils/timeline-density-marquee-preview'
 import { notifyTimelineLiveScroll } from '@/shared/timeline/live-scroll-sync'
 import { getPlaybackFollowScrollLeft } from '../utils/playback-follow-scroll'
+import { resolveBeatvideoTimelineSnapFrames } from '../utils/beatvideo-timeline-grid'
 import { TimelineSettledContentZoomProvider } from './timeline-settled-content-zoom-provider'
 import { getTimelineZoomInteractionShieldBounds } from '../utils/timeline-zoom-interaction-shield'
 
@@ -1346,6 +1348,16 @@ export const TimelineContent = memo(function TimelineContent({
 
     // Playhead
     targets.push({ frame: Math.round(currentFrameRef.current), type: 'playhead' })
+
+    // Musical beats. Beatvideo's source-mapped grid is the timing grid the
+    // user can actually see and hear, so Shift-snap must use those same points.
+    const analysis = useProjectStore.getState().currentProject?.beatvideoMusic
+    if (analysis) {
+      const fps = useTimelineSettingsStore.getState().fps
+      for (const frame of resolveBeatvideoTimelineSnapFrames(analysis, items, fps)) {
+        targets.push({ frame, type: 'grid' })
+      }
+    }
 
     // Markers
     const markers = useMarkersStore.getState().markers
