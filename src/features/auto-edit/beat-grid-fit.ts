@@ -3,7 +3,7 @@ import type { BeatThisRhythmResult } from './beatThisCore'
 
 const EPSILON = 1e-9
 const MIN_FIXED_BEATS = 10
-const MAX_PHASE_SHIFT_SECONDS = 0.1
+const MAX_PHASE_SHIFT_BEAT_FRACTION = 0.48
 
 function clamp01(value: number): number {
   return Math.max(0, Math.min(1, value))
@@ -234,6 +234,50 @@ function nearestMusicalTransient(
   return winner
 }
 
+function wrapPhaseShift(shift: number, period: number): number {
+  if (!Number.isFinite(shift) || !Number.isFinite(period) || period <= 0) return 0
+  let wrapped = shift % period
+  if (wrapped > period / 2) wrapped -= period
+  if (wrapped < -period / 2) wrapped += period
+  return wrapped
+}
+
+function phaseCandidateScore(params: {
+  phase: number
+  shift: number
+  period: number
+  observations: readonly Observation[]
+  transients: readonly MusicTransient[]
+  radius: number
+}): { score: number; supportRatio: number; offsets: number[] } {
+  const { phase, shift, period, observations, transients, radius } = params
+  let score = 0
+  let support = 0
+  const offsets: number[] = []
+
+  for (const observation of observations) {
+    const predicted = phase + shift + observation.cycle * period
+    const transient = nearestMusicalTransient(transients, predicted, radius)
+    if (!transient || transient.strength < 0.28) continue
+
+    const distance = Math.abs(transient.time - predicted)
+    const proximity = 1 - distance / Math.max(radius, EPSILON)
+    // Prefer kick/low-end evidence so a dense eighth-note hat pattern cannot
+    // pull an otherwise-correct quarter-note grid halfway between the beats.
+    const spectralWeight = 0.42 + transient.low * 0.48 + transient.mid * 0.1
+    const detectorWeight = 0.72 + observation.strength * 0.28
+    score += transient.strength * spectralWeight * detectorWeight * (0.32 + 0.68 * proximity)
+    support += 1
+    offsets.push(transient.time - predicted)
+  }
+
+  return {
+    score: score / Math.max(1, observations.length),
+    supportRatio: support / Math.max(1, observations.length),
+    offsets,
+  }
+}
+
 function refinePhaseWithTransients(params: {
   phase: number
   period: number
@@ -245,31 +289,80 @@ function refinePhaseWithTransients(params: {
     return { phase, phaseShift: 0, supportRatio: 0 }
   }
 
-  const radius = Math.min(0.11, period * 0.22)
-  const offsets: number[] = []
+  const radius = Math.min(0.095, period * 0.16)
+  const maxShift = period * MAX_PHASE_SHIFT_BEAT_FRACTION
+  const candidateShifts = new Set<number>([0])
 
-  for (const observation of observations) {
-    const predicted = phase + observation.cycle * period
-    const transient = nearestMusicalTransient(transients, predicted, radius)
-    if (!transient || transient.strength < 0.3) continue
-    offsets.push(transient.time - predicted)
+  for (const transient of transients) {
+    if (transient.strength < 0.32) continue
+    const cycle = Math.round((transient.time - phase) / period)
+    const rawShift = transient.time - (phase + cycle * period)
+    const shift = wrapPhaseShift(rawShift, period)
+    if (Math.abs(shift) > maxShift + EPSILON) continue
+
+    // Five-millisecond bins keep the search bounded while remaining much finer
+    // than both the Beat This frame rate and a visible timeline correction.
+    candidateShifts.add(Math.round(shift / 0.005) * 0.005)
   }
 
-  const supportRatio = offsets.length / observations.length
-  if (offsets.length < 6 || supportRatio < 0.22) {
-    return { phase, phaseShift: 0, supportRatio }
+  const baseline = phaseCandidateScore({
+    phase,
+    shift: 0,
+    period,
+    observations,
+    transients,
+    radius,
+  })
+  let winner = { shift: 0, ...baseline }
+
+  for (const shift of candidateShifts) {
+    if (Math.abs(shift) <= EPSILON) continue
+    const candidate = phaseCandidateScore({
+      phase,
+      shift,
+      period,
+      observations,
+      transients,
+      radius,
+    })
+    if (
+      candidate.score > winner.score + 1e-6 ||
+      (Math.abs(candidate.score - winner.score) <= 1e-6 &&
+        candidate.supportRatio > winner.supportRatio)
+    ) {
+      winner = { shift, ...candidate }
+    }
   }
 
-  const phaseShift = median(offsets)
-  const spread = median(offsets.map((offset) => Math.abs(offset - phaseShift)))
-  if (Math.abs(phaseShift) > MAX_PHASE_SHIFT_SECONDS || spread > 0.04) {
-    return { phase, phaseShift: 0, supportRatio }
+  if (
+    Math.abs(winner.shift) <= EPSILON ||
+    winner.supportRatio < 0.24 ||
+    winner.offsets.length < 6
+  ) {
+    return { phase, phaseShift: 0, supportRatio: baseline.supportRatio }
   }
+
+  // A large correction needs meaningfully better onset evidence than the raw
+  // detector phase. This lets tempo be correct while phase is repaired, but
+  // prevents a loud off-beat texture from moving an already-good grid.
+  const requiredGain =
+    Math.abs(winner.shift) > 0.1
+      ? Math.max(0.025, baseline.score * 0.1)
+      : 0.008
+  if (winner.score < baseline.score + requiredGain) {
+    return { phase, phaseShift: 0, supportRatio: baseline.supportRatio }
+  }
+
+  const residual = median(winner.offsets)
+  const refinedShift = Math.max(
+    -maxShift,
+    Math.min(maxShift, winner.shift + Math.max(-radius, Math.min(radius, residual))),
+  )
 
   return {
-    phase: phase + phaseShift,
-    phaseShift,
-    supportRatio,
+    phase: phase + refinedShift,
+    phaseShift: refinedShift,
+    supportRatio: winner.supportRatio,
   }
 }
 

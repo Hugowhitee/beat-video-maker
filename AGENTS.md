@@ -41,8 +41,8 @@ Beatvideo-specific code should stay a small, recognizable product overlay. Port 
 
 `Photo` and `Video` are project-level workflows over one FreeCut project/runtime.
 
-- **Photo:** hero still + beat. Default UI should emphasize media, text, effects, motion/color workspaces and later Beatvideo overlays. Hide video-only editing tools unless deliberately exposed as Advanced.
-- **Video:** footage + beat. Keep cuts, transitions, shot/scene analysis and manual editing available; Beatvideo Guided/Auto planning is added on top.
+- **Photo:** hero still + beat. The normal product route is Beat → Visual → Color → Master. Visual owns source placement plus text/effects/motion; Color owns focused grading. Hide video-only editing tools unless deliberately exposed as Advanced.
+- **Video:** footage + beat. Visual owns footage import, scene preparation, Auto Arrange/loop/manual placement plus text/effects/motion. Keep cuts, transitions, shot/scene analysis and manual editing available; Beatvideo Guided/Auto planning is added on top.
 - Never build separate Photo and Video render/export engines.
 - Existing upstream/legacy projects without a Beatvideo mode resolve to `Video`. New Beatvideo projects default to `Photo`.
 

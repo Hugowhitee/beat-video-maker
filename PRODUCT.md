@@ -17,9 +17,10 @@ The app is project-first globally and **beat-first inside a project**.
 1. **Projects** — open an existing project or create one.
 2. **New project** — keep setup minimal: name, Photo/Video type and only output settings that must be known up front. Photo/Video is project configuration: change it from project settings when needed, not from a persistent editor-toolbar toggle.
 3. **Beat** — import/select the beat, enter a known BPM or analyze it, verify the musical grid and place producer tags/watermarks.
-4. **Visual** — add the hero cover or footage, then use Auto Arrange/manual timeline editing, text, overlays and one canonical effects inspector. Audio-reactive quick starts and per-parameter React controls live with the applied effects rather than being duplicated in Beat or a second effects browser.
-5. **Master** — finish the stereo beat through the project master rack while preview and export use the same processing model.
-6. **Publish** — render locally, review publication metadata and optionally continue to YouTube.
+4. **Visual** — add the hero cover or footage. Photo sources can fill the beat automatically; video sources may be analyzed on import, Auto Arranged against the verified grid, looped to the beat or dragged manually onto the normal timeline. Text, overlays, motion/camera movement and one canonical effects inspector live with the visual work instead of being split across unrelated product pages.
+5. **Color** — focused grading/correction over the same selected visual/timeline state. Color stays separate because grading is a distinct finishing task; motion does not get a separate top-level Beatvideo page.
+6. **Master** — finish the stereo beat through the project master rack plus the existing real track mixer. Dedicated Beat, Producer tags and Watermarks tracks automatically become mixer channels; preview and export use the same processing model.
+7. **Publish** — render locally, review publication metadata and optionally continue to YouTube.
 
 A source upload is never the app's global home screen. Inside an opened Beatvideo project, however, the beat is the primary production input and should be the obvious first action.
 
@@ -29,9 +30,10 @@ Photo mode is the fastest path for a beat visual:
 
 - still image is the hero;
 - beat audio drives the musical grid;
-- Beat, Visual and Master are the primary workflow pages;
-- Visual's left rail is for media/layer creation; effect browsing, applied effects and audio-reactive controls live together in the visible Inspector on the right;
-- motion/color remain available through FreeCut as advanced workspaces/properties;
+- Beat, Visual, Color and Master are the primary workflow pages;
+- Visual begins with an explicit **Visual source** action: add/replace the hero still in Photo, or add footage in Video; imported footage may be prepared for scene-aware Auto Arrange immediately;
+- Visual's left rail is for media/layer creation; effect browsing, applied effects, transform motion, camera shake and audio-reactive controls live together in the visible Inspector on the right;
+- Color remains a focused grading workspace; motion/composition internals remain available through FreeCut when needed but are not a normal top-level Beatvideo navigation step;
 - generic video-only controls stay out of the normal path.
 
 Overlay means real timeline/compositor layers built from FreeCut primitives: text, imported logo/image and simple shapes. It is not a renamed preset/look menu.
@@ -180,9 +182,9 @@ Prefer direct manipulation, conventional editor behavior, consistent spacing and
 - effect state has one atomic lifecycle: **add → edit → remove → undo/redo**. Removing an effect also removes its effect-keyframes and audio-reactive bindings in the same history transaction; Undo restores all of them and Redo removes all of them again;
 - removing one mapped effect from a multi-selection is one undoable edit, never one hidden history entry per selected clip;
 - live slider previews must be cleared before effect removal so preview-only state can never survive a deleted effect;
-- the default Beat/Visual/Master path is text-first and progressively disclosed. Do not leave rows of permanent utility icons visible just because FreeCut supports the commands;
+- the default Beat/Visual/Color/Master path is text-first and progressively disclosed. Do not leave rows of permanent utility icons visible just because FreeCut supports the commands;
 - advanced track controls such as disable/solo/lock/sync-lock/close-gaps remain available through contextual menus in the simplified Beatvideo timeline; richer permanent controls may remain in Advanced editor workspaces where they are expected;
-- Settings, shortcuts, render queue and project-bundle export belong under a compact utility menu; the primary toolbar should emphasize project identity, Beat/Visual/Master, Inspector when relevant, Save and Export.
+- Settings, shortcuts, render queue and project-bundle export belong under a compact utility menu; the primary toolbar should emphasize project identity, Beat/Visual/Color/Master, Inspector when relevant, Project settings near Save, Save and Export.
 
 ## Local-first boundary
 

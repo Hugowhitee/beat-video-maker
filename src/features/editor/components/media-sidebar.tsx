@@ -95,6 +95,7 @@ const LazyBeatvideoMusicPanel = lazy(() =>
 const LazyBeatvideoMasterPanel = lazy(() =>
   import('./beatvideo-master-panel').then((module) => ({ default: module.BeatvideoMasterPanel })),
 )
+import { BeatvideoVisualSourcePanel } from './beatvideo-visual-source-panel'
 const LazyAiPanel = lazy(() => import('./ai-tab').then((m) => ({ default: m.AiTab })))
 const LazyTranscriptEditorPanel = lazy(() =>
   importTranscriptEditorPanel().then(({ TranscriptEditorPanel }) => ({
@@ -1138,29 +1139,12 @@ export const MediaSidebar = memo(function MediaSidebar({
               className={`min-h-0 flex-1 overflow-hidden ${activeTab === 'media' ? 'block' : 'hidden'}`}
             >
               <div className="flex h-full min-h-0 flex-col">
-                <div className="shrink-0 border-b border-border bg-secondary/15 px-3 py-2 text-[10px] leading-relaxed text-muted-foreground">
-                  {beatvideoMode === 'photo' ? (
-                    <div className="space-y-2">
-                      <p>
-                        Beat owns the project beat and grid. Place one cover here and it will span
-                        the full song automatically when the beat is ready.
-                      </p>
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="outline"
-                        className="h-7 w-full justify-start text-xs"
-                        disabled={importingPhotoCover}
-                        onClick={() => void handleImportPhotoCover()}
-                      >
-                        <ImagePlus className="h-3.5 w-3.5" />
-                        {importingPhotoCover ? 'Importing cover…' : 'Import & place cover'}
-                      </Button>
-                    </div>
-                  ) : (
-                    'Import footage here. Beat owns the music grid; return to Visual for cuts, layers and effects.'
-                  )}
-                </div>
+                <BeatvideoVisualSourcePanel
+                  beatvideoMode={beatvideoMode}
+                  importingPhotoCover={importingPhotoCover}
+                  onImportPhotoCover={handleImportPhotoCover}
+                  onFitPhotoCoverToBeat={handleFitPhotoCoverToBeat}
+                />
                 <div className="min-h-0 flex-1 overflow-hidden">
                   <MediaLibrary />
                 </div>

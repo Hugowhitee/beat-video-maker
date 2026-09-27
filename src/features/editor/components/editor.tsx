@@ -824,7 +824,12 @@ export const LoadedEditor = memo(function LoadedEditor({
                         </Suspense>
                       )}
                     </div>
-                    {beatvideoMode === 'video' ? <AudioMeterPanel /> : null}
+                    {workspace === 'master' || beatvideoMode === 'video' ? (
+                      <AudioMeterPanel
+                        key={workspace === 'master' ? 'master-mixer' : 'editor-meter'}
+                        initialMode={workspace === 'master' ? 'mixer' : 'meter'}
+                      />
+                    ) : null}
                   </div>
                 </ErrorBoundary>
               </InteractionLockRegion>

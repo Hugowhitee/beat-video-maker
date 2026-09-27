@@ -137,4 +137,4 @@ export interface ResolvedMasterFxSettings {
   limiter: Required<MasterLimiterSettings>
 }
 
-export type MasteringPresetId = 'clean' | 'punch' | 'hard' | '808-punch' | 'warm'
+export type MasteringPresetId = 'clean' | 'punch' | 'hard' | 'detroit' | '808-punch' | 'warm'

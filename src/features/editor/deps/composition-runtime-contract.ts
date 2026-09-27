@@ -24,7 +24,7 @@ export {
   resolveCornerPinForSize,
   withCornerPinReferenceSize,
 } from '@/runtime/composition-runtime/utils/corner-pin'
-export { clearPreviewAudioCache } from '@/runtime/composition-runtime/utils/audio-decode-cache'
+export { clearPreviewAudioCache, getOrDecodeAudio } from '@/runtime/composition-runtime/utils/audio-decode-cache'
 export { deletePreviewAudioConform } from '@/runtime/composition-runtime/utils/preview-audio-conform'
 
 export { getPreviewMasterReduction } from '@/runtime/composition-runtime/utils/preview-audio-graph'

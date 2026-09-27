@@ -4,12 +4,6 @@ import { useEditorStore } from '@/shared/state/editor'
 import { cn } from '@/shared/ui/cn'
 import type { EditorWorkspaceId } from '@/config/editor-workspaces'
 import type { BeatvideoProjectMode } from '@/types/project'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
 
 const PRIMARY_WORKSPACES: readonly {
   id: EditorWorkspaceId
@@ -17,21 +11,16 @@ const PRIMARY_WORKSPACES: readonly {
 }[] = [
   { id: 'beat', label: 'Beat' },
   { id: 'edit', label: 'Visual' },
+  { id: 'color', label: 'Color' },
   { id: 'master', label: 'Master' },
 ]
 
-const ADVANCED_WORKSPACES: readonly {
-  id: EditorWorkspaceId
-  label: string
-}[] = [
-  { id: 'color', label: 'Color' },
-  { id: 'motion', label: 'Motion' },
-]
-
 /**
- * Producer-first Beatvideo workspaces. The primary path is Beat → Visual → Master.
- * Mature FreeCut Color/Motion workspaces remain available behind Advanced instead
- * of competing with the common publication flow.
+ * Producer workflow: Beat → Visual → Color → Master.
+ *
+ * Motion stays a capability of selected visual items in the Inspector. The
+ * internal Motion/composition workspace still exists for composition editing,
+ * but it is not part of the normal Beatvideo navigation.
  */
 export const WorkspaceSwitcher = memo(function WorkspaceSwitcher({
   beatvideoMode = 'video',
@@ -41,9 +30,8 @@ export const WorkspaceSwitcher = memo(function WorkspaceSwitcher({
   const { t } = useTranslation()
   const workspace = useEditorStore((s) => s.workspace)
   const setWorkspace = useEditorStore((s) => s.setWorkspace)
-  const advancedActive = ADVANCED_WORKSPACES.some((item) => item.id === workspace)
   const visualHint =
-    beatvideoMode === 'photo' ? 'Design the cover visual' : 'Edit footage and visuals'
+    beatvideoMode === 'photo' ? 'Photo, text, motion and effects' : 'Footage, cuts, motion and effects'
 
   return (
     <div
@@ -62,7 +50,7 @@ export const WorkspaceSwitcher = memo(function WorkspaceSwitcher({
             title={id === 'edit' ? visualHint : undefined}
             onClick={() => setWorkspace(id)}
             className={cn(
-              'flex h-7 items-center gap-1.5 rounded-[3px] px-3 text-xs font-medium transition-colors',
+              'flex h-7 items-center rounded-[3px] px-3 text-xs font-medium transition-colors',
               isActive
                 ? 'bg-primary text-primary-foreground'
                 : 'text-muted-foreground hover:bg-background/60 hover:text-foreground',
@@ -72,30 +60,6 @@ export const WorkspaceSwitcher = memo(function WorkspaceSwitcher({
           </button>
         )
       })}
-
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <button
-            type="button"
-            aria-label="Advanced workspaces"
-            className={cn(
-              'flex h-7 items-center gap-1 rounded-[3px] px-2 text-xs font-medium transition-colors',
-              advancedActive
-                ? 'bg-primary text-primary-foreground'
-                : 'text-muted-foreground hover:bg-background/60 hover:text-foreground',
-            )}
-          >
-            <span>Advanced</span>
-          </button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="min-w-36">
-          {ADVANCED_WORKSPACES.map(({ id, label }) => (
-            <DropdownMenuItem key={id} onSelect={() => setWorkspace(id)}>
-              {label}
-            </DropdownMenuItem>
-          ))}
-        </DropdownMenuContent>
-      </DropdownMenu>
     </div>
   )
 })

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { toast } from 'sonner'
 import {
   Activity,
   BookmarkPlus,
@@ -19,14 +20,18 @@ import {
 import { usePlaybackStore } from '@/shared/state/playback'
 import {
   MASTERING_PRESETS,
+  analyzeProgramLevel,
   createSaturationCurve,
+  resolveAutoLevelInputGainDb,
   resolveMasterFxSettings,
 } from '@/shared/utils/mastering'
 import { getSparseAudioEqSettings } from '@/shared/utils/audio-eq'
 import type { AudioEqSettings, MasterFxSettings, MasteringPresetId } from '@/types/audio'
 import { AudioEqPanelContent } from './properties-sidebar/clip-panel/audio-eq-panel-content'
 import type { AudioEqPatch } from './properties-sidebar/clip-panel/audio-eq-curve-editor'
-import { getPreviewMasterReduction } from '@/features/editor/deps/composition-runtime'
+import { getOrDecodeAudio, getPreviewMasterReduction } from '@/features/editor/deps/composition-runtime'
+import { resolveMediaUrl } from '@/features/editor/deps/media-library'
+import { useProjectStore } from '@/features/editor/deps/projects'
 import { cn } from '@/shared/ui/cn'
 
 type MasterSlot = 'eq' | 'compressor' | 'saturator' | 'limiter'
@@ -231,6 +236,7 @@ export function BeatvideoMasterPanel() {
   const setMasterBusDb = usePlaybackStore((state) => state.setMasterBusDb)
   const busAudioEq = usePlaybackStore((state) => state.busAudioEq)
   const setBusAudioEq = usePlaybackStore((state) => state.setBusAudioEq)
+  const currentProject = useProjectStore((state) => state.currentProject)
   const resolved = useMemo(() => resolveMasterFxSettings(masterFx), [masterFx])
   const [selectedSlot, setSelectedSlot] = useState<MasterSlot>('eq')
   const [reduction, setReduction] = useState({ compressorDb: 0, limiterDb: 0 })
@@ -238,6 +244,23 @@ export function BeatvideoMasterPanel() {
   const [savedPresets, setSavedPresets] = useState<SavedMasterPreset[]>(loadSavedMasterPresets)
   const [savingPreset, setSavingPreset] = useState(false)
   const [presetName, setPresetName] = useState('')
+  const [autoLeveling, setAutoLeveling] = useState(false)
+  const [autoLevelResult, setAutoLevelResult] = useState<{
+    rmsDb: number
+    peakDb: number
+    inputGainDb: number
+  } | null>(null)
+
+  const activeBuiltInPresetId = useMemo(() => {
+    if (busAudioEq !== undefined || Math.abs(masterBusDb) > 0.0001) return null
+    const current = JSON.stringify(resolved)
+    return (
+      MASTERING_PRESETS.find(
+        (preset) =>
+          JSON.stringify(resolveMasterFxSettings(preset.settings)) === current,
+      )?.id ?? null
+    )
+  }, [busAudioEq, masterBusDb, resolved])
 
   useEffect(() => {
     let frame = 0
@@ -307,6 +330,7 @@ export function BeatvideoMasterPanel() {
       setBusAudioEq(undefined)
       setMasterBusDb(0)
       setMasterFx(preset.settings)
+      setAutoLevelResult(null)
       markChanged()
       useTimelineCommandStore
         .getState()
@@ -390,11 +414,75 @@ export function BeatvideoMasterPanel() {
     [markChanged, setBusAudioEq],
   )
 
+  const autoLevel = useCallback(async () => {
+    if (autoLeveling) return
+    const mediaId = currentProject?.beatvideoMusic?.mediaId
+    if (!mediaId) {
+      toast.error('Add and analyze the beat before Auto level')
+      return
+    }
+
+    setAutoLeveling(true)
+    try {
+      const mediaUrl = await resolveMediaUrl(mediaId)
+      if (!mediaUrl) throw new Error('The beat source could not be opened')
+      const buffer = await getOrDecodeAudio(mediaId, mediaUrl)
+      const channels = Array.from(
+        { length: buffer.numberOfChannels },
+        (_, channel) => buffer.getChannelData(channel),
+      )
+      const level = analyzeProgramLevel(channels, buffer.sampleRate)
+      if (level.analyzedBlocks === 0 || level.rmsDb <= -100) {
+        throw new Error('No usable audio level was detected')
+      }
+
+      const inputGainDb = resolveAutoLevelInputGainDb(level)
+      const before = captureSnapshot()
+      setMasterBusDb(0)
+      setMasterFx({
+        ...resolved,
+        enabled: true,
+        inputGainDb,
+        limiter: {
+          ...resolved.limiter,
+          enabled: true,
+          ceilingDb: Math.min(resolved.limiter.ceilingDb, -0.8),
+        },
+      })
+      markChanged()
+      useTimelineCommandStore
+        .getState()
+        .addUndoEntry({ type: 'AUTO_LEVEL_MASTER', payload: {} }, before)
+      setAutoLevelResult({
+        rmsDb: level.rmsDb,
+        peakDb: level.peakDb,
+        inputGainDb,
+      })
+      toast.success('Auto level applied', {
+        description: `Program RMS ${level.rmsDb.toFixed(1)} dBFS · input ${inputGainDb >= 0 ? '+' : ''}${inputGainDb.toFixed(1)} dB · peak limiter on`,
+      })
+    } catch (error) {
+      toast.error('Could not auto level the beat', {
+        description: error instanceof Error ? error.message : String(error),
+      })
+    } finally {
+      setAutoLeveling(false)
+    }
+  }, [
+    autoLeveling,
+    currentProject?.beatvideoMusic?.mediaId,
+    markChanged,
+    resolved,
+    setMasterBusDb,
+    setMasterFx,
+  ])
+
   const resetAll = useCallback(() => {
     const before = captureSnapshot()
     setMasterFx(undefined)
     setBusAudioEq(undefined)
     setMasterBusDb(0)
+    setAutoLevelResult(null)
     markChanged()
     useTimelineCommandStore
       .getState()
@@ -445,7 +533,8 @@ export function BeatvideoMasterPanel() {
             variant="ghost"
             className={cn(
               'ml-auto h-7 w-7',
-              resolved.enabled && 'bg-secondary text-foreground',
+              resolved.enabled &&
+                'border border-emerald-500/60 bg-emerald-500/15 text-emerald-300 hover:bg-emerald-500/20 hover:text-emerald-200',
             )}
             onClick={() =>
               commitMasterFx(
@@ -477,7 +566,13 @@ export function BeatvideoMasterPanel() {
               key={preset.id}
               type="button"
               onClick={() => applyPreset(preset.id)}
-              className="shrink-0 rounded-md border border-border bg-secondary/30 px-2 py-1.5 text-[10px] font-medium text-muted-foreground transition-colors hover:bg-secondary/70 hover:text-foreground"
+              aria-pressed={activeBuiltInPresetId === preset.id}
+              className={cn(
+                'shrink-0 rounded-md border px-2 py-1.5 text-[10px] font-medium transition-colors',
+                activeBuiltInPresetId === preset.id
+                  ? 'border-primary/70 bg-primary/15 text-foreground ring-1 ring-primary/25'
+                  : 'border-border bg-secondary/30 text-muted-foreground hover:bg-secondary/70 hover:text-foreground',
+              )}
               title={preset.description}
             >
               {preset.label}
@@ -575,6 +670,27 @@ export function BeatvideoMasterPanel() {
         </div>
 
         <div className="mt-3 space-y-2 border-t border-border pt-3">
+          <div className="flex items-center justify-between gap-2">
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              className="h-7 px-2 text-[10px]"
+              disabled={autoLeveling}
+              onClick={() => void autoLevel()}
+            >
+              <Gauge className="h-3.5 w-3.5" />
+              {autoLeveling ? 'Analyzing level…' : 'Auto level'}
+            </Button>
+            {autoLevelResult ? (
+              <span
+                className="truncate font-mono text-[9px] text-muted-foreground"
+                title="Program RMS and sample peak; not LUFS or true peak"
+              >
+                RMS {autoLevelResult.rmsDb.toFixed(1)} · peak {autoLevelResult.peakDb.toFixed(1)}
+              </span>
+            ) : null}
+          </div>
           <MasterRange
             label="Input"
             value={resolved.inputGainDb}
@@ -620,7 +736,7 @@ export function BeatvideoMasterPanel() {
               key={id}
               className={cn(
                 'min-w-0 border-r border-border last:border-r-0',
-                selectedSlot === id && 'bg-secondary/40',
+                selectedSlot === id && 'bg-secondary/60 shadow-[inset_0_-2px_0_hsl(var(--primary))]',
               )}
             >
               <button
@@ -629,7 +745,7 @@ export function BeatvideoMasterPanel() {
                 className="flex w-full min-w-0 flex-col items-center gap-1 px-1 py-2 text-center"
                 title={hint}
               >
-                <Icon className={cn('h-3.5 w-3.5', enabled ? 'text-foreground' : 'text-muted-foreground')} />
+                <Icon className={cn('h-3.5 w-3.5', enabled ? 'text-emerald-300' : 'text-muted-foreground')} />
                 <span className="max-w-full truncate text-[9px] font-medium text-foreground">{label}</span>
               </button>
               <button
@@ -638,7 +754,7 @@ export function BeatvideoMasterPanel() {
                 className={cn(
                   'mx-auto mb-1.5 flex h-4 w-4 items-center justify-center rounded-sm border',
                   enabled
-                    ? 'border-foreground/50 bg-foreground text-background'
+                    ? 'border-emerald-500/60 bg-emerald-500/15 text-emerald-300'
                     : 'border-border text-muted-foreground',
                 )}
                 aria-label={`${enabled ? 'Bypass' : 'Enable'} ${label}`}

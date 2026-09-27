@@ -1568,6 +1568,25 @@ const MediaCardInternal = memo(function MediaCardInternal({
     />
   )
 
+  const mediaTypeLabel =
+    mediaType === 'video'
+      ? 'VIDEO'
+      : mediaType === 'audio'
+        ? 'AUDIO'
+        : mediaType === 'image'
+          ? 'IMAGE'
+          : mediaType === 'lottie'
+            ? 'MOTION'
+            : 'MEDIA'
+  const mediaTypeBadgeClass =
+    mediaType === 'video'
+      ? 'bg-sky-500/90 text-white'
+      : mediaType === 'audio'
+        ? 'bg-emerald-500/90 text-black'
+        : mediaType === 'image'
+          ? 'bg-violet-500/90 text-white'
+          : 'bg-fuchsia-500/90 text-white'
+
   const getIcon = () => {
     switch (mediaType) {
       case 'video':
@@ -1593,13 +1612,13 @@ const MediaCardInternal = memo(function MediaCardInternal({
             <div
               style={CARD_PERF_STYLE}
               className={`
-          ${CARD_LIST_BASE} cursor-pointer
+          ${CARD_LIST_BASE}
           ${
             selected
               ? 'border-primary ring-1 ring-primary/20'
               : 'border-border hover:border-primary/50'
           }
-          ${isPreparingMedia ? 'opacity-80 cursor-default' : ''}
+          ${isPreparingMedia ? 'opacity-80 cursor-default' : 'cursor-grab active:cursor-grabbing'}
         `}
               draggable={!isPreparingMedia}
               onDragStart={isPreparingMedia ? undefined : handleDragStart}
@@ -1694,11 +1713,15 @@ const MediaCardInternal = memo(function MediaCardInternal({
                   <span className="text-[10px] text-muted-foreground">{preparingLabel}</span>
                 ) : (
                   <>
-                    <div className="p-0.5 rounded bg-primary/90 text-primary-foreground flex-shrink-0">
-                      {mediaType === 'video' && <Video className="w-2.5 h-2.5" />}
-                      {mediaType === 'audio' && <FileAudio className="w-2.5 h-2.5" />}
-                      {mediaType === 'image' && <ImageIcon className="w-2.5 h-2.5" />}
-                      {mediaType === 'lottie' && <FileJson className="w-2.5 h-2.5" />}
+                    <div
+                      className={`flex flex-shrink-0 items-center gap-1 rounded px-1 py-0.5 ${mediaTypeBadgeClass}`}
+                      title="Drag to timeline"
+                    >
+                      {mediaType === 'video' && <Video className="h-2.5 w-2.5" />}
+                      {mediaType === 'audio' && <FileAudio className="h-2.5 w-2.5" />}
+                      {mediaType === 'image' && <ImageIcon className="h-2.5 w-2.5" />}
+                      {mediaType === 'lottie' && <FileJson className="h-2.5 w-2.5" />}
+                      <span className="text-[8px] font-semibold tracking-wide">{mediaTypeLabel}</span>
                     </div>
                     <h3 className="text-xs font-medium text-foreground truncate">
                       {media.fileName}
@@ -1741,13 +1764,13 @@ const MediaCardInternal = memo(function MediaCardInternal({
           <div
             style={CARD_PERF_STYLE}
             className={`
-        ${CARD_GRID_BASE} cursor-pointer
+        ${CARD_GRID_BASE}
         ${
           selected
             ? 'border-primary ring-2 ring-primary/20'
             : 'border-border hover:border-primary/50 hover:shadow-lg hover:shadow-primary/10'
         }
-        ${isPreparingMedia ? 'cursor-default' : ''}
+        ${isPreparingMedia ? 'cursor-default' : 'cursor-grab active:cursor-grabbing'}
       `}
             draggable={!isPreparingMedia}
             onDragStart={isPreparingMedia ? undefined : handleDragStart}
@@ -1845,12 +1868,15 @@ const MediaCardInternal = memo(function MediaCardInternal({
               {/* Overlaid badges - hidden during preparation */}
               {!isPreparingMedia && (
                 <div className="absolute inset-x-0 bottom-0 px-1.5 py-1 bg-gradient-to-t from-black/60 to-transparent flex items-center justify-between gap-1 pointer-events-none">
-                  {/* Type icon badge - icon only */}
-                  <div className="p-0.5 rounded bg-primary/90 text-primary-foreground">
-                    {mediaType === 'video' && <Video className="w-2.5 h-2.5" />}
-                    {mediaType === 'audio' && <FileAudio className="w-2.5 h-2.5" />}
-                    {mediaType === 'image' && <ImageIcon className="w-2.5 h-2.5" />}
-                    {mediaType === 'lottie' && <FileJson className="w-2.5 h-2.5" />}
+                  <div
+                    className={`flex items-center gap-1 rounded px-1 py-0.5 ${mediaTypeBadgeClass}`}
+                    title="Drag to timeline"
+                  >
+                    {mediaType === 'video' && <Video className="h-2.5 w-2.5" />}
+                    {mediaType === 'audio' && <FileAudio className="h-2.5 w-2.5" />}
+                    {mediaType === 'image' && <ImageIcon className="h-2.5 w-2.5" />}
+                    {mediaType === 'lottie' && <FileJson className="h-2.5 w-2.5" />}
+                    <span className="text-[8px] font-semibold tracking-wide">{mediaTypeLabel}</span>
                   </div>
 
                   {/* Duration badge */}
