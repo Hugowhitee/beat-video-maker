@@ -201,7 +201,7 @@ export const Toolbar = memo(function Toolbar({
 
       <div className="flex flex-1 items-center justify-center gap-2">
         <div
-          className="flex items-center gap-0.5 rounded-md bg-muted p-0.5"
+          className="flex items-center gap-0.5 rounded-sm border border-border/80 bg-secondary/60 p-0.5"
           role="group"
           aria-label="Beatvideo mode"
         >
@@ -217,10 +217,10 @@ export const Toolbar = memo(function Toolbar({
                 aria-pressed={active}
                 onClick={() => onBeatvideoModeChange(mode)}
                 className={cn(
-                  'flex h-7 items-center gap-1.5 rounded-[5px] px-2.5 text-xs font-medium transition-colors',
+                  'flex h-7 items-center gap-1.5 rounded-[3px] px-2.5 text-xs font-medium transition-colors',
                   active
-                    ? 'bg-background text-foreground shadow-sm'
-                    : 'text-muted-foreground hover:text-foreground',
+                    ? 'bg-background text-foreground'
+                    : 'text-muted-foreground hover:bg-background/50 hover:text-foreground',
                 )}
                 data-tooltip={
                   mode === 'photo'
@@ -313,7 +313,7 @@ export const Toolbar = memo(function Toolbar({
 
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button size="sm" className="gap-1.5 glow-primary-sm">
+            <Button size="sm" className="gap-1.5">
               <Download className="h-4 w-4" />
               {t('toolbar.export')}
               <ChevronDown className="h-3 w-3" />

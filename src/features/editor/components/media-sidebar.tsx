@@ -77,6 +77,7 @@ import { useSettingsStore } from '@/features/editor/deps/settings'
 import { resolveGeneratedLayerCanvasSize } from '../utils/generated-layer-canvas-size'
 import type { BeatvideoProjectMode } from '@/types/project'
 import { isSidebarTabVisibleForBeatvideoMode } from '@/config/beatvideo'
+import type { EditorSidebarTab, EditorWorkspaceId } from '@/config/editor-workspaces'
 const LazyBeatvideoMusicPanel = lazy(() =>
   import('./beatvideo-music-panel').then((module) => ({ default: module.BeatvideoMusicPanel })),
 )
@@ -101,6 +102,25 @@ import {
 } from '@/config/editor-layout'
 
 const logger = createLogger('MediaSidebar')
+
+function isSidebarTabVisibleForWorkspace(
+  tab: EditorSidebarTab,
+  workspace: EditorWorkspaceId,
+): boolean {
+  if (workspace === 'beat') return tab === 'beat'
+  if (workspace === 'master') return tab === 'master'
+  if (workspace === 'color') return tab === 'effects'
+  if (workspace === 'motion') return tab === 'media'
+  return tab !== 'beat' && tab !== 'master'
+}
+
+function getWorkspaceSidebarFallback(workspace: EditorWorkspaceId): EditorSidebarTab {
+  if (workspace === 'beat') return 'beat'
+  if (workspace === 'master') return 'master'
+  if (workspace === 'color') return 'effects'
+  return 'media'
+}
+
 const TEXT_TEMPLATE_PREVIEW_SHELL =
   'w-full aspect-video rounded-sm border border-border bg-slate-950'
 
@@ -331,6 +351,7 @@ export const MediaSidebar = memo(function MediaSidebar({
   const mediaFullColumn = useEditorStore((s) => s.mediaFullColumn)
   const toggleMediaFullColumn = useEditorStore((s) => s.toggleMediaFullColumn)
   const activeTab = useEditorStore((s) => s.activeTab)
+  const workspace = useEditorStore((s) => s.workspace)
   const setActiveTab = useEditorStore((s) => s.setActiveTab)
   const sidebarWidth = useEditorStore((s) => s.sidebarWidth)
   const setSidebarWidth = useEditorStore((s) => s.setSidebarWidth)
@@ -771,13 +792,20 @@ export const MediaSidebar = memo(function MediaSidebar({
     { id: 'lottie' as const, icon: Sticker, label: t('lottieBrowser.tabLabel') },
     { id: 'transcript' as const, icon: Captions, label: t('transcript.tabLabel') },
     { id: 'ai' as const, icon: WandSparkles, label: t('editor.mediaSidebar.ai') },
-  ].filter(({ id }) => isSidebarTabVisibleForBeatvideoMode(id, beatvideoMode))
+  ].filter(
+    ({ id }) =>
+      isSidebarTabVisibleForBeatvideoMode(id, beatvideoMode) &&
+      isSidebarTabVisibleForWorkspace(id, workspace),
+  )
 
   useEffect(() => {
-    if (!isSidebarTabVisibleForBeatvideoMode(activeTab, beatvideoMode)) {
-      setActiveTab('media')
+    if (
+      !isSidebarTabVisibleForBeatvideoMode(activeTab, beatvideoMode) ||
+      !isSidebarTabVisibleForWorkspace(activeTab, workspace)
+    ) {
+      setActiveTab(getWorkspaceSidebarFallback(workspace))
     }
-  }, [activeTab, beatvideoMode, setActiveTab])
+  }, [activeTab, beatvideoMode, setActiveTab, workspace])
 
   const shouldSuppressGeneratedItemClick = useCallback(() => {
     if (!suppressGeneratedItemClickRef.current) {
@@ -852,8 +880,9 @@ export const MediaSidebar = memo(function MediaSidebar({
           </button>
         </div>
 
-        {/* Category Icons */}
-        <div className="flex flex-col gap-1 py-1.5">
+        {/* Category Icons — single-purpose Beat/Master workspaces do not repeat themselves here. */}
+        {categories.length > 1 ? (
+          <div className="flex flex-col gap-1 py-1.5">
           {categories.map(({ id, icon: Icon, label }) => (
             <button
               key={id}
@@ -880,7 +909,8 @@ export const MediaSidebar = memo(function MediaSidebar({
               <Icon className="w-4 h-4" />
             </button>
           ))}
-        </div>
+          </div>
+        ) : null}
       </div>
 
       {/* Content Panel — width animated via motion for the open/close toggle.
@@ -935,7 +965,7 @@ export const MediaSidebar = memo(function MediaSidebar({
                       data-tooltip-side="bottom"
                     >
                       <Plus className="h-3.5 w-3.5" />
-                      Layer
+                      Add layer
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" className="min-w-40">
@@ -996,8 +1026,8 @@ export const MediaSidebar = memo(function MediaSidebar({
               <div className="flex h-full min-h-0 flex-col">
                 <div className="shrink-0 border-b border-border bg-secondary/15 px-3 py-2 text-[10px] leading-relaxed text-muted-foreground">
                   {beatvideoMode === 'photo'
-                    ? 'Import a cover and beat, then drag both onto the timeline.'
-                    : 'Video: import footage and a beat. Drag clips onto the timeline; double-click a card to inspect it first.'}
+                    ? 'Import the cover here. Beat owns the project beat and grid; the cover can span the full song automatically.'
+                    : 'Import footage here. Beat owns the music grid; return to Visual for cuts, layers and effects.'}
                 </div>
                 <div className="min-h-0 flex-1 overflow-hidden">
                   <MediaLibrary />

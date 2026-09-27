@@ -53,7 +53,7 @@ export const WorkspaceSwitcher = memo(function WorkspaceSwitcher({
     <div
       role="tablist"
       aria-label={t('toolbar.workspaces.label')}
-      className="flex items-center gap-0.5 rounded-md bg-muted p-0.5"
+      className="flex items-center gap-0.5 rounded-sm border border-border/80 bg-secondary/70 p-0.5"
     >
       {PRIMARY_WORKSPACES.map(({ id, icon: Icon, label }) => {
         const isActive = workspace === id
@@ -66,10 +66,10 @@ export const WorkspaceSwitcher = memo(function WorkspaceSwitcher({
             title={id === 'edit' ? visualHint : undefined}
             onClick={() => setWorkspace(id)}
             className={cn(
-              'flex h-7 items-center gap-1.5 rounded-[5px] px-3 text-xs font-medium transition-colors',
+              'flex h-7 items-center gap-1.5 rounded-[3px] px-3 text-xs font-medium transition-colors',
               isActive
-                ? 'bg-background text-foreground shadow-sm'
-                : 'text-muted-foreground hover:text-foreground',
+                ? 'bg-primary text-primary-foreground'
+                : 'text-muted-foreground hover:bg-background/60 hover:text-foreground',
             )}
           >
             <Icon className="h-3.5 w-3.5" />
@@ -84,10 +84,10 @@ export const WorkspaceSwitcher = memo(function WorkspaceSwitcher({
             type="button"
             aria-label="Advanced workspaces"
             className={cn(
-              'flex h-7 items-center gap-1 rounded-[5px] px-2 text-xs font-medium transition-colors',
+              'flex h-7 items-center gap-1 rounded-[3px] px-2 text-xs font-medium transition-colors',
               advancedActive
-                ? 'bg-background text-foreground shadow-sm'
-                : 'text-muted-foreground hover:text-foreground',
+                ? 'bg-primary text-primary-foreground'
+                : 'text-muted-foreground hover:bg-background/60 hover:text-foreground',
             )}
           >
             <SlidersHorizontal className="h-3.5 w-3.5" />

@@ -111,6 +111,12 @@ components:
 
 # Design System: FreeCut
 
+> **Beatvideo downstream theme override.** Beatvideo keeps FreeCut's precision and
+> component grammar, but intentionally uses a warmer, slightly lighter graphite
+> shell with flatter hardware-like controls. The exact runtime tokens in
+> `src/index.css` are authoritative for Beatvideo. Do not revert the downstream
+> app to the upstream near-black palette during future UI work.
+
 ## 1. Overview
 
 **Creative North Star: "The Quiet Instrument"**
@@ -138,7 +144,7 @@ legacy-NLE chrome (beveled gray toolbars, illegible 10px labels). Density here i
 high but always clean and scannable.
 
 **Key Characteristics:**
-- Dark-only, neutral graphite ramp; value carries hierarchy
+- Warm-dark graphite ramp; Beatvideo is intentionally lighter than upstream FreeCut while remaining suitable for long editing sessions
 - One warm-orange signal color, used sparingly for active/playback/focus
 - Tonal layering, not shadows, for depth
 - IBM Plex Sans for UI, IBM Plex Mono for all technical/numeric data
@@ -331,4 +337,4 @@ density and more color than the rest of the app because the color is data.
   `muted-foreground` already sits near the AA floor (~4.8:1); an alpha modifier drops
   readable text to ~2.5–3.5:1. De-emphasize with size/weight, not sub-AA alpha. (Opacity
   is fine on genuinely decorative markers or disabled controls, which AA exempts.)
-- **Don't** add a light theme; contrast work happens within the dark ramp.
+- **Don't** jump to a white consumer-editor theme; Beatvideo's intended direction is a lighter warm-dark studio shell with restrained contrast.
