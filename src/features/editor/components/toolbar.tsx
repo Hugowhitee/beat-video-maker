@@ -12,8 +12,6 @@ import {
   Save,
   Settings,
   Video,
-  Clapperboard,
-  Image as ImageIcon,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
@@ -62,7 +60,6 @@ interface ToolbarProps {
     fps: number
   }
   beatvideoMode: BeatvideoProjectMode
-  onBeatvideoModeChange: (mode: BeatvideoProjectMode) => void
   onSave?: () => Promise<void>
   onExport?: () => void
   onExportBundle?: () => void
@@ -75,7 +72,6 @@ export const Toolbar = memo(function Toolbar({
   projectId,
   project,
   beatvideoMode,
-  onBeatvideoModeChange,
   onSave,
   onExport,
   onExportBundle,
@@ -199,43 +195,7 @@ export const Toolbar = memo(function Toolbar({
         </div>
       </div>
 
-      <div className="flex flex-1 items-center justify-center gap-2">
-        <div
-          className="flex items-center gap-0.5 rounded-sm border border-border/80 bg-secondary/60 p-0.5"
-          role="group"
-          aria-label="Beatvideo mode"
-        >
-          {([
-            ['photo', ImageIcon, 'Photo'],
-            ['video', Clapperboard, 'Video'],
-          ] as const).map(([mode, Icon, label]) => {
-            const active = beatvideoMode === mode
-            return (
-              <button
-                key={mode}
-                type="button"
-                aria-pressed={active}
-                onClick={() => onBeatvideoModeChange(mode)}
-                className={cn(
-                  'flex h-7 items-center gap-1.5 rounded-[3px] px-2.5 text-xs font-medium transition-colors',
-                  active
-                    ? 'bg-background text-foreground'
-                    : 'text-muted-foreground hover:bg-background/50 hover:text-foreground',
-                )}
-                data-tooltip={
-                  mode === 'photo'
-                    ? 'Still image + beat workflow'
-                    : 'Footage + cuts + transitions workflow'
-                }
-                data-tooltip-side="bottom"
-              >
-                <Icon className="h-3.5 w-3.5" />
-                {label}
-              </button>
-            )
-          })}
-        </div>
-        <Separator orientation="vertical" className="h-5" />
+      <div className="flex flex-1 items-center justify-center">
         <WorkspaceSwitcher beatvideoMode={beatvideoMode} />
       </div>
 

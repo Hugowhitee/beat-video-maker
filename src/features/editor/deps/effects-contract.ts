@@ -14,3 +14,4 @@ export {
   buildAudioReactivePresetUpdate,
   type AudioReactivePresetId,
 } from '@/features/effects/utils/audio-reactive-presets'
+export { isAudioReactiveParam } from '@/features/effects/utils/audio-reactive-bindings'

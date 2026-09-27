@@ -53,7 +53,6 @@ import { EDITOR_WORKSPACE_TIMELINE_SIZE, type EditorWorkspaceId } from '@/config
 import {
   createProjectUpgradeBackup,
   formatProjectUpgradeBackupName,
-  updateStoredProject,
 } from '@/features/editor/deps/projects'
 import { useClearKeyframesDialogStore } from '@/shared/state/clear-keyframes-dialog'
 import { useTtsGenerateDialogStore } from '@/shared/state/tts-generate-dialog'
@@ -620,35 +619,6 @@ export const LoadedEditor = memo(function LoadedEditor({
     }
   }, [projectId])
 
-  const handleBeatvideoModeChange = useCallback(
-    async (nextMode: import('@/types/project').BeatvideoProjectMode) => {
-      if (nextMode === beatvideoMode) return
-
-      const previousMode = beatvideoMode
-      setBeatvideoMode(nextMode)
-
-      if (nextMode === 'photo') {
-        const editor = useEditorStore.getState()
-        if (editor.activeTab === 'transitions' || editor.activeTab === 'transcript' || editor.activeTab === 'ai') {
-          editor.setActiveTab('media')
-        }
-      }
-
-      try {
-        await updateStoredProject(projectId, { beatvideoMode: nextMode })
-        const currentProject = useProjectStore.getState().currentProject
-        if (currentProject?.id === projectId) {
-          useProjectStore.getState().setCurrentProject({ ...currentProject, beatvideoMode: nextMode })
-        }
-      } catch (error) {
-        setBeatvideoMode(previousMode)
-        logger.error('Failed to change Beatvideo mode:', error)
-        toast.error('Could not change Beatvideo mode')
-      }
-    },
-    [beatvideoMode, projectId],
-  )
-
   const handleExport = useCallback(() => {
     // Pause playback when opening export dialog
     usePlaybackStore.getState().pause()
@@ -726,7 +696,6 @@ export const LoadedEditor = memo(function LoadedEditor({
           projectId={projectId}
           project={project}
           beatvideoMode={beatvideoMode}
-          onBeatvideoModeChange={handleBeatvideoModeChange}
           onSave={handleSave}
           onExport={handleExport}
           onExportBundle={handleExportBundle}
