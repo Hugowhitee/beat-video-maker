@@ -19,6 +19,7 @@ import { useMixerLiveGainProduct, clearMixerLiveGain } from '@/shared/state/mixe
 import type { ResolvedAudioEqSettings } from '@/types/audio'
 import type { AudioPlaybackProps } from '../audio-playback-props'
 import { resolveTimelineDuckingGain } from '@/shared/utils/audio-ducking'
+import { syncPreviewMasterAudioGraph } from '../../utils/preview-audio-graph'
 
 interface AudioPlaybackState {
   frame: number
@@ -75,6 +76,11 @@ export function useAudioPlaybackState({
   const previewMasterVolume = usePlaybackStore((state) => state.volume)
   const previewMasterMuted = usePlaybackStore((state) => state.muted)
   const masterBusDb = usePlaybackStore((state) => state.masterBusDb)
+  const masterFx = usePlaybackStore((state) => state.masterFx)
+  const effectiveMonitorVolume = previewMasterMuted ? 0 : previewMasterVolume
+  useEffect(() => {
+    syncPreviewMasterAudioGraph(masterFx, masterBusDb, effectiveMonitorVolume)
+  }, [effectiveMonitorVolume, masterBusDb, masterFx])
 
   const contextKeyframes = useItemKeyframesFromContext(itemId)
   const storeKeyframes = useTimelineStore(
@@ -121,9 +127,6 @@ export function useAudioPlaybackState({
 
   const linearVolume = Math.pow(10, effectiveVolumeDb / 20)
   const itemVolume = muted ? 0 : Math.max(0, linearVolume * fadeMultiplier)
-  const masterBusGain = Math.pow(10, masterBusDb / 20)
-  const effectiveMonitorVolume = previewMasterMuted ? 0 : previewMasterVolume
-
   const mixerGain = useMixerLiveGainProduct([itemId, ...(liveGainItemIds ?? [])])
   useEffect(() => {
     clearMixerLiveGain(itemId)
@@ -169,8 +172,6 @@ export function useAudioPlaybackState({
     isPreviewScrubbing,
     resolvedVolume:
       itemVolume *
-      masterBusGain *
-      effectiveMonitorVolume *
       Math.max(0, volumeMultiplier) *
       duckingGain *
       mixerGain,
