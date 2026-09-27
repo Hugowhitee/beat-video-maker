@@ -1,7 +1,7 @@
 // @vitest-environment node
 
 import { describe, expect, it } from 'vite-plus/test'
-import { createSaturationMixCurve } from './mastering'
+import { analyzeProgramLevel, createSaturationMixCurve, getMasteringPreset, resolveAutoLevelInputGainDb } from './mastering'
 
 function sampleCurve(curve: Float32Array, x: number): number {
   const normalized = Math.max(0, Math.min(1, (x + 1) / 2))
@@ -31,5 +31,38 @@ describe('createSaturationMixCurve', () => {
       Math.abs(sampleCurve(unity, 0.5)),
     )
     expect(Math.abs(sampleCurve(attenuated, 0.5))).toBeGreaterThan(0.25)
+  })
+})
+
+
+describe('mastering presets', () => {
+  it('provides a complete Detroit recipe on the canonical master chain', () => {
+    const preset = getMasteringPreset('detroit')
+    expect(preset.id).toBe('detroit')
+    expect(preset.settings.enabled).toBe(true)
+    expect(preset.settings.compressor?.enabled).toBe(true)
+    expect(preset.settings.saturator?.enabled).toBe(true)
+    expect(preset.settings.limiter?.enabled).toBe(true)
+    expect(preset.settings.limiter?.ceilingDb).toBeLessThan(0)
+  })
+})
+
+describe('program level analysis', () => {
+  it('ignores a long silent tail when estimating program RMS', () => {
+    const sampleRate = 100
+    const samples = new Float32Array(sampleRate * 8)
+    samples.fill(0.25, 0, sampleRate * 4)
+
+    const level = analyzeProgramLevel([samples], sampleRate)
+
+    expect(level.rmsDb).toBeCloseTo(-12.041, 2)
+    expect(level.peakDb).toBeCloseTo(-12.041, 2)
+    expect(level.analyzedBlocks).toBeGreaterThan(0)
+  })
+
+  it('returns a bounded input gain for Auto level', () => {
+    expect(resolveAutoLevelInputGainDb({ rmsDb: -17, peakDb: -4, analyzedBlocks: 10 })).toBe(6)
+    expect(resolveAutoLevelInputGainDb({ rmsDb: -40, peakDb: -20, analyzedBlocks: 10 })).toBe(12)
+    expect(resolveAutoLevelInputGainDb({ rmsDb: -120, peakDb: -120, analyzedBlocks: 0 })).toBe(0)
   })
 })
