@@ -12,7 +12,7 @@ import type {
   TimelineItem,
   TimelineTrack,
 } from '@/types/timeline'
-import type { AudioEqSettings } from '@/types/audio'
+import type { AudioEqSettings, MasterFxSettings } from '@/types/audio'
 import type { Transition } from '@/types/transition'
 import type { CompositionEditorKind, ProjectTimeline, Project } from '@/types/project'
 
@@ -721,6 +721,7 @@ interface TimelinePersistenceSnapshot {
   scrollPosition: number
   busAudioEq?: AudioEqSettings
   masterBusDb: number
+  masterFx?: MasterFxSettings
   markers: ProjectMarker[]
   inPoint: number | null
   outPoint: number | null
@@ -789,6 +790,7 @@ function captureTimelinePersistenceSnapshot(): TimelinePersistenceSnapshot {
       heldRoot?.scrollPosition ?? rootView?.scrollPosition ?? settings.scrollPosition,
     busAudioEq: heldRoot ? heldRoot.busAudioEq : playback.busAudioEq,
     masterBusDb: playback.masterBusDb,
+    masterFx: playback.masterFx,
     markers: heldRoot ? heldRoot.markers : markers.markers,
     inPoint: heldRoot ? heldRoot.inPoint : markers.inPoint,
     outPoint: heldRoot ? heldRoot.outPoint : markers.outPoint,
@@ -814,6 +816,7 @@ function buildTimelineFromPersistenceSnapshot(
     items: rootTimeline.items as ProjectTimeline['items'],
     ...(snapshot.busAudioEq && { busAudioEq: snapshot.busAudioEq }),
     masterBusDb: snapshot.masterBusDb,
+    ...(snapshot.masterFx && { masterFx: snapshot.masterFx }),
     currentFrame: snapshot.currentFrame,
     zoomLevel: snapshot.zoomLevel,
     scrollPosition: snapshot.scrollPosition,
@@ -1136,6 +1139,7 @@ export async function hydrateTimelineStoresFromProject(project: Project): Promis
     useTimelineSettingsStore.getState().setScrollPosition(t.scrollPosition || 0)
     usePlaybackStore.getState().setBusAudioEq(t.busAudioEq)
     usePlaybackStore.getState().setMasterBusDb(t.masterBusDb ?? 0)
+    usePlaybackStore.getState().setMasterFx(t.masterFx)
 
     // Restore sub-compositions
     if (t.compositions && t.compositions.length > 0) {
@@ -1210,6 +1214,7 @@ export async function hydrateTimelineStoresFromProject(project: Project): Promis
     useZoomStore.getState().setZoomLevel(1)
     usePlaybackStore.getState().setCurrentFrame(0)
     usePlaybackStore.getState().setBusAudioEq(undefined)
+    usePlaybackStore.getState().setMasterFx(undefined)
   }
 
   // Common setup for both cases
