@@ -25,3 +25,12 @@ export { searchTimelineTranscript } from '@/features/timeline/utils/transcript-s
 export type { TranscriptSearchMatch } from '@/features/timeline/utils/transcript-search'
 export { timelineToSourceFrames, sourceToTimelineFrames } from '@/features/timeline/utils/source-calculations'
 export { linkItems } from '@/features/timeline/stores/actions/item-actions'
+export {
+  BEATVIDEO_COVER_LAYOUT_PRESETS,
+  buildBeatvideoCoverLayoutItems,
+} from '@/features/timeline/utils/beatvideo-cover-layout'
+export type {
+  BeatvideoCoverContent,
+  BeatvideoCoverLayoutPresetId,
+  BeatvideoCoverTitleMotion,
+} from '@/features/timeline/utils/beatvideo-cover-layout'

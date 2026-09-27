@@ -63,9 +63,15 @@ import {
   createClassicTrack,
   createOverlayLayerTrack,
   createTextTemplateItem,
+  BEATVIDEO_COVER_LAYOUT_PRESETS,
+  buildBeatvideoCoverLayoutItems,
   getDefaultGeneratedLayerDurationInFrames,
   resolvePhotoPublishingDurationInFrames,
   computeInitialTransform,
+} from '@/features/editor/deps/timeline-utils'
+import type {
+  BeatvideoCoverLayoutPresetId,
+  BeatvideoCoverTitleMotion,
 } from '@/features/editor/deps/timeline-utils'
 import {
   addItemsOnNewTracks,
@@ -376,6 +382,13 @@ export const MediaSidebar = memo(function MediaSidebar({
   const [aiTabActivated, setAiTabActivated] = useState(activeTab === 'ai')
   const [showAllPhotoEffects, setShowAllPhotoEffects] = useState(false)
   const [importingPhotoCover, setImportingPhotoCover] = useState(false)
+  const [coverLayoutPresetId, setCoverLayoutPresetId] =
+    useState<BeatvideoCoverLayoutPresetId>('hero-stack')
+  const [coverTitleMotion, setCoverTitleMotion] =
+    useState<BeatvideoCoverTitleMotion>('static')
+  const [coverTitleDraft, setCoverTitleDraft] = useState('BEAT TITLE')
+  const [coverSubtitleDraft, setCoverSubtitleDraft] = useState('ARTIST TYPE BEAT')
+  const [coverBrandingDraft, setCoverBrandingDraft] = useState('PROD. NAME')
   // The Lottie panel hits an external API on mount, so keep it unmounted until
   // the tab is first opened; it then stays mounted (state preserved).
   const [lottieTabActivated, setLottieTabActivated] = useState(activeTab === 'lottie')
@@ -499,6 +512,93 @@ export const MediaSidebar = memo(function MediaSidebar({
     },
     [t],
   )
+
+  const handleAddCoverLayout = useCallback(() => {
+    const timeline = useTimelineStore.getState()
+    const selection = useSelectionStore.getState()
+    const currentProject = useProjectStore.getState().currentProject
+    const canvasWidth = currentProject?.metadata.width ?? DEFAULT_PROJECT_WIDTH
+    const canvasHeight = currentProject?.metadata.height ?? DEFAULT_PROJECT_HEIGHT
+    const publishDuration = resolvePhotoPublishingDurationInFrames(timeline.fps, {
+      beatvideoMode: currentProject?.beatvideoMode,
+      beatvideoMusic: currentProject?.beatvideoMusic,
+      projectMedia: useMediaLibraryStore.getState().mediaItems,
+      timelineItems: timeline.items,
+    })
+    const durationInFrames =
+      publishDuration > 0
+        ? publishDuration
+        : getDefaultGeneratedLayerDurationInFrames(timeline.fps)
+    const from = publishDuration > 0
+      ? 0
+      : Math.max(0, usePlaybackStore.getState().currentFrame)
+
+    let workingTracks = timeline.tracks
+    let anchorTrackId = selection.activeTrackId
+    const trackIds: {
+      title?: string
+      subtitle?: string
+      branding?: string
+    } = {}
+
+    const roles = [
+      ['title', 'Cover title'],
+      ['subtitle', 'Cover subtitle'],
+      ['branding', 'Cover branding'],
+    ] as const
+
+    for (const [role, name] of roles) {
+      const created = createOverlayLayerTrack({
+        tracks: workingTracks,
+        activeTrackId: anchorTrackId,
+      })
+      if (!created) {
+        toast.error('Could not create the cover text layers')
+        return
+      }
+
+      workingTracks = created.tracks.map((track) =>
+        track.id === created.trackId ? { ...track, name } : track,
+      )
+      trackIds[role] = created.trackId
+      anchorTrackId = created.trackId
+    }
+
+    if (!trackIds.title || !trackIds.subtitle || !trackIds.branding) return
+
+    const textItems = buildBeatvideoCoverLayoutItems({
+      presetId: coverLayoutPresetId,
+      content: {
+        title: coverTitleDraft,
+        subtitle: coverSubtitleDraft,
+        branding: coverBrandingDraft,
+      },
+      titleMotion: coverTitleMotion,
+      trackIds: {
+        title: trackIds.title,
+        subtitle: trackIds.subtitle,
+        branding: trackIds.branding,
+      },
+      from,
+      durationInFrames,
+      canvasWidth,
+      canvasHeight,
+      fps: timeline.fps,
+    })
+
+    addItemsOnNewTracks(textItems, workingTracks)
+    selection.setActiveTrack(trackIds.title)
+    selection.selectItems(textItems.map((item) => item.id))
+    toast.success('Cover layout added', {
+      description: 'Title, subtitle and branding are normal editable text layers.',
+    })
+  }, [
+    coverBrandingDraft,
+    coverLayoutPresetId,
+    coverSubtitleDraft,
+    coverTitleDraft,
+    coverTitleMotion,
+  ])
 
   const handleAddPhotoText = useCallback((kind: 'display' | 'bold' | 'type-line') => {
     const { tracks, fps, items, addItemOnNewTrack } = useTimelineStore.getState()
@@ -1297,10 +1397,105 @@ export const MediaSidebar = memo(function MediaSidebar({
             <div
               className={`min-h-0 flex-1 overflow-y-auto p-3 ${activeTab === 'text' ? 'block' : 'hidden'}`}
             >
-              <div className="space-y-3">
+              <div className="space-y-4">
+                <section className="space-y-2.5 rounded-md border border-border bg-secondary/15 p-2.5">
+                  <div className="flex items-start justify-between gap-2">
+                    <div>
+                      <div className="text-[11px] font-semibold text-foreground">Cover layout</div>
+                      <p className="mt-0.5 text-[9px] leading-relaxed text-muted-foreground">
+                        Build title, type line and branding as three normal editable layers.
+                      </p>
+                    </div>
+                    <span className="shrink-0 rounded border border-border px-1.5 py-0.5 text-[8px] text-muted-foreground">
+                      3 layers
+                    </span>
+                  </div>
+
+                  <div className="grid gap-1.5">
+                    <label className="space-y-1 text-[9px] text-muted-foreground">
+                      <span>Title</span>
+                      <input
+                        value={coverTitleDraft}
+                        onChange={(event) => setCoverTitleDraft(event.target.value)}
+                        className="h-8 w-full rounded-md border border-input bg-background/60 px-2 text-xs text-foreground"
+                        placeholder="BEAT TITLE"
+                      />
+                    </label>
+                    <label className="space-y-1 text-[9px] text-muted-foreground">
+                      <span>Subtitle</span>
+                      <input
+                        value={coverSubtitleDraft}
+                        onChange={(event) => setCoverSubtitleDraft(event.target.value)}
+                        className="h-8 w-full rounded-md border border-input bg-background/60 px-2 text-xs text-foreground"
+                        placeholder="ARTIST TYPE BEAT"
+                      />
+                    </label>
+                    <label className="space-y-1 text-[9px] text-muted-foreground">
+                      <span>Branding</span>
+                      <input
+                        value={coverBrandingDraft}
+                        onChange={(event) => setCoverBrandingDraft(event.target.value)}
+                        className="h-8 w-full rounded-md border border-input bg-background/60 px-2 text-xs text-foreground"
+                        placeholder="PROD. NAME"
+                      />
+                    </label>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-1.5">
+                    {BEATVIDEO_COVER_LAYOUT_PRESETS.map((preset) => (
+                      <button
+                        key={preset.id}
+                        type="button"
+                        aria-pressed={coverLayoutPresetId === preset.id}
+                        onClick={() => setCoverLayoutPresetId(preset.id)}
+                        className={cn(
+                          'rounded-md border p-2 text-left transition-colors',
+                          coverLayoutPresetId === preset.id
+                            ? 'border-primary bg-primary/10 text-foreground'
+                            : 'border-border bg-background/35 text-muted-foreground hover:text-foreground',
+                        )}
+                      >
+                        <div className="text-[10px] font-semibold">{preset.label}</div>
+                        <div className="mt-1 text-[8px] leading-tight opacity-75">
+                          {preset.description}
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+
+                  <label className="grid grid-cols-[72px_minmax(0,1fr)] items-center gap-2 text-[9px] text-muted-foreground">
+                    <span>Title motion</span>
+                    <select
+                      value={coverTitleMotion}
+                      onChange={(event) =>
+                        setCoverTitleMotion(event.target.value as BeatvideoCoverTitleMotion)
+                      }
+                      className="h-8 rounded-md border border-input bg-background/60 px-2 text-xs text-foreground"
+                    >
+                      <option value="static">Static</option>
+                      <option value="pulse">Subtle pulse</option>
+                    </select>
+                  </label>
+
+                  <Button
+                    type="button"
+                    size="sm"
+                    className="w-full justify-center"
+                    onClick={handleAddCoverLayout}
+                  >
+                    <Type className="h-3.5 w-3.5" />
+                    Add cover layout
+                  </Button>
+
+                  <p className="text-[8px] leading-relaxed text-muted-foreground">
+                    Title/subtitle use Staatliches. Branding starts with a reliable script fallback
+                    and can be changed with the normal font picker.
+                  </p>
+                </section>
+
                 <div className="space-y-3">
                   <div className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">
-                    {t('editor.mediaSidebar.templates')}
+                    Single text
                   </div>
                   {TEXT_TEMPLATE_GROUPS.map((group) => {
                     const presets = textTemplatesByLayout[group.key]
