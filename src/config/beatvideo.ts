@@ -13,6 +13,7 @@ const PHOTO_SIDEBAR_TABS = new Set<EditorSidebarTab>([
   'master',
   'text',
   'shapes',
+  'effects',
 ])
 const VIDEO_SIDEBAR_TABS = new Set<EditorSidebarTab>([
   'media',
@@ -20,6 +21,7 @@ const VIDEO_SIDEBAR_TABS = new Set<EditorSidebarTab>([
   'master',
   'text',
   'shapes',
+  'effects',
   'transitions',
 ])
 
