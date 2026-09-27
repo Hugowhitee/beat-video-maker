@@ -10,7 +10,7 @@
 import type { TimelineItem, TimelineTrack, ProjectMarker } from '@/types/timeline'
 import type { Transition } from '@/types/transition'
 import type { ItemKeyframes } from '@/types/keyframe'
-import type { AudioEqSettings } from '@/types/audio'
+import type { AudioEqSettings, MasterFxSettings } from '@/types/audio'
 import { DEFAULT_PROJECT_HEIGHT, DEFAULT_PROJECT_WIDTH } from '@/shared/projects/defaults'
 import { DEFAULT_FPS } from '@/shared/timeline/defaults'
 import { useMarkersStore } from '../markers-store'
@@ -39,6 +39,7 @@ export interface ExportableSequence {
   backgroundColor?: string
   busAudioEq?: AudioEqSettings
   masterBusDb: number
+  masterFx?: MasterFxSettings
   durationFrames: number
   inPoint: number | null
   outPoint: number | null
@@ -139,6 +140,7 @@ export function getExportableSequence(sequenceId: string | null): ExportableSequ
       backgroundColor: metadata?.backgroundColor,
       busAudioEq,
       masterBusDb: playback.masterBusDb,
+      masterFx: playback.masterFx,
       durationFrames: furthestItemEnd(root.items),
       ...range(nav.mainHolder),
     }
@@ -164,6 +166,7 @@ export function getExportableSequence(sequenceId: string | null): ExportableSequ
     // registry entry is only up to date once we've switched away from it.
     busAudioEq: isActiveTab ? playback.busAudioEq : comp.busAudioEq,
     masterBusDb: playback.masterBusDb,
+    masterFx: playback.masterFx,
     durationFrames: comp.durationInFrames || furthestItemEnd(comp.items),
     ...range(comp),
   }
