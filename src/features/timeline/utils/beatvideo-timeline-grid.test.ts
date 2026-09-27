@@ -132,6 +132,72 @@ describe('Beatvideo timeline musical grid', () => {
     expect(result!.grid.beats.slice(0, 3).map((beat) => beat.time)).toEqual([0.25, 0.5, 0.75])
   })
 
+  it('maps spectral transients with the same trim, speed, and reverse rules as the waveform', () => {
+    const withTransients = analysis()
+    withTransients.musicMap.transients = [
+      { time: 1, index: 0, strength: 0.9, low: 0.8, mid: 0.2, high: 0.1 },
+      { time: 3, index: 1, strength: 0.8, low: 0.2, mid: 0.7, high: 0.3 },
+      { time: 5, index: 2, strength: 0.7, low: 0.1, mid: 0.2, high: 0.9 },
+    ]
+
+    const result = resolveBeatvideoTimelineGrid(
+      withTransients,
+      [
+        audio({
+          from: 60,
+          durationInFrames: 60,
+          sourceStart: 30,
+          sourceEnd: 150,
+          speed: 2,
+          isReversed: true,
+        }),
+      ],
+      30,
+    )
+
+    expect(result).not.toBeNull()
+    expect(result!.grid.transients?.map((hit) => hit.index)).toEqual([2, 1, 0])
+    expect(result!.grid.transients?.map((hit) => hit.time)).toEqual([2, 3, 4])
+  })
+
+  it('keeps corrected and fixed grids on deterministic timeline frames', () => {
+    const corrected = analysis({
+      correctionAnchors: [
+        { id: 'late-fix', sourceTime: 2, correctedTime: 2.2 },
+      ],
+    })
+    const correctedGrid = resolveBeatvideoTimelineGrid(
+      corrected,
+      [audio({ from: 30 })],
+      30,
+    )
+
+    expect(correctedGrid).not.toBeNull()
+    expect(
+      correctedGrid!.grid.beats.find((beat) => beat.index === 3)?.time,
+    ).toBeCloseTo(3.2, 8)
+
+    const fixed = analysis({
+      gridMode: 'fixed',
+      bpmOverride: 100,
+      barOneTime: 1,
+      barOneVerified: true,
+    })
+    const fixedGrid = resolveBeatvideoTimelineGrid(
+      fixed,
+      [audio({ from: 45 })],
+      30,
+    )
+
+    expect(fixedGrid).not.toBeNull()
+    expect(fixedGrid!.barOneTimelineTime).toBeCloseTo(2.5, 8)
+    expect(
+      fixedGrid!.grid.beats.some(
+        (beat) => beat.downbeat && Math.abs(beat.time - 2.5) < 1e-8,
+      ),
+    ).toBe(true)
+  })
+
   it('prefers an audio companion over the matching video placement', () => {
     const a = audio({ id: 'audio-companion', from: 30 })
     const v = video({ id: 'video-companion', from: 0 })
