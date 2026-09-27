@@ -203,6 +203,17 @@ describe('editor-store', () => {
     expect(editState.activeTab).toBe('media')
   })
 
+  it('keeps Beat and Master focused by collapsing generic properties', () => {
+    expect(useEditorStore.getState().rightSidebarOpen).toBe(true)
+
+    useEditorStore.getState().setWorkspace('beat')
+    expect(useEditorStore.getState().rightSidebarOpen).toBe(false)
+
+    useEditorStore.getState().setRightSidebarOpen(true)
+    useEditorStore.getState().setWorkspace('master')
+    expect(useEditorStore.getState().rightSidebarOpen).toBe(false)
+  })
+
   it('remembers per-workspace layout tweaks across a round trip', () => {
     useEditorStore.getState().setWorkspace('color')
     useEditorStore.getState().setColorScopesOpen(false)
