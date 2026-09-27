@@ -22,6 +22,7 @@ import {
   resolveBeatvideoMusicGrid,
   resolveBeatvideoTimelineGrid,
   projectAudioReactiveBeatsToItem,
+  projectAudioReactiveTransientsToItem,
   sourceSecondsToTimelineFrame,
   timelineFrameToSourceSeconds,
   type MusicAnalysisProgress,
@@ -500,6 +501,11 @@ export function BeatvideoMusicPanel() {
                 audioReactive: {
                   ...item.audioReactive,
                   beats: projectAudioReactiveBeatsToItem(
+                    refreshedGrid.grid,
+                    item,
+                    timeline.fps,
+                  ),
+                  transients: projectAudioReactiveTransientsToItem(
                     refreshedGrid.grid,
                     item,
                     timeline.fps,
