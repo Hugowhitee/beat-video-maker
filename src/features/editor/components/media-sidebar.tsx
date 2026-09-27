@@ -82,6 +82,7 @@ import {
   AUDIO_REACTIVE_PRESETS,
   buildAudioReactivePresetUpdate,
   EffectThumbnail,
+  isAudioReactiveParam,
   useGpuEffectPreviewData,
   type AudioReactivePresetId,
 } from '@/features/editor/deps/effects-contract'
@@ -1659,15 +1660,15 @@ export const MediaSidebar = memo(function MediaSidebar({
                 <section className="rounded-md border border-primary/30 bg-primary/5 p-2.5">
                   <div className="flex items-center gap-2">
                     <AudioLines className="h-3.5 w-3.5 text-primary" />
-                    <div className="text-xs font-semibold text-foreground">Audio Reactive</div>
+                    <div className="text-xs font-semibold text-foreground">Reactive quick starts</div>
                     <span className="ml-auto font-mono text-[9px] uppercase tracking-wide text-muted-foreground">
                       {hasBeatAnalysis ? 'Beat ready' : 'Needs beat'}
                     </span>
                   </div>
                   <p className="mt-1.5 text-[10px] leading-relaxed text-muted-foreground">
-                    Make the cover or selected layer pulse, flash, glow, shake or split on the beat.
-                    After applying, the orange React controls on the right expose Beat/Downbeat,
-                    Threshold, Amount and Release.
+                    These are shortcuts, not the limit. Any effect marked React below can follow the
+                    beat on each compatible slider. Applied effects expose Beat/Downbeat, Threshold,
+                    Amount and Release.
                   </p>
 
                   {hasBeatAnalysis ? (
@@ -1731,11 +1732,19 @@ export const MediaSidebar = memo(function MediaSidebar({
                           onClick={() => handleAddGpuEffect(def.id)}
                           className="flex flex-col items-center gap-1 rounded-md border border-border bg-secondary/30 p-1.5 transition-[transform,background-color,border-color,color] duration-150 hover:border-primary/50 hover:bg-secondary/50 active:scale-[0.98] group"
                         >
-                          <EffectThumbnail
-                            effectId={def.id}
-                            active={hoveredEffectKey === def.id}
-                            className="w-full aspect-video rounded-sm"
-                          />
+                          <div className="relative w-full">
+                            <EffectThumbnail
+                              effectId={def.id}
+                              active={hoveredEffectKey === def.id}
+                              className="w-full aspect-video rounded-sm"
+                            />
+                            {Object.values(def.params).some(isAudioReactiveParam) ? (
+                              <span className="absolute right-1 top-1 inline-flex items-center gap-0.5 rounded-sm border border-primary/40 bg-background/85 px-1 py-0.5 text-[8px] font-semibold text-primary">
+                                <AudioLines className="h-2.5 w-2.5" />
+                                React
+                              </span>
+                            ) : null}
+                          </div>
                           <span className="w-full truncate text-center text-[10px] leading-tight text-muted-foreground group-hover:text-foreground">
                             {def.name}
                           </span>
@@ -1855,11 +1864,19 @@ export const MediaSidebar = memo(function MediaSidebar({
                           }}
                           className="flex flex-col items-center gap-1 p-1.5 rounded-md border border-border bg-secondary/30 hover:bg-secondary/50 hover:border-primary/50 transition-[transform,background-color,border-color,color] duration-150 active:scale-[0.98] group"
                         >
-                          <EffectThumbnail
-                            effectId={def.id}
-                            active={hoveredEffectKey === def.id}
-                            className="w-full aspect-video rounded-sm"
-                          />
+                          <div className="relative w-full">
+                            <EffectThumbnail
+                              effectId={def.id}
+                              active={hoveredEffectKey === def.id}
+                              className="w-full aspect-video rounded-sm"
+                            />
+                            {Object.values(def.params).some(isAudioReactiveParam) ? (
+                              <span className="absolute right-1 top-1 inline-flex items-center gap-0.5 rounded-sm border border-primary/40 bg-background/85 px-1 py-0.5 text-[8px] font-semibold text-primary">
+                                <AudioLines className="h-2.5 w-2.5" />
+                                React
+                              </span>
+                            ) : null}
+                          </div>
                           <span className="text-[9px] text-muted-foreground group-hover:text-foreground text-center leading-tight truncate w-full">
                             {def.name}
                           </span>
