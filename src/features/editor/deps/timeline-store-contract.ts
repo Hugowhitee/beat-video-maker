@@ -62,5 +62,6 @@ export {
 } from '@/features/timeline/deps/keyframe-editors'
 export {
   createMotionClip,
+  createPreCompBatch,
   openComposition,
 } from '@/features/timeline/stores/actions/composition-actions'
