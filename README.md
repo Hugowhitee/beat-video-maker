@@ -4,32 +4,29 @@ Beatvideo Maker is a local-first editor for turning a beat plus photos or footag
 
 ## Open the app
 
-Hosted app: **https://hugowhitee.github.io/beat-video-maker/**
+Primary hosted app: **https://beat-video-maker-live-production.up.railway.app/**
+
+GitHub Pages remains a fallback deployment target: **https://hugowhitee.github.io/beat-video-maker/**. The production container is host-agnostic and serves the same built `dist/` with nginx; it does not rely on Vite Preview host allowlists.
 
 On first use the browser asks for a local workspace folder. Project files, media metadata, caches and exports stay local; Beatvideo Maker does not require a cloud backend.
 
 The normal flow is:
 
 1. open or create a project;
-2. choose **Photo** or **Video**, a name, format and FPS;
-3. import a cover/beat or footage/beat in **Media**;
-4. use **Beat** to analyze BPM/downbeats and correct tempo or bar 1 when needed;
-5. edit on the normal FreeCut preview/timeline;
-6. use **Overlay**, **Effects**, **Motion/Color** and Video-only editing tools as needed;
-7. export locally.
+2. choose **Photo** or **Video**, a name, format and FPS — project type is changed from Project Settings, not from a persistent editor toggle;
+3. use **Beat** to import/select the beat, analyze it or enter a known BPM, verify the grid and place producer tags/watermarks;
+4. use **Visual** to import the hero cover/footage, add layers and effects, and make compatible effect parameters audio-reactive;
+5. use **Master** for the project EQ/compressor/saturation/limiter chain;
+6. use Advanced Motion/Color or deeper FreeCut editing only when needed;
+7. export locally for publishing.
 
 ## Product modes
 
 ### Photo
 
-Focused cover-art workflow. The normal left rail is intentionally small:
+Focused cover-art workflow. **Beat → Visual → Master** is the normal path. Visual owns the cover, layers and effects; compatible numeric/animatable effect parameters expose **React** controls for Beat/Downbeat, Threshold, Amount and Release. Reactive presets are only quick starts, not the limit of what can react.
 
-- **Media** — cover and beat intake;
-- **Beat** — Beat This analysis, BPM correction and explicit bar-1 anchoring;
-- **Overlay** — text, logo/image and simple graphic layers;
-- **Effects** — FreeCut adjustment/GPU effects.
-
-The photo stays the visual hero. Photo mode reuses the same timeline, renderer and export path as Video mode.
+The photo stays the visual hero and normally spans the beat. Photo mode reuses the same timeline, renderer and export path as Video mode; deeper Motion/Color tools remain available under Advanced.
 
 ### Video
 
@@ -87,7 +84,9 @@ vp test run
 vp build
 ```
 
-GitHub Pages production builds use the project base `/beat-video-maker/`. The Pages workflow also installs a SPA fallback so `/projects` and `/editor/<id>` can be refreshed on the hosted project site.
+Railway production builds are source-controlled through `Dockerfile`, `deploy/nginx.conf.template` and `railway.json`. Node/Vite+ builds the app; nginx serves the static `dist/` with SPA fallback and the cross-origin-isolation headers required by the editor. This avoids provider-specific Vite Preview host allowlists.
+
+GitHub Pages production builds remain supported with the project base `/beat-video-maker/`. The Pages workflow installs a SPA fallback so `/projects` and `/editor/<id>` can be refreshed there as well.
 
 ## Upstream and license
 
