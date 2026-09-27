@@ -7,7 +7,13 @@ export function resolveBeatvideoProjectMode(value: unknown): BeatvideoProjectMod
   return value === 'photo' ? 'photo' : 'video'
 }
 
-const PHOTO_SIDEBAR_TABS = new Set<EditorSidebarTab>(['media', 'beat', 'overlay', 'effects'])
+const PHOTO_SIDEBAR_TABS = new Set<EditorSidebarTab>([
+  'media',
+  'beat',
+  'master',
+  'overlay',
+  'effects',
+])
 const VIDEO_SIDEBAR_TABS = new Set<EditorSidebarTab>([
   'media',
   'beat',

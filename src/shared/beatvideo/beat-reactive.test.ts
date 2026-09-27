@@ -136,6 +136,7 @@ describe('audio reactive modulation', () => {
     expect(beats).toEqual([
       { frame: 0, index: 1, strength: 0.7, downbeat: false },
       { frame: 15, index: 2, strength: 0.9, downbeat: false },
+      { frame: 30, index: 3, strength: 1, downbeat: false },
     ])
   })
 

@@ -73,7 +73,7 @@ describe('GpuEffectPanel parameter resets', () => {
 
     const disclosure = screen.getByRole('button', { name: /^Fluted Glass/ })
     expect(disclosure).toHaveAttribute('aria-expanded', 'true')
-    expect(disclosure.parentElement).toHaveClass('bg-muted/35')
+    expect(disclosure.parentElement).toHaveClass('bg-secondary/35')
 
     fireEvent.click(disclosure)
 

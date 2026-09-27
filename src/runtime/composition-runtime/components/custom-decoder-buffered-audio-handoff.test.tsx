@@ -77,6 +77,24 @@ describe('CustomDecoderBufferedAudio queued handoff', () => {
       disconnect() {}
     }
 
+    class DynamicsCompressorNodeMock {
+      threshold = new AudioParamMock()
+      knee = new AudioParamMock()
+      ratio = new AudioParamMock()
+      attack = new AudioParamMock()
+      release = new AudioParamMock()
+      reduction = 0
+      connect() {}
+      disconnect() {}
+    }
+
+    class WaveShaperNodeMock {
+      curve: Float32Array | null = null
+      oversample: OverSampleType = 'none'
+      connect() {}
+      disconnect() {}
+    }
+
     class AudioBufferSourceNodeMock {
       buffer: AudioBuffer | null = null
       playbackRate = new AudioParamMock()
@@ -99,6 +117,12 @@ describe('CustomDecoderBufferedAudio queued handoff', () => {
       }
       createBiquadFilter() {
         return new BiquadFilterNodeMock()
+      }
+      createDynamicsCompressor() {
+        return new DynamicsCompressorNodeMock()
+      }
+      createWaveShaper() {
+        return new WaveShaperNodeMock()
       }
       createBufferSource() {
         const source = new AudioBufferSourceNodeMock()
