@@ -18,6 +18,7 @@ import { resolvePreviewAudioPitchShiftSemitones } from '@/shared/utils/audio-pit
 import { useMixerLiveGainProduct, clearMixerLiveGain } from '@/shared/state/mixer-live-gain'
 import type { ResolvedAudioEqSettings } from '@/types/audio'
 import type { AudioPlaybackProps } from '../audio-playback-props'
+import { resolveTimelineDuckingGain } from '@/shared/utils/audio-ducking'
 
 interface AudioPlaybackState {
   frame: number
@@ -32,6 +33,7 @@ interface AudioPlaybackState {
 
 export function useAudioPlaybackState({
   itemId,
+  timelineFrom = 0,
   liveGainItemIds,
   volume = 0,
   muted = false,
@@ -127,6 +129,20 @@ export function useAudioPlaybackState({
     clearMixerLiveGain(itemId)
   }, [itemId, volume])
 
+  const timelineItems = useTimelineStore((state) => state.items)
+  const timelineTracks = useTimelineStore((state) => state.tracks)
+  const duckingGain = useMemo(
+    () =>
+      resolveTimelineDuckingGain({
+        frame: timelineFrom + frame,
+        targetItemId: itemId,
+        items: timelineItems,
+        tracks: timelineTracks,
+        fps,
+      }),
+    [fps, frame, itemId, timelineFrom, timelineItems, timelineTracks],
+  )
+
   const resolvedPitchShiftSemitones = useMemo(
     () =>
       resolvePreviewAudioPitchShiftSemitones({
@@ -156,6 +172,7 @@ export function useAudioPlaybackState({
       masterBusGain *
       effectiveMonitorVolume *
       Math.max(0, volumeMultiplier) *
+      duckingGain *
       mixerGain,
     resolvedPitchShiftSemitones,
     resolvedAudioEqStages,
