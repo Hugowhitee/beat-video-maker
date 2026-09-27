@@ -49,6 +49,7 @@ import { DEFAULT_PROJECT_HEIGHT, DEFAULT_PROJECT_WIDTH } from '@/shared/projects
 import {
   clearMediaDragData,
   MediaLibrary,
+  resolveMediaUrl,
   setMediaDragData,
   useMediaLibraryStore,
 } from '@/features/editor/deps/media-library'
@@ -59,12 +60,18 @@ import {
   createDefaultGradientItem,
   createDefaultShapeItem,
   createDefaultSolidColorItem,
+  createClassicTrack,
   createOverlayLayerTrack,
   createTextTemplateItem,
   getDefaultGeneratedLayerDurationInFrames,
   resolvePhotoPublishingDurationInFrames,
   computeInitialTransform,
 } from '@/features/editor/deps/timeline-utils'
+import {
+  addItemsOnNewTracks,
+  buildDroppedMediaTimelineItems,
+  replaceItemsOnTrack,
+} from '@/features/editor/deps/timeline-contract'
 import { addAdjustmentLayer } from '../utils/add-adjustment-layer'
 import type { TextItem, ShapeItem, ShapeType } from '@/types/timeline'
 import { useMaskEditorStore } from '@/features/editor/deps/preview'
@@ -360,6 +367,7 @@ export const MediaSidebar = memo(function MediaSidebar({
   const [beatTabActivated, setBeatTabActivated] = useState(activeTab === 'beat')
   const [aiTabActivated, setAiTabActivated] = useState(activeTab === 'ai')
   const [showAllPhotoEffects, setShowAllPhotoEffects] = useState(false)
+  const [importingPhotoCover, setImportingPhotoCover] = useState(false)
   // The Lottie panel hits an external API on mount, so keep it unmounted until
   // the tab is first opened; it then stays mounted (state preserved).
   const [lottieTabActivated, setLottieTabActivated] = useState(activeTab === 'lottie')
@@ -561,6 +569,103 @@ export const MediaSidebar = memo(function MediaSidebar({
     setActiveTrack(newTrack.trackId)
     selectItems([textItem.id])
   }, [])
+
+  const handleImportPhotoCover = useCallback(async () => {
+    if (importingPhotoCover) return
+
+    setImportingPhotoCover(true)
+    try {
+      const mediaStore = useMediaLibraryStore.getState()
+      const imported = await mediaStore.importMedia({ storageMode: 'copy' })
+      const coverMedia = imported.find((media) => media.mimeType.startsWith('image/'))
+
+      if (!coverMedia) {
+        if (imported.length > 0) {
+          toast.warning('Choose an image file for the cover')
+        }
+        return
+      }
+
+      const blobUrl = await resolveMediaUrl(coverMedia.id)
+      if (!blobUrl) {
+        toast.error('Could not load the imported cover')
+        return
+      }
+
+      const timeline = useTimelineStore.getState()
+      const currentProject = useProjectStore.getState().currentProject
+      const existingCoverTrack = timeline.tracks.find(
+        (track) => track.kind === 'video' && track.name === 'Cover',
+      )
+      const maxOrder = timeline.tracks.reduce(
+        (max, track) => Math.max(max, track.order ?? 0),
+        0,
+      )
+      const coverTrack =
+        existingCoverTrack ??
+        {
+          ...createClassicTrack({
+            tracks: timeline.tracks,
+            kind: 'video',
+            order: maxOrder + 1,
+          }),
+          name: 'Cover',
+        }
+      const nextTracks = existingCoverTrack
+        ? timeline.tracks
+        : [...timeline.tracks, coverTrack]
+      const publishDuration = resolvePhotoPublishingDurationInFrames(timeline.fps, {
+        beatvideoMode: 'photo',
+        beatvideoMusic: currentProject?.beatvideoMusic,
+        projectMedia: useMediaLibraryStore.getState().mediaItems,
+        timelineItems: timeline.items,
+      })
+      const durationInFrames =
+        publishDuration > 0
+          ? publishDuration
+          : getDefaultGeneratedLayerDurationInFrames(timeline.fps)
+      const coverItems = buildDroppedMediaTimelineItems({
+        media: coverMedia,
+        mediaId: coverMedia.id,
+        mediaType: 'image',
+        label: `Cover: ${coverMedia.fileName}`,
+        timelineFps: timeline.fps,
+        blobUrl,
+        canvasWidth: currentProject?.metadata.width ?? DEFAULT_PROJECT_WIDTH,
+        canvasHeight: currentProject?.metadata.height ?? DEFAULT_PROJECT_HEIGHT,
+        initialFit: 'cover',
+        placement: {
+          primary: {
+            trackId: coverTrack.id,
+            from: 0,
+            durationInFrames,
+          },
+        },
+      })
+      const coverItem = coverItems.find((item) => item.type === 'image')
+      if (!coverItem) {
+        toast.error('Could not place the imported cover')
+        return
+      }
+
+      if (existingCoverTrack) {
+        replaceItemsOnTrack(existingCoverTrack.id, coverItems)
+      } else {
+        addItemsOnNewTracks(coverItems, nextTracks)
+      }
+
+      const selection = useSelectionStore.getState()
+      selection.setActiveTrack(coverTrack.id)
+      selection.selectItems([coverItem.id])
+      toast.success(publishDuration > 0 ? 'Cover placed for the full beat' : 'Cover placed')
+    } catch (error) {
+      toast.error('Could not import the cover', {
+        description: error instanceof Error ? error.message : String(error),
+      })
+    } finally {
+      setImportingPhotoCover(false)
+    }
+  }, [importingPhotoCover])
 
   const handleFitPhotoCoverToBeat = useCallback(() => {
     const timeline = useTimelineStore.getState()
@@ -1027,9 +1132,27 @@ export const MediaSidebar = memo(function MediaSidebar({
             >
               <div className="flex h-full min-h-0 flex-col">
                 <div className="shrink-0 border-b border-border bg-secondary/15 px-3 py-2 text-[10px] leading-relaxed text-muted-foreground">
-                  {beatvideoMode === 'photo'
-                    ? 'Import the cover here. Beat owns the project beat and grid; the cover can span the full song automatically.'
-                    : 'Import footage here. Beat owns the music grid; return to Visual for cuts, layers and effects.'}
+                  {beatvideoMode === 'photo' ? (
+                    <div className="space-y-2">
+                      <p>
+                        Beat owns the project beat and grid. Place one cover here and it will span
+                        the full song automatically when the beat is ready.
+                      </p>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        className="h-7 w-full justify-start text-xs"
+                        disabled={importingPhotoCover}
+                        onClick={() => void handleImportPhotoCover()}
+                      >
+                        <ImagePlus className="h-3.5 w-3.5" />
+                        {importingPhotoCover ? 'Importing cover…' : 'Import & place cover'}
+                      </Button>
+                    </div>
+                  ) : (
+                    'Import footage here. Beat owns the music grid; return to Visual for cuts, layers and effects.'
+                  )}
                 </div>
                 <div className="min-h-0 flex-1 overflow-hidden">
                   <MediaLibrary />
@@ -1065,6 +1188,17 @@ export const MediaSidebar = memo(function MediaSidebar({
             >
               <section className="space-y-2 border-b border-border pb-3">
                 <div className="text-xs font-medium text-foreground">Cover</div>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  className="w-full justify-start"
+                  disabled={importingPhotoCover}
+                  onClick={() => void handleImportPhotoCover()}
+                >
+                  <ImagePlus className="h-3.5 w-3.5" />
+                  {importingPhotoCover ? 'Importing cover…' : 'Import & place cover'}
+                </Button>
                 <Button
                   type="button"
                   size="sm"
