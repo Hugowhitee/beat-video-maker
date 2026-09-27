@@ -339,6 +339,7 @@ export const FONT_CATALOG: readonly FontCatalogEntry[] = [
     weights: [100, 200, 300, 400, 500, 600, 700, 800, 900],
   },
   { value: 'Anton', label: 'Anton', family: 'Anton', weights: [400] },
+  { value: 'Staatliches', label: 'Staatliches', family: 'Staatliches', weights: [400] },
   { value: 'Mukta', label: 'Mukta', family: 'Mukta', weights: [200, 300, 400, 500, 600, 700, 800] },
   {
     value: 'Schibsted Grotesk',
