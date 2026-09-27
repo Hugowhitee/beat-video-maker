@@ -1642,36 +1642,140 @@ export function BeatvideoMusicPanel() {
           </section>
         ) : null}
 
-        <details className="border-t border-border pt-3">
-          <summary className="flex cursor-pointer list-none items-center justify-between gap-2 text-xs font-medium text-foreground marker:hidden [&::-webkit-details-marker]:hidden">
-            <span>Tags & watermark</span>
-            <span className="text-[10px] font-normal text-muted-foreground">Optional</span>
-          </summary>
-          <div className="mt-3 space-y-2">
-            <div className="grid grid-cols-2 rounded-md border border-border bg-secondary/25 p-0.5">
-              <button
-                type="button"
-                onClick={() => setTagTool('producer')}
-                className={`h-7 rounded-[5px] text-[10px] font-medium transition-colors ${
-                  tagTool === 'producer'
-                    ? 'bg-background text-foreground shadow-sm'
-                    : 'text-muted-foreground hover:text-foreground'
-                }`}
-              >
-                Producer tag
-              </button>
-              <button
-                type="button"
-                onClick={() => setTagTool('watermark')}
-                className={`h-7 rounded-[5px] text-[10px] font-medium transition-colors ${
-                  tagTool === 'watermark'
-                    ? 'bg-background text-foreground shadow-sm'
-                    : 'text-muted-foreground hover:text-foreground'
-                }`}
-              >
-                Watermark
-              </button>
+        <section className="space-y-3 border-t border-border pt-3">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <div className="text-xs font-medium text-foreground">Tag audio</div>
+              <p className="mt-1 text-[10px] leading-relaxed text-muted-foreground">
+                Place one producer tag, or repeat a watermark across musical bars.
+              </p>
             </div>
+            <span className="text-[9px] text-muted-foreground">Optional</span>
+          </div>
+
+          <div className="grid grid-cols-2 gap-1.5">
+            <button
+              type="button"
+              aria-pressed={tagTool === 'producer'}
+              onClick={() => setTagTool('producer')}
+              className={`min-h-12 rounded-md border px-2.5 py-2 text-left transition-colors ${
+                tagTool === 'producer'
+                  ? 'border-primary/60 bg-primary/10 text-foreground'
+                  : 'border-border bg-secondary/25 text-muted-foreground hover:border-foreground/25 hover:bg-secondary/50 hover:text-foreground'
+              }`}
+            >
+              <span className="block text-[11px] font-semibold">Producer tag</span>
+              <span className="mt-0.5 block text-[9px] leading-tight opacity-75">
+                Place once at playhead
+              </span>
+            </button>
+            <button
+              type="button"
+              aria-pressed={tagTool === 'watermark'}
+              onClick={() => setTagTool('watermark')}
+              className={`min-h-12 rounded-md border px-2.5 py-2 text-left transition-colors ${
+                tagTool === 'watermark'
+                  ? 'border-primary/60 bg-primary/10 text-foreground'
+                  : 'border-border bg-secondary/25 text-muted-foreground hover:border-foreground/25 hover:bg-secondary/50 hover:text-foreground'
+              }`}
+            >
+              <span className="block text-[11px] font-semibold">Watermark</span>
+              <span className="mt-0.5 block text-[9px] leading-tight opacity-75">
+                Repeat across bars
+              </span>
+            </button>
+          </div>
+
+          <div className="rounded-md border border-border bg-secondary/20 p-2">
+            <div className="mb-2 flex items-center justify-between gap-2">
+              <span className="text-[10px] font-medium text-foreground">Track mix</span>
+              <span className="text-[9px] text-muted-foreground">Affects every clip on the track</span>
+            </div>
+
+            <div className="space-y-2">
+              <div className="grid grid-cols-[68px_minmax(0,1fr)_42px_26px] items-center gap-1.5">
+                <span className="truncate text-[9px] text-muted-foreground">Producer</span>
+                <input
+                  type="range"
+                  min={-60}
+                  max={12}
+                  step={0.5}
+                  value={producerTrack?.volume ?? 0}
+                  disabled={!producerTrack}
+                  onPointerDown={beginTagMixGesture}
+                  onPointerUp={endTagMixGesture}
+                  onPointerCancel={endTagMixGesture}
+                  onKeyDown={beginTagMixGesture}
+                  onKeyUp={endTagMixGesture}
+                  onBlur={endTagMixGesture}
+                  onChange={(event) =>
+                    patchTagTrack('producer', { volume: Number(event.target.value) })
+                  }
+                  className="min-w-0 accent-foreground disabled:opacity-35"
+                  aria-label="Producer tags master volume"
+                />
+                <span className="text-right font-mono text-[9px] tabular-nums text-muted-foreground">
+                  {producerTrack ? `${(producerTrack.volume ?? 0).toFixed(1)} dB` : '—'}
+                </span>
+                <button
+                  type="button"
+                  disabled={!producerTrack}
+                  aria-label="Mute producer tags"
+                  aria-pressed={producerTrack?.muted ?? false}
+                  onClick={() => toggleTagTrackMute('producer')}
+                  className={`h-6 rounded border text-[9px] font-semibold transition-colors disabled:opacity-30 ${
+                    producerTrack?.muted
+                      ? 'border-red-500/60 bg-red-500/15 text-red-300'
+                      : 'border-border bg-background/50 text-muted-foreground hover:text-foreground'
+                  }`}
+                >
+                  M
+                </button>
+              </div>
+
+              <div className="grid grid-cols-[68px_minmax(0,1fr)_42px_26px] items-center gap-1.5">
+                <span className="truncate text-[9px] text-muted-foreground">Watermark</span>
+                <input
+                  type="range"
+                  min={-60}
+                  max={12}
+                  step={0.5}
+                  value={watermarkTrack?.volume ?? 0}
+                  disabled={!watermarkTrack}
+                  onPointerDown={beginTagMixGesture}
+                  onPointerUp={endTagMixGesture}
+                  onPointerCancel={endTagMixGesture}
+                  onKeyDown={beginTagMixGesture}
+                  onKeyUp={endTagMixGesture}
+                  onBlur={endTagMixGesture}
+                  onChange={(event) =>
+                    patchTagTrack('watermark', { volume: Number(event.target.value) })
+                  }
+                  className="min-w-0 accent-foreground disabled:opacity-35"
+                  aria-label="Watermarks master volume"
+                />
+                <span className="text-right font-mono text-[9px] tabular-nums text-muted-foreground">
+                  {watermarkTrack ? `${(watermarkTrack.volume ?? 0).toFixed(1)} dB` : '—'}
+                </span>
+                <button
+                  type="button"
+                  disabled={!watermarkTrack}
+                  aria-label="Mute watermarks"
+                  aria-pressed={watermarkTrack?.muted ?? false}
+                  onClick={() => toggleTagTrackMute('watermark')}
+                  className={`h-6 rounded border text-[9px] font-semibold transition-colors disabled:opacity-30 ${
+                    watermarkTrack?.muted
+                      ? 'border-red-500/60 bg-red-500/15 text-red-300'
+                      : 'border-border bg-background/50 text-muted-foreground hover:text-foreground'
+                  }`}
+                >
+                  M
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div className="space-y-2">
 
             <Button
               type="button"
@@ -1778,7 +1882,7 @@ export function BeatvideoMusicPanel() {
 
                 <details className="border-t border-border pt-2">
                   <summary className="cursor-pointer list-none text-[10px] font-medium text-foreground marker:hidden [&::-webkit-details-marker]:hidden">
-                    Timing & ducking
+                    More timing options
                   </summary>
                   <div className="mt-2 grid grid-cols-2 gap-1.5">
                     <label className="space-y-1 text-[10px] text-muted-foreground">
@@ -1805,7 +1909,7 @@ export function BeatvideoMusicPanel() {
                       />
                     </label>
                     <label className="space-y-1 text-[10px] text-muted-foreground">
-                      <span>Anchor</span>
+                      <span>Tag hit (s)</span>
                       <input
                         type="number"
                         min={0}
@@ -1838,7 +1942,7 @@ export function BeatvideoMusicPanel() {
               </div>
             )}
           </div>
-        </details>
+        </section>
 
         {effectiveAnalysis && resolvedSourceGrid ? (
           <>
