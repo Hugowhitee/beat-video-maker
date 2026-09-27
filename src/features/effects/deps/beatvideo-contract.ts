@@ -4,4 +4,7 @@
  */
 export { useProjectStore } from '@/features/projects/stores/project-store'
 export { resolveBeatvideoTimelineGrid } from '@/features/timeline/utils/beatvideo-timeline-grid'
-export { projectAudioReactiveBeatsToItem } from '@/shared/beatvideo/beat-reactive'
+export {
+  projectAudioReactiveBeatsToItem,
+  projectAudioReactiveTransientsToItem,
+} from '@/shared/beatvideo/beat-reactive'
