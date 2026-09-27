@@ -277,11 +277,11 @@ export const GpuEffectPanel = memo(function GpuEffectPanel({
                       <Button
                         type="button"
                         variant="ghost"
-                        size="icon"
+                        size="sm"
                         className={
                           reactiveBinding
-                            ? 'h-6 w-6 shrink-0 bg-primary/10 text-primary hover:bg-primary/15 hover:text-primary'
-                            : 'h-6 w-6 shrink-0 text-muted-foreground'
+                            ? 'h-6 shrink-0 gap-1 bg-primary/12 px-1.5 text-[9px] font-semibold text-primary hover:bg-primary/18 hover:text-primary'
+                            : 'h-6 shrink-0 gap-1 px-1.5 text-[9px] text-muted-foreground'
                         }
                         disabled={!paramEnabled || !audioReactiveAvailable}
                         aria-pressed={Boolean(reactiveBinding)}
@@ -289,7 +289,8 @@ export const GpuEffectPanel = memo(function GpuEffectPanel({
                         title={reactiveLabel}
                         onClick={() => onToggleAudioReactive?.(effect.id, key, param)}
                       >
-                        <AudioLines className="h-3.5 w-3.5" />
+                        <AudioLines className="h-3 w-3" />
+                        React
                       </Button>
                     ) : null}
                     {keyframeProperty ? (
