@@ -631,9 +631,34 @@ export const MediaSidebar = memo(function MediaSidebar({
     (presetId: string) => {
       const preset = EFFECT_PRESETS.find((p) => p.id === presetId)
       if (!preset) return
+
+      if (beatvideoMode === 'photo') {
+        const { selectedItemIds } = useSelectionStore.getState()
+        const { items, addEffect } = useTimelineStore.getState()
+        const selectedVisualIds = selectedItemIds.filter((id) => {
+          const item = items.find((candidate) => candidate.id === id)
+          return item && item.type !== 'audio'
+        })
+        const coverId = items.find((item) => item.type === 'image')?.id
+        const visualIds =
+          selectedVisualIds.length > 0
+            ? selectedVisualIds
+            : coverId
+              ? [coverId]
+              : []
+
+        if (visualIds.length > 0) {
+          preset.effects.forEach((effect) => {
+            visualIds.forEach((id) => addEffect(id, effect))
+          })
+          useSelectionStore.getState().selectItems(visualIds)
+          return
+        }
+      }
+
       handleAddAdjustmentLayer(preset.effects, preset.name)
     },
-    [handleAddAdjustmentLayer],
+    [beatvideoMode, handleAddAdjustmentLayer],
   )
 
   // Add a single GPU effect ââ‚¬” to selected clips, or as adjustment layer if nothing selected
@@ -643,10 +668,20 @@ export const MediaSidebar = memo(function MediaSidebar({
       const { items, addEffect } = useTimelineStore.getState()
 
       // Find selected visual items (not audio)
-      const visualIds = selectedItemIds.filter((id) => {
+      const selectedVisualIds = selectedItemIds.filter((id) => {
         const item = items.find((i) => i.id === id)
         return item && item.type !== 'audio'
       })
+      const photoCoverId =
+        beatvideoMode === 'photo'
+          ? items.find((item) => item.type === 'image')?.id
+          : undefined
+      const visualIds =
+        selectedVisualIds.length > 0
+          ? selectedVisualIds
+          : photoCoverId
+            ? [photoCoverId]
+            : []
 
       if (visualIds.length > 0) {
         const defaults = getGpuEffectDefaultParams(gpuEffectId)
@@ -664,7 +699,7 @@ export const MediaSidebar = memo(function MediaSidebar({
         ])
       }
     },
-    [handleAddAdjustmentLayer],
+    [beatvideoMode, handleAddAdjustmentLayer],
   )
 
   const { gpuCategories, triggerPreviews } = useGpuEffectPreviewData()
