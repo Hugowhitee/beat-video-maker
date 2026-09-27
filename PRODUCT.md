@@ -78,6 +78,7 @@ Producer tags are a musical-timeline workflow, not generic overlay audio and not
 - generated repetitions materialize as normal FreeCut audio clips on a dedicated producer-tag track;
 - after generation, any repetition can be moved, trimmed, faded, turned down or deleted without breaking the rest of the pattern;
 - optional automatic ducking belongs to the tag clip and targets the beat/music track, so the music moves behind the spoken tag without requiring the user to build a manual sidechain graph;
+- the compact first implementation may use numeric trim/anchor fields, but the intended direct-manipulation UI is a small tag waveform with start/end handles and one draggable anchor marker; do not grow a second waveform/timeline system around it;
 - do not force producer-tag audio to declare a BPM unless the user explicitly chooses creative time-stretching in an advanced workflow.
 
 This deliberately borrows the useful mental model from a DAW playlist—bar grid, tracks and editable clips—without copying a DAW channel rack, plugin routing graph or other production complexity into the default Beatvideo surface.
