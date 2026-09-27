@@ -9,6 +9,7 @@ interface TimelineViewportMeasurements {
 
 interface TimelineViewportState extends TimelineViewportMeasurements {
   pendingScrollToFrame: number | null
+  pendingCenterFrame: number | null
 }
 
 interface TimelineViewportActions {
@@ -17,6 +18,9 @@ interface TimelineViewportActions {
   /** Request the timeline container to scroll so `frame` is visible. */
   requestScrollToFrame: (frame: number) => void
   clearScrollToFrame: () => void
+  /** Request the timeline container to center `frame`, even when already visible. */
+  requestCenterOnFrame: (frame: number) => void
+  clearCenterOnFrame: () => void
 }
 
 const EPSILON = 0.5
@@ -72,8 +76,11 @@ export const useTimelineViewportStore = create<TimelineViewportState & TimelineV
     viewportWidth: 0,
     viewportHeight: 0,
     pendingScrollToFrame: null,
+    pendingCenterFrame: null,
     requestScrollToFrame: (frame: number) => set({ pendingScrollToFrame: frame }),
     clearScrollToFrame: () => set({ pendingScrollToFrame: null }),
+    requestCenterOnFrame: (frame: number) => set({ pendingCenterFrame: frame }),
+    clearCenterOnFrame: () => set({ pendingCenterFrame: null }),
     setViewportImmediate: (next) => {
       lastScrollUpdate = performance.now()
       pendingViewport = null
@@ -103,7 +110,11 @@ export const useTimelineViewportStore = create<TimelineViewportState & TimelineV
 
       // Scroll-only: throttle to SCROLL_THROTTLE_MS to reduce subscriber churn
       const now = performance.now()
-      pendingViewport = { ...next, pendingScrollToFrame: current.pendingScrollToFrame }
+      pendingViewport = {
+        ...next,
+        pendingScrollToFrame: current.pendingScrollToFrame,
+        pendingCenterFrame: current.pendingCenterFrame,
+      }
 
       if (now - lastScrollUpdate >= SCROLL_THROTTLE_MS) {
         lastScrollUpdate = now
