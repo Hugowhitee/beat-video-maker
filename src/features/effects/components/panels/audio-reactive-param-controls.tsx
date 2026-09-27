@@ -67,17 +67,6 @@ export const AudioReactiveParamControls = memo(function AudioReactiveParamContro
       </div>
 
       <div className="grid grid-cols-[64px_minmax(0,1fr)] items-center gap-x-2 gap-y-1.5">
-        <span className="text-[10px] text-muted-foreground">Threshold</span>
-        <SliderInput
-          value={binding.threshold}
-          min={0}
-          max={1}
-          step={0.01}
-          formatValue={(value) => `${Math.round(value * 100)}%`}
-          onLiveChange={noLiveCommit}
-          onChange={(threshold) => onChange({ threshold })}
-        />
-
         <span className="text-[10px] text-muted-foreground">Amount</span>
         <SliderInput
           value={binding.amount}
@@ -87,25 +76,43 @@ export const AudioReactiveParamControls = memo(function AudioReactiveParamContro
           onLiveChange={noLiveCommit}
           onChange={(amount) => onChange({ amount })}
         />
-
-        <span className="text-[10px] text-muted-foreground">Release</span>
-        <SliderInput
-          value={releaseMs}
-          min={40}
-          max={600}
-          step={10}
-          unit=" ms"
-          onLiveChange={noLiveCommit}
-          onChange={(milliseconds) =>
-            onChange({
-              releaseFrames: Math.max(
-                1,
-                Math.round((milliseconds / 1000) * Math.max(1, fps)),
-              ),
-            })
-          }
-        />
       </div>
+
+      <details className="mt-2 border-t border-border/70 pt-1.5">
+        <summary className="cursor-pointer list-none text-[9px] font-medium text-muted-foreground marker:hidden [&::-webkit-details-marker]:hidden">
+          Fine tune
+        </summary>
+        <div className="mt-1.5 grid grid-cols-[64px_minmax(0,1fr)] items-center gap-x-2 gap-y-1.5">
+          <span className="text-[10px] text-muted-foreground">Threshold</span>
+          <SliderInput
+            value={binding.threshold}
+            min={0}
+            max={1}
+            step={0.01}
+            formatValue={(value) => `${Math.round(value * 100)}%`}
+            onLiveChange={noLiveCommit}
+            onChange={(threshold) => onChange({ threshold })}
+          />
+
+          <span className="text-[10px] text-muted-foreground">Release</span>
+          <SliderInput
+            value={releaseMs}
+            min={40}
+            max={600}
+            step={10}
+            unit=" ms"
+            onLiveChange={noLiveCommit}
+            onChange={(milliseconds) =>
+              onChange({
+                releaseFrames: Math.max(
+                  1,
+                  Math.round((milliseconds / 1000) * Math.max(1, fps)),
+                ),
+              })
+            }
+          />
+        </div>
+      </details>
     </div>
   )
 })
