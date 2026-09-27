@@ -4,6 +4,8 @@
  */
 
 export { useProjectStore } from '@/features/projects/stores/project-store'
+export { EditProjectForm } from '@/features/projects/components/project-form'
+export type { ProjectFormData } from '@/features/projects/utils/validation'
 export { createProjectUpgradeBackup } from '@/features/projects/services/project-upgrade-service'
 export { formatProjectUpgradeBackupName } from '@/features/projects/utils/project-helpers'
 export { formatFpsValue, resolveAutoMatchProjectFps } from '@/features/projects/utils/project-fps'

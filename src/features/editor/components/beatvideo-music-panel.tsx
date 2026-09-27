@@ -396,6 +396,7 @@ export function BeatvideoMusicPanel() {
             order: maxOrder + 1,
           }),
           name: 'Beat',
+          color: '#38bdf8',
         }
       const nextTracks = existingBeatTrack
         ? timeline.tracks
@@ -827,6 +828,7 @@ export function BeatvideoMusicPanel() {
             order: maxOrder + 1,
           }),
           name: 'Producer tags',
+          color: '#f59e0b',
         }
       const nextTracks = existingTagTrack
         ? currentTimeline.tracks

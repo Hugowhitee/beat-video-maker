@@ -7,6 +7,7 @@ import {
   ChevronDown,
   Download,
   FolderArchive,
+  FolderCog,
   Keyboard,
   ListVideo,
   Save,
@@ -63,6 +64,7 @@ interface ToolbarProps {
   onSave?: () => Promise<void>
   onExport?: () => void
   onExportBundle?: () => void
+  onProjectSettings?: () => void
   onOpenRenderQueue?: () => void
   /** Number of queued + rendering jobs, shown as a badge on the queue button. */
   renderQueueCount?: number
@@ -75,6 +77,7 @@ export const Toolbar = memo(function Toolbar({
   onSave,
   onExport,
   onExportBundle,
+  onProjectSettings,
   onOpenRenderQueue,
   renderQueueCount = 0,
 }: ToolbarProps) {
@@ -193,6 +196,21 @@ export const Toolbar = memo(function Toolbar({
             })}
           </span>
         </div>
+
+        {onProjectSettings ? (
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="h-7 shrink-0 gap-1.5 px-2 text-[11px] text-muted-foreground hover:text-foreground"
+            onClick={onProjectSettings}
+            aria-label="Project settings"
+            data-tooltip="Project settings"
+          >
+            <FolderCog className="h-3.5 w-3.5" />
+            Project settings
+          </Button>
+        ) : null}
       </div>
 
       <div className="flex flex-1 items-center justify-center">

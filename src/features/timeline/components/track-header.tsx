@@ -250,6 +250,13 @@ export const TrackHeader = memo(function TrackHeader({
             </div>
 
             <div className="flex min-h-0 flex-1 items-center gap-1.5 overflow-hidden px-1.5">
+              {track.color ? (
+                <span
+                  className="h-2 w-2 shrink-0 rounded-[2px]"
+                  style={{ backgroundColor: track.color }}
+                  aria-hidden="true"
+                />
+              ) : null}
               <span className="min-w-0 truncate text-xs font-semibold leading-none font-mono">
                 {track.name}
               </span>

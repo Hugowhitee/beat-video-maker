@@ -23,6 +23,44 @@ function median(values: number[]): number {
   return ((sorted[middle - 1] ?? 0) + (sorted[middle] ?? 0)) / 2
 }
 
+type AudioAccentBand = 'low' | 'mid' | 'high'
+
+function resolveAudioAccentBand(
+  transients: readonly {
+    time: number
+    strength: number
+    low: number
+    mid: number
+    high: number
+  }[],
+  time: number,
+  toleranceSeconds: number,
+): AudioAccentBand | null {
+  let nearest: (typeof transients)[number] | null = null
+  let nearestDistance = Number.POSITIVE_INFINITY
+  for (const transient of transients) {
+    const distance = Math.abs(transient.time - time)
+    if (distance > toleranceSeconds || distance >= nearestDistance) continue
+    nearest = transient
+    nearestDistance = distance
+  }
+  if (!nearest || nearest.strength < 0.28) return null
+
+  const entries = [
+    ['low', nearest.low],
+    ['mid', nearest.mid],
+    ['high', nearest.high],
+  ] as const
+  const strongest = entries.reduce((best, entry) => entry[1] > best[1] ? entry : best)
+  return strongest[1] > 0.08 ? strongest[0] : null
+}
+
+function audioAccentClass(band: AudioAccentBand): string {
+  if (band === 'low') return 'bg-sky-400/85'
+  if (band === 'mid') return 'bg-amber-400/85'
+  return 'bg-fuchsia-400/85'
+}
+
 export function resolveBeatGridDensity(beatSpacingPx: number, barSpacingPx: number) {
   const safeBeatSpacing = Math.max(0, beatSpacingPx)
   const safeBarSpacing = Math.max(0, barSpacingPx)
@@ -104,6 +142,12 @@ export const BeatvideoGridOverlay = memo(function BeatvideoGridOverlay({
   } = resolveBeatGridDensity(beatSpacingPx, barSpacingPx)
   const barOneDownbeatIndex =
     barOneTimelineTime === null ? -1 : closestIndex(downbeatTimes, barOneTimelineTime)
+  const beatIntervalSeconds = median(beatIntervals)
+  const audioAccentTolerance = Math.max(
+    0.035,
+    Math.min(0.11, beatIntervalSeconds > 0 ? beatIntervalSeconds * 0.22 : 0.06),
+  )
+  const audioTransients = grid.transients ?? []
 
   return (
     <div
@@ -145,6 +189,10 @@ export const BeatvideoGridOverlay = memo(function BeatvideoGridOverlay({
           barNumber !== null &&
           barNumber >= 1 &&
           (barNumber === 1 || (barNumber - 1) % labelStride === 0)
+        const audioAccent =
+          variant === 'ruler' && (showIndividualBeats || beat.downbeat)
+            ? resolveAudioAccentBand(audioTransients, beat.time, audioAccentTolerance)
+            : null
 
         return (
           <div
@@ -161,6 +209,12 @@ export const BeatvideoGridOverlay = memo(function BeatvideoGridOverlay({
                     : 'h-full w-px bg-foreground/12'
               }
             />
+            {audioAccent ? (
+              <span
+                data-audio-accent={audioAccent}
+                className={`absolute -left-[2px] top-0 h-1 w-1 rounded-[1px] ${audioAccentClass(audioAccent)}`}
+              />
+            ) : null}
             {showBarLabel ? (
               <span
                 className={

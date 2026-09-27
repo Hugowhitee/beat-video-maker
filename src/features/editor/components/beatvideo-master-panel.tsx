@@ -1,5 +1,15 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Activity, Flame, Gauge, Power, RotateCcw, Shield, SlidersHorizontal } from 'lucide-react'
+import {
+  Activity,
+  BookmarkPlus,
+  Flame,
+  Gauge,
+  Power,
+  RotateCcw,
+  Shield,
+  SlidersHorizontal,
+  X,
+} from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
   captureSnapshot,
@@ -13,7 +23,7 @@ import {
   resolveMasterFxSettings,
 } from '@/shared/utils/mastering'
 import { getSparseAudioEqSettings } from '@/shared/utils/audio-eq'
-import type { MasterFxSettings, MasteringPresetId } from '@/types/audio'
+import type { AudioEqSettings, MasterFxSettings, MasteringPresetId } from '@/types/audio'
 import { AudioEqPanelContent } from './properties-sidebar/clip-panel/audio-eq-panel-content'
 import type { AudioEqPatch } from './properties-sidebar/clip-panel/audio-eq-curve-editor'
 import { getPreviewMasterReduction } from '@/features/editor/deps/composition-runtime'
@@ -32,6 +42,60 @@ const SLOT_META: ReadonlyArray<{
   { id: 'saturator', label: 'Saturator', hint: 'Harmonics and density', icon: Flame },
   { id: 'limiter', label: 'Peak limiter', hint: 'Final peak control', icon: Shield },
 ]
+
+const SAVED_MASTER_PRESETS_KEY = 'beatvideo:master-presets:v1'
+
+interface SavedMasterPreset {
+  id: string
+  name: string
+  masterFx: MasterFxSettings
+  busAudioEq?: AudioEqSettings
+  masterBusDb: number
+}
+
+function loadSavedMasterPresets(): SavedMasterPreset[] {
+  if (typeof window === 'undefined') return []
+  try {
+    const raw = window.localStorage.getItem(SAVED_MASTER_PRESETS_KEY)
+    if (!raw) return []
+    const parsed = JSON.parse(raw)
+    if (!Array.isArray(parsed)) return []
+    return parsed.flatMap((candidate) => {
+      if (
+        !candidate ||
+        typeof candidate !== 'object' ||
+        typeof candidate.id !== 'string' ||
+        typeof candidate.name !== 'string' ||
+        typeof candidate.masterBusDb !== 'number' ||
+        !candidate.masterFx ||
+        typeof candidate.masterFx !== 'object'
+      ) {
+        return []
+      }
+      return [{
+        id: candidate.id,
+        name: candidate.name,
+        masterFx: candidate.masterFx as MasterFxSettings,
+        busAudioEq:
+          candidate.busAudioEq && typeof candidate.busAudioEq === 'object'
+            ? candidate.busAudioEq as AudioEqSettings
+            : undefined,
+        masterBusDb: candidate.masterBusDb,
+      }]
+    })
+  } catch {
+    return []
+  }
+}
+
+function persistSavedMasterPresets(presets: SavedMasterPreset[]): void {
+  if (typeof window === 'undefined') return
+  try {
+    window.localStorage.setItem(SAVED_MASTER_PRESETS_KEY, JSON.stringify(presets))
+  } catch {
+    /* A full/private storage surface should not break the master rack. */
+  }
+}
 
 function MasterRange({
   label,
@@ -171,6 +235,9 @@ export function BeatvideoMasterPanel() {
   const [selectedSlot, setSelectedSlot] = useState<MasterSlot>('eq')
   const [reduction, setReduction] = useState({ compressorDb: 0, limiterDb: 0 })
   const gestureSnapshotRef = useRef<ReturnType<typeof captureSnapshot> | null>(null)
+  const [savedPresets, setSavedPresets] = useState<SavedMasterPreset[]>(loadSavedMasterPresets)
+  const [savingPreset, setSavingPreset] = useState(false)
+  const [presetName, setPresetName] = useState('')
 
   useEffect(() => {
     let frame = 0
@@ -232,10 +299,71 @@ export function BeatvideoMasterPanel() {
     (presetId: MasteringPresetId) => {
       const preset = MASTERING_PRESETS.find((candidate) => candidate.id === presetId)
       if (!preset) return
-      commitMasterFx(preset.settings, 'APPLY_MASTER_PRESET')
+
+      // Built-ins are complete recipes, not deltas over whatever happened to
+      // be left in EQ/output. This keeps A/B comparisons repeatable and avoids
+      // an old EQ curve making a new preset sound unexpectedly hollow.
+      const before = captureSnapshot()
+      setBusAudioEq(undefined)
+      setMasterBusDb(0)
+      setMasterFx(preset.settings)
+      markChanged()
+      useTimelineCommandStore
+        .getState()
+        .addUndoEntry({ type: 'APPLY_MASTER_PRESET', payload: { presetId } }, before)
     },
-    [commitMasterFx],
+    [markChanged, setBusAudioEq, setMasterBusDb, setMasterFx],
   )
+
+  const applySavedPreset = useCallback(
+    (preset: SavedMasterPreset) => {
+      const before = captureSnapshot()
+      setMasterFx(preset.masterFx)
+      setBusAudioEq(preset.busAudioEq)
+      setMasterBusDb(preset.masterBusDb)
+      markChanged()
+      useTimelineCommandStore
+        .getState()
+        .addUndoEntry({ type: 'APPLY_MASTER_PRESET', payload: { presetId: preset.id } }, before)
+    },
+    [markChanged, setBusAudioEq, setMasterBusDb, setMasterFx],
+  )
+
+  const saveCurrentPreset = useCallback(() => {
+    const name = presetName.trim()
+    if (!name) return
+
+    const existing = savedPresets.find(
+      (preset) => preset.name.toLocaleLowerCase() === name.toLocaleLowerCase(),
+    )
+    const nextPreset: SavedMasterPreset = {
+      id: existing?.id ?? crypto.randomUUID(),
+      name,
+      masterFx: {
+        ...resolved,
+        compressor: { ...resolved.compressor },
+        saturator: { ...resolved.saturator },
+        limiter: { ...resolved.limiter },
+      },
+      busAudioEq: busAudioEq ? { ...busAudioEq } : undefined,
+      masterBusDb,
+    }
+    const next = existing
+      ? savedPresets.map((preset) => preset.id === existing.id ? nextPreset : preset)
+      : [...savedPresets, nextPreset]
+    persistSavedMasterPresets(next)
+    setSavedPresets(next)
+    setPresetName('')
+    setSavingPreset(false)
+  }, [busAudioEq, masterBusDb, presetName, resolved, savedPresets])
+
+  const removeSavedPreset = useCallback((presetId: string) => {
+    setSavedPresets((current) => {
+      const next = current.filter((preset) => preset.id !== presetId)
+      persistSavedMasterPresets(next)
+      return next
+    })
+  }, [])
 
   const handleBusEqChange = useCallback(
     (patch: AudioEqPatch) => {
@@ -355,6 +483,95 @@ export function BeatvideoMasterPanel() {
               {preset.label}
             </button>
           ))}
+        </div>
+
+        {savedPresets.length > 0 ? (
+          <div className="mt-2">
+            <div className="mb-1 text-[9px] font-medium uppercase tracking-[0.12em] text-muted-foreground">
+              My presets
+            </div>
+            <div className="flex gap-1 overflow-x-auto pb-1">
+              {savedPresets.map((preset) => (
+                <div
+                  key={preset.id}
+                  className="flex shrink-0 items-center rounded-md border border-border bg-background"
+                >
+                  <button
+                    type="button"
+                    onClick={() => applySavedPreset(preset)}
+                    className="px-2 py-1.5 text-[10px] font-medium text-foreground hover:bg-secondary/50"
+                    title="Load saved master preset"
+                  >
+                    {preset.name}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => removeSavedPreset(preset.id)}
+                    className="flex h-6 w-6 items-center justify-center border-l border-border text-muted-foreground hover:bg-secondary/50 hover:text-foreground"
+                    aria-label={`Delete ${preset.name} preset`}
+                    title="Delete preset"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : null}
+
+        <div className="mt-2">
+          {savingPreset ? (
+            <div className="flex items-center gap-1.5">
+              <input
+                autoFocus
+                value={presetName}
+                maxLength={48}
+                placeholder="Preset name"
+                onChange={(event) => setPresetName(event.target.value)}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter') saveCurrentPreset()
+                  if (event.key === 'Escape') {
+                    setSavingPreset(false)
+                    setPresetName('')
+                  }
+                }}
+                className="h-7 min-w-0 flex-1 rounded-md border border-input bg-secondary px-2 text-[10px] text-foreground outline-none focus:border-foreground/40"
+              />
+              <Button
+                type="button"
+                size="sm"
+                className="h-7 px-2 text-[10px]"
+                disabled={presetName.trim() === ''}
+                onClick={saveCurrentPreset}
+              >
+                Save
+              </Button>
+              <Button
+                type="button"
+                size="icon"
+                variant="ghost"
+                className="h-7 w-7"
+                onClick={() => {
+                  setSavingPreset(false)
+                  setPresetName('')
+                }}
+                aria-label="Cancel saving preset"
+              >
+                <X className="h-3.5 w-3.5" />
+              </Button>
+            </div>
+          ) : (
+            <Button
+              type="button"
+              size="sm"
+              variant="ghost"
+              className="h-7 gap-1.5 px-2 text-[10px] text-muted-foreground"
+              onClick={() => setSavingPreset(true)}
+            >
+              <BookmarkPlus className="h-3.5 w-3.5" />
+              Save current preset
+            </Button>
+          )}
         </div>
 
         <div className="mt-3 space-y-2 border-t border-border pt-3">
