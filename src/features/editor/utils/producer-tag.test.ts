@@ -78,8 +78,27 @@ describe('resolveProducerTagRepeatFrames', () => {
       }),
     ).toEqual([0, 300])
   })
-})
 
+  it('supports custom bar intervals, not only the suggested presets', () => {
+    const beats = Array.from({ length: 20 }, (_, index) => ({
+      time: index,
+      index: index * 4,
+      downbeat: true,
+      strength: 1,
+    }))
+
+    expect(
+      resolveProducerTagRepeatFrames({
+        beats,
+        fps: 30,
+        everyBars: 5,
+        firstBar: 2,
+        startFrame: 0,
+        endFrame: 1000,
+        tagDurationInFrames: 15,
+      }),
+    ).toEqual([30, 180, 330, 480])
+  })
 
   it('does not place a repeated watermark when the full tag cannot fit', () => {
     expect(
@@ -93,3 +112,4 @@ describe('resolveProducerTagRepeatFrames', () => {
       }),
     ).toEqual([])
   })
+})
