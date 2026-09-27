@@ -95,6 +95,27 @@ function getMotionReactiveLabel(binding: AudioReactiveBinding): string {
   return 'Motion'
 }
 
+function sameReactiveTarget(
+  left: AudioReactiveBinding['target'],
+  right: AudioReactiveBinding['target'],
+): boolean {
+  if (left.kind !== right.kind) return false
+  if (left.kind === 'transform' && right.kind === 'transform') {
+    return left.property === right.property
+  }
+  if (left.kind === 'transform-shake' && right.kind === 'transform-shake') {
+    return true
+  }
+  if (left.kind === 'effect-param' && right.kind === 'effect-param') {
+    return (
+      left.effectId === right.effectId &&
+      left.gpuEffectType === right.gpuEffectType &&
+      left.paramKey === right.paramKey
+    )
+  }
+  return false
+}
+
 function getMotionReactiveAmountRange(
   binding: AudioReactiveBinding,
 ): AudioReactiveAmountRange {
@@ -222,6 +243,34 @@ export const EffectsSection = memo(function EffectsSection({
       ])
     },
     [displayItem, setAudioReactiveStates],
+  )
+
+  const handleRemoveMotionReactiveBinding = useCallback(
+    (bindingId: string) => {
+      const sourceBinding = displayItem?.audioReactive?.bindings.find(
+        (binding) => binding.id === bindingId,
+      )
+      if (!sourceBinding) return
+
+      const updates = visualItems.flatMap((item) => {
+        if (!item.audioReactive) return []
+        const bindings = item.audioReactive.bindings.filter(
+          (binding) => !sameReactiveTarget(binding.target, sourceBinding.target),
+        )
+        if (bindings.length === item.audioReactive.bindings.length) return []
+        return [{
+          itemId: item.id,
+          audioReactive:
+            bindings.length > 0
+              ? { ...item.audioReactive, enabled: true, bindings }
+              : undefined,
+        }]
+      })
+      if (updates.length > 0) {
+        setAudioReactiveStates(updates)
+      }
+    },
+    [displayItem, setAudioReactiveStates, visualItems],
   )
 
   const getMappedEffectEntry = useCallback(
@@ -802,6 +851,9 @@ export const EffectsSection = memo(function EffectsSection({
   // Remove effect
   const handleRemove = useCallback(
     (effectId: string) => {
+      // A live slider preview can outlive the committed effect stack. Clear it
+      // before deleting so preview/undo always render canonical timeline state.
+      clearPreview()
       visualItems.forEach((item) => {
         const targetEffect = getMappedEffectEntry(item, effectId)
         if (targetEffect) {
@@ -809,7 +861,7 @@ export const EffectsSection = memo(function EffectsSection({
         }
       })
     },
-    [getMappedEffectEntry, removeEffect, visualItems],
+    [clearPreview, getMappedEffectEntry, removeEffect, visualItems],
   )
 
   // Effect picker popover state
@@ -1106,14 +1158,26 @@ export const EffectsSection = memo(function EffectsSection({
         Transform reactions from a reactive look. These stay editable instead of becoming baked animation.
       </p>
       {motionReactiveBindings.map((binding) => (
-        <AudioReactiveParamControls
-          key={binding.id}
-          binding={binding}
-          label={getMotionReactiveLabel(binding)}
-          amountRange={getMotionReactiveAmountRange(binding)}
-          fps={timelineFps}
-          onChange={(patch) => handleUpdateMotionReactiveBinding(binding.id, patch)}
-        />
+        <div key={binding.id} className="relative">
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="absolute right-3 top-1.5 z-10 h-6 w-6 text-muted-foreground hover:text-destructive"
+            aria-label={`Remove ${getMotionReactiveLabel(binding)} reaction`}
+            title={`Remove ${getMotionReactiveLabel(binding)} reaction`}
+            onClick={() => handleRemoveMotionReactiveBinding(binding.id)}
+          >
+            <X className="h-3 w-3" />
+          </Button>
+          <AudioReactiveParamControls
+            binding={binding}
+            label={getMotionReactiveLabel(binding)}
+            amountRange={getMotionReactiveAmountRange(binding)}
+            fps={timelineFps}
+            onChange={(patch) => handleUpdateMotionReactiveBinding(binding.id, patch)}
+          />
+        </div>
       ))}
     </div>
   ) : null
