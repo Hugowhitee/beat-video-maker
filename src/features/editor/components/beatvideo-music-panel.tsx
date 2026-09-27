@@ -510,10 +510,11 @@ export function BeatvideoMusicPanel() {
         timeline.removeItems(existingPatternIds)
       }
 
-      const existingTagTrack = timeline.tracks.find(
+      const currentTimeline = useTimelineStore.getState()
+      const existingTagTrack = currentTimeline.tracks.find(
         (track) => track.kind === 'audio' && track.name === 'Producer tags',
       )
-      const maxOrder = timeline.tracks.reduce(
+      const maxOrder = currentTimeline.tracks.reduce(
         (max, track) => Math.max(max, track.order ?? 0),
         0,
       )
@@ -521,15 +522,15 @@ export function BeatvideoMusicPanel() {
         existingTagTrack ??
         {
           ...createClassicTrack({
-            tracks: timeline.tracks,
+            tracks: currentTimeline.tracks,
             kind: 'audio',
             order: maxOrder + 1,
           }),
           name: 'Producer tags',
         }
       const nextTracks = existingTagTrack
-        ? timeline.tracks
-        : [...timeline.tracks, tagTrack]
+        ? currentTimeline.tracks
+        : [...currentTimeline.tracks, tagTrack]
       const canvasWidth = currentProject?.metadata.width ?? DEFAULT_PROJECT_WIDTH
       const canvasHeight = currentProject?.metadata.height ?? DEFAULT_PROJECT_HEIGHT
       const sourceStart = Math.round(requestedTrimStart * timeline.fps)
@@ -576,7 +577,7 @@ export function BeatvideoMusicPanel() {
       )
 
       if (existingTagTrack) {
-        timeline.addItems(tagItems)
+        currentTimeline.addItems(tagItems)
       } else {
         addItemsOnNewTracks(tagItems, nextTracks)
       }
@@ -890,16 +891,23 @@ export function BeatvideoMusicPanel() {
 
   const resetCorrections = useCallback(async () => {
     if (!effectiveAnalysis) return
+    const hasDetectedTiming = effectiveAnalysis.musicMap.beats.length > 0
+    const fixedBpm =
+      effectiveAnalysis.bpmOverride ?? effectiveAnalysis.musicMap.bpm ?? null
     await persistAnalysis({
       ...effectiveAnalysis,
       version: 2,
-      barOneTime: effectiveAnalysis.detectedBarOneTime,
+      barOneTime: hasDetectedTiming ? effectiveAnalysis.detectedBarOneTime : 0,
       barOneVerified: false,
-      bpmOverride: null,
-      gridMode: 'detected',
+      bpmOverride: hasDetectedTiming ? null : fixedBpm,
+      gridMode: hasDetectedTiming ? 'detected' : 'fixed',
       correctionAnchors: [],
     })
-    toast.success('Beat grid reset to detected timing')
+    toast.success(
+      hasDetectedTiming
+        ? 'Beat grid reset to detected timing'
+        : 'Fixed BPM grid reset to bar 1',
+    )
   }, [effectiveAnalysis, persistAnalysis])
 
   const applyReactivePreset = useCallback(
