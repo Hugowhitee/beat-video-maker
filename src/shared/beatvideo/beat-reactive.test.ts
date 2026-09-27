@@ -51,6 +51,26 @@ describe('audio reactive modulation', () => {
     expect(evaluateAudioReactiveBinding(s, b, 27).delta).toBe(0)
   })
 
+  it('fires on the exact analyzed frame instead of one frame early or late', () => {
+    const b = binding({
+      driver: 'audio',
+      threshold: 0,
+      useStrength: false,
+      attackFrames: 0,
+      releaseFrames: 4,
+    })
+    const s: AudioReactiveState = {
+      ...state([b]),
+      transients: [
+        { frame: 42, index: 0, strength: 1, low: 0.8, mid: 0.5, high: 0.3 },
+      ],
+    }
+
+    expect(evaluateAudioReactiveBinding(s, b, 41).pulse).toBe(0)
+    expect(evaluateAudioReactiveBinding(s, b, 42).pulse).toBe(1)
+    expect(evaluateAudioReactiveBinding(s, b, 43).pulse).toBeGreaterThan(0)
+  })
+
   it('supports downbeat and every-N sparse triggering without keyframes', () => {
     const b = binding({
       driver: 'downbeat',
