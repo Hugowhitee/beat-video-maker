@@ -68,6 +68,79 @@ import type {
 const GRID_NUDGE_SECONDS = 0.01
 const ANCHOR_EPSILON = 1e-4
 const ANCHOR_GAP_SECONDS = 0.001
+const ANALYSIS_STRIP_BINS = 96
+
+function buildAnalysisStripBins(map: MusicMap) {
+  const bins = Array.from({ length: ANALYSIS_STRIP_BINS }, () => ({
+    low: 0,
+    mid: 0,
+    high: 0,
+  }))
+  if (map.duration <= 0) return bins
+
+  for (const transient of map.transients ?? []) {
+    const index = Math.max(
+      0,
+      Math.min(
+        ANALYSIS_STRIP_BINS - 1,
+        Math.floor((transient.time / map.duration) * ANALYSIS_STRIP_BINS),
+      ),
+    )
+    const bin = bins[index]!
+    bin.low = Math.max(bin.low, transient.low)
+    bin.mid = Math.max(bin.mid, transient.mid)
+    bin.high = Math.max(bin.high, transient.high)
+  }
+  return bins
+}
+
+function BeatAnalysisStrip({ map }: { map: MusicMap }) {
+  const bins = useMemo(() => buildAnalysisStripBins(map), [map])
+  const hasEvidence = (map.transients?.length ?? 0) > 0
+  if (!hasEvidence) return null
+
+  const fit = map.gridFit
+  return (
+    <div className="mt-2 space-y-1.5">
+      <div
+        className="grid h-12 overflow-hidden rounded-sm border border-border bg-background/70"
+        style={{
+          gridTemplateColumns: `repeat(${ANALYSIS_STRIP_BINS}, minmax(0, 1fr))`,
+        }}
+        aria-label="Low, mid and high frequency onset scan"
+      >
+        {bins.map((bin, index) => (
+          <div key={index} className="grid min-w-0 grid-rows-3 gap-px">
+            <span
+              className="bg-fuchsia-400"
+              style={{ opacity: 0.08 + bin.high * 0.82 }}
+            />
+            <span
+              className="bg-amber-400"
+              style={{ opacity: 0.08 + bin.mid * 0.82 }}
+            />
+            <span
+              className="bg-sky-400"
+              style={{ opacity: 0.08 + bin.low * 0.82 }}
+            />
+          </div>
+        ))}
+      </div>
+      <div className="flex items-center gap-2 text-[9px] text-muted-foreground">
+        <span><span className="text-sky-400">■</span> low</span>
+        <span><span className="text-amber-400">■</span> mid</span>
+        <span><span className="text-fuchsia-400">■</span> high</span>
+        {fit ? (
+          <span className="ml-auto font-mono">
+            {fit.mode === 'fixed' ? 'Stable grid' : 'Variable map'}
+            {' · '}
+            {Math.round(fit.confidence * 100)}%
+          </span>
+        ) : null}
+      </div>
+    </div>
+  )
+}
 
 function formatClock(seconds: number | null) {
   if (seconds === null || !Number.isFinite(seconds)) return '—'
@@ -161,6 +234,8 @@ export function BeatvideoMusicPanel() {
   const [selectedMediaId, setSelectedMediaId] = useState('')
   const [selectedLoopMediaId, setSelectedLoopMediaId] = useState('')
   const [selectedTagMediaId, setSelectedTagMediaId] = useState('')
+  const [selectedWatermarkMediaId, setSelectedWatermarkMediaId] = useState('')
+  const [tagTool, setTagTool] = useState<'producer' | 'watermark'>('producer')
   const [tagRepeatBars, setTagRepeatBars] = useState(16)
   const [tagFirstBar, setTagFirstBar] = useState(1)
   const [tagTrimStartSeconds, setTagTrimStartSeconds] = useState('0')
@@ -228,13 +303,22 @@ export function BeatvideoMusicPanel() {
     if (!tagCandidates.some((media) => media.id === selectedTagMediaId)) {
       setSelectedTagMediaId(tagCandidates[0]?.id ?? '')
     }
-  }, [selectedTagMediaId, tagCandidates])
+    if (
+      selectedWatermarkMediaId &&
+      !tagCandidates.some((media) => media.id === selectedWatermarkMediaId)
+    ) {
+      setSelectedWatermarkMediaId('')
+    }
+  }, [selectedTagMediaId, selectedWatermarkMediaId, tagCandidates])
+
+  const activeTagMediaId =
+    tagTool === 'producer' ? selectedTagMediaId : selectedWatermarkMediaId
 
   useEffect(() => {
     setTagTrimStartSeconds('0')
     setTagTrimEndSeconds('')
     setTagAnchorSeconds('0')
-  }, [selectedTagMediaId])
+  }, [activeTagMediaId, tagTool])
 
   useEffect(() => {
     const bpm =
@@ -287,31 +371,40 @@ export function BeatvideoMusicPanel() {
     }
   }, [importingBeat])
 
-  const importProducerTag = useCallback(async () => {
-    if (importingTag) return
-    setImportingTag(true)
-    try {
-      const imported = await useMediaLibraryStore.getState().importMedia()
-      if (imported.length === 0) return
-      const tag = imported.find(
-        (media) => media.mimeType.startsWith('audio/') && media.id !== selectedMediaId,
-      )
-      if (!tag) {
-        toast.error('Choose a short audio file for the producer tag')
-        return
+  const importTagAudio = useCallback(
+    async (kind: 'producer' | 'watermark') => {
+      if (importingTag) return
+      setImportingTag(true)
+      try {
+        const imported = await useMediaLibraryStore.getState().importMedia()
+        if (imported.length === 0) return
+        const tag = imported.find(
+          (media) => media.mimeType.startsWith('audio/') && media.id !== selectedMediaId,
+        )
+        if (!tag) {
+          toast.error(`Choose a short audio file for the ${kind === 'producer' ? 'producer tag' : 'watermark'}`)
+          return
+        }
+
+        if (kind === 'producer') setSelectedTagMediaId(tag.id)
+        else setSelectedWatermarkMediaId(tag.id)
+        setTagTool(kind)
+        toast.success(kind === 'producer' ? 'Producer tag imported' : 'Watermark imported', {
+          description:
+            kind === 'producer'
+              ? 'It will use the dedicated Producer tags track.'
+              : 'It will use the dedicated Watermarks track.',
+        })
+      } catch (error) {
+        toast.error(kind === 'producer' ? 'Could not import producer tag' : 'Could not import watermark', {
+          description: error instanceof Error ? error.message : String(error),
+        })
+      } finally {
+        setImportingTag(false)
       }
-      setSelectedTagMediaId(tag.id)
-      toast.success('Producer tag imported', {
-        description: 'It will be placed on the dedicated Producer tags track.',
-      })
-    } catch (error) {
-      toast.error('Could not import producer tag', {
-        description: error instanceof Error ? error.message : String(error),
-      })
-    } finally {
-      setImportingTag(false)
-    }
-  }, [importingTag, selectedMediaId])
+    },
+    [importingTag, selectedMediaId],
+  )
 
   const ensureBeatPlacement = useCallback(
     async (mediaId = selectedMediaId) => {
@@ -680,19 +773,29 @@ export function BeatvideoMusicPanel() {
     }
   }, [autoArranging, timelineGrid, videoCandidates])
 
-  const insertProducerTags = useCallback(
-    async (mode: 'playhead' | 'repeat') => {
+  const insertTagAudio = useCallback(
+    async (kind: 'producer' | 'watermark') => {
+      const mediaId = kind === 'producer' ? selectedTagMediaId : selectedWatermarkMediaId
       const media = useMediaLibraryStore
         .getState()
-        .mediaItems.find((candidate) => candidate.id === selectedTagMediaId)
+        .mediaItems.find((candidate) => candidate.id === mediaId)
       if (!media || !media.mimeType.startsWith('audio/')) {
-        toast.error('Import and select a producer tag audio file first')
+        toast.error(
+          kind === 'producer'
+            ? 'Import and select a producer tag first'
+            : 'Import and select a watermark first',
+        )
+        return
+      }
+
+      if (kind === 'watermark' && !timelineGrid) {
+        toast.error('Analyze and place the beat first to align the watermark pattern')
         return
       }
 
       const blobUrl = await resolveMediaUrl(media.id)
       if (!blobUrl) {
-        toast.error('Could not load the producer tag audio')
+        toast.error('Could not load the selected tag audio')
         return
       }
 
@@ -707,7 +810,7 @@ export function BeatvideoMusicPanel() {
         requestedTrimEnd <= requestedTrimStart ||
         requestedTrimEnd > media.duration + 1e-6
       ) {
-        toast.error('Enter a valid producer-tag trim range')
+        toast.error('Enter a valid trim range')
         return
       }
 
@@ -718,112 +821,70 @@ export function BeatvideoMusicPanel() {
         requestedAnchorSeconds < 0 ||
         requestedAnchorSeconds > tagDurationSeconds
       ) {
-        toast.error('Tag anchor must sit inside the trimmed clip')
+        toast.error('Anchor must sit inside the trimmed clip')
         return
       }
 
-      const tagDurationInFrames = Math.max(
-        1,
-        Math.round(tagDurationSeconds * timeline.fps),
-      )
+      const tagDurationInFrames = Math.max(1, Math.round(tagDurationSeconds * timeline.fps))
       const anchorFrameOffset = Math.round(requestedAnchorSeconds * timeline.fps)
-      let frames =
-        mode === 'playhead'
+      const frames =
+        kind === 'producer'
           ? [
-              Math.round(usePlaybackStore.getState().currentFrame) -
-                anchorFrameOffset,
+              Math.round(usePlaybackStore.getState().currentFrame) - anchorFrameOffset,
             ].filter((frame) => frame >= 0)
-          : timelineGrid
-            ? resolveProducerTagRepeatFrames({
-                beats: timelineGrid.grid.beats,
-                fps: timeline.fps,
-                everyBars: tagRepeatBars,
-                firstBar: tagFirstBar,
-                anchorFrameOffset,
-                startFrame: timelineGrid.placement.from,
-                endFrame: timelineGrid.placement.from + timelineGrid.placement.durationInFrames,
-                tagDurationInFrames,
-              })
-            : []
-
-      if (mode === 'repeat' && !timelineGrid) {
-        toast.error('Analyze and place the beat first to repeat tags on musical bars')
-        return
-      }
-
-      const existingPatternIds =
-        mode === 'repeat'
-          ? timeline.items
-              .filter(
-                (item) =>
-                  item.type === 'audio' &&
-                  item.mediaId === media.id &&
-                  item.label === `Watermark: ${media.fileName}`,
-              )
-              .map((item) => item.id)
-          : []
-      const replacingPatternIds = new Set(existingPatternIds)
-      const occupied = new Set(
-        timeline.items
-          .filter(
-            (item) =>
-              item.type === 'audio' &&
-              item.mediaId === media.id &&
-              !replacingPatternIds.has(item.id),
-          )
-          .map((item) => Math.round(item.from)),
-      )
-      frames = frames.filter((frame) => !occupied.has(frame))
+          : resolveProducerTagRepeatFrames({
+              beats: timelineGrid!.grid.beats,
+              fps: timeline.fps,
+              everyBars: tagRepeatBars,
+              firstBar: tagFirstBar,
+              anchorFrameOffset,
+              startFrame: timelineGrid!.placement.from,
+              endFrame: timelineGrid!.placement.from + timelineGrid!.placement.durationInFrames,
+              tagDurationInFrames,
+            })
 
       if (frames.length === 0) {
-        toast.info(
-          mode === 'repeat'
-            ? 'Those producer-tag positions are already on the timeline'
-            : 'No producer-tag position available',
-        )
+        toast.info(kind === 'producer' ? 'No producer-tag position available' : 'No watermark positions available')
         return
       }
 
-      if (existingPatternIds.length > 0) {
-        timeline.removeItems(existingPatternIds)
-      }
-
+      const trackName = kind === 'producer' ? 'Producer tags' : 'Watermarks'
+      const labelPrefix = kind === 'producer' ? 'Producer tag' : 'Watermark'
+      const trackColor = kind === 'producer' ? '#f59e0b' : '#14b8a6'
       const currentTimeline = useTimelineStore.getState()
-      const existingTagTrack = currentTimeline.tracks.find(
-        (track) => track.kind === 'audio' && track.name === 'Producer tags',
+      const existingTrack = currentTimeline.tracks.find(
+        (track) => track.kind === 'audio' && track.name === trackName,
       )
       const maxOrder = currentTimeline.tracks.reduce(
         (max, track) => Math.max(max, track.order ?? 0),
         0,
       )
-      const tagTrack =
-        existingTagTrack ??
+      const targetTrack =
+        existingTrack ??
         {
           ...createClassicTrack({
             tracks: currentTimeline.tracks,
             kind: 'audio',
             order: maxOrder + 1,
           }),
-          name: 'Producer tags',
-          color: '#f59e0b',
+          name: trackName,
+          color: trackColor,
         }
-      const nextTracks = existingTagTrack
+      const nextTracks = existingTrack
         ? currentTimeline.tracks
-        : [...currentTimeline.tracks, tagTrack]
+        : [...currentTimeline.tracks, targetTrack]
       const canvasWidth = currentProject?.metadata.width ?? DEFAULT_PROJECT_WIDTH
       const canvasHeight = currentProject?.metadata.height ?? DEFAULT_PROJECT_HEIGHT
       const sourceStart = Math.round(requestedTrimStart * timeline.fps)
       const sourceEnd = Math.round(requestedTrimEnd * timeline.fps)
       const duckTargetTrackId = timelineGrid?.placement.trackId
+
       const tagItems = frames.flatMap((from) =>
         buildDroppedMediaTimelineItems({
           media,
           mediaId: media.id,
           mediaType: 'audio',
-          label:
-            mode === 'repeat'
-              ? `Watermark: ${media.fileName}`
-              : `Producer tag: ${media.fileName}`,
+          label: `${labelPrefix}: ${media.fileName}`,
           timelineFps: timeline.fps,
           blobUrl,
           canvasWidth,
@@ -833,7 +894,7 @@ export function BeatvideoMusicPanel() {
           fallbackSourceFps: timeline.fps,
           placement: {
             primary: {
-              trackId: tagTrack.id,
+              trackId: targetTrack.id,
               from,
               durationInFrames: tagDurationInFrames,
             },
@@ -846,33 +907,36 @@ export function BeatvideoMusicPanel() {
                   duckOthersDb: tagDuckDb,
                   attackSec: 0.06,
                   releaseSec: 0.22,
-                  ...(duckTargetTrackId
-                    ? { targetTrackIds: [duckTargetTrackId] }
-                    : {}),
+                  ...(duckTargetTrackId ? { targetTrackIds: [duckTargetTrackId] } : {}),
                 },
               }
             : item,
         ),
       )
 
-      if (existingTagTrack) {
-        currentTimeline.addItems(tagItems)
+      if (existingTrack) {
+        if (kind === 'watermark') {
+          replaceItemsOnTrack(existingTrack.id, tagItems)
+        } else {
+          currentTimeline.addItems(tagItems)
+        }
       } else {
         addItemsOnNewTracks(tagItems, nextTracks)
       }
 
-      useSelectionStore.getState().setActiveTrack(tagTrack.id)
+      useSelectionStore.getState().setActiveTrack(targetTrack.id)
       useSelectionStore.getState().selectItems(tagItems.map((item) => item.id))
       toast.success(
-        mode === 'repeat'
-          ? `Placed ${tagItems.length} watermark tags from bar ${tagFirstBar}, every ${tagRepeatBars} bars`
-          : 'Producer tag added at playhead',
+        kind === 'producer'
+          ? 'Producer tag added at playhead'
+          : `Watermark placed from bar ${tagFirstBar}, every ${tagRepeatBars} bars`,
       )
     },
     [
       currentProject?.metadata.height,
       currentProject?.metadata.width,
       selectedTagMediaId,
+      selectedWatermarkMediaId,
       tagAnchorSeconds,
       tagDuckDb,
       tagFirstBar,
@@ -1360,6 +1424,14 @@ export function BeatvideoMusicPanel() {
                   ? `Grid linked to ${timelineGrid.placement.label}. Reactive effects can use it now.`
                   : 'Analysis is saved. Analyze again or set BPM to link this source as the project beat.'}
               </div>
+              <BeatAnalysisStrip map={resolvedSourceGrid} />
+              {resolvedSourceGrid.gridFit ? (
+                <div className="mt-1.5 font-mono text-[9px] leading-relaxed text-muted-foreground">
+                  {resolvedSourceGrid.gridFit.mode === 'fixed'
+                    ? `Stable phase · ${resolvedSourceGrid.gridFit.medianErrorMs ?? '—'} ms detector error · ${resolvedSourceGrid.gridFit.phaseShiftMs >= 0 ? '+' : ''}${resolvedSourceGrid.gridFit.phaseShiftMs} ms onset correction`
+                    : 'Variable timing preserved · use Grid correction only where the scan is visibly wrong'}
+                </div>
+              ) : null}
             </div>
           ) : null}
         </section>
@@ -1440,170 +1512,192 @@ export function BeatvideoMusicPanel() {
 
         <details className="border-t border-border pt-3">
           <summary className="flex cursor-pointer list-none items-center justify-between gap-2 text-xs font-medium text-foreground marker:hidden [&::-webkit-details-marker]:hidden">
-            <span className="flex items-center gap-2">
-              <Tag className="h-3.5 w-3.5 text-muted-foreground" />
-              Tags & watermark
-            </span>
-            <span className="text-[10px] font-normal text-muted-foreground">
-              Optional
-            </span>
+            <span>Tags & watermark</span>
+            <span className="text-[10px] font-normal text-muted-foreground">Optional</span>
           </summary>
           <div className="mt-3 space-y-2">
-          <Button
-            type="button"
-            size="sm"
-            variant="outline"
-            className="w-full justify-start"
-            disabled={importingTag}
-            onClick={() => void importProducerTag()}
-          >
-            <Tag className="h-3.5 w-3.5" />
-            {importingTag ? 'Importing producer tag…' : 'Import producer tag'}
-          </Button>
-          <p className="text-[9px] leading-relaxed text-muted-foreground">
-            Audio tags use one dedicated Producer tags track; importing one never replaces the project beat.
-          </p>
-
-          {tagCandidates.length > 0 ? (
-            <>
-              <select
-                value={selectedTagMediaId}
-                onChange={(event) => setSelectedTagMediaId(event.target.value)}
-                className="h-8 w-full rounded-md border border-input bg-secondary px-2 text-xs text-foreground"
-              >
-                {tagCandidates.map((media) => (
-                  <option key={media.id} value={media.id}>
-                    {media.fileName}
-                  </option>
-                ))}
-              </select>
-
-              <Button
+            <div className="grid grid-cols-2 rounded-md border border-border bg-secondary/25 p-0.5">
+              <button
                 type="button"
-                size="sm"
-                variant="outline"
-                className="w-full justify-start"
-                onClick={() => void insertProducerTags('playhead')}
+                onClick={() => setTagTool('producer')}
+                className={`h-7 rounded-[5px] text-[10px] font-medium transition-colors ${
+                  tagTool === 'producer'
+                    ? 'bg-background text-foreground shadow-sm'
+                    : 'text-muted-foreground hover:text-foreground'
+                }`}
               >
-                <Tag className="h-3.5 w-3.5" />
-                Place tag at playhead
-              </Button>
-
-              <div className="grid grid-cols-2 gap-1.5">
-                <label className="space-y-1 text-[10px] text-muted-foreground">
-                  <span>Start bar</span>
-                  <input
-                    type="number"
-                    min={1}
-                    step={1}
-                    value={tagFirstBar}
-                    onChange={(event) =>
-                      setTagFirstBar(Math.max(1, Number(event.target.value) || 1))
-                    }
-                    className="h-8 w-full rounded-md border border-input bg-secondary px-2 font-mono text-xs text-foreground"
-                  />
-                </label>
-                <label className="space-y-1 text-[10px] text-muted-foreground">
-                  <span>Every</span>
-                  <select
-                    value={tagRepeatBars}
-                    onChange={(event) => setTagRepeatBars(Number(event.target.value))}
-                    className="h-8 w-full rounded-md border border-input bg-secondary px-2 text-xs text-foreground"
-                    aria-label="Producer tag repeat interval"
-                  >
-                    <option value={8}>8 bars</option>
-                    <option value={16}>16 bars</option>
-                    <option value={32}>32 bars</option>
-                    <option value={64}>64 bars</option>
-                  </select>
-                </label>
-              </div>
-
-              <Button
+                Producer tag
+              </button>
+              <button
                 type="button"
-                size="sm"
-                variant="outline"
-                className="w-full justify-start"
-                disabled={!timelineGrid}
-                onClick={() => void insertProducerTags('repeat')}
+                onClick={() => setTagTool('watermark')}
+                className={`h-7 rounded-[5px] text-[10px] font-medium transition-colors ${
+                  tagTool === 'watermark'
+                    ? 'bg-background text-foreground shadow-sm'
+                    : 'text-muted-foreground hover:text-foreground'
+                }`}
               >
-                <Repeat2 className="h-3.5 w-3.5" />
-                Apply watermark pattern
-              </Button>
-
-              <details className="border-t border-border pt-2">
-                <summary className="cursor-pointer list-none text-[10px] font-medium text-foreground marker:hidden [&::-webkit-details-marker]:hidden">
-                  Timing & ducking
-                </summary>
-                <div className="mt-2 grid grid-cols-2 gap-1.5">
-                  <label className="space-y-1 text-[10px] text-muted-foreground">
-                    <span>Trim start</span>
-                    <input
-                      type="number"
-                      min={0}
-                      step={0.01}
-                      value={tagTrimStartSeconds}
-                      onChange={(event) => setTagTrimStartSeconds(event.target.value)}
-                      className="h-8 w-full rounded-md border border-input bg-secondary px-2 font-mono text-xs text-foreground"
-                      aria-label="Producer tag trim start in seconds"
-                    />
-                  </label>
-                  <label className="space-y-1 text-[10px] text-muted-foreground">
-                    <span>Trim end</span>
-                    <input
-                      type="number"
-                      min={0}
-                      step={0.01}
-                      placeholder="Full"
-                      value={tagTrimEndSeconds}
-                      onChange={(event) => setTagTrimEndSeconds(event.target.value)}
-                      className="h-8 w-full rounded-md border border-input bg-secondary px-2 font-mono text-xs text-foreground"
-                      aria-label="Producer tag trim end in seconds"
-                    />
-                  </label>
-                  <label className="space-y-1 text-[10px] text-muted-foreground">
-                    <span>Anchor in clip</span>
-                    <input
-                      type="number"
-                      min={0}
-                      step={0.01}
-                      value={tagAnchorSeconds}
-                      onChange={(event) => setTagAnchorSeconds(event.target.value)}
-                      className="h-8 w-full rounded-md border border-input bg-secondary px-2 font-mono text-xs text-foreground"
-                      aria-label="Producer tag anchor in seconds"
-                    />
-                  </label>
-                  <label className="space-y-1 text-[10px] text-muted-foreground">
-                    <span>Duck beat</span>
-                    <select
-                      value={tagDuckDb}
-                      onChange={(event) => setTagDuckDb(Number(event.target.value))}
-                      className="h-8 w-full rounded-md border border-input bg-secondary px-2 text-xs text-foreground"
-                    >
-                      <option value={0}>Off</option>
-                      <option value={-2}>−2 dB</option>
-                      <option value={-3}>−3 dB</option>
-                      <option value={-4}>−4 dB</option>
-                      <option value={-6}>−6 dB</option>
-                    </select>
-                  </label>
-                </div>
-                <p className="mt-2 text-[10px] leading-relaxed text-muted-foreground">
-                  Anchor is the moment inside the tag that lands on the bar. The voice
-                  keeps its natural speed; only placement changes.
-                </p>
-              </details>
-
-              <p className="text-[10px] leading-relaxed text-muted-foreground">
-                Repeats stay as normal timeline clips. Move, trim, fade, mute at −60 dB
-                or delete any occurrence without changing the rest.
-              </p>
-            </>
-          ) : (
-            <div className="border-l-2 border-border pl-2 text-[10px] leading-relaxed text-muted-foreground">
-              Import a short producer-tag audio file above. The beat source itself is never reused as a tag.
+                Watermark
+              </button>
             </div>
-          )}
+
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              className="w-full"
+              disabled={importingTag}
+              onClick={() => void importTagAudio(tagTool)}
+            >
+              {importingTag
+                ? 'Importing…'
+                : tagTool === 'producer'
+                  ? 'Import producer tag'
+                  : 'Import watermark'}
+            </Button>
+
+            <p className="text-[9px] leading-relaxed text-muted-foreground">
+              {tagTool === 'producer'
+                ? 'One-shot producer tags go on their own Producer tags track.'
+                : 'Repeated protection tags use a separate Watermarks track and never replace the producer tag.'}
+            </p>
+
+            {tagCandidates.length > 0 ? (
+              <>
+                <select
+                  value={activeTagMediaId}
+                  onChange={(event) => {
+                    if (tagTool === 'producer') setSelectedTagMediaId(event.target.value)
+                    else setSelectedWatermarkMediaId(event.target.value)
+                  }}
+                  className="h-8 w-full rounded-md border border-input bg-secondary px-2 text-xs text-foreground"
+                >
+                  <option value="">
+                    {tagTool === 'producer' ? 'Choose producer tag…' : 'Choose watermark…'}
+                  </option>
+                  {tagCandidates.map((media) => (
+                    <option key={media.id} value={media.id}>
+                      {media.fileName}
+                    </option>
+                  ))}
+                </select>
+
+                {tagTool === 'producer' ? (
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    className="w-full"
+                    disabled={!selectedTagMediaId}
+                    onClick={() => void insertTagAudio('producer')}
+                  >
+                    Place at playhead
+                  </Button>
+                ) : (
+                  <>
+                    <div className="grid grid-cols-2 gap-1.5">
+                      <label className="space-y-1 text-[10px] text-muted-foreground">
+                        <span>Start bar</span>
+                        <input
+                          type="number"
+                          min={1}
+                          step={1}
+                          value={tagFirstBar}
+                          onChange={(event) =>
+                            setTagFirstBar(Math.max(1, Number(event.target.value) || 1))
+                          }
+                          className="h-8 w-full rounded-md border border-input bg-secondary px-2 font-mono text-xs text-foreground"
+                        />
+                      </label>
+                      <label className="space-y-1 text-[10px] text-muted-foreground">
+                        <span>Every</span>
+                        <select
+                          value={tagRepeatBars}
+                          onChange={(event) => setTagRepeatBars(Number(event.target.value))}
+                          className="h-8 w-full rounded-md border border-input bg-secondary px-2 text-xs text-foreground"
+                          aria-label="Watermark repeat interval"
+                        >
+                          <option value={8}>8 bars</option>
+                          <option value={16}>16 bars</option>
+                          <option value={32}>32 bars</option>
+                          <option value={64}>64 bars</option>
+                        </select>
+                      </label>
+                    </div>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      className="w-full"
+                      disabled={!timelineGrid || !selectedWatermarkMediaId}
+                      onClick={() => void insertTagAudio('watermark')}
+                    >
+                      Apply watermark pattern
+                    </Button>
+                  </>
+                )}
+
+                <details className="border-t border-border pt-2">
+                  <summary className="cursor-pointer list-none text-[10px] font-medium text-foreground marker:hidden [&::-webkit-details-marker]:hidden">
+                    Timing & ducking
+                  </summary>
+                  <div className="mt-2 grid grid-cols-2 gap-1.5">
+                    <label className="space-y-1 text-[10px] text-muted-foreground">
+                      <span>Trim start</span>
+                      <input
+                        type="number"
+                        min={0}
+                        step={0.01}
+                        value={tagTrimStartSeconds}
+                        onChange={(event) => setTagTrimStartSeconds(event.target.value)}
+                        className="h-8 w-full rounded-md border border-input bg-secondary px-2 font-mono text-xs text-foreground"
+                      />
+                    </label>
+                    <label className="space-y-1 text-[10px] text-muted-foreground">
+                      <span>Trim end</span>
+                      <input
+                        type="number"
+                        min={0}
+                        step={0.01}
+                        placeholder="Full"
+                        value={tagTrimEndSeconds}
+                        onChange={(event) => setTagTrimEndSeconds(event.target.value)}
+                        className="h-8 w-full rounded-md border border-input bg-secondary px-2 font-mono text-xs text-foreground"
+                      />
+                    </label>
+                    <label className="space-y-1 text-[10px] text-muted-foreground">
+                      <span>Anchor</span>
+                      <input
+                        type="number"
+                        min={0}
+                        step={0.01}
+                        value={tagAnchorSeconds}
+                        onChange={(event) => setTagAnchorSeconds(event.target.value)}
+                        className="h-8 w-full rounded-md border border-input bg-secondary px-2 font-mono text-xs text-foreground"
+                      />
+                    </label>
+                    <label className="space-y-1 text-[10px] text-muted-foreground">
+                      <span>Duck beat</span>
+                      <select
+                        value={tagDuckDb}
+                        onChange={(event) => setTagDuckDb(Number(event.target.value))}
+                        className="h-8 w-full rounded-md border border-input bg-secondary px-2 text-xs text-foreground"
+                      >
+                        <option value={0}>Off</option>
+                        <option value={-2}>−2 dB</option>
+                        <option value={-3}>−3 dB</option>
+                        <option value={-4}>−4 dB</option>
+                        <option value={-6}>−6 dB</option>
+                      </select>
+                    </label>
+                  </div>
+                </details>
+              </>
+            ) : (
+              <div className="border-l-2 border-border pl-2 text-[10px] leading-relaxed text-muted-foreground">
+                Import a short audio file for the selected tag type.
+              </div>
+            )}
           </div>
         </details>
 
