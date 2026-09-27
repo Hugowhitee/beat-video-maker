@@ -170,9 +170,11 @@ async function fetchPinnedAsset(
   try {
     const cache = await caches.open(MODEL_CACHE)
     const contentType = response.headers.get('content-type') ?? 'application/octet-stream'
+    const cachedBody = new ArrayBuffer(bytes.byteLength)
+    new Uint8Array(cachedBody).set(bytes)
     await cache.put(
       url,
-      new Response(bytes.slice().buffer, {
+      new Response(cachedBody, {
         headers: {
           'content-type': contentType,
           'content-length': String(bytes.byteLength),

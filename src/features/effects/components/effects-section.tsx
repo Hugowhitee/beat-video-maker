@@ -89,6 +89,8 @@ function getMotionReactiveLabel(binding: AudioReactiveBinding): string {
     case 'opacity':
       return 'Opacity'
   }
+
+  return 'Motion'
 }
 
 function getMotionReactiveAmountRange(
@@ -112,6 +114,8 @@ function getMotionReactiveAmountRange(
     case 'opacity':
       return { min: -0.8, max: 0.8, step: 0.01 }
   }
+
+  return { min: -1, max: 1, step: 0.01 }
 }
 
 /**
