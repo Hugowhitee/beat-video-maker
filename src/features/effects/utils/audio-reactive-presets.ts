@@ -79,6 +79,7 @@ function upsertBinding(
 function ensureGpuEffect(
   effects: readonly ItemEffect[],
   gpuEffectType: string,
+  neutralParamKey?: string,
 ): { effects: ItemEffect[]; effect: ItemEffect } {
   const existing = effects.find(
     (entry) =>
@@ -94,13 +95,17 @@ function ensureGpuEffect(
     }
   }
 
+  const defaultParams = getGpuEffectDefaultParams(gpuEffectType)
   const effect: ItemEffect = {
     id: crypto.randomUUID(),
     enabled: true,
     effect: {
       type: 'gpu-effect',
       gpuEffectType,
-      params: getGpuEffectDefaultParams(gpuEffectType),
+      params:
+        neutralParamKey && typeof defaultParams[neutralParamKey] === 'number'
+          ? { ...defaultParams, [neutralParamKey]: 0 }
+          : defaultParams,
     },
   }
   return { effects: [...effects, effect], effect }
@@ -124,6 +129,87 @@ function baseBinding(
     everyNthBeat: 1,
     useStrength: true,
     ...overrides,
+  }
+}
+
+function bindingMatchesPreset(
+  binding: AudioReactiveBinding,
+  presetId: AudioReactivePresetId,
+): boolean {
+  if (presetId === 'gentle-punch') {
+    return binding.target.kind === 'transform' && binding.target.property === 'scale'
+  }
+  if (presetId === 'subtle-shake') {
+    return binding.target.kind === 'transform-shake'
+  }
+  if (binding.target.kind !== 'effect-param' || binding.target.paramKey !== 'amount') {
+    return false
+  }
+
+  const effectType =
+    presetId === 'beat-flash'
+      ? 'gpu-brightness'
+      : presetId === 'glow-hit'
+        ? 'gpu-glow'
+        : 'gpu-rgb-split'
+  return binding.target.gpuEffectType === effectType
+}
+
+export function isAudioReactivePresetApplied(
+  item: TimelineItem,
+  presetId: AudioReactivePresetId,
+): boolean {
+  return item.audioReactive?.bindings.some((binding) => bindingMatchesPreset(binding, presetId)) ?? false
+}
+
+export function buildAudioReactivePresetRemovalUpdate(params: {
+  item: TimelineItem
+  presetId: AudioReactivePresetId
+}): {
+  itemId: string
+  effects: ItemEffect[]
+  audioReactive?: AudioReactiveState
+} | null {
+  const { item, presetId } = params
+  const current = item.audioReactive
+  if (!current) return null
+
+  const removedBindings = current.bindings.filter((binding) =>
+    bindingMatchesPreset(binding, presetId),
+  )
+  if (removedBindings.length === 0) return null
+
+  const remainingBindings = current.bindings.filter(
+    (binding) => !bindingMatchesPreset(binding, presetId),
+  )
+  const removedEffectIds = new Set(
+    removedBindings.flatMap((binding) =>
+      binding.target.kind === 'effect-param' ? [binding.target.effectId] : [],
+    ),
+  )
+  const remainingBoundEffectIds = new Set(
+    remainingBindings.flatMap((binding) =>
+      binding.target.kind === 'effect-param' ? [binding.target.effectId] : [],
+    ),
+  )
+
+  const effects = (item.effects ?? []).filter((effect) => {
+    if (!removedEffectIds.has(effect.id) || remainingBoundEffectIds.has(effect.id)) return true
+    if (effect.effect.type !== 'gpu-effect') return true
+    const amount = effect.effect.params.amount
+    // Quick-start-created visual effects have a neutral zero baseline. Remove
+    // those shells when their final reactive binding is removed, while
+    // preserving any authored effect with a non-neutral base value.
+    return typeof amount !== 'number' || Math.abs(amount) > 1e-9
+  })
+
+  return {
+    itemId: item.id,
+    effects,
+    audioReactive:
+      remainingBindings.length > 0
+        ? { ...current, bindings: remainingBindings }
+        : undefined,
   }
 }
 
@@ -175,7 +261,7 @@ export function buildAudioReactivePresetUpdate(params: {
         : presetId === 'glow-hit'
           ? 'gpu-glow'
           : 'gpu-rgb-split'
-    const ensured = ensureGpuEffect(effects, effectType)
+    const ensured = ensureGpuEffect(effects, effectType, 'amount')
     effects = ensured.effects
 
     if (ensured.effect.effect.type !== 'gpu-effect') return null
