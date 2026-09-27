@@ -4,6 +4,8 @@ import { useItemsStore } from '../stores/items-store'
 import { useTimelineSettingsStore } from '../stores/timeline-settings-store'
 import { useTransitionsStore } from '../stores/transitions-store'
 import { usePlaybackStore } from '@/shared/state/playback'
+import { useProjectStore } from '@/features/timeline/deps/projects'
+import { resolveBeatvideoTimelineSnapFrames } from '../utils/beatvideo-timeline-grid'
 import {
   generateGridSnapPoints,
   findNearestSnapTarget,
@@ -85,14 +87,21 @@ export function useSnapCalculator(
 
   const generateSnapTargets = useCallback(() => {
     const { fps } = useTimelineSettingsStore.getState()
-    const targets: SnapTarget[] = []
-    const gridFrames = generateGridSnapPoints(timelineDuration, fps, getZoomLevelNow())
+    const { items } = useItemsStore.getState()
+    const analysis = useProjectStore.getState().currentProject?.beatvideoMusic
+    const musicalFrames = analysis
+      ? resolveBeatvideoTimelineSnapFrames(analysis, items, fps)
+      : []
+    const gridFrames =
+      musicalFrames.length > 0
+        ? musicalFrames
+        : generateGridSnapPoints(timelineDuration, fps, getZoomLevelNow())
+    const targets: SnapTarget[] = gridFrames.map((frame) => ({
+      frame,
+      type: 'grid',
+    }))
 
-    for (const frame of gridFrames) {
-      targets.push({ frame, type: 'grid' })
-    }
     targets.push(...getMagneticSnapTargets())
-
     return targets
   }, [getMagneticSnapTargets, timelineDuration])
 
