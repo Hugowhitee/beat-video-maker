@@ -48,7 +48,7 @@ export type AudioReactiveTransient = {
   high: number
 }
 
-export type AudioReactiveDriver = 'beat' | 'downbeat' | 'low' | 'mid' | 'high'
+export type AudioReactiveDriver = 'audio' | 'beat' | 'downbeat' | 'low' | 'mid' | 'high'
 
 export type AudioReactiveTransformProperty = 'scale' | 'x' | 'y' | 'rotation' | 'opacity'
 
