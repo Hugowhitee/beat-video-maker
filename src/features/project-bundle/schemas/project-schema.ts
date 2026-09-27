@@ -404,7 +404,7 @@ const audioReactiveBindingSchema = z.object({
   id: z.string().min(1),
   enabled: z.boolean(),
   target: audioReactiveTargetSchema,
-  driver: z.enum(['beat', 'downbeat', 'low', 'mid', 'high']),
+  driver: z.enum(['audio', 'beat', 'downbeat', 'low', 'mid', 'high']),
   amount: z.number().min(-10000).max(10000),
   threshold: z.number().min(0).max(1),
   sensitivity: z.number().min(0).max(4),
