@@ -1,4 +1,4 @@
-import type { AudioEqSettings } from '@/types/audio'
+import type { AudioEqSettings, MasterFxSettings } from '@/types/audio'
 
 export interface CaptureOptions {
   width?: number
@@ -53,6 +53,8 @@ export interface PlaybackState {
    */
   masterBusDb: number
   busAudioEq?: AudioEqSettings
+  /** Project-scoped post-mix mastering chain. */
+  masterFx?: MasterFxSettings
   zoom: number
   /** Frame to preview on hover (null when not hovering) */
   previewFrame: number | null
@@ -99,6 +101,7 @@ export interface PlaybackActions {
   setMuted: (muted: boolean) => void
   setMasterBusDb: (db: number) => void
   setBusAudioEq: (eq: AudioEqSettings | undefined) => void
+  setMasterFx: (settings: MasterFxSettings | undefined) => void
   setZoom: (zoom: number) => void
   setPreviewFrame: (frame: number | null, itemId?: string | null) => void
   /** Toggle proxy playback mode */
