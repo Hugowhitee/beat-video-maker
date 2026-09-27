@@ -6,6 +6,7 @@ import {
   type BeatThisRhythmResult,
 } from './beatThisCore'
 import { buildMusicMapFromRhythm } from './musicMap'
+import { stabilizeBeatGrid } from './beat-grid-fit'
 import {
   getMediaType,
   getOrDecodeAudio,
@@ -297,14 +298,30 @@ export async function analyzeMusicMedia(
   throwIfAborted(options.signal)
   reportProgress(options, 'prepare', 1, 'Rhythm input ready')
 
-  const { rhythm, warnings } = await runBeatThisWorker(samples, options)
+  const { rhythm: detectedRhythm, warnings } = await runBeatThisWorker(samples, options)
   throwIfAborted(options.signal)
 
   const duration = Number.isFinite(media.duration) && media.duration > 0
     ? media.duration
     : decoded.duration
-  const musicMap = buildMusicMapFromRhythm(rhythm, duration)
-  reportProgress(options, 'finalize', 1, 'Beat map ready')
+  const stabilized = stabilizeBeatGrid(detectedRhythm, duration)
+  const musicMap = {
+    ...buildMusicMapFromRhythm(stabilized.rhythm, duration),
+    gridFit: stabilized.fit,
+  }
+  if (
+    stabilized.fit.mode === 'variable' &&
+    stabilized.fit.confidence > 0 &&
+    stabilized.fit.confidence < 0.48
+  ) {
+    warnings.push('Timing varies too much for one fixed grid; keeping detected beat timing.')
+  }
+  reportProgress(
+    options,
+    'finalize',
+    1,
+    stabilized.fit.mode === 'fixed' ? 'Stable beat grid ready' : 'Variable beat map ready',
+  )
 
-  return { musicMap, rhythm, warnings }
+  return { musicMap, rhythm: stabilized.rhythm, warnings }
 }

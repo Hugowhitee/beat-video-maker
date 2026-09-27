@@ -114,6 +114,21 @@ export type MusicSection = {
   confidence: number
 }
 
+export type MusicGridFit = {
+  /** Fixed = one global tempo/phase grid; variable = preserve detected beat map. */
+  mode: 'fixed' | 'variable'
+  confidence: number
+  bpm: number | null
+  /** First fitted downbeat/beat in source seconds; not forced to zero. */
+  anchorTime: number | null
+  /** Median detector-to-grid timing error before onset phase refinement. */
+  medianErrorMs: number | null
+  /** Signed phase shift applied from coherent transient evidence. */
+  phaseShiftMs: number
+  /** Fraction of fitted beat observations supported by a nearby audio onset. */
+  onsetSupport: number
+}
+
 export type MusicMap = {
   duration: number
   bpm: number | null
@@ -121,6 +136,8 @@ export type MusicMap = {
   beats: MusicBeat[]
   /** Optional in older projects; populated by new Beat This analyses. */
   transients?: MusicTransient[]
+  /** Diagnostics from the DJ-style constant-grid fitter. */
+  gridFit?: MusicGridFit
   sections: MusicSection[]
 }
 

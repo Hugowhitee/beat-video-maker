@@ -802,12 +802,23 @@ const beatvideoMusicSectionSchema = z.object({
   confidence: z.number().min(0).max(1),
 })
 
+const beatvideoMusicGridFitSchema = z.object({
+  mode: z.enum(['fixed', 'variable']),
+  confidence: z.number().min(0).max(1),
+  bpm: z.number().positive().nullable(),
+  anchorTime: z.number().min(0).nullable(),
+  medianErrorMs: z.number().min(0).nullable(),
+  phaseShiftMs: z.number(),
+  onsetSupport: z.number().min(0).max(1),
+})
+
 const beatvideoMusicMapSchema = z.object({
   duration: z.number().positive(),
   bpm: z.number().positive().nullable(),
   beatsPerBar: z.number().int().min(1).max(12),
   beats: z.array(beatvideoMusicBeatSchema),
   transients: z.array(beatvideoMusicTransientSchema).optional(),
+  gridFit: beatvideoMusicGridFitSchema.optional(),
   sections: z.array(beatvideoMusicSectionSchema),
 })
 
