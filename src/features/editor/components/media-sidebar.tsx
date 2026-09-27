@@ -6,6 +6,7 @@ import {
   ChevronRight,
   ChevronUp,
   AudioLines,
+  Gauge,
   Film,
   ImagePlus,
   Layers,
@@ -78,6 +79,9 @@ import type { BeatvideoProjectMode } from '@/types/project'
 import { isSidebarTabVisibleForBeatvideoMode } from '@/config/beatvideo'
 const LazyBeatvideoMusicPanel = lazy(() =>
   import('./beatvideo-music-panel').then((module) => ({ default: module.BeatvideoMusicPanel })),
+)
+const LazyBeatvideoMasterPanel = lazy(() =>
+  import('./beatvideo-master-panel').then((module) => ({ default: module.BeatvideoMasterPanel })),
 )
 const LazyAiPanel = lazy(() => import('./ai-tab').then((m) => ({ default: m.AiTab })))
 const LazyTranscriptEditorPanel = lazy(() =>
@@ -758,6 +762,7 @@ export const MediaSidebar = memo(function MediaSidebar({
   const categories = [
     { id: 'media' as const, icon: Film, label: t('editor.mediaSidebar.media') },
     { id: 'beat' as const, icon: AudioLines, label: 'Beat' },
+    { id: 'master' as const, icon: Gauge, label: 'Master' },
     { id: 'overlay' as const, icon: ImagePlus, label: 'Overlay' },
     { id: 'text' as const, icon: Type, label: t('editor.mediaSidebar.text') },
     { id: 'shapes' as const, icon: Pentagon, label: t('editor.mediaSidebar.shapes') },
@@ -1007,6 +1012,17 @@ export const MediaSidebar = memo(function MediaSidebar({
               {beatTabActivated ? (
                 <Suspense fallback={null}>
                   <LazyBeatvideoMusicPanel />
+                </Suspense>
+              ) : null}
+            </div>
+
+            {/* Project-scoped mastering rack. */}
+            <div
+              className={`min-h-0 flex-1 overflow-hidden ${activeTab === 'master' ? 'block' : 'hidden'}`}
+            >
+              {activeTab === 'master' ? (
+                <Suspense fallback={null}>
+                  <LazyBeatvideoMasterPanel />
                 </Suspense>
               ) : null}
             </div>
