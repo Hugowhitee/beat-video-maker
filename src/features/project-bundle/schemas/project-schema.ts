@@ -774,6 +774,63 @@ const timelineSchema = z
   .passthrough()
 
 // ============================================================================
+// Beatvideo Music Schema
+// ============================================================================
+
+const beatvideoMusicBeatSchema = z.object({
+  time: z.number().min(0),
+  index: z.number().int(),
+  downbeat: z.boolean(),
+  strength: z.number().min(0).max(1),
+})
+
+const beatvideoMusicTransientSchema = z.object({
+  time: z.number().min(0),
+  index: z.number().int().min(0),
+  strength: z.number().min(0).max(1),
+  low: z.number().min(0).max(1),
+  mid: z.number().min(0).max(1),
+  high: z.number().min(0).max(1),
+})
+
+const beatvideoMusicSectionSchema = z.object({
+  id: z.string().min(1),
+  start: z.number().min(0),
+  end: z.number().min(0),
+  kind: z.enum(['intro', 'verse', 'chorus', 'break', 'build', 'drop', 'outro', 'unknown']),
+  energy: z.number().min(0).max(1),
+  confidence: z.number().min(0).max(1),
+})
+
+const beatvideoMusicMapSchema = z.object({
+  duration: z.number().positive(),
+  bpm: z.number().positive().nullable(),
+  beatsPerBar: z.number().int().min(1).max(12),
+  beats: z.array(beatvideoMusicBeatSchema),
+  transients: z.array(beatvideoMusicTransientSchema).optional(),
+  sections: z.array(beatvideoMusicSectionSchema),
+})
+
+const beatvideoGridCorrectionAnchorSchema = z.object({
+  id: z.string().min(1),
+  sourceTime: z.number().min(0),
+  correctedTime: z.number().min(0),
+})
+
+const beatvideoMusicAnalysisSchema = z.object({
+  version: z.union([z.literal(1), z.literal(2)]),
+  mediaId: z.string().min(1),
+  analyzedAt: z.number().int().min(0),
+  musicMap: beatvideoMusicMapSchema,
+  detectedBarOneTime: z.number().min(0).nullable(),
+  barOneTime: z.number().min(0).nullable(),
+  barOneVerified: z.boolean(),
+  bpmOverride: z.number().positive().nullable(),
+  gridMode: z.enum(['detected', 'fixed']).optional(),
+  correctionAnchors: z.array(beatvideoGridCorrectionAnchorSchema).optional(),
+})
+
+// ============================================================================
 // Project Resolution Schema
 // ============================================================================
 
@@ -797,6 +854,7 @@ const projectSchema = z
     name: z.string().min(1).max(100),
     description: z.string().max(500),
     beatvideoMode: z.enum(['photo', 'video']).optional(),
+    beatvideoMusic: beatvideoMusicAnalysisSchema.optional(),
     createdAt: z.number().int().min(0),
     updatedAt: z.number().int().min(0),
     duration: z.number().min(0),
