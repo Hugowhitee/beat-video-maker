@@ -74,6 +74,7 @@ async function renderQueuedJob(job: RenderJob): Promise<void> {
         outPoint: job.outPoint,
         busAudioEq: snapshot.busAudioEq,
         masterBusDb: snapshot.masterBusDb,
+        masterFx: snapshot.masterFx,
       },
       controller.signal,
       (progress) => useRenderQueueStore.getState().updateJobProgress(job.id, progress),
@@ -107,6 +108,7 @@ async function renderQueuedJob(job: RenderJob): Promise<void> {
       snapshot.backgroundColor,
       snapshot.busAudioEq,
       snapshot.masterBusDb,
+      snapshot.masterFx,
     )
 
     // Resolve mediaIds → blob URLs fresh at render time (export never proxies).
