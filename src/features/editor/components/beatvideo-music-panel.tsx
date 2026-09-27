@@ -219,14 +219,14 @@ export function BeatvideoMusicPanel() {
   )
 
   useEffect(() => {
+    if (candidates.some((media) => media.id === selectedMediaId)) return
+
     const preferred = analysis?.mediaId
     if (preferred && candidates.some((media) => media.id === preferred)) {
       setSelectedMediaId(preferred)
       return
     }
-    if (!candidates.some((media) => media.id === selectedMediaId)) {
-      setSelectedMediaId(candidates[0]?.id ?? '')
-    }
+    setSelectedMediaId(candidates[0]?.id ?? '')
   }, [analysis?.mediaId, candidates, selectedMediaId])
 
   useEffect(() => {
@@ -1267,7 +1267,7 @@ export function BeatvideoMusicPanel() {
             <AudioLines className="h-3.5 w-3.5" />
             {analyzing
               ? 'Analyzing beat…'
-              : analysis
+              : effectiveAnalysis
                 ? 'Analyze / replace grid'
                 : 'Analyze beat'}
           </Button>
