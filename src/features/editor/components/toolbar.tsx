@@ -5,6 +5,7 @@ import {
   ArrowLeft,
   Bug,
   ChevronDown,
+  Settings2,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
@@ -155,18 +156,6 @@ export const Toolbar = memo(function Toolbar({
           </span>
         </div>
 
-        {onProjectSettings ? (
-          <Button
-            type="button"
-            variant="ghost"
-            size="sm"
-            className="h-7 shrink-0 px-2 text-[11px] text-muted-foreground hover:text-foreground"
-            onClick={onProjectSettings}
-            aria-label="Project settings"
-          >
-            Project settings
-          </Button>
-        ) : null}
       </div>
 
       <div className="flex flex-1 items-center justify-center">
@@ -224,6 +213,21 @@ export const Toolbar = memo(function Toolbar({
         </DropdownMenu>
 
         {/* Actions */}
+        {onProjectSettings ? (
+          <Button
+            type="button"
+            variant="outline"
+            size="icon"
+            className="h-7 w-7"
+            onClick={onProjectSettings}
+            aria-label="Project settings"
+            data-tooltip="Project settings"
+            data-tooltip-side="bottom"
+          >
+            <Settings2 className="h-3.5 w-3.5" />
+          </Button>
+        ) : null}
+
         <Button
           variant="outline"
           size="sm"
