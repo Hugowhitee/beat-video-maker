@@ -160,6 +160,11 @@ export function BeatvideoMusicPanel() {
   const [selectedLoopMediaId, setSelectedLoopMediaId] = useState('')
   const [selectedTagMediaId, setSelectedTagMediaId] = useState('')
   const [tagRepeatBars, setTagRepeatBars] = useState(16)
+  const [tagFirstBar, setTagFirstBar] = useState(1)
+  const [tagTrimStartSeconds, setTagTrimStartSeconds] = useState('0')
+  const [tagTrimEndSeconds, setTagTrimEndSeconds] = useState('')
+  const [tagAnchorSeconds, setTagAnchorSeconds] = useState('0')
+  const [tagDuckDb, setTagDuckDb] = useState(-3)
   const [progress, setProgress] = useState<MusicAnalysisProgress | null>(null)
   const [analyzing, setAnalyzing] = useState(false)
   const [bpmDraft, setBpmDraft] = useState('')
@@ -226,6 +231,12 @@ export function BeatvideoMusicPanel() {
       setSelectedTagMediaId(tagCandidates[0]?.id ?? '')
     }
   }, [selectedTagMediaId, tagCandidates])
+
+  useEffect(() => {
+    setTagTrimStartSeconds('0')
+    setTagTrimEndSeconds('')
+    setTagAnchorSeconds('0')
+  }, [selectedTagMediaId])
 
   useEffect(() => {
     const bpm =
@@ -410,15 +421,49 @@ export function BeatvideoMusicPanel() {
       }
 
       const timeline = useTimelineStore.getState()
-      const tagDurationInFrames = getDroppedMediaDurationInFrames(media, 'audio', timeline.fps)
+      const requestedTrimStart = Number(tagTrimStartSeconds)
+      const requestedTrimEnd =
+        tagTrimEndSeconds.trim() === '' ? media.duration : Number(tagTrimEndSeconds)
+      if (
+        !Number.isFinite(requestedTrimStart) ||
+        !Number.isFinite(requestedTrimEnd) ||
+        requestedTrimStart < 0 ||
+        requestedTrimEnd <= requestedTrimStart ||
+        requestedTrimEnd > media.duration + 1e-6
+      ) {
+        toast.error('Enter a valid producer-tag trim range')
+        return
+      }
+
+      const tagDurationSeconds = requestedTrimEnd - requestedTrimStart
+      const requestedAnchorSeconds = Number(tagAnchorSeconds)
+      if (
+        !Number.isFinite(requestedAnchorSeconds) ||
+        requestedAnchorSeconds < 0 ||
+        requestedAnchorSeconds > tagDurationSeconds
+      ) {
+        toast.error('Tag anchor must sit inside the trimmed clip')
+        return
+      }
+
+      const tagDurationInFrames = Math.max(
+        1,
+        Math.round(tagDurationSeconds * timeline.fps),
+      )
+      const anchorFrameOffset = Math.round(requestedAnchorSeconds * timeline.fps)
       let frames =
         mode === 'playhead'
-          ? [Math.max(0, Math.round(usePlaybackStore.getState().currentFrame))]
+          ? [
+              Math.round(usePlaybackStore.getState().currentFrame) -
+                anchorFrameOffset,
+            ].filter((frame) => frame >= 0)
           : timelineGrid
             ? resolveProducerTagRepeatFrames({
                 beats: timelineGrid.grid.beats,
                 fps: timeline.fps,
                 everyBars: tagRepeatBars,
+                firstBar: tagFirstBar,
+                anchorFrameOffset,
                 startFrame: timelineGrid.placement.from,
                 endFrame: timelineGrid.placement.from + timelineGrid.placement.durationInFrames,
                 tagDurationInFrames,
@@ -468,6 +513,9 @@ export function BeatvideoMusicPanel() {
         : [...timeline.tracks, tagTrack]
       const canvasWidth = currentProject?.metadata.width ?? DEFAULT_PROJECT_WIDTH
       const canvasHeight = currentProject?.metadata.height ?? DEFAULT_PROJECT_HEIGHT
+      const sourceStart = Math.round(requestedTrimStart * timeline.fps)
+      const sourceEnd = Math.round(requestedTrimEnd * timeline.fps)
+      const duckTargetTrackId = timelineGrid?.placement.trackId
       const tagItems = frames.flatMap((from) =>
         buildDroppedMediaTimelineItems({
           media,
@@ -478,6 +526,9 @@ export function BeatvideoMusicPanel() {
           blobUrl,
           canvasWidth,
           canvasHeight,
+          sourceStart,
+          sourceEnd,
+          fallbackSourceFps: timeline.fps,
           placement: {
             primary: {
               trackId: tagTrack.id,
@@ -485,7 +536,21 @@ export function BeatvideoMusicPanel() {
               durationInFrames: tagDurationInFrames,
             },
           },
-        }),
+        }).map((item) =>
+          item.type === 'audio' && tagDuckDb < 0
+            ? {
+                ...item,
+                audioDucking: {
+                  duckOthersDb: tagDuckDb,
+                  attackSec: 0.06,
+                  releaseSec: 0.22,
+                  ...(duckTargetTrackId
+                    ? { targetTrackIds: [duckTargetTrackId] }
+                    : {}),
+                },
+              }
+            : item,
+        ),
       )
 
       if (existingTagTrack) {
@@ -498,11 +563,22 @@ export function BeatvideoMusicPanel() {
       useSelectionStore.getState().selectItems(tagItems.map((item) => item.id))
       toast.success(
         mode === 'repeat'
-          ? `Placed ${tagItems.length} producer tags every ${tagRepeatBars} bars`
+          ? `Placed ${tagItems.length} producer tags from bar ${tagFirstBar}, every ${tagRepeatBars} bars`
           : 'Producer tag added at playhead',
       )
     },
-    [currentProject?.metadata.height, currentProject?.metadata.width, selectedTagMediaId, tagRepeatBars, timelineGrid],
+    [
+      currentProject?.metadata.height,
+      currentProject?.metadata.width,
+      selectedTagMediaId,
+      tagAnchorSeconds,
+      tagDuckDb,
+      tagFirstBar,
+      tagRepeatBars,
+      tagTrimEndSeconds,
+      tagTrimStartSeconds,
+      timelineGrid,
+    ],
   )
 
   const requirePlacementAtPlayhead = useCallback(() => {
@@ -1029,32 +1105,114 @@ export function BeatvideoMusicPanel() {
                 Place at playhead
               </Button>
 
-              <div className="grid grid-cols-[1fr_auto] gap-1.5">
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="outline"
-                  className="justify-start"
-                  disabled={!timelineGrid}
-                  onClick={() => void insertProducerTags('repeat')}
-                >
-                  <Repeat2 className="h-3.5 w-3.5" />
-                  Repeat across beat
-                </Button>
-                <select
-                  value={tagRepeatBars}
-                  onChange={(event) => setTagRepeatBars(Number(event.target.value))}
-                  className="h-8 rounded-md border border-input bg-secondary px-2 text-xs text-foreground"
-                  aria-label="Producer tag repeat interval"
-                >
-                  <option value={8}>8 bars</option>
-                  <option value={16}>16 bars</option>
-                  <option value={32}>32 bars</option>
-                </select>
+              <div className="grid grid-cols-2 gap-1.5">
+                <label className="space-y-1 text-[10px] text-muted-foreground">
+                  <span>First bar</span>
+                  <input
+                    type="number"
+                    min={1}
+                    step={1}
+                    value={tagFirstBar}
+                    onChange={(event) =>
+                      setTagFirstBar(Math.max(1, Number(event.target.value) || 1))
+                    }
+                    className="h-8 w-full rounded-md border border-input bg-secondary px-2 font-mono text-xs text-foreground"
+                  />
+                </label>
+                <label className="space-y-1 text-[10px] text-muted-foreground">
+                  <span>Every</span>
+                  <select
+                    value={tagRepeatBars}
+                    onChange={(event) => setTagRepeatBars(Number(event.target.value))}
+                    className="h-8 w-full rounded-md border border-input bg-secondary px-2 text-xs text-foreground"
+                    aria-label="Producer tag repeat interval"
+                  >
+                    <option value={8}>8 bars</option>
+                    <option value={16}>16 bars</option>
+                    <option value={32}>32 bars</option>
+                    <option value={64}>64 bars</option>
+                  </select>
+                </label>
               </div>
+
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                className="w-full justify-start"
+                disabled={!timelineGrid}
+                onClick={() => void insertProducerTags('repeat')}
+              >
+                <Repeat2 className="h-3.5 w-3.5" />
+                Place pattern
+              </Button>
+
+              <details className="border-t border-border pt-2">
+                <summary className="cursor-pointer list-none text-[10px] font-medium text-foreground marker:hidden [&::-webkit-details-marker]:hidden">
+                  Timing & ducking
+                </summary>
+                <div className="mt-2 grid grid-cols-2 gap-1.5">
+                  <label className="space-y-1 text-[10px] text-muted-foreground">
+                    <span>Trim start</span>
+                    <input
+                      type="number"
+                      min={0}
+                      step={0.01}
+                      value={tagTrimStartSeconds}
+                      onChange={(event) => setTagTrimStartSeconds(event.target.value)}
+                      className="h-8 w-full rounded-md border border-input bg-secondary px-2 font-mono text-xs text-foreground"
+                      aria-label="Producer tag trim start in seconds"
+                    />
+                  </label>
+                  <label className="space-y-1 text-[10px] text-muted-foreground">
+                    <span>Trim end</span>
+                    <input
+                      type="number"
+                      min={0}
+                      step={0.01}
+                      placeholder="Full"
+                      value={tagTrimEndSeconds}
+                      onChange={(event) => setTagTrimEndSeconds(event.target.value)}
+                      className="h-8 w-full rounded-md border border-input bg-secondary px-2 font-mono text-xs text-foreground"
+                      aria-label="Producer tag trim end in seconds"
+                    />
+                  </label>
+                  <label className="space-y-1 text-[10px] text-muted-foreground">
+                    <span>Anchor in clip</span>
+                    <input
+                      type="number"
+                      min={0}
+                      step={0.01}
+                      value={tagAnchorSeconds}
+                      onChange={(event) => setTagAnchorSeconds(event.target.value)}
+                      className="h-8 w-full rounded-md border border-input bg-secondary px-2 font-mono text-xs text-foreground"
+                      aria-label="Producer tag anchor in seconds"
+                    />
+                  </label>
+                  <label className="space-y-1 text-[10px] text-muted-foreground">
+                    <span>Duck beat</span>
+                    <select
+                      value={tagDuckDb}
+                      onChange={(event) => setTagDuckDb(Number(event.target.value))}
+                      className="h-8 w-full rounded-md border border-input bg-secondary px-2 text-xs text-foreground"
+                    >
+                      <option value={0}>Off</option>
+                      <option value={-2}>−2 dB</option>
+                      <option value={-3}>−3 dB</option>
+                      <option value={-4}>−4 dB</option>
+                      <option value={-6}>−6 dB</option>
+                    </select>
+                  </label>
+                </div>
+                <p className="mt-2 text-[10px] leading-relaxed text-muted-foreground">
+                  Anchor is the moment inside the tag that lands on the bar. The voice
+                  keeps its natural speed; only placement changes.
+                </p>
+              </details>
+
               <p className="text-[10px] leading-relaxed text-muted-foreground">
-                Tags are normal audio clips on the Producer tags track. Move, trim,
-                change volume, fade or delete them like any other clip.
+                Repeats stay as normal timeline clips, so any one can be moved, trimmed,
+                faded, turned down or deleted.
               </p>
             </>
           ) : (
