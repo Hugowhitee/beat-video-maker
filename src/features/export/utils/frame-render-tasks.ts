@@ -135,6 +135,7 @@ export async function renderItemWithEffects(
     baseItemEffects,
     getCurrentKeyframes(effectiveItem.id),
     frame - effectiveItem.from,
+    effectiveItem.beatReactive,
   )
   const adjEffects = getAdjustmentLayerEffects(
     trackOrder,

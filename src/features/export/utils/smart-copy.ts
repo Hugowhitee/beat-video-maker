@@ -144,6 +144,7 @@ function hasVisualProcessing(item: VideoItem, width: number, height: number): bo
     hasEntries(item.effects),
     hasEntries(item.motionModifiers),
     hasEntries(item.motionLayers),
+    item.beatReactive?.enabled === true,
   ].some(Boolean)
   return [
     transformChanged,

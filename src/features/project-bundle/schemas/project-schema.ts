@@ -384,6 +384,27 @@ const itemEffectSchema = z.object({
   enabled: z.boolean(),
 })
 
+const beatReactiveSchema = z.object({
+  version: z.literal(1),
+  enabled: z.boolean(),
+  beats: z.array(
+    z.object({
+      frame: z.number().int(),
+      strength: z.number().min(0).max(1),
+      downbeat: z.boolean(),
+    }),
+  ),
+  threshold: z.number().min(0).max(1),
+  releaseFrames: z.number().int().min(1),
+  zoom: z.number().min(0).max(0.12),
+  shake: z.number().min(0).max(1),
+  brightness: z.number().min(0).max(1),
+  glow: z.number().min(0).max(2),
+  rgbSplit: z.number().min(0).max(0.03),
+  downbeatsOnly: z.boolean(),
+  downbeatBoost: z.number().min(1).max(2),
+})
+
 const transformSchema = z.object({
   x: z.number().optional(),
   y: z.number().optional(),
@@ -603,6 +624,8 @@ const timelineItemSchema = z
     fadeOut: z.number().min(0).optional(),
     // Effects
     effects: z.array(itemEffectSchema).optional(),
+    // Beatvideo sparse beat modulation
+    beatReactive: beatReactiveSchema.optional(),
     // Adjustment layer
     effectOpacity: z.number().min(0).max(1).optional(),
     // Composition item fields

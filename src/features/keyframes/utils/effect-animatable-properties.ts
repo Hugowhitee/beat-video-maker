@@ -7,7 +7,9 @@ import {
   type ItemKeyframes,
 } from '@/types/keyframe'
 import type { GpuEffect, ItemEffect } from '@/types/effects'
+import type { BeatReactiveSettings } from '@/types/beatvideo'
 import type { TimelineItem } from '@/types/timeline'
+import { buildBeatReactiveEffects } from '@/shared/beatvideo/beat-reactive'
 import {
   colorStringToKeyframeValue,
   interpolateColorKeyframesToHex,
@@ -311,15 +313,21 @@ export function resolveAnimatedGpuEffects(
   effects: ItemEffect[] | undefined,
   itemKeyframes: ItemKeyframes | undefined,
   relativeFrame: number,
+  beatReactive?: BeatReactiveSettings,
 ): ItemEffect[] | undefined {
-  const hasAudioPulse = effects?.some((entry) => entry.audioPulse?.enabled) ?? false
-  if (!effects || effects.length === 0 || (!itemKeyframes && !hasAudioPulse)) {
-    return effects
+  const sourceEffects = effects ?? []
+  const reactiveEffects = buildBeatReactiveEffects(beatReactive, relativeFrame)
+  const hasAudioPulse = sourceEffects.some((entry) => entry.audioPulse?.enabled)
+  if (sourceEffects.length === 0) {
+    return reactiveEffects.length > 0 ? reactiveEffects : effects
+  }
+  if (!itemKeyframes && !hasAudioPulse) {
+    return reactiveEffects.length > 0 ? [...sourceEffects, ...reactiveEffects] : effects
   }
 
   let changed = false
 
-  const resolvedEffects = effects.map((effectEntry) => {
+  const resolvedEffects = sourceEffects.map((effectEntry) => {
     if (effectEntry.effect.type !== 'gpu-effect') {
       return effectEntry
     }
@@ -406,7 +414,8 @@ export function resolveAnimatedGpuEffects(
     }
   })
 
-  return changed ? resolvedEffects : effects
+  const baseResolved = changed ? resolvedEffects : sourceEffects
+  return reactiveEffects.length > 0 ? [...baseResolved, ...reactiveEffects] : baseResolved
 }
 
 export const resolveAnimatedColorEffects = resolveAnimatedGpuEffects

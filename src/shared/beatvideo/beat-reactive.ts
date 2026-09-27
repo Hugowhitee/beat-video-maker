@@ -1,4 +1,5 @@
 import type { BeatReactiveSettings } from '@/types/beatvideo'
+import type { ItemEffect } from '@/types/effects'
 import type { ResolvedTransform } from '@/types/transform'
 
 export interface BeatReactiveFrameState {
@@ -99,4 +100,67 @@ export function applyBeatReactiveTransform(
     height: transform.height * scale,
     rotation: transform.rotation + dr,
   }
+}
+
+/**
+ * Build small transient GPU effects from the same sparse beat envelope used by
+ * transform punch/shake. These are regular ItemEffect records, so the canonical
+ * preview/export GPU pipeline stays the only renderer.
+ */
+export function buildBeatReactiveEffects(
+  settings: BeatReactiveSettings | undefined,
+  relativeFrame: number,
+): ItemEffect[] {
+  const state = evaluateBeatReactiveFrame(settings, relativeFrame)
+  if (!settings?.enabled || state.pulse <= 0) return []
+
+  const effects: ItemEffect[] = []
+  const brightness = Math.max(0, Math.min(1, settings.brightness)) * state.pulse
+  const glow = Math.max(0, Math.min(2, settings.glow)) * state.pulse
+  const rgbSplit = Math.max(0, Math.min(0.03, settings.rgbSplit)) * state.pulse
+
+  if (brightness > 0.0001) {
+    effects.push({
+      id: 'beat-reactive-brightness',
+      enabled: true,
+      effect: {
+        type: 'gpu-effect',
+        gpuEffectType: 'gpu-brightness',
+        params: { amount: brightness },
+      },
+    })
+  }
+
+  if (glow > 0.0001) {
+    effects.push({
+      id: 'beat-reactive-glow',
+      enabled: true,
+      effect: {
+        type: 'gpu-effect',
+        gpuEffectType: 'gpu-glow',
+        params: {
+          amount: glow,
+          threshold: 0.62,
+          radius: 12,
+          softness: 0.55,
+          rings: 2,
+          samplesPerRing: 8,
+        },
+      },
+    })
+  }
+
+  if (rgbSplit > 0.00001) {
+    effects.push({
+      id: 'beat-reactive-rgb-split',
+      enabled: true,
+      effect: {
+        type: 'gpu-effect',
+        gpuEffectType: 'gpu-rgb-split',
+        params: { amount: rgbSplit, angle: 0 },
+      },
+    })
+  }
+
+  return effects
 }
