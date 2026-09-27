@@ -45,6 +45,7 @@ import type { BeatvideoProjectMode } from '@/types/project'
 
 interface TimelineHeaderProps {
   beatvideoMode?: BeatvideoProjectMode
+  simplifiedBeatvideo?: boolean
   onZoomChange?: (newZoom: number) => void
   onZoomIn?: () => void
   onZoomOut?: () => void
@@ -448,6 +449,7 @@ const TimelineZoomControls = memo(function TimelineZoomControls({
  */
 export const TimelineHeader = memo(function TimelineHeader({
   beatvideoMode = 'video',
+  simplifiedBeatvideo = false,
   onZoomChange,
   onZoomIn,
   onZoomOut,
@@ -455,6 +457,7 @@ export const TimelineHeader = memo(function TimelineHeader({
 }: TimelineHeaderProps) {
   const { t } = useTranslation()
   const isPhotoMode = beatvideoMode === 'photo'
+  const isSimplified = simplifiedBeatvideo || isPhotoMode
   const hotkeys = useResolvedHotkeys()
   const snapEnabled = useTimelineStore((s) => s.snapEnabled)
   const toggleSnap = useTimelineStore((s) => s.toggleSnap)
@@ -487,10 +490,13 @@ export const TimelineHeader = memo(function TimelineHeader({
   const SlipSlideFlyoutIcon = activeTool === 'slide' ? BetweenHorizontalEnd : ArrowRightLeft
 
   useEffect(() => {
-    if (isPhotoMode && activeTool !== 'select') {
+    if (isSimplified && activeTool !== 'select' && activeTool !== 'razor') {
       setActiveTool('select')
     }
-  }, [activeTool, isPhotoMode, setActiveTool])
+    if (isPhotoMode && activeTool === 'razor') {
+      setActiveTool('select')
+    }
+  }, [activeTool, isPhotoMode, isSimplified, setActiveTool])
 
   const btnSize = {
     width: EDITOR_LAYOUT_CSS_VALUES.toolbarButtonSize,
@@ -543,21 +549,23 @@ export const TimelineHeader = memo(function TimelineHeader({
 
             {!isPhotoMode ? (
               <>
-              <Button
-                variant="ghost"
-                size="icon"
-                style={btnSize}
-                className={
-                  activeTool === 'trim-edit'
-                    ? 'bg-primary text-primary-foreground hover:bg-primary/90'
-                    : ''
-                }
-                onClick={() => setActiveTool(activeTool === 'trim-edit' ? 'select' : 'trim-edit')}
-                aria-label={t('timeline.header.trimEditTool')}
-                data-tooltip={t('timeline.header.trimEditToolTooltip')}
-              >
-                <TrimEditIcon className="w-3.5 h-3.5" />
-              </Button>
+              {!isSimplified ? (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  style={btnSize}
+                  className={
+                    activeTool === 'trim-edit'
+                      ? 'bg-primary text-primary-foreground hover:bg-primary/90'
+                      : ''
+                  }
+                  onClick={() => setActiveTool(activeTool === 'trim-edit' ? 'select' : 'trim-edit')}
+                  aria-label={t('timeline.header.trimEditTool')}
+                  data-tooltip={t('timeline.header.trimEditToolTooltip')}
+                >
+                  <TrimEditIcon className="w-3.5 h-3.5" />
+                </Button>
+              ) : null}
   
               <Button
                 variant="ghost"
@@ -575,67 +583,72 @@ export const TimelineHeader = memo(function TimelineHeader({
                 <Scissors className="w-3.5 h-3.5 -rotate-90" />
               </Button>
   
-              <Button
-                variant="ghost"
-                size="icon"
-                style={btnSize}
-                className={
-                  activeTool === 'rate-stretch'
-                    ? 'bg-primary text-primary-foreground hover:bg-primary/90'
-                    : ''
-                }
-                onClick={() =>
-                  setActiveTool(activeTool === 'rate-stretch' ? 'select' : 'rate-stretch')
-                }
-                aria-label={t('timeline.header.rateStretchTool')}
-                data-tooltip={t('timeline.header.rateStretchToolTooltip')}
-              >
-                <Gauge className="w-3.5 h-3.5" />
-              </Button>
-  
-              {SLIP_SLIDE_TOOLS_ENABLED ? (
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      style={{ height: EDITOR_LAYOUT_CSS_VALUES.toolbarButtonSize }}
-                      className={`gap-1 px-2 ${
-                        activeTool === 'slip' || activeTool === 'slide'
-                          ? 'bg-primary text-primary-foreground hover:bg-primary/90'
-                          : ''
-                      }`}
-                      aria-label={t('timeline.header.slipSlideTools')}
-                      data-tooltip={t('timeline.header.slipSlideToolsTooltip')}
-                    >
-                      <span className="flex items-center gap-1">
-                        <span className="inline-flex items-center justify-center">
-                          <SlipSlideFlyoutIcon className="w-3.5 h-3.5" />
+              {!isSimplified ? (
+                <>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  style={btnSize}
+                  className={
+                    activeTool === 'rate-stretch'
+                      ? 'bg-primary text-primary-foreground hover:bg-primary/90'
+                      : ''
+                  }
+                  onClick={() =>
+                    setActiveTool(activeTool === 'rate-stretch' ? 'select' : 'rate-stretch')
+                  }
+                  aria-label={t('timeline.header.rateStretchTool')}
+                  data-tooltip={t('timeline.header.rateStretchToolTooltip')}
+                >
+                  <Gauge className="w-3.5 h-3.5" />
+                </Button>
+    
+                {SLIP_SLIDE_TOOLS_ENABLED ? (
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        style={{ height: EDITOR_LAYOUT_CSS_VALUES.toolbarButtonSize }}
+                        className={`gap-1 px-2 ${
+                          activeTool === 'slip' || activeTool === 'slide'
+                            ? 'bg-primary text-primary-foreground hover:bg-primary/90'
+                            : ''
+                        }`}
+                        aria-label={t('timeline.header.slipSlideTools')}
+                        data-tooltip={t('timeline.header.slipSlideToolsTooltip')}
+                      >
+                        <span className="flex items-center gap-1">
+                          <span className="inline-flex items-center justify-center">
+                            <SlipSlideFlyoutIcon className="w-3.5 h-3.5" />
+                          </span>
+                          <ChevronDown className="w-3 h-3 opacity-70" />
                         </span>
-                        <ChevronDown className="w-3 h-3 opacity-70" />
-                      </span>
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="start">
-                    <DropdownMenuItem
-                      onClick={() => setActiveTool(activeTool === 'slip' ? 'select' : 'slip')}
-                    >
-                      <ArrowRightLeft className="w-3.5 h-3.5" />
-                      <span className="flex-1">{t('timeline.header.slipTool')}</span>
-                      <span className="text-xs text-muted-foreground">
-                        {formatHotkeyBinding(hotkeys.SLIP_TOOL)}
-                      </span>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      onClick={() => setActiveTool(activeTool === 'slide' ? 'select' : 'slide')}
-                    >
-                      <BetweenHorizontalEnd className="w-3.5 h-3.5" />
-                      <span className="flex-1">{t('timeline.header.slideTool')}</span>
-                      <span className="text-xs text-muted-foreground">
-                        {formatHotkeyBinding(hotkeys.SLIDE_TOOL)}
-                      </span>
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="start">
+                      <DropdownMenuItem
+                        onClick={() => setActiveTool(activeTool === 'slip' ? 'select' : 'slip')}
+                      >
+                        <ArrowRightLeft className="w-3.5 h-3.5" />
+                        <span className="flex-1">{t('timeline.header.slipTool')}</span>
+                        <span className="text-xs text-muted-foreground">
+                          {formatHotkeyBinding(hotkeys.SLIP_TOOL)}
+                        </span>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={() => setActiveTool(activeTool === 'slide' ? 'select' : 'slide')}
+                      >
+                        <BetweenHorizontalEnd className="w-3.5 h-3.5" />
+                        <span className="flex-1">{t('timeline.header.slideTool')}</span>
+                        <span className="text-xs text-muted-foreground">
+                          {formatHotkeyBinding(hotkeys.SLIDE_TOOL)}
+                        </span>
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+  
+                </>
+              ) : null}
               ) : null}
                 </>
             ) : null}
@@ -686,7 +699,7 @@ export const TimelineHeader = memo(function TimelineHeader({
             </Button>
           </div>
 
-          {!isPhotoMode ? (
+          {!isSimplified ? (
             <>
             <Separator orientation="vertical" className="h-5 mx-1.5" />
   
@@ -807,7 +820,7 @@ export const TimelineHeader = memo(function TimelineHeader({
             <Magnet className="w-3.5 h-3.5" />
           </Button>
 
-          {!isPhotoMode ? (
+          {!isSimplified ? (
             <>
             <Button
               variant="ghost"
