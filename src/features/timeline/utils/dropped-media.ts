@@ -152,6 +152,10 @@ export function buildDroppedMediaTimelineItems(params: {
   canvasHeight: number
   placement: TimelineLinkedMediaPlacement
   linkVideoAudio?: boolean
+  /** Optional source crop in source-native frames. */
+  sourceStart?: number
+  sourceEnd?: number
+  fallbackSourceFps?: number
   initialFit?: InitialTransformFitMode
 }): TimelineItem[] {
   return buildMediaTimelineItems({
@@ -166,6 +170,9 @@ export function buildDroppedMediaTimelineItems(params: {
     canvasHeight: params.canvasHeight,
     placements: params.placement satisfies LinkedMediaTimelinePlacement,
     linkVideoAudio: params.linkVideoAudio,
+    sourceStart: params.sourceStart,
+    sourceEnd: params.sourceEnd,
+    fallbackSourceFps: params.fallbackSourceFps,
     initialFit: params.initialFit,
   })
 }
