@@ -6,6 +6,7 @@ import {
   applyAudioReactiveEffectParamValue,
   applyAudioReactiveTransform,
   evaluateAudioReactiveBinding,
+  projectAudioReactiveBeatsToItem,
 } from './beat-reactive'
 
 function binding(overrides: Partial<AudioReactiveBinding> = {}): AudioReactiveBinding {
@@ -114,4 +115,28 @@ describe('audio reactive modulation', () => {
     expect(first.height).toBeCloseTo(1030)
     expect(Math.abs(first.x)).toBeLessThanOrEqual(1080 * 0.004 * 0.25)
   })
+  it('projects corrected timeline beats into item-local frames', () => {
+    const beats = projectAudioReactiveBeatsToItem(
+      {
+        duration: 4,
+        bpm: 120,
+        beatsPerBar: 4,
+        sections: [],
+        beats: [
+          { time: 0.5, index: 0, strength: 0.8, downbeat: true },
+          { time: 1, index: 1, strength: 0.7, downbeat: false },
+          { time: 1.5, index: 2, strength: 0.9, downbeat: false },
+          { time: 2, index: 3, strength: 1, downbeat: false },
+        ],
+      },
+      { from: 30, durationInFrames: 60 },
+      30,
+    )
+
+    expect(beats).toEqual([
+      { frame: 0, index: 1, strength: 0.7, downbeat: false },
+      { frame: 15, index: 2, strength: 0.9, downbeat: false },
+    ])
+  })
+
 })

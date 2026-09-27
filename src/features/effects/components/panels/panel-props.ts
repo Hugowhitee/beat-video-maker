@@ -1,4 +1,6 @@
 import type { GpuEffectDefinition } from '@/infrastructure/gpu-effects'
+import type { EffectParam } from '@/infrastructure/gpu-effects/types'
+import type { AudioReactiveBinding } from '@/types/beatvideo'
 import type { GpuEffect, ItemEffect } from '@/types/effects'
 import type { AnimatableProperty } from '@/types/keyframe'
 import type { EffectMoveProps } from './effect-move-buttons'
@@ -30,4 +32,21 @@ export interface GpuPanelBaseProps extends EffectMoveProps {
 export interface GpuKeyframePanelProps extends GpuPanelBaseProps {
   itemIds: string[]
   getKeyframeProperty: (effectId: string, paramKey: string) => AnimatableProperty | null
+  /** Optional Beatvideo property modulation affordances for generic numeric params. */
+  audioReactiveAvailable?: boolean
+  audioReactiveFps?: number
+  getAudioReactiveBinding?: (
+    effectId: string,
+    paramKey: string,
+  ) => AudioReactiveBinding | undefined
+  onToggleAudioReactive?: (
+    effectId: string,
+    paramKey: string,
+    param: EffectParam,
+  ) => void
+  onUpdateAudioReactiveBinding?: (
+    effectId: string,
+    paramKey: string,
+    patch: Partial<AudioReactiveBinding>,
+  ) => void
 }

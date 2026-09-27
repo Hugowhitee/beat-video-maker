@@ -5,6 +5,8 @@ import { Sparkles, Plus, Eye, EyeOff, Search, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import type { TimelineItem } from '@/types/timeline'
 import type { ItemEffect, GpuEffect, VisualEffect } from '@/types/effects'
+import type { AudioReactiveBinding } from '@/types/beatvideo'
+import type { EffectParam } from '@/infrastructure/gpu-effects/types'
 import { EFFECT_PRESETS } from '@/types/effects'
 import { useTimelineStore } from '@/features/effects/deps/timeline-contract'
 import {
@@ -40,6 +42,15 @@ import {
   getResolvedGpuEffectForFrame,
 } from '@/features/effects/utils/effect-keyframes'
 import { useKeyframesByItemId } from '../hooks/use-keyframes-by-item-id'
+import {
+  projectAudioReactiveBeatsToItem,
+  resolveBeatvideoTimelineGrid,
+  useProjectStore,
+} from '@/features/effects/deps/beatvideo-contract'
+import {
+  createDefaultAudioReactiveEffectBinding,
+  getAudioReactiveBindingForParam,
+} from '@/features/effects/utils/audio-reactive-bindings'
 
 interface EffectsSectionProps {
   /** Visual items (already filtered to exclude audio) */
@@ -81,6 +92,10 @@ export const EffectsSection = memo(function EffectsSection({
   const toggleEffect = useTimelineStore((s) => s.toggleEffect)
   const setItemEffects = useTimelineStore((s) => s.setItemEffects)
   const applyAutoKeyframeOperations = useTimelineStore((s) => s.applyAutoKeyframeOperations)
+  const setAudioReactiveStates = useTimelineStore((s) => s.setAudioReactiveStates)
+  const timelineItems = useTimelineStore((s) => s.items)
+  const timelineFps = useTimelineStore((s) => s.fps)
+  const beatAnalysis = useProjectStore((s) => s.currentProject?.beatvideoMusic)
 
   // Gizmo store for live effect preview
   const setEffectsPreviewNew = useGizmoStore((s) => s.setEffectsPreviewNew)
@@ -91,6 +106,15 @@ export const EffectsSection = memo(function EffectsSection({
 
   // Items are already filtered by parent - use directly
   const visualItems = items
+  const audioReactiveGrid = useMemo(
+    () =>
+      beatAnalysis
+        ? resolveBeatvideoTimelineGrid(beatAnalysis, timelineItems, timelineFps)
+        : null,
+    [beatAnalysis, timelineFps, timelineItems],
+  )
+  const audioReactiveAvailable =
+    audioReactiveGrid !== null && audioReactiveGrid.grid.beats.length > 0
 
   // Memoize item IDs for stable callback dependencies
   const itemIds = useMemo(() => visualItems.map((item) => item.id), [visualItems])
@@ -127,6 +151,129 @@ export const EffectsSection = memo(function EffectsSection({
       )
     },
     [effects, isHiddenEffectEntry],
+  )
+
+  const getAudioReactiveBinding = useCallback(
+    (effectId: string, paramKey: string): AudioReactiveBinding | undefined => {
+      const displayEffect = effects.find((entry) => entry.id === effectId)
+      if (!displayItem || displayEffect?.effect.type !== 'gpu-effect') return undefined
+      return getAudioReactiveBindingForParam(
+        displayItem.audioReactive?.bindings,
+        effectId,
+        displayEffect.effect.gpuEffectType,
+        paramKey,
+      )
+    },
+    [displayItem, effects],
+  )
+
+  const handleToggleAudioReactive = useCallback(
+    (effectId: string, paramKey: string, param: EffectParam) => {
+      if (!audioReactiveGrid) return
+
+      const updates = visualItems.flatMap((item) => {
+        const targetEffect = getMappedEffectEntry(item, effectId)
+        if (!targetEffect || targetEffect.effect.type !== 'gpu-effect') return []
+
+        const current = item.audioReactive
+        const existing = getAudioReactiveBindingForParam(
+          current?.bindings,
+          targetEffect.id,
+          targetEffect.effect.gpuEffectType,
+          paramKey,
+        )
+        const bindings = existing
+          ? (current?.bindings ?? []).filter((binding) => binding.id !== existing.id)
+          : [
+              ...(current?.bindings ?? []),
+              createDefaultAudioReactiveEffectBinding({
+                effect: targetEffect,
+                paramKey,
+                param,
+                fps: timelineFps,
+              }),
+            ].filter((binding): binding is AudioReactiveBinding => binding !== null)
+
+        const audioReactive =
+          bindings.length > 0
+            ? {
+                version: 1 as const,
+                enabled: true,
+                beats: projectAudioReactiveBeatsToItem(
+                  audioReactiveGrid.grid,
+                  item,
+                  timelineFps,
+                ),
+                bindings,
+              }
+            : undefined
+
+        return [{ itemId: item.id, audioReactive }]
+      })
+
+      setAudioReactiveStates(updates)
+    },
+    [
+      audioReactiveGrid,
+      getMappedEffectEntry,
+      setAudioReactiveStates,
+      timelineFps,
+      visualItems,
+    ],
+  )
+
+  const handleUpdateAudioReactiveBinding = useCallback(
+    (
+      effectId: string,
+      paramKey: string,
+      patch: Partial<AudioReactiveBinding>,
+    ) => {
+      if (!audioReactiveGrid) return
+
+      const updates = visualItems.flatMap((item) => {
+        const targetEffect = getMappedEffectEntry(item, effectId)
+        if (!targetEffect || targetEffect.effect.type !== 'gpu-effect' || !item.audioReactive) {
+          return []
+        }
+
+        const existing = getAudioReactiveBindingForParam(
+          item.audioReactive.bindings,
+          targetEffect.id,
+          targetEffect.effect.gpuEffectType,
+          paramKey,
+        )
+        if (!existing) return []
+
+        const bindings = item.audioReactive.bindings.map((binding) =>
+          binding.id === existing.id
+            ? { ...binding, ...patch, id: binding.id, target: binding.target }
+            : binding,
+        )
+
+        return [{
+          itemId: item.id,
+          audioReactive: {
+            ...item.audioReactive,
+            enabled: true,
+            beats: projectAudioReactiveBeatsToItem(
+              audioReactiveGrid.grid,
+              item,
+              timelineFps,
+            ),
+            bindings,
+          },
+        }]
+      })
+
+      setAudioReactiveStates(updates)
+    },
+    [
+      audioReactiveGrid,
+      getMappedEffectEntry,
+      setAudioReactiveStates,
+      timelineFps,
+      visualItems,
+    ],
   )
 
   const getKeyframeProperty = useCallback(
@@ -932,6 +1079,11 @@ export const EffectsSection = memo(function EffectsSection({
               gpuEffect={displayGpuEffect}
               definition={def}
               getKeyframeProperty={getKeyframeProperty}
+              audioReactiveAvailable={audioReactiveAvailable}
+              audioReactiveFps={timelineFps}
+              getAudioReactiveBinding={getAudioReactiveBinding}
+              onToggleAudioReactive={handleToggleAudioReactive}
+              onUpdateAudioReactiveBinding={handleUpdateAudioReactiveBinding}
               onParamChange={handleGpuParamChange}
               onParamLiveChange={handleGpuParamLiveChange}
               onReset={handleResetGpuEffect}

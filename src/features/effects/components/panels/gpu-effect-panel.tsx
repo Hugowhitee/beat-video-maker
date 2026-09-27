@@ -1,6 +1,6 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Scan } from 'lucide-react'
+import { AudioLines, Scan } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import {
@@ -26,6 +26,8 @@ import {
 import { getSpatialPointEffectConfig } from '@/infrastructure/gpu-effects/spatial-point-editor'
 import { EffectPanelHeaderRow } from './effect-panel-header-actions'
 import { ParamResetButton } from './param-reset-button'
+import { AudioReactiveParamControls } from './audio-reactive-param-controls'
+import { isAudioReactiveParam } from '@/features/effects/utils/audio-reactive-bindings'
 import type { GpuKeyframePanelProps, GpuParamValue } from './panel-props'
 
 type GpuEffectPanelProps = GpuKeyframePanelProps
@@ -104,6 +106,11 @@ export const GpuEffectPanel = memo(function GpuEffectPanel({
   gpuEffect,
   definition,
   getKeyframeProperty,
+  audioReactiveAvailable = false,
+  audioReactiveFps = 30,
+  getAudioReactiveBinding,
+  onToggleAudioReactive,
+  onUpdateAudioReactiveBinding,
   onParamChange,
   onParamLiveChange,
   onReset,
@@ -240,39 +247,80 @@ export const GpuEffectPanel = memo(function GpuEffectPanel({
 
             if (param.type === 'number') {
               const keyframeProperty = getKeyframeProperty(effect.id, key)
+              const canReact = isAudioReactiveParam(param)
+              const reactiveBinding = canReact
+                ? getAudioReactiveBinding?.(effect.id, key)
+                : undefined
+              const reactiveLabel = reactiveBinding
+                ? `Disable audio reaction for ${paramLabel}`
+                : audioReactiveAvailable
+                  ? `Make ${paramLabel} audio reactive`
+                  : 'Analyze and place the beat first'
+
               return (
-                <PropertyRow
-                  key={key}
-                  label={paramLabel}
-                  className={!paramEnabled ? 'opacity-50' : undefined}
-                >
-                  <SliderInput
-                    value={currentValue as number}
-                    onChange={(v) => onParamChange(effect.id, key, v)}
-                    onLiveChange={(v) => onParamLiveChange(effect.id, key, v)}
-                    min={param.min ?? 0}
-                    max={param.max ?? 1}
-                    step={param.step ?? 0.01}
-                    disabled={!paramEnabled}
-                    className="flex-1 min-w-0"
-                  />
-                  {keyframeProperty ? (
-                    <KeyframeToggle
-                      itemIds={itemIds}
-                      property={keyframeProperty}
-                      currentValue={currentValue as number}
+                <div key={key}>
+                  <PropertyRow
+                    label={paramLabel}
+                    className={!paramEnabled ? 'opacity-50' : undefined}
+                  >
+                    <SliderInput
+                      value={currentValue as number}
+                      onChange={(v) => onParamChange(effect.id, key, v)}
+                      onLiveChange={(v) => onParamLiveChange(effect.id, key, v)}
+                      min={param.min ?? 0}
+                      max={param.max ?? 1}
+                      step={param.step ?? 0.01}
                       disabled={!paramEnabled}
+                      className="flex-1 min-w-0"
+                    />
+                    {canReact ? (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className={
+                          reactiveBinding
+                            ? 'h-6 w-6 shrink-0 bg-primary/10 text-primary hover:bg-primary/15 hover:text-primary'
+                            : 'h-6 w-6 shrink-0 text-muted-foreground'
+                        }
+                        disabled={!paramEnabled || !audioReactiveAvailable}
+                        aria-pressed={Boolean(reactiveBinding)}
+                        aria-label={reactiveLabel}
+                        title={reactiveLabel}
+                        onClick={() => onToggleAudioReactive?.(effect.id, key, param)}
+                      >
+                        <AudioLines className="h-3.5 w-3.5" />
+                      </Button>
+                    ) : null}
+                    {keyframeProperty ? (
+                      <KeyframeToggle
+                        itemIds={itemIds}
+                        property={keyframeProperty}
+                        currentValue={currentValue as number}
+                        disabled={!paramEnabled}
+                      />
+                    ) : null}
+                    <ParamResetButton
+                      effectId={effect.id}
+                      paramKey={key}
+                      label={paramLabel}
+                      value={currentValue as number}
+                      defaultValue={param.default}
+                      onParamChange={onParamChange}
+                    />
+                  </PropertyRow>
+
+                  {reactiveBinding && onUpdateAudioReactiveBinding ? (
+                    <AudioReactiveParamControls
+                      binding={reactiveBinding}
+                      param={param}
+                      fps={audioReactiveFps}
+                      onChange={(patch) =>
+                        onUpdateAudioReactiveBinding(effect.id, key, patch)
+                      }
                     />
                   ) : null}
-                  <ParamResetButton
-                    effectId={effect.id}
-                    paramKey={key}
-                    label={paramLabel}
-                    value={currentValue as number}
-                    defaultValue={param.default}
-                    onParamChange={onParamChange}
-                  />
-                </PropertyRow>
+                </div>
               )
             }
 

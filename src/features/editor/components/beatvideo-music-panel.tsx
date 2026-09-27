@@ -18,6 +18,7 @@ import {
   getBeatvideoGridMode,
   resolveBeatvideoMusicGrid,
   resolveBeatvideoTimelineGrid,
+  projectAudioReactiveBeatsToItem,
   sourceSecondsToTimelineFrame,
   timelineFrameToSourceSeconds,
   type MusicAnalysisProgress,
@@ -273,8 +274,28 @@ export function BeatvideoMusicPanel() {
 
       await persistAnalysis(next)
 
+      const timeline = useTimelineStore.getState()
+      const refreshedGrid = resolveBeatvideoTimelineGrid(next, timeline.items, timeline.fps)
+      if (refreshedGrid) {
+        const reactiveUpdates = timeline.items.flatMap((item) =>
+          item.audioReactive?.bindings.length
+            ? [{
+                itemId: item.id,
+                audioReactive: {
+                  ...item.audioReactive,
+                  beats: projectAudioReactiveBeatsToItem(
+                    refreshedGrid.grid,
+                    item,
+                    timeline.fps,
+                  ),
+                },
+              }]
+            : [],
+        )
+        timeline.setAudioReactiveStates(reactiveUpdates)
+      }
+
       if (currentProject.beatvideoMode === 'photo') {
-        const timeline = useTimelineStore.getState()
         const covers = timeline.items.filter((item) => item.type === 'image')
         if (covers.length === 1) {
           const cover = covers[0]!

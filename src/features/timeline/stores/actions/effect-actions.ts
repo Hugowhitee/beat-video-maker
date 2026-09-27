@@ -49,7 +49,23 @@ export function removeEffect(itemId: string, effectId: string): void {
   execute(
     'REMOVE_EFFECT',
     () => {
-      useItemsStore.getState()._removeEffect(itemId, effectId)
+      const store = useItemsStore.getState()
+      const item = store.itemById[itemId]
+      store._removeEffect(itemId, effectId)
+
+      if (item?.audioReactive) {
+        const bindings = item.audioReactive.bindings.filter(
+          (binding) =>
+            binding.target.kind !== 'effect-param' || binding.target.effectId !== effectId,
+        )
+        if (bindings.length !== item.audioReactive.bindings.length) {
+          store._updateItem(itemId, {
+            audioReactive:
+              bindings.length > 0 ? { ...item.audioReactive, bindings } : undefined,
+          })
+        }
+      }
+
       useTimelineSettingsStore.getState().markDirty()
     },
     { itemId, effectId },
@@ -65,7 +81,25 @@ export function setItemEffects(updates: Array<{ itemId: string; effects: ItemEff
   execute(
     'SET_ITEM_EFFECTS',
     () => {
-      useItemsStore.getState()._setItemEffects(updates)
+      const store = useItemsStore.getState()
+      store._setItemEffects(updates)
+
+      for (const update of updates) {
+        const item = store.itemById[update.itemId]
+        if (!item?.audioReactive) continue
+        const effectIds = new Set(update.effects.map((effect) => effect.id))
+        const bindings = item.audioReactive.bindings.filter(
+          (binding) =>
+            binding.target.kind !== 'effect-param' || effectIds.has(binding.target.effectId),
+        )
+        if (bindings.length !== item.audioReactive.bindings.length) {
+          store._updateItem(update.itemId, {
+            audioReactive:
+              bindings.length > 0 ? { ...item.audioReactive, bindings } : undefined,
+          })
+        }
+      }
+
       useTimelineSettingsStore.getState().markDirty()
     },
     { count: updates.length },

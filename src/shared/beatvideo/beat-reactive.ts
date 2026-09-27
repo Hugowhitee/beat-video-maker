@@ -1,7 +1,10 @@
 import type {
+  AudioReactiveBeat,
   AudioReactiveBinding,
   AudioReactiveState,
+  MusicMap,
 } from '@/types/beatvideo'
+import type { TimelineItem } from '@/types/timeline'
 import type { ResolvedTransform } from '@/types/transform'
 
 export interface AudioReactiveFrameState {
@@ -34,6 +37,34 @@ export function hasEnabledAudioReactiveBindings(
   state: AudioReactiveState | undefined,
 ): boolean {
   return state?.enabled === true && state.bindings.some((binding) => binding.enabled)
+}
+
+/**
+ * Project the corrected timeline-domain Beatvideo grid onto one visual item's
+ * local frame space. Keeping sparse detector evidence on the item makes preview,
+ * export and save/reload independent from UI state while remaining cheap for a
+ * full-song still.
+ */
+export function projectAudioReactiveBeatsToItem(
+  grid: MusicMap,
+  item: Pick<TimelineItem, 'from' | 'durationInFrames'>,
+  fps: number,
+): AudioReactiveBeat[] {
+  if (!Number.isFinite(fps) || fps <= 0 || item.durationInFrames <= 0) return []
+
+  const start = item.from
+  const end = item.from + item.durationInFrames
+
+  return grid.beats.flatMap((beat) => {
+    const timelineFrame = Math.round(beat.time * fps)
+    if (timelineFrame < start || timelineFrame >= end) return []
+    return [{
+      frame: timelineFrame - start,
+      index: beat.index,
+      strength: clamp01(beat.strength),
+      downbeat: beat.downbeat,
+    }]
+  })
 }
 
 /**

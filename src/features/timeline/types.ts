@@ -23,6 +23,7 @@ import type {
 } from '@/types/keyframe'
 import type { MaskVertex } from '@/types/masks'
 import type { AutoKeyframeOperation } from '@/features/timeline/deps/keyframes'
+import type { AudioReactiveState } from '@/types/beatvideo'
 
 export type TransformHistoryOperation =
   | 'move'
@@ -69,6 +70,9 @@ export interface TimelineActions {
   addItemWithLinkedAudio: (video: VideoItem) => void
   addItemOnNewTrack: (item: TimelineItem, tracks: TimelineTrack[]) => void
   updateItem: (id: string, updates: Partial<TimelineItem>) => void
+  setAudioReactiveStates: (
+    updates: Array<{ itemId: string; audioReactive?: AudioReactiveState }>,
+  ) => void
   removeItems: (ids: string[]) => void
   rippleDeleteItems: (ids: string[]) => void
   reverseItems: (ids: string[]) => void

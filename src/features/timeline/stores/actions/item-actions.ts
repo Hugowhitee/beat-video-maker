@@ -3,6 +3,7 @@
  */
 
 import type { ControllerItem, TimelineItem, TimelineTrack, VideoItem } from '@/types/timeline'
+import type { AudioReactiveState } from '@/types/beatvideo'
 import type {
   CanvasSettings,
   ResolvedTransform,
@@ -730,6 +731,29 @@ export function updateItem(id: string, updates: Partial<TimelineItem>): void {
       useTimelineSettingsStore.getState().markDirty()
     },
     { id, updates },
+  )
+}
+
+/**
+ * Replace audio-reactive state on one or more items as one history transaction.
+ * Used by effect-property bindings and beat re-analysis re-projection.
+ */
+export function setAudioReactiveStates(
+  updates: Array<{ itemId: string; audioReactive?: AudioReactiveState }>,
+): void {
+  if (updates.length === 0) return
+
+  execute(
+    'SET_AUDIO_REACTIVE',
+    () => {
+      const store = useItemsStore.getState()
+      for (const update of updates) {
+        if (!store.itemById[update.itemId]) continue
+        store._updateItem(update.itemId, { audioReactive: update.audioReactive })
+      }
+      useTimelineSettingsStore.getState().markDirty()
+    },
+    { count: updates.length },
   )
 }
 
