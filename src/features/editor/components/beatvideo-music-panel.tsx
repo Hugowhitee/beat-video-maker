@@ -84,42 +84,77 @@ function buildAnalysisStripBins(map: MusicMap) {
   return bins
 }
 
-function BeatAnalysisStrip({ map }: { map: MusicMap }) {
+function BeatAnalysisStrip({
+  map,
+  barOneTime,
+}: {
+  map: MusicMap
+  barOneTime: number | null
+}) {
   const bins = useMemo(() => buildAnalysisStripBins(map), [map])
   const hasEvidence = (map.transients?.length ?? 0) > 0
   if (!hasEvidence) return null
 
   const fit = map.gridFit
+  const markerLeft = (time: number) =>
+    `${Math.max(0, Math.min(100, (time / Math.max(map.duration, 1e-6)) * 100))}%`
+
   return (
     <div className="mt-2 space-y-1.5">
       <div
-        className="grid h-12 overflow-hidden rounded-sm border border-border bg-background/70"
-        style={{
-          gridTemplateColumns: `repeat(${ANALYSIS_STRIP_BINS}, minmax(0, 1fr))`,
-        }}
-        aria-label="Low, mid and high frequency onset scan"
+        className="relative h-12 overflow-hidden rounded-sm border border-border bg-background/70"
+        aria-label="Spectral onset evidence with beat and downbeat markers"
       >
-        {bins.map((bin, index) => (
-          <div key={index} className="grid min-w-0 grid-rows-3 gap-px">
+        <div
+          className="grid h-full"
+          style={{
+            gridTemplateColumns: `repeat(${ANALYSIS_STRIP_BINS}, minmax(0, 1fr))`,
+          }}
+        >
+          {bins.map((bin, index) => (
+            <div key={index} className="grid min-w-0 grid-rows-3 gap-px">
+              <span
+                className="bg-fuchsia-400"
+                style={{ opacity: 0.08 + bin.high * 0.82 }}
+              />
+              <span
+                className="bg-amber-400"
+                style={{ opacity: 0.08 + bin.mid * 0.82 }}
+              />
+              <span
+                className="bg-sky-400"
+                style={{ opacity: 0.08 + bin.low * 0.82 }}
+              />
+            </div>
+          ))}
+        </div>
+
+        {map.beats.map((beat) => {
+          const isBarOne =
+            barOneTime !== null &&
+            Math.abs(beat.time - barOneTime) <=
+              Math.max(0.015, (60 / Math.max(map.bpm ?? 120, 1)) * 0.12)
+          return (
             <span
-              className="bg-fuchsia-400"
-              style={{ opacity: 0.08 + bin.high * 0.82 }}
+              key={`evidence-beat-${beat.index}-${beat.time.toFixed(4)}`}
+              className={
+                isBarOne
+                  ? 'absolute inset-y-0 w-[2px] bg-primary shadow-[0_0_0_1px_rgba(0,0,0,0.25)]'
+                  : beat.downbeat
+                    ? 'absolute inset-y-0 w-px bg-white/70'
+                    : 'absolute inset-y-0 w-px bg-white/18'
+              }
+              style={{ left: markerLeft(beat.time) }}
             />
-            <span
-              className="bg-amber-400"
-              style={{ opacity: 0.08 + bin.mid * 0.82 }}
-            />
-            <span
-              className="bg-sky-400"
-              style={{ opacity: 0.08 + bin.low * 0.82 }}
-            />
-          </div>
-        ))}
+          )
+        })}
       </div>
-      <div className="flex items-center gap-2 text-[9px] text-muted-foreground">
+      <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[9px] text-muted-foreground">
         <span><span className="text-sky-400">■</span> low</span>
         <span><span className="text-amber-400">■</span> mid</span>
         <span><span className="text-fuchsia-400">■</span> high</span>
+        <span><span className="text-white/70">│</span> downbeat</span>
+        <span><span className="text-primary">│</span> bar 1</span>
         {fit ? (
           <span className="ml-auto font-mono">
             {fit.mode === 'fixed' ? 'Stable grid' : 'Variable map'}
@@ -224,6 +259,7 @@ export function BeatvideoMusicPanel() {
   const [selectedMediaId, setSelectedMediaId] = useState('')
   const [selectedTagMediaId, setSelectedTagMediaId] = useState('')
   const [selectedWatermarkMediaId, setSelectedWatermarkMediaId] = useState('')
+  const [beatTool, setBeatTool] = useState<'grid' | 'tags'>('grid')
   const [tagTool, setTagTool] = useState<'producer' | 'watermark'>('producer')
   const [tagRepeatBars, setTagRepeatBars] = useState(16)
   const [tagFirstBar, setTagFirstBar] = useState(1)
@@ -1163,14 +1199,41 @@ export function BeatvideoMusicPanel() {
         <div className="border-b border-border pb-3">
           <div className="flex items-center gap-2 text-xs font-medium text-foreground">
             <AudioLines className="h-4 w-4" />
-            Musical grid
+            Beat
           </div>
           <p className="mt-1.5 text-[10px] leading-relaxed text-muted-foreground">
-            Analyze once. If the tempo is right but the lines are offset, place the playhead on a real beat and align the whole grid.
+            One project beat owns the grid, snapping, reactive timing and tag placement.
           </p>
         </div>
 
-        <section className="space-y-2">
+        <div className="grid grid-cols-2 gap-1 rounded-md border border-border bg-secondary/20 p-1">
+          <button
+            type="button"
+            aria-pressed={beatTool === 'grid'}
+            onClick={() => setBeatTool('grid')}
+            className={`h-8 rounded text-[10px] font-semibold transition-colors ${
+              beatTool === 'grid'
+                ? 'bg-primary text-primary-foreground'
+                : 'text-muted-foreground hover:bg-background/60 hover:text-foreground'
+            }`}
+          >
+            Grid
+          </button>
+          <button
+            type="button"
+            aria-pressed={beatTool === 'tags'}
+            onClick={() => setBeatTool('tags')}
+            className={`h-8 rounded text-[10px] font-semibold transition-colors ${
+              beatTool === 'tags'
+                ? 'bg-primary text-primary-foreground'
+                : 'text-muted-foreground hover:bg-background/60 hover:text-foreground'
+            }`}
+          >
+            Tags
+          </button>
+        </div>
+
+        <section className={beatTool === 'grid' ? 'space-y-2' : 'hidden'}>
           <label className="block text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
             Beat source
           </label>
@@ -1324,7 +1387,12 @@ export function BeatvideoMusicPanel() {
                   Align whole grid to playhead
                 </Button>
               ) : null}
-              <BeatAnalysisStrip map={resolvedSourceGrid} />
+              <BeatAnalysisStrip
+                map={resolvedSourceGrid}
+                barOneTime={
+                  effectiveAnalysis.barOneTime ?? effectiveAnalysis.detectedBarOneTime
+                }
+              />
               {resolvedSourceGrid.gridFit ? (
                 <div className="mt-1.5 font-mono text-[9px] leading-relaxed text-muted-foreground">
                   {resolvedSourceGrid.gridFit.mode === 'fixed'
@@ -1336,7 +1404,13 @@ export function BeatvideoMusicPanel() {
           ) : null}
         </section>
 
-        <section className="space-y-3 border-t border-border pt-3">
+        <section
+          className={
+            beatTool === 'tags'
+              ? 'space-y-3 border-t border-border pt-3'
+              : 'hidden'
+          }
+        >
           <div className="flex items-start justify-between gap-3">
             <div>
               <div className="text-xs font-medium text-foreground">Tag audio</div>
@@ -1549,7 +1623,7 @@ export function BeatvideoMusicPanel() {
           </div>
         </section>
 
-        {effectiveAnalysis && resolvedSourceGrid ? (
+        {beatTool === 'grid' && effectiveAnalysis && resolvedSourceGrid ? (
           <>
             <section className="grid grid-cols-3 gap-1.5">
               <div className="border-t border-border pt-2">

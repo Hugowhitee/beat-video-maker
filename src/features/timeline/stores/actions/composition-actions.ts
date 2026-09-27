@@ -935,6 +935,29 @@ export function createPreComp(
  * The selected clips keep their existing animation inside the new composition;
  * the returned wrapper is the simple clip-level animation surface in Edit.
  */
+export function createPreCompBatch(
+  groups: readonly { name: string; itemIds: string[] }[],
+): TimelineItem[] {
+  const usableGroups = groups.filter((group) => group.itemIds.length > 0)
+  if (usableGroups.length === 0) return []
+
+  return execute(
+    'CREATE_PRE_COMP_BATCH',
+    () =>
+      usableGroups.flatMap((group) => {
+        const wrapper = performCreatePreComp(group.name, group.itemIds, {
+          editorKind: 'sequence',
+          openAfterCreate: false,
+        })
+        return wrapper ? [wrapper] : []
+      }),
+    {
+      groupCount: usableGroups.length,
+      itemCount: usableGroups.reduce((sum, group) => sum + group.itemIds.length, 0),
+    },
+  )
+}
+
 export function createMotionClip(name?: string, itemIds?: string[]): TimelineItem | null {
   return createPreComp(name, itemIds, {
     editorKind: 'composite-2d',

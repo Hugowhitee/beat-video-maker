@@ -4,6 +4,7 @@ import { useItemsStore } from '../stores/items-store'
 import { useTimelineSettingsStore } from '../stores/timeline-settings-store'
 import { useZoomStore } from '../stores/zoom-store'
 import { resolveBeatvideoTimelineGrid } from '../utils/beatvideo-timeline-grid'
+import { resolveBeatGridDensity } from '../utils/beatvideo-grid-density'
 
 interface BeatvideoGridOverlayProps {
   duration: number
@@ -21,27 +22,6 @@ function median(values: number[]): number {
   const middle = Math.floor(sorted.length / 2)
   if (sorted.length % 2 === 1) return sorted[middle] ?? 0
   return ((sorted[middle - 1] ?? 0) + (sorted[middle] ?? 0)) / 2
-}
-
-export function resolveBeatGridDensity(beatSpacingPx: number, barSpacingPx: number) {
-  const safeBeatSpacing = Math.max(0, beatSpacingPx)
-  const safeBarSpacing = Math.max(0, barSpacingPx)
-  const barStride =
-    safeBarSpacing >= 32 ? 1 :
-    safeBarSpacing >= 16 ? 2 :
-    safeBarSpacing >= 8 ? 4 :
-    safeBarSpacing >= 4 ? 8 : 16
-  const labelStride =
-    safeBarSpacing >= 64 ? 1 :
-    safeBarSpacing >= 32 ? 2 :
-    safeBarSpacing >= 16 ? 4 :
-    safeBarSpacing >= 8 ? 8 : 16
-
-  return {
-    showIndividualBeats: safeBeatSpacing >= 13 && safeBarSpacing >= 40 && barStride === 1,
-    barStride,
-    labelStride: Math.max(barStride, labelStride),
-  }
 }
 
 function closestIndex(values: number[], target: number): number {

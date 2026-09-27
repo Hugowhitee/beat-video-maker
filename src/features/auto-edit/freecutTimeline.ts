@@ -64,6 +64,8 @@ export interface EditPlanTimelineDraft {
 export interface ApplyEditPlanOptions {
   preferredVideoTrackId?: string
   sourceMediaIds?: Record<string, string>
+  /** Existing generated clips to replace as part of the same undoable command. */
+  replaceItemIds?: string[]
 }
 
 export interface ApplyEditPlanResult {
@@ -348,13 +350,18 @@ export async function applyEditPlanToFreeCutTimeline(
   const canvasHeight = currentProject?.metadata.height ?? DEFAULT_PROJECT_HEIGHT
   const resolvedSources = await resolveEditSources(plan, options.sourceMediaIds)
   const itemState = useItemsStore.getState()
+  const replaceItemIds = new Set(options.replaceItemIds ?? [])
+  const placementItems =
+    replaceItemIds.size === 0
+      ? itemState.items
+      : itemState.items.filter((item) => !replaceItemIds.has(item.id))
 
   const draft = buildEditPlanTimelineDraft(plan, resolvedSources, {
     projectFps,
     canvasWidth,
     canvasHeight,
     existingTracks: itemState.tracks,
-    existingItems: itemState.items,
+    existingItems: placementItems,
     preferredVideoTrackId: options.preferredVideoTrackId,
   })
 
@@ -388,10 +395,22 @@ export async function applyEditPlanToFreeCutTimeline(
     'APPLY_BEATVIDEO_EDIT_PLAN',
     () => {
       const itemsStore = useItemsStore.getState()
+      const transitionsStore = useTransitionsStore.getState()
+
+      if (replaceItemIds.size > 0) {
+        itemsStore._removeItems([...replaceItemIds])
+        transitionsStore.setTransitions(
+          transitionsStore.transitions.filter(
+            (transition) =>
+              !replaceItemIds.has(transition.leftClipId) &&
+              !replaceItemIds.has(transition.rightClipId),
+          ),
+        )
+      }
+
       itemsStore.setTracks(draft.tracks)
       itemsStore._addItems(draft.items)
 
-      const transitionsStore = useTransitionsStore.getState()
       for (const transition of acceptedTransitions) {
         const id = transitionsStore._addTransition(
           transition.leftItemId,
@@ -413,6 +432,7 @@ export async function applyEditPlanToFreeCutTimeline(
       segmentCount: draft.items.length,
       transitionCount: acceptedTransitions.length,
       targetVideoTrackId: draft.targetVideoTrackId,
+      replacedItemCount: replaceItemIds.size,
     },
   )
 

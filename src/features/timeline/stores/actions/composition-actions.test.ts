@@ -20,6 +20,7 @@ import { useEditorStore } from '@/shared/state/editor'
 import {
   createMotionClip,
   createPreComp,
+  createPreCompBatch,
   deleteCompoundClips,
   dissolvePreComp,
   getCompoundClipDeletionImpact,
@@ -92,6 +93,59 @@ describe('composition-actions split wrappers', () => {
       sourceDuration: 60,
     })
     expect(audioWrapper?.linkedGroupId).toBe(visualWrapper?.linkedGroupId)
+  })
+
+  it('groups repeated loop ranges into compound blocks in one history entry', () => {
+    useItemsStore
+      .getState()
+      .setTracks([makeTrack({ id: 'track-v1', name: 'V1', kind: 'video', order: 0 })])
+    useItemsStore.getState().setItems([
+      makeVideoItem({
+        id: 'loop-1-a',
+        trackId: 'track-v1',
+        embeddedAudioMuted: true,
+        from: 0,
+        durationInFrames: 30,
+        linkedGroupId: undefined,
+      }),
+      makeVideoItem({
+        id: 'loop-1-b',
+        trackId: 'track-v1',
+        embeddedAudioMuted: true,
+        from: 30,
+        durationInFrames: 30,
+        linkedGroupId: undefined,
+      }),
+      makeVideoItem({
+        id: 'loop-2-a',
+        trackId: 'track-v1',
+        embeddedAudioMuted: true,
+        from: 60,
+        durationInFrames: 30,
+        linkedGroupId: undefined,
+      }),
+      makeVideoItem({
+        id: 'loop-2-b',
+        trackId: 'track-v1',
+        embeddedAudioMuted: true,
+        from: 90,
+        durationInFrames: 30,
+        linkedGroupId: undefined,
+      }),
+    ])
+
+    const wrappers = createPreCompBatch([
+      { name: 'Loop 1', itemIds: ['loop-1-a', 'loop-1-b'] },
+      { name: 'Loop 2', itemIds: ['loop-2-a', 'loop-2-b'] },
+    ])
+
+    expect(wrappers.map((wrapper) => wrapper.label)).toEqual(['Loop 1', 'Loop 2'])
+    expect(useItemsStore.getState().items).toHaveLength(2)
+    expect(useItemsStore.getState().items.every((item) => item.type === 'composition')).toBe(true)
+    expect(useCompositionsStore.getState().compositions).toHaveLength(2)
+    expect(useCompositionsStore.getState().compositions[0]?.items).toHaveLength(2)
+    expect(useCompositionsStore.getState().compositions[1]?.items).toHaveLength(2)
+    expect(useTimelineCommandStore.getState().undoStack).toHaveLength(1)
   })
 
   it('promotes a clip and its animation into a Motion composition', () => {

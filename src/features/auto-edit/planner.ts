@@ -60,14 +60,25 @@ function sectionIntensity(section: MusicSection) {
   return clamp01(section.energy + bias);
 }
 
-function cadencePattern(section: MusicSection) {
+function cadencePattern(
+  section: MusicSection,
+  pace: Required<EditPlannerOptions>['pace'],
+) {
   const intensity = sectionIntensity(section);
+  const base =
+    intensity < 0.22
+      ? [16, 8, 12, 8]
+      : intensity < 0.45
+        ? [8, 6, 4, 8, 4]
+        : intensity < 0.68
+          ? [4, 2, 4, 6, 2, 4]
+          : intensity < 0.84
+            ? [2, 4, 2, 1, 4, 2, 3]
+            : [1, 2, 1, 4, 2, 1, 2, 3, 1];
 
-  if (intensity < 0.22) return [16, 8, 12, 8];
-  if (intensity < 0.45) return [8, 6, 4, 8, 4];
-  if (intensity < 0.68) return [4, 2, 4, 6, 2, 4];
-  if (intensity < 0.84) return [2, 4, 2, 1, 4, 2, 3];
-  return [1, 2, 1, 4, 2, 1, 2, 3, 1];
+  if (pace === 'balanced') return base;
+  const multiplier = pace === 'relaxed' ? 1.5 : 0.6;
+  return base.map((span) => Math.max(1, Math.round(span * multiplier)));
 }
 
 function nextBeatIndexAtOrAfter(music: MusicMap, time: number) {
@@ -124,7 +135,7 @@ function buildTimelineSlots(
 
   while (cursor < rangeEnd - EPSILON) {
     const section = sectionAt(music, cursor);
-    const pattern = cadencePattern(section);
+    const pattern = cadencePattern(section, context.options.pace);
     const patternIndex = patternIndices.get(section.id) ?? 0;
     const requestedSpan = pattern[patternIndex % pattern.length] ?? 4;
     patternIndices.set(section.id, patternIndex + 1);
@@ -133,7 +144,17 @@ function buildTimelineSlots(
     let end = beatTime(music, currentBeat + requestedSpan);
 
     const sectionEnd = Math.min(section.end, rangeEnd);
-    if (sectionEnd > cursor + EPSILON) end = Math.min(end, sectionEnd);
+    if (sectionEnd > cursor + EPSILON && sectionEnd < end - EPSILON) {
+      // Section analysis is descriptive evidence, not an edit grid. Never let
+      // a section timestamp create an off-beat cut: move the boundary to the
+      // last verified beat before that section edge.
+      const beatLockedSectionEnd = previousBeatTimeAtOrBefore(
+        music,
+        sectionEnd,
+        cursor,
+      );
+      if (beatLockedSectionEnd !== null) end = beatLockedSectionEnd;
+    }
     end = Math.min(end, rangeEnd);
 
     if (end <= cursor + EPSILON) {
@@ -598,11 +619,17 @@ export function createEditPlan(
 ): EditPlan {
   validateInputs(music, clips);
 
+  const excludedShotIds = new Set(options.excludedShotIds ?? []);
   const shots = clips.sources
     .filter((source) => (source.role ?? 'footage') === 'footage')
-    .flatMap((source) => source.shots);
+    .flatMap((source) => source.shots)
+    .filter((shot) => !excludedShotIds.has(shot.id));
   if (shots.length === 0) {
-    throw new Error('Auto edit requires at least one analyzed footage shot.');
+    throw new Error(
+      excludedShotIds.size > 0
+        ? 'Every analyzed footage shot is excluded. Re-enable at least one shot.'
+        : 'Auto edit requires at least one analyzed footage shot.',
+    );
   }
 
   const maxShotDuration = Math.max(
@@ -613,6 +640,8 @@ export function createEditPlan(
     mode: options.mode,
     loopBars: Math.max(1, Math.round(options.loopBars ?? 8)),
     transitionProfile: options.transitionProfile ?? 'clean',
+    pace: options.pace ?? 'balanced',
+    excludedShotIds: [...excludedShotIds],
     seed: Math.round(options.seed ?? 1),
   };
 

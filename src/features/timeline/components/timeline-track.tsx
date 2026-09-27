@@ -499,7 +499,7 @@ export const TimelineTrack = memo(function TimelineTrack({ track }: TimelineTrac
         frameToPixels: frameToPixelsNow,
       })
     },
-    [fps, getCollisionTrackItemsMap, track.id],
+    [getCollisionTrackItemsMap, getProjectAwareDroppedDuration, track.id],
   )
 
   const buildGenericExternalGhostPreviews = useCallback(

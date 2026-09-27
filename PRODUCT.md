@@ -32,7 +32,7 @@ Photo mode is the fastest path for a beat visual:
 - beat audio drives the musical grid;
 - Beat, Visual, Color and Master are the primary workflow pages;
 - Visual begins with an explicit **Visual source** action: add/replace the hero still in Photo, or add footage in Video; imported footage may be prepared for scene-aware Auto Arrange immediately;
-- Visual's left rail is for media/layer creation; effect browsing, applied effects, transform motion, camera shake and audio-reactive controls live together in the visible Inspector on the right;
+- Visual uses visible labeled creation tools such as Media, Text and Graphics rather than a collapsed icon rail; effect browsing, applied effects, transform motion, camera shake and audio-reactive controls live together in the visible Inspector on the right;
 - Color remains a focused grading workspace; motion/composition internals remain available through FreeCut when needed but are not a normal top-level Beatvideo navigation step;
 - generic video-only controls stay out of the normal path.
 
@@ -48,11 +48,16 @@ Video mode exposes footage editing without changing engines:
 - cuts, slip/slide and transitions;
 - text/shapes/effects;
 - motion/keyframes and color;
-- **Auto Arrange footage** for multi-source music-video editing: existing FreeCut scene detection supplies shot boundaries, while the verified beat grid and music sections determine a variable musical cut cadence;
-- **Loop one clip** remains a simpler fallback for one repeated source;
-- both routes materialize normal editable FreeCut timeline clips with source trims and muted footage audio.
+- **Auto Arrange footage** for multi-source music-video editing: existing FreeCut scene detection supplies shot boundaries, while the verified corrected beat grid determines every generated internal cut position;
+- Auto Arrange exposes meaningful producer controls—pace, clean/accent transitions and an optional repeating bar motif—without exposing planner internals;
+- section/energy analysis may change cadence and source choice, but a raw section timestamp must never pull a generated cut away from the corrected musical grid;
+- generated **Used shots** remain editable: the user can replace a generated slot or mark a detected source shot to avoid on the next rebuild; repeated motif slots propagate source replacement across their linked repeats;
+- repeating motifs may be grouped into real FreeCut compound **Loop blocks** so the main track stays readable while the individual cuts remain editable inside each block;
+- **Fill with one clip** remains a simpler fallback for one repeated source;
+- rebuilding a generated arrangement replaces the previous generated clips atomically instead of stacking another edit on top;
+- all generated routes materialize normal editable FreeCut timeline clips with source trims and muted footage audio.
 
-Auto Arrange does **not** cut on every beat. Beats/downbeats are candidate timing points; music-section energy, available shot duration and reuse policy determine whether a segment lasts 1, 2, 4, 8, 16 or another musically sensible beat span. Manual edits remain authoritative after generation.
+Auto Arrange does **not** cut on every beat. Beats/downbeats are timing anchors; pace, music-section energy, available shot duration and reuse policy determine whether a segment lasts 1, 2, 4, 8, 16 or another musically sensible beat span. Internal boundaries still land on the corrected mapped beat grid. Manual edits remain authoritative after generation.
 
 ## Musical grid contract
 
@@ -71,7 +76,7 @@ The canonical rule is:
 - grid density is zoom-aware: close zoom may show individual beats, medium zoom prioritizes bars, and wide zoom steps through 2/4/8/16-bar phrase landmarks instead of drawing a fence of lines;
 - **Beat grid** visibility and **Beat snap** are separate user controls;
 - when Beat snap is enabled and a musical grid exists, move/trim/razor edits snap to those exact mapped beat positions; generic seconds-based snapping is only the fallback before a beat grid exists or musical snapping is explicitly disabled;
-- low/mid/high transient-energy evidence drives reactive effects and is visualized in a compact DJ-style analysis strip in Beat so the user can inspect what the scan found; do not scatter decorative color dots over the ruler and do not label spectral bands as kick/snare/hat detection unless a real classifier provides that evidence;
+- low/mid/high transient-energy evidence drives reactive effects and is visualized in a compact DJ-style analysis strip in Beat; that strip overlays the actual beat/downbeat/Bar-1 positions so the user can inspect spectral evidence against the grid without pretending low/mid/high are a kick/snare/hat classifier; do not scatter decorative color dots over the ruler;
 - bar 1 is visually unambiguous, is never assumed to be 0:00, and detected bar 1 is distinguished from a user-verified bar 1;
 - DJ-style corrections (phase nudge and correction anchors) are explicit, reversible source-domain project state;
 - multiple correction anchors form a piecewise timing map so long tracks can be corrected without forcing one global BPM;
