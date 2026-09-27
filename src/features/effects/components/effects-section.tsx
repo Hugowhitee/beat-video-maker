@@ -422,89 +422,6 @@ export const EffectsSection = memo(function EffectsSection({
     ],
   )
 
-  const renderStandaloneAudioReactiveControls = useCallback(
-    (effect: ItemEffect, definition: GpuEffectDefinition) => {
-      const params = Object.entries(definition.params).filter(([, param]) =>
-        isAudioReactiveParam(param),
-      )
-      if (params.length === 0) return null
-
-      return (
-        <div className="border-b border-border/70 bg-primary/[0.035] px-2 py-2">
-          <div className="mb-1.5 flex items-center gap-1.5">
-            <AudioLines className="h-3.5 w-3.5 text-primary" aria-hidden="true" />
-            <span className="text-[10px] font-semibold uppercase tracking-wide text-foreground">
-              Audio Reactive
-            </span>
-            <span className="ml-auto text-[9px] text-muted-foreground">
-              compatible sliders
-            </span>
-          </div>
-
-          <div className="space-y-1">
-            {params.map(([paramKey, param]) => {
-              const binding = getAudioReactiveBinding(effect.id, paramKey)
-              const label = getEffectParamLabel(t, definition, paramKey)
-              const toggleLabel = binding
-                ? `Disable audio reaction for ${label}`
-                : audioReactiveAvailable
-                  ? `Make ${label} audio reactive`
-                  : 'Set up the beat first'
-
-              return (
-                <div key={paramKey}>
-                  <div className="flex h-7 items-center gap-2">
-                    <span className="min-w-0 flex-1 truncate text-[10px] text-muted-foreground">
-                      {label}
-                    </span>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      className={
-                        binding
-                          ? 'h-6 shrink-0 gap-1 bg-primary/10 px-1.5 text-[9px] font-semibold text-primary hover:bg-primary/20 hover:text-primary'
-                          : 'h-6 shrink-0 gap-1 px-1.5 text-[9px] text-muted-foreground'
-                      }
-                      disabled={!effect.enabled || !audioReactiveAvailable}
-                      aria-pressed={Boolean(binding)}
-                      aria-label={toggleLabel}
-                      title={toggleLabel}
-                      onClick={() => handleToggleAudioReactive(effect.id, paramKey, param)}
-                    >
-                      <AudioLines className="h-3 w-3" />
-                      React
-                    </Button>
-                  </div>
-
-                  {binding ? (
-                    <AudioReactiveParamControls
-                      binding={binding}
-                      param={param}
-                      label={label}
-                      fps={timelineFps}
-                      onChange={(patch) =>
-                        handleUpdateAudioReactiveBinding(effect.id, paramKey, patch)
-                      }
-                    />
-                  ) : null}
-                </div>
-              )
-            })}
-          </div>
-        </div>
-      )
-    },
-    [
-      audioReactiveAvailable,
-      getAudioReactiveBinding,
-      handleToggleAudioReactive,
-      handleUpdateAudioReactiveBinding,
-      t,
-      timelineFps,
-    ],
-  )
-
   const getKeyframeProperty = useCallback(
     (effectId: string, paramKey: string): AnimatableProperty | null => {
       const effect = effects.find((entry) => entry.id === effectId)
@@ -1228,7 +1145,6 @@ export const EffectsSection = memo(function EffectsSection({
                   canMoveUp={effectIndex > 0}
                   canMoveDown={effectIndex < effects.length - 1}
                 />
-                {renderStandaloneAudioReactiveControls(effect, def)}
               </div>
             )
           }
@@ -1253,7 +1169,6 @@ export const EffectsSection = memo(function EffectsSection({
                   canMoveUp={effectIndex > 0}
                   canMoveDown={effectIndex < effects.length - 1}
                 />
-                {renderStandaloneAudioReactiveControls(effect, def)}
               </div>
             )
           }
@@ -1281,7 +1196,6 @@ export const EffectsSection = memo(function EffectsSection({
                   canMoveUp={effectIndex > 0}
                   canMoveDown={effectIndex < effects.length - 1}
                 />
-                {renderStandaloneAudioReactiveControls(effect, def)}
               </div>
             )
           }
@@ -1305,7 +1219,6 @@ export const EffectsSection = memo(function EffectsSection({
                   canMoveUp={effectIndex > 0}
                   canMoveDown={effectIndex < effects.length - 1}
                 />
-                {renderStandaloneAudioReactiveControls(effect, def)}
               </div>
             )
           }
@@ -1329,7 +1242,6 @@ export const EffectsSection = memo(function EffectsSection({
                   canMoveUp={effectIndex > 0}
                   canMoveDown={effectIndex < effects.length - 1}
                 />
-                {renderStandaloneAudioReactiveControls(effect, def)}
               </div>
             )
           }
@@ -1353,7 +1265,6 @@ export const EffectsSection = memo(function EffectsSection({
                   canMoveUp={effectIndex > 0}
                   canMoveDown={effectIndex < effects.length - 1}
                 />
-                {renderStandaloneAudioReactiveControls(effect, def)}
               </div>
             )
           }

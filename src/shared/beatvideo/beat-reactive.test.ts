@@ -83,6 +83,30 @@ describe('audio reactive modulation', () => {
     expect(evaluateAudioReactiveBinding(s, b, 18).pulse).toBe(0)
   })
 
+  it('only scans the active event window while preserving the strongest current hit', () => {
+    const b = binding({
+      driver: 'audio',
+      threshold: 0,
+      releaseFrames: 4,
+      useStrength: true,
+      amount: 0.1,
+    })
+    const s: AudioReactiveState = {
+      ...state([b]),
+      transients: [
+        { frame: 2, index: 0, strength: 1, low: 1, mid: 0, high: 0 },
+        { frame: 18, index: 1, strength: 0.5, low: 0.5, mid: 0, high: 0 },
+        { frame: 20, index: 2, strength: 0.9, low: 0.9, mid: 0, high: 0 },
+        { frame: 99, index: 3, strength: 1, low: 1, mid: 0, high: 0 },
+      ],
+    }
+
+    const evaluated = evaluateAudioReactiveBinding(s, b, 20)
+    expect(evaluated.beatFrame).toBe(20)
+    expect(evaluated.sourceStrength).toBeCloseTo(0.9)
+    expect(evaluated.delta).toBeGreaterThan(0)
+  })
+
   it('adds modulation to the authored effect value instead of replacing it', () => {
     const b = binding({
       target: {

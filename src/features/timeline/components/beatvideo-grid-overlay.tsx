@@ -36,15 +36,30 @@ function resolveAudioAccentBand(
   time: number,
   toleranceSeconds: number,
 ): AudioAccentBand | null {
-  let nearest: (typeof transients)[number] | null = null
-  let nearestDistance = Number.POSITIVE_INFINITY
-  for (const transient of transients) {
-    const distance = Math.abs(transient.time - time)
-    if (distance > toleranceSeconds || distance >= nearestDistance) continue
-    nearest = transient
-    nearestDistance = distance
+  if (transients.length === 0) return null
+
+  let low = 0
+  let high = transients.length
+  while (low < high) {
+    const middle = low + ((high - low) >> 1)
+    if ((transients[middle]?.time ?? Number.POSITIVE_INFINITY) < time) {
+      low = middle + 1
+    } else {
+      high = middle
+    }
   }
-  if (!nearest || nearest.strength < 0.28) return null
+
+  const right = transients[low]
+  const left = low > 0 ? transients[low - 1] : undefined
+  const nearest =
+    left && right
+      ? Math.abs(left.time - time) <= Math.abs(right.time - time)
+        ? left
+        : right
+      : (left ?? right)
+  if (!nearest || Math.abs(nearest.time - time) > toleranceSeconds || nearest.strength < 0.28) {
+    return null
+  }
 
   const entries = [
     ['low', nearest.low],

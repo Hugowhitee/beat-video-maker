@@ -34,6 +34,23 @@ function clampDelta(value: number, binding: AudioReactiveBinding): number {
   return next
 }
 
+function lowerBoundFrame(
+  events: readonly { frame: number }[],
+  targetFrame: number,
+): number {
+  let low = 0
+  let high = events.length
+  while (low < high) {
+    const middle = low + ((high - low) >> 1)
+    if ((events[middle]?.frame ?? Number.POSITIVE_INFINITY) < targetFrame) {
+      low = middle + 1
+    } else {
+      high = middle
+    }
+  }
+  return low
+}
+
 export function hasEnabledAudioReactiveBindings(
   state: AudioReactiveState | undefined,
 ): boolean {
@@ -110,41 +127,29 @@ export function evaluateAudioReactiveBinding(
     downbeat: false,
   }
   if (!state?.enabled || !binding.enabled) return rest
-  const usesMusicalGrid = binding.driver === 'beat' || binding.driver === 'downbeat'
-  const sourceEvents = usesMusicalGrid
-    ? state.beats.map((beat) => ({
-        frame: beat.frame,
-        index: beat.index,
-        strength: beat.strength,
-        downbeat: beat.downbeat,
-      }))
-    : (state.transients ?? []).map((transient) => ({
-        frame: transient.frame,
-        index: transient.index,
-        strength:
-          binding.driver === 'audio'
-            ? transient.strength
-            : transient[binding.driver],
-        downbeat: false,
-      }))
-  if (sourceEvents.length === 0) return rest
 
   const threshold = clamp01(binding.threshold)
   const sensitivity = Math.max(0, binding.sensitivity)
   const attackFrames = Math.max(0, Math.round(binding.attackFrames))
   const releaseFrames = Math.max(1, Math.round(binding.releaseFrames))
   const everyNthBeat = Math.max(1, Math.round(binding.everyNthBeat))
+  const earliestFrame = relativeFrame - attackFrames - releaseFrames
+  const direction = binding.invert ? -1 : 1
   let winner = rest
 
-  for (const event of sourceEvents) {
-    if (binding.driver === 'downbeat' && !event.downbeat) continue
-    if (event.index % everyNthBeat !== 0) continue
+  const considerEvent = (
+    frame: number,
+    index: number,
+    sourceStrength: number,
+    downbeat: boolean,
+  ) => {
+    if (index % everyNthBeat !== 0) return
 
-    const strength = clamp01(event.strength)
-    if (strength < threshold) continue
+    const strength = clamp01(sourceStrength)
+    if (strength < threshold) return
 
-    const elapsed = relativeFrame - event.frame
-    if (elapsed < 0 || elapsed > attackFrames + releaseFrames) continue
+    const elapsed = relativeFrame - frame
+    if (elapsed < 0 || elapsed > attackFrames + releaseFrames) return
 
     const envelope =
       attackFrames > 0 && elapsed < attackFrames
@@ -154,16 +159,43 @@ export function evaluateAudioReactiveBinding(
       ? clamp01(((strength - threshold) / Math.max(0.001, 1 - threshold)) * sensitivity)
       : clamp01(sensitivity)
     const pulse = clamp01(envelope * gatedStrength)
-    if (pulse <= winner.pulse) continue
+    if (pulse <= winner.pulse) return
 
-    const direction = binding.invert ? -1 : 1
     winner = {
       pulse,
       delta: clampDelta(binding.amount * pulse * direction, binding),
       sourceStrength: strength,
-      beatFrame: event.frame,
-      downbeat: event.downbeat,
+      beatFrame: frame,
+      downbeat,
     }
+  }
+
+  if (binding.driver === 'beat' || binding.driver === 'downbeat') {
+    const beats = state.beats
+    let index = lowerBoundFrame(beats, earliestFrame)
+    for (; index < beats.length; index += 1) {
+      const beat = beats[index]!
+      if (beat.frame > relativeFrame) break
+      if (binding.driver === 'downbeat' && !beat.downbeat) continue
+      considerEvent(beat.frame, beat.index, beat.strength, beat.downbeat)
+    }
+    return winner
+  }
+
+  const transients = state.transients ?? []
+  let index = lowerBoundFrame(transients, earliestFrame)
+  for (; index < transients.length; index += 1) {
+    const transient = transients[index]!
+    if (transient.frame > relativeFrame) break
+    const strength =
+      binding.driver === 'audio'
+        ? transient.strength
+        : binding.driver === 'low'
+          ? transient.low
+          : binding.driver === 'mid'
+            ? transient.mid
+            : transient.high
+    considerEvent(transient.frame, transient.index, strength, false)
   }
 
   return winner
