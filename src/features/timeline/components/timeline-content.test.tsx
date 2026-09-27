@@ -194,6 +194,8 @@ function resetStores() {
     scrollTop: 0,
     viewportWidth: 0,
     viewportHeight: 0,
+    pendingScrollToFrame: null,
+    pendingCenterFrame: null,
   })
 }
 
@@ -265,6 +267,26 @@ describe('TimelineContent playback selection behavior', () => {
     expect(useTimelineViewportStore.getState().scrollLeft).toBeCloseTo(scrollContainer.scrollLeft)
     expect(liveScroll).toHaveBeenCalledOnce()
     expect(scrollWidthRead).not.toHaveBeenCalled()
+  })
+
+  it('centers an explicitly requested correction frame even when it was already visible', async () => {
+    const { container } = render(<TimelineContent duration={30} tracks={[VIDEO_TRACK]} />)
+    const scrollContainer = container.querySelector('[data-timeline-scroll-container]')
+    if (!(scrollContainer instanceof HTMLDivElement)) {
+      throw new Error('Expected timeline scroll container')
+    }
+
+    Object.defineProperty(scrollContainer, 'clientWidth', { configurable: true, value: 400 })
+    useZoomStore.getState().setZoomLevelSynchronized(1)
+
+    act(() => {
+      useTimelineViewportStore.getState().requestCenterOnFrame(150)
+    })
+
+    await waitFor(() => {
+      expect(scrollContainer.scrollLeft).toBeCloseTo((150 / 30) * 100 - 200)
+    })
+    expect(useTimelineViewportStore.getState().pendingCenterFrame).toBeNull()
   })
 
   it('does not re-render the full timeline tree for live or settled gesture zoom', () => {
