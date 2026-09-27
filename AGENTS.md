@@ -41,8 +41,8 @@ Beatvideo-specific code should stay a small, recognizable product overlay. Port 
 
 `Photo` and `Video` are project-level workflows over one FreeCut project/runtime.
 
-- **Photo:** hero still + beat. The normal product route is Beat → Visual → Color → Master. Visual owns source placement plus text/effects/motion; Color owns focused grading. Hide video-only editing tools unless deliberately exposed as Advanced.
-- **Video:** footage + beat. Visual owns footage import, scene preparation, Auto Arrange/loop/manual placement plus text/effects/motion. Keep cuts, transitions, shot/scene analysis and manual editing available; Beatvideo Guided/Auto planning is added on top.
+- **Photo:** hero still + beat. The normal product route is Beat → Visual → Color → Master. Visual owns source placement plus visible Text/Graphics creation and selected-object effects/motion; Color owns focused grading. Do not hide primary producer tools behind a generic icon-rail collapse state. Hide video-only editing tools unless deliberately exposed as Advanced.
+- **Video:** footage + beat. Visual owns footage import, scene preparation, configurable Auto Arrange/repeating motifs/manual placement plus text/effects/motion. Auto Arrange may use section energy to choose cadence, but every internal generated cut must land on the same corrected mapped beat grid used by the timeline/snap system. Keep generated slots editable/rebuildable and use canonical compound clips when repeated motifs are grouped. Keep cuts, transitions, shot/scene analysis and manual editing available; Beatvideo Guided/Auto planning is added on top.
 - Never build separate Photo and Video render/export engines.
 - Existing upstream/legacy projects without a Beatvideo mode resolve to `Video`. New Beatvideo projects default to `Photo`.
 
