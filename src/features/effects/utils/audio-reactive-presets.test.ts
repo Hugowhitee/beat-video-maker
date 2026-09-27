@@ -3,7 +3,11 @@
 import { describe, expect, it } from 'vite-plus/test'
 import type { TimelineItem } from '@/types/timeline'
 import type { MusicMap } from '@/types/beatvideo'
-import { buildAudioReactivePresetUpdate } from './audio-reactive-presets'
+import {
+  buildAudioReactivePresetRemovalUpdate,
+  buildAudioReactivePresetUpdate,
+  isAudioReactivePresetApplied,
+} from './audio-reactive-presets'
 
 const grid: MusicMap = {
   duration: 4,
@@ -92,6 +96,87 @@ describe('audio reactive presets', () => {
           candidate.target.gpuEffectType === 'gpu-brightness',
       ),
     ).toHaveLength(1)
+  })
+
+  it('starts reactive Glow from a neutral visual baseline', () => {
+    const update = buildAudioReactivePresetUpdate({
+      item: imageItem(),
+      grid,
+      fps: 30,
+      presetId: 'glow-hit',
+    })
+
+    const glow = update?.effects.find(
+      (entry) =>
+        entry.effect.type === 'gpu-effect' &&
+        entry.effect.gpuEffectType === 'gpu-glow',
+    )
+    expect(glow?.effect.type).toBe('gpu-effect')
+    if (glow?.effect.type === 'gpu-effect') {
+      expect(glow.effect.params.amount).toBe(0)
+    }
+    expect(update ? isAudioReactivePresetApplied(
+      { ...imageItem(), effects: update.effects, audioReactive: update.audioReactive },
+      'glow-hit',
+    ) : false).toBe(true)
+  })
+
+  it('removes a neutral quick-start effect together with its final binding', () => {
+    const applied = buildAudioReactivePresetUpdate({
+      item: imageItem(),
+      grid,
+      fps: 30,
+      presetId: 'glow-hit',
+    })
+    expect(applied).not.toBeNull()
+
+    const item = {
+      ...imageItem(),
+      effects: applied?.effects,
+      audioReactive: applied?.audioReactive,
+    }
+    const removed = buildAudioReactivePresetRemovalUpdate({
+      item,
+      presetId: 'glow-hit',
+    })
+
+    expect(removed?.effects.some(
+      (entry) =>
+        entry.effect.type === 'gpu-effect' &&
+        entry.effect.gpuEffectType === 'gpu-glow',
+    )).toBe(false)
+    expect(removed?.audioReactive).toBeUndefined()
+  })
+
+  it('keeps an authored non-neutral effect when only its reactive binding is removed', () => {
+    const authoredGlow = {
+      id: 'authored-glow',
+      enabled: true,
+      effect: {
+        type: 'gpu-effect' as const,
+        gpuEffectType: 'gpu-glow',
+        params: { amount: 0.8 },
+      },
+    }
+    const applied = buildAudioReactivePresetUpdate({
+      item: { ...imageItem(), effects: [authoredGlow] },
+      grid,
+      fps: 30,
+      presetId: 'glow-hit',
+    })
+    expect(applied).not.toBeNull()
+
+    const removed = buildAudioReactivePresetRemovalUpdate({
+      item: {
+        ...imageItem(),
+        effects: applied?.effects,
+        audioReactive: applied?.audioReactive,
+      },
+      presetId: 'glow-hit',
+    })
+
+    expect(removed?.effects).toContainEqual(authoredGlow)
+    expect(removed?.audioReactive).toBeUndefined()
   })
 
   it('keeps shake deliberately restrained and downbeat driven', () => {
