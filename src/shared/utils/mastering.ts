@@ -226,8 +226,12 @@ export function getMasteringPreset(id: MasteringPresetId) {
   return MASTERING_PRESETS.find((preset) => preset.id === id) ?? MASTERING_PRESETS[0]!
 }
 
-export function createSaturationCurve(driveDb: number, size = 2048): Float32Array {
-  const curve = new Float32Array(Math.max(64, size))
+export function createSaturationCurve(
+  driveDb: number,
+  size = 2048,
+): Float32Array<ArrayBuffer> {
+  const length = Math.max(64, size)
+  const curve = new Float32Array(new ArrayBuffer(length * Float32Array.BYTES_PER_ELEMENT))
   const drive = Math.pow(10, Math.max(0, driveDb) / 20)
   if (driveDb <= 0.0001) {
     for (let i = 0; i < curve.length; i++) {
@@ -244,8 +248,12 @@ export function createSaturationCurve(driveDb: number, size = 2048): Float32Arra
   return curve
 }
 
-export function createCeilingCurve(ceilingDb: number, size = 2048): Float32Array {
-  const curve = new Float32Array(Math.max(64, size))
+export function createCeilingCurve(
+  ceilingDb: number,
+  size = 2048,
+): Float32Array<ArrayBuffer> {
+  const length = Math.max(64, size)
+  const curve = new Float32Array(new ArrayBuffer(length * Float32Array.BYTES_PER_ELEMENT))
   const ceiling = Math.pow(10, Math.min(0, ceilingDb) / 20)
   for (let i = 0; i < curve.length; i++) {
     const x = (i / (curve.length - 1)) * 2 - 1
