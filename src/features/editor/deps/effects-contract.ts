@@ -11,7 +11,9 @@ export { useGpuEffectPreviewData } from '@/features/effects/hooks/use-gpu-effect
 
 export {
   AUDIO_REACTIVE_PRESETS,
+  buildAudioReactivePresetRemovalUpdate,
   buildAudioReactivePresetUpdate,
+  isAudioReactivePresetApplied,
   type AudioReactivePresetId,
 } from '@/features/effects/utils/audio-reactive-presets'
 export { isAudioReactiveParam } from '@/features/effects/utils/audio-reactive-bindings'
