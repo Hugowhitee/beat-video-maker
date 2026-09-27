@@ -23,6 +23,25 @@ function median(values: number[]): number {
   return ((sorted[middle - 1] ?? 0) + (sorted[middle] ?? 0)) / 2
 }
 
+export function resolveBeatGridDensity(beatSpacingPx: number, barSpacingPx: number) {
+  const safeBeatSpacing = Math.max(0, beatSpacingPx)
+  const safeBarSpacing = Math.max(0, barSpacingPx)
+  const barStride =
+    safeBarSpacing >= 18 ? 1 :
+    safeBarSpacing >= 9 ? 2 :
+    safeBarSpacing >= 4.5 ? 4 : 8
+  const labelStride =
+    safeBarSpacing >= 42 ? 1 :
+    safeBarSpacing >= 20 ? 2 :
+    safeBarSpacing >= 10 ? 4 : 8
+
+  return {
+    showIndividualBeats: safeBeatSpacing >= 9 && barStride === 1,
+    barStride,
+    labelStride: Math.max(barStride, labelStride),
+  }
+}
+
 function closestIndex(values: number[], target: number): number {
   let bestIndex = -1
   let bestDistance = Number.POSITIVE_INFINITY
@@ -43,6 +62,7 @@ export const BeatvideoGridOverlay = memo(function BeatvideoGridOverlay({
   const analysis = useProjectStore((state) => state.currentProject?.beatvideoMusic)
   const items = useItemsStore((state) => state.items)
   const fps = useTimelineSettingsStore((state) => state.fps)
+  const beatGridVisible = useTimelineSettingsStore((state) => state.beatGridVisible)
   const pixelsPerSecond = useZoomStore((state) => state.pixelsPerSecond)
 
   const timelineGrid = useMemo(
@@ -53,7 +73,12 @@ export const BeatvideoGridOverlay = memo(function BeatvideoGridOverlay({
     [analysis, fps, items],
   )
 
-  if (!timelineGrid || timelineGrid.grid.beats.length === 0 || duration <= 0) return null
+  if (
+    !beatGridVisible ||
+    !timelineGrid ||
+    timelineGrid.grid.beats.length === 0 ||
+    duration <= 0
+  ) return null
 
   const { grid, barOneTimelineTime } = timelineGrid
   const beatIntervals = grid.beats
@@ -61,15 +86,22 @@ export const BeatvideoGridOverlay = memo(function BeatvideoGridOverlay({
     .map((beat, index) => beat.time - (grid.beats[index]?.time ?? beat.time))
     .filter((interval) => interval > 0)
   const beatSpacingPx = median(beatIntervals) * pixelsPerSecond
-  const showIndividualBeats = beatSpacingPx >= 7
 
   const downbeatTimes = grid.beats.filter((beat) => beat.downbeat).map((beat) => beat.time)
   const barIntervals = downbeatTimes
     .slice(1)
     .map((time, index) => time - (downbeatTimes[index] ?? time))
     .filter((interval) => interval > 0)
-  const barSpacingPx = median(barIntervals) * pixelsPerSecond
-  const labelEveryBars = barSpacingPx >= 42 ? 1 : barSpacingPx >= 20 ? 2 : 4
+  const measuredBarSpacingPx = median(barIntervals) * pixelsPerSecond
+  const barSpacingPx =
+    measuredBarSpacingPx > 0
+      ? measuredBarSpacingPx
+      : beatSpacingPx * Math.max(1, grid.beatsPerBar)
+  const {
+    showIndividualBeats,
+    barStride,
+    labelStride,
+  } = resolveBeatGridDensity(beatSpacingPx, barSpacingPx)
   const barOneDownbeatIndex =
     barOneTimelineTime === null ? -1 : closestIndex(downbeatTimes, barOneTimelineTime)
 
@@ -99,13 +131,20 @@ export const BeatvideoGridOverlay = memo(function BeatvideoGridOverlay({
           beat.downbeat && barOneDownbeatIndex >= 0 && downbeatIndex >= 0
             ? downbeatIndex - barOneDownbeatIndex + 1
             : null
+        const barDistance =
+          downbeatIndex >= 0
+            ? Math.abs(downbeatIndex - Math.max(0, barOneDownbeatIndex))
+            : 0
+        if (beat.downbeat && !isBarOne && barDistance % barStride !== 0) {
+          return null
+        }
 
         const showBarLabel =
           variant === 'ruler' &&
           beat.downbeat &&
           barNumber !== null &&
           barNumber >= 1 &&
-          (barNumber === 1 || (barNumber - 1) % labelEveryBars === 0)
+          (barNumber === 1 || (barNumber - 1) % labelStride === 0)
 
         return (
           <div
