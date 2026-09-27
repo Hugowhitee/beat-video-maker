@@ -12,16 +12,16 @@ Music producers and creators who already understand timelines, beats, bars and b
 
 ## Primary hierarchy
 
-The app is project-first, not upload-first.
+The app is project-first globally and **beat-first inside a project**.
 
 1. **Projects** — open an existing project or create one.
-2. **New project** — name, Photo/Video type, output format and FPS.
-3. **Media** — bring in cover/beat or footage/beat.
-4. **Beat** — analyze and verify the musical grid, then place beat-aware producer tags/watermarks.
-5. **Edit** — preview/timeline plus the controls relevant to the selected mode.
-6. **Export** — finish the project audio, render locally and optionally continue to publishing.
+2. **New project** — keep setup minimal: name, Photo/Video type and only output settings that must be known up front.
+3. **Beat** — import/select the beat, enter a known BPM or analyze it, verify the musical grid and place producer tags/watermarks.
+4. **Visual** — add the hero cover or footage, then use beat-reactive looks, Auto Arrange/manual timeline editing, text and effects.
+5. **Master** — finish the stereo beat through the project master rack while preview and export use the same processing model.
+6. **Publish** — render locally, review publication metadata and optionally continue to YouTube.
 
-A source upload is never the app's home screen.
+A source upload is never the app's global home screen. Inside an opened Beatvideo project, however, the beat is the primary production input and should be the obvious first action.
 
 ## Photo mode
 
@@ -29,8 +29,9 @@ Photo mode is the fastest path for a beat visual:
 
 - still image is the hero;
 - beat audio drives the musical grid;
-- Media, Beat, Overlay and Effects are first-class;
-- motion/color remain available through FreeCut workspaces/properties;
+- Beat, Visual and Master are the primary workflow pages;
+- overlay/effect controls live under Visual rather than competing with the musical setup;
+- motion/color remain available through FreeCut as advanced workspaces/properties;
 - generic video-only controls stay out of the normal path.
 
 Overlay means real timeline/compositor layers built from FreeCut primitives: text, imported logo/image and simple shapes. It is not a renamed preset/look menu.
@@ -43,9 +44,11 @@ Video mode exposes footage editing without changing engines:
 - cuts, slip/slide and transitions;
 - text/shapes/effects;
 - motion/keyframes and color;
-- **Loop clip to beat** for the common single-footage workflow, materialized onto the same timeline.
+- **Auto Arrange footage** for multi-source music-video editing: existing FreeCut scene detection supplies shot boundaries, while the verified beat grid and music sections determine a variable musical cut cadence;
+- **Loop one clip** remains a simpler fallback for one repeated source;
+- both routes materialize normal editable FreeCut timeline clips with source trims and muted footage audio.
 
-Importing footage should make the next action obvious: inspect it or drag it onto the timeline. Beatvideo automation may create timeline items, but it never creates a parallel hidden edit state.
+Auto Arrange does **not** cut on every beat. Beats/downbeats are candidate timing points; music-section energy, available shot duration and reuse policy determine whether a segment lasts 1, 2, 4, 8, 16 or another musically sensible beat span. Manual edits remain authoritative after generation.
 
 ## Musical grid contract
 
@@ -89,18 +92,23 @@ Beatvideo Maker should be able to finish an already-produced stereo beat for pub
 
 The canonical implementation must build on the existing project-scoped master bus, bus EQ, preview pipeline and export mixer so preview and render remain equivalent.
 
-Default surface:
+The default Master surface is a small ordered insert rack rather than a generic settings card:
 
-- one small master/finish preset selector;
-- input/output level;
-- loudness and true-peak feedback;
-- a small intensity/drive control only when it maps to real DSP;
-- safe reset/bypass and A/B;
-- advanced access to the existing mixer/bus EQ rather than duplicating those controls.
+1. **EQ** — reuse the canonical visual parametric bus EQ.
+2. **Compressor** — threshold/ratio/attack/release/makeup with a transfer graph and gain-reduction feedback.
+3. **Saturator** — drive/mix/output with a visible transfer curve and bounded oversampling choices.
+4. **Peak limiter** — final peak control with threshold/ceiling/release and visible gain reduction.
+5. **Output** — project master output gain after the processing chain.
 
-The eventual finishing DSP may include tonal EQ, low-end control, saturation/soft clipping and final limiting, but a control must not appear until the processing exists in both preview and export. Presets such as Clean, Hard/Flat and 808 Punch are product recipes over the same canonical DSP chain, not separate engines.
+Each processor is selectable, bypassable and visibly editable. The mental model may borrow the useful part of a DAW insert rack—ordered slots and one focused plugin editor—without importing a full channel rack, patch graph or arbitrary plugin-host complexity into the common workflow.
 
-A stereo master cannot independently remix a buried 808, kick or hat. Do not imply stem-level control when only a finished stereo beat is available.
+Presets such as **Clean, Punch, Hard, 808 Punch and Warm** are recipes over this same canonical chain, never separate engines or hidden magic. A preset must expose the resulting real parameters so it stays understandable and editable.
+
+Preview audio must be summed into one shared project master bus before compressor/saturation/limiting. Monitor/listening volume sits after that DSP so changing speaker volume cannot change compression behavior. Export applies the equivalent chain to the final mixed stereo buffer; optimizations that would reset dynamics state at chunk boundaries must be disabled while mastering is active.
+
+Loudness/true-peak metering, A/B level matching and more advanced mastering processors can be added only when they have real preview/export implementations. Do not label estimated peak meters as LUFS or true peak.
+
+A stereo master cannot independently remix a buried 808, kick or hat. **808 Punch** may shape full-mix dynamics/harmonics, but must not imply stem-level control when only a finished stereo beat is available.
 
 ## Publishing direction
 
@@ -130,9 +138,12 @@ Beatvideo's music intelligence owns:
 
 - Beat This beat/downbeat analysis;
 - MusicMap and musical sections;
-- TransNet/ClipMap evidence where required;
-- deterministic edit-plan infrastructure for assisted multi-clip editing; only workflows that are fully wired into the product surface should be presented as user-facing modes;
+- FreeCut's existing fast histogram or adaptive scene detection as source-native shot-boundary evidence;
+- a ClipMap adapter that converts persisted scene cuts into footage shots without modifying the user's timeline just to analyze media;
+- deterministic, section-aware edit-plan infrastructure for multi-clip Auto Arrange;
 - beat/amplitude/phrase reactive modulation.
+
+When motion or quality evidence is unavailable, use neutral planner inputs and mark the evidence unavailable; never fabricate a measured score. Scene detection and musical planning are separate concerns: scene cuts define *what source ranges are valid shots*, while the music grid defines *where timeline edits may land*.
 
 Automation must remain inspectable and correctable. It produces normal FreeCut project/timeline data.
 
