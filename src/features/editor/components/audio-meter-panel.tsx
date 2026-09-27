@@ -196,9 +196,13 @@ const AudioEqPanelSurface = memo(function AudioEqPanelSurface({
   )
 })
 
-export const AudioMeterPanel = memo(function AudioMeterPanel() {
+export const AudioMeterPanel = memo(function AudioMeterPanel({
+  initialMode = 'meter',
+}: {
+  initialMode?: PanelMode
+}) {
   const { t } = useTranslation()
-  const [panelMode, setPanelMode] = useState<PanelMode>('meter')
+  const [panelMode, setPanelMode] = useState<PanelMode>(initialMode)
   const [eqPanelTarget, setEqPanelTarget] = useState<EqPanelTarget | null>(null)
   const mixerFloating = useEditorStore((s) => s.mixerFloating)
   const setMixerFloating = useEditorStore((s) => s.setMixerFloating)
