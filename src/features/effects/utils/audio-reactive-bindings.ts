@@ -32,8 +32,9 @@ export function createDefaultAudioReactiveEffectBinding(params: {
   paramKey: string
   param: EffectParam
   fps: number
+  driver?: AudioReactiveBinding['driver']
 }): AudioReactiveBinding | null {
-  const { effect, paramKey, param, fps } = params
+  const { effect, paramKey, param, fps, driver = 'beat' } = params
   if (effect.effect.type !== 'gpu-effect' || !isAudioReactiveParam(param)) return null
 
   const min = typeof param.min === 'number' ? param.min : 0
@@ -52,7 +53,7 @@ export function createDefaultAudioReactiveEffectBinding(params: {
       gpuEffectType: effect.effect.gpuEffectType,
       paramKey,
     },
-    driver: 'beat',
+    driver,
     amount,
     threshold: 0.58,
     sensitivity: 1,
