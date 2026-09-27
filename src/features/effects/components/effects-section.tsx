@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button'
 import type { TimelineItem } from '@/types/timeline'
 import type { ItemEffect, GpuEffect, VisualEffect } from '@/types/effects'
 import type { AudioReactiveBinding } from '@/types/beatvideo'
-import type { EffectParam, GpuEffectDefinition } from '@/infrastructure/gpu-effects/types'
+import type { EffectParam } from '@/infrastructure/gpu-effects/types'
 import { EFFECT_PRESETS } from '@/types/effects'
 import { useTimelineStore } from '@/features/effects/deps/timeline-contract'
 import {
@@ -39,7 +39,6 @@ import { buildEffectAnimatableProperty, type AnimatableProperty } from '@/types/
 import {
   getEffectCategoryLabel,
   getEffectDefinitionName,
-  getEffectParamLabel,
 } from '@/features/effects/utils/effect-i18n'
 import {
   getGpuEffectKeyframeProperty,
@@ -56,7 +55,6 @@ import {
 import {
   createDefaultAudioReactiveEffectBinding,
   getAudioReactiveBindingForParam,
-  isAudioReactiveParam,
 } from '@/features/effects/utils/audio-reactive-bindings'
 import {
   AUDIO_REACTIVE_PRESETS,
