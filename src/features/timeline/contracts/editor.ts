@@ -60,6 +60,7 @@ export {
   duplicateItemsWithTrackChanges,
   moveItems,
   removeItems,
+  replaceItemsOnTrack,
   updateItem,
 } from '../stores/actions/item-actions'
 export { setTracks } from '../stores/actions/track-actions'

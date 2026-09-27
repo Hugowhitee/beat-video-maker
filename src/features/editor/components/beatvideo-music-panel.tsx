@@ -42,6 +42,7 @@ import {
   addItemsOnNewTracks,
   buildDroppedMediaTimelineItems,
   createClassicTrack,
+  replaceItemsOnTrack,
 } from '@/features/editor/deps/timeline-contract'
 import { usePlaybackStore } from '@/shared/state/playback'
 import { useSelectionStore } from '@/shared/state/selection'
@@ -308,26 +309,43 @@ export function BeatvideoMusicPanel() {
       }
 
       const timeline = useTimelineStore.getState()
-      const existing = timeline.items
-        .filter(
-          (item) =>
-            (item.type === 'audio' || item.type === 'video') &&
-            item.mediaId === media.id,
-        )
-        .sort((left, right) => {
-          const leftAudio = left.type === 'audio'
-          const rightAudio = right.type === 'audio'
-          if (leftAudio !== rightAudio) return leftAudio ? -1 : 1
-          return right.durationInFrames - left.durationInFrames
-        })[0]
-      if (existing) return existing
-
-      const blobUrl = await resolveMediaUrl(media.id)
-      if (!blobUrl) throw new Error('Could not load the selected beat')
-
       const existingBeatTrack = timeline.tracks.find(
         (track) => track.kind === 'audio' && track.name === 'Beat',
       )
+      const beatTrackItems = existingBeatTrack
+        ? timeline.items.filter((item) => item.trackId === existingBeatTrack.id)
+        : []
+      const matchingBeatTrackItem = beatTrackItems.find(
+        (item) =>
+          (item.type === 'audio' || item.type === 'video') &&
+          item.mediaId === media.id,
+      )
+
+      // A clean canonical Beat track is already exactly what this workflow needs.
+      if (matchingBeatTrackItem && beatTrackItems.length === 1) {
+        return matchingBeatTrackItem
+      }
+
+      // Older/manual projects may already contain this source before the dedicated
+      // Beat track exists. Reuse that placement rather than creating duplicate audio.
+      if (!existingBeatTrack) {
+        const existingPlacement = timeline.items
+          .filter(
+            (item) =>
+              (item.type === 'audio' || item.type === 'video') &&
+              item.mediaId === media.id,
+          )
+          .sort((left, right) => {
+            const leftAudio = left.type === 'audio'
+            const rightAudio = right.type === 'audio'
+            if (leftAudio !== rightAudio) return leftAudio ? -1 : 1
+            return right.durationInFrames - left.durationInFrames
+          })[0]
+        if (existingPlacement) return existingPlacement
+      }
+
+      const blobUrl = await resolveMediaUrl(media.id)
+      if (!blobUrl) throw new Error('Could not load the selected beat')
       const maxOrder = timeline.tracks.reduce(
         (max, track) => Math.max(max, track.order ?? 0),
         0,
@@ -369,7 +387,10 @@ export function BeatvideoMusicPanel() {
       })
 
       if (existingBeatTrack) {
-        timeline.addItems(beatItems)
+        // Switching the project beat replaces the generated Beat track in one
+        // history transaction. Collision placement must never push the new beat
+        // behind the old source.
+        replaceItemsOnTrack(existingBeatTrack.id, beatItems)
       } else {
         addItemsOnNewTracks(beatItems, nextTracks)
       }

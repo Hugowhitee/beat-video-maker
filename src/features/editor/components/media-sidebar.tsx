@@ -953,43 +953,45 @@ export const MediaSidebar = memo(function MediaSidebar({
                 {categories.find((c) => c.id === activeTab)?.label}
               </span>
               <div className="flex items-center gap-1">
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      className="h-7 gap-1 px-2 text-xs"
-                      aria-label="Add layer"
-                      data-tooltip="Add layer"
-                      data-tooltip-side="bottom"
-                    >
-                      <Plus className="h-3.5 w-3.5" />
-                      Add layer
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="min-w-40">
-                    <DropdownMenuItem
-                      onSelect={() =>
-                        beatvideoMode === 'photo'
-                          ? handleAddPhotoText('bold')
-                          : handleAddText()
-                      }
-                    >
-                      <Type className="mr-2 h-3.5 w-3.5" />
-                      Text layer
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onSelect={() => handleAddShape('rectangle')}>
-                      <Square className="mr-2 h-3.5 w-3.5" />
-                      Shape layer
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onSelect={() => handleAddAdjustmentLayer()}>
-                      <Layers className="mr-2 h-3.5 w-3.5" />
-                      Adjustment layer
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              <Button
+                {workspace === 'edit' ? (
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 gap-1 px-2 text-xs"
+                        aria-label="Add layer"
+                        data-tooltip="Add layer"
+                        data-tooltip-side="bottom"
+                      >
+                        <Plus className="h-3.5 w-3.5" />
+                        Add layer
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="min-w-40">
+                      <DropdownMenuItem
+                        onSelect={() =>
+                          beatvideoMode === 'photo'
+                            ? handleAddPhotoText('bold')
+                            : handleAddText()
+                        }
+                      >
+                        <Type className="mr-2 h-3.5 w-3.5" />
+                        Text layer
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onSelect={() => handleAddShape('rectangle')}>
+                        <Square className="mr-2 h-3.5 w-3.5" />
+                        Shape layer
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onSelect={() => handleAddAdjustmentLayer()}>
+                        <Layers className="mr-2 h-3.5 w-3.5" />
+                        Adjustment layer
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                ) : null}
+                <Button
                 variant="ghost"
                 size="icon"
                 className="shrink-0"
