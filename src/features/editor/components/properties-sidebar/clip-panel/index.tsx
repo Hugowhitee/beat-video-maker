@@ -539,13 +539,15 @@ const ClipPanelCore = memo(function ClipPanelCore({
   const availableTabs = useMemo(() => {
     const tabs: ClipInspectorTab[] = []
     if (showVideoTab) tabs.push('video')
-    if (showSecondTab) tabs.push('audio')
     if (workspace === 'motion') {
       if (showMotionTab) tabs.push('motion')
       if (showEffectsTab) tabs.push('effects')
+      if (showSecondTab) tabs.push('audio')
     } else {
-      if (showEffectsTab) tabs.push('effects')
+      // Visual keeps the normal producer order: object → motion → effects → audio.
       if (showMotionTab) tabs.push('motion')
+      if (showEffectsTab) tabs.push('effects')
+      if (showSecondTab) tabs.push('audio')
     }
     return tabs
   }, [showMotionTab, showSecondTab, showEffectsTab, showVideoTab, workspace])
@@ -601,7 +603,7 @@ const ClipPanelCore = memo(function ClipPanelCore({
         label:
           workspace === 'motion'
             ? t('editor.clipPanel.tabAnimate', { defaultValue: 'Animate' })
-            : t('editor.clipPanel.tabAnimation'),
+            : 'Motion',
         icon: WandSparkles,
       }
     }
