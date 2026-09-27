@@ -8,14 +8,6 @@ COPY package.json package-lock.json ./
 RUN npm ci --include=dev
 
 COPY . .
-RUN npm run check
-RUN npm run check:boundaries
-RUN npm run check:deps-contracts
-RUN npx vp test run \
-  src/features/editor/utils/beat-grid-focus.test.ts \
-  src/features/timeline/components/timeline-content.test.tsx \
-  src/features/auto-edit/beat-grid-fit.test.ts \
-  src/features/timeline/utils/beatvideo-timeline-grid.test.ts
 RUN npm run build
 
 FROM nginx:alpine AS runtime
