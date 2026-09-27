@@ -103,6 +103,7 @@ describe('composition-actions split wrappers', () => {
       makeVideoItem({
         id: 'loop-1-a',
         trackId: 'track-v1',
+        embeddedAudioMuted: true,
         from: 0,
         durationInFrames: 30,
         linkedGroupId: undefined,
@@ -110,6 +111,7 @@ describe('composition-actions split wrappers', () => {
       makeVideoItem({
         id: 'loop-1-b',
         trackId: 'track-v1',
+        embeddedAudioMuted: true,
         from: 30,
         durationInFrames: 30,
         linkedGroupId: undefined,
@@ -117,6 +119,7 @@ describe('composition-actions split wrappers', () => {
       makeVideoItem({
         id: 'loop-2-a',
         trackId: 'track-v1',
+        embeddedAudioMuted: true,
         from: 60,
         durationInFrames: 30,
         linkedGroupId: undefined,
@@ -124,6 +127,7 @@ describe('composition-actions split wrappers', () => {
       makeVideoItem({
         id: 'loop-2-b',
         trackId: 'track-v1',
+        embeddedAudioMuted: true,
         from: 90,
         durationInFrames: 30,
         linkedGroupId: undefined,
