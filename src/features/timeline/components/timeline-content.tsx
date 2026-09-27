@@ -1159,6 +1159,21 @@ export const TimelineContent = memo(function TimelineContent({
     }
   })
 
+  const pendingCenterFrame = useTimelineViewportStore((s) => s.pendingCenterFrame)
+  useEffect(() => {
+    if (pendingCenterFrame === null) return
+    const container = containerRef.current
+    if (!container) return
+    useTimelineViewportStore.getState().clearCenterOnFrame()
+
+    const frameX = frameToPixelsRef.current(pendingCenterFrame)
+    const viewportWidth = container.clientWidth
+    const nextScrollLeft = Math.max(0, frameX - viewportWidth / 2)
+    container.scrollLeft = nextScrollLeft
+    scrollLeftRef.current = nextScrollLeft
+    syncViewportFromContainer(nextScrollLeft, true)
+  }, [pendingCenterFrame, syncViewportFromContainer])
+
   // Scroll the timeline so a specific frame is visible (requested externally)
   const pendingScrollToFrame = useTimelineViewportStore((s) => s.pendingScrollToFrame)
   useEffect(() => {
