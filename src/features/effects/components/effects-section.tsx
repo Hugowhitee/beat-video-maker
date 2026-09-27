@@ -323,6 +323,10 @@ export const EffectsSection = memo(function EffectsSection({
                 paramKey,
                 param,
                 fps: timelineFps,
+                driver:
+                  (audioReactiveGrid.grid.transients?.length ?? 0) > 0
+                    ? 'audio'
+                    : 'beat',
               }),
             ].filter((binding): binding is AudioReactiveBinding => binding !== null)
 
