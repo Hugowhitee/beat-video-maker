@@ -7,7 +7,6 @@ import {
   LocateFixed,
   Play,
   Repeat2,
-  RotateCcw,
   Sparkles,
   Tag,
   Undo2,
@@ -712,21 +711,6 @@ export function BeatvideoMusicPanel() {
     await persistAnalysis(next)
     toast.success(`Fixed grid set to ${nextBpm} BPM`)
   }, [bpmDraft, effectiveAnalysis, mediaItems, persistAnalysis, selectedMediaId])
-
-  const resetToDetected = useCallback(async () => {
-    if (!effectiveAnalysis) return
-    if (effectiveAnalysis.musicMap.beats.length === 0) {
-      toast.info('Run beat analysis first to restore detected timing')
-      return
-    }
-    await persistAnalysis({
-      ...effectiveAnalysis,
-      version: 2,
-      bpmOverride: null,
-      gridMode: 'detected',
-      correctionAnchors: effectiveAnalysis.correctionAnchors ?? [],
-    })
-  }, [effectiveAnalysis, persistAnalysis])
 
   const nudgeGrid = useCallback(
     async (timelineDeltaSeconds: number) => {
