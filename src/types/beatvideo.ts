@@ -15,6 +15,39 @@ export type MusicBeat = {
   strength: number
 }
 
+export type BeatReactiveBeat = {
+  /** Frame relative to the visual item's start. */
+  frame: number
+  /** Detector strength normalized to 0..1. */
+  strength: number
+  downbeat: boolean
+}
+
+export type BeatReactiveSettings = {
+  version: 1
+  enabled: boolean
+  /** Beat evidence projected onto the target visual item's local timeline. */
+  beats: BeatReactiveBeat[]
+  /** Ignore detector hits weaker than this normalized strength. */
+  threshold: number
+  /** Fast post-hit decay. Stored in frames so preview/export evaluate identically. */
+  releaseFrames: number
+  /** Fractional scale punch, e.g. 0.025 = 2.5%. */
+  zoom: number
+  /** Restrained transform shake amount, 0..1. */
+  shake: number
+  /** Peak additive brightness amount for gpu-brightness. */
+  brightness: number
+  /** Peak glow amount. */
+  glow: number
+  /** Peak chromatic separation in normalized UV units. */
+  rgbSplit: number
+  /** Restrict triggering to detected downbeats. */
+  downbeatsOnly: boolean
+  /** Extra emphasis for downbeats without changing the detector evidence. */
+  downbeatBoost: number
+}
+
 export type MusicSection = {
   id: string
   start: number

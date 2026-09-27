@@ -25,6 +25,7 @@ import {
 } from '@/shared/utils/frame-invalidation'
 import { hasCornerPin } from './corner-pin'
 import { resolveTransformHierarchy } from '@/shared/utils/transform-parenting'
+import { applyBeatReactiveTransform } from '@/shared/beatvideo/beat-reactive'
 
 export type TransformOverride = Partial<ResolvedTransform> | undefined
 
@@ -111,8 +112,15 @@ export function resolveItemTransformAtRelativeFrame(
     frameWidth: canvas.width,
     frameHeight: canvas.height,
   })
+  const beatReactiveResolved = applyBeatReactiveTransform(
+    modulatedResolved,
+    item.beatReactive,
+    relativeFrame,
+    canvas.width,
+    canvas.height,
+  )
 
-  const resolved = applyTransformOverride(modulatedResolved, previewTransform)
+  const resolved = applyTransformOverride(beatReactiveResolved, previewTransform)
 
   return item.type === 'text' && !hasCornerPin(item.cornerPin)
     ? expandTextTransformToFitContent(

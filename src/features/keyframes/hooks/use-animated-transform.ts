@@ -16,6 +16,7 @@ import { applyMotionAnimationLayers } from '../utils/motion-layer-eval'
 import { resolveTransformHierarchy } from '@/shared/utils/transform-parenting'
 import type { CanvasSettings } from '@/types/transform'
 import type { ItemKeyframes } from '@/types/keyframe'
+import { applyBeatReactiveTransform } from '@/shared/beatvideo/beat-reactive'
 
 interface AnimatedTransformResult {
   /** The fully resolved transform with keyframe animation applied */
@@ -57,10 +58,17 @@ function resolveLocalAnimatedTransform(params: {
     frameWidth: canvas.width,
     frameHeight: canvas.height,
   })
-  if (item.type !== 'text' || hasCornerPin(item.cornerPin)) return modulated
+  const beatReactive = applyBeatReactiveTransform(
+    modulated,
+    item.beatReactive,
+    relativeFrame,
+    canvas.width,
+    canvas.height,
+  )
+  if (item.type !== 'text' || hasCornerPin(item.cornerPin)) return beatReactive
   return expandTextTransformToFitContent(
     resolveAnimatedTextItem(item, itemKeyframes, relativeFrame, canvas),
-    modulated,
+    beatReactive,
   )
 }
 
