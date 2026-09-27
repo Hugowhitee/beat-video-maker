@@ -637,7 +637,7 @@ export const MediaSidebar = memo(function MediaSidebar({
         const { items, addEffect } = useTimelineStore.getState()
         const selectedVisualIds = selectedItemIds.filter((id) => {
           const item = items.find((candidate) => candidate.id === id)
-          return item && item.type !== 'audio'
+          return item && (item.type === 'image' || item.type === 'video')
         })
         const coverId = items.find((item) => item.type === 'image')?.id
         const visualIds =
@@ -670,7 +670,12 @@ export const MediaSidebar = memo(function MediaSidebar({
       // Find selected visual items (not audio)
       const selectedVisualIds = selectedItemIds.filter((id) => {
         const item = items.find((i) => i.id === id)
-        return item && item.type !== 'audio'
+        return (
+          item &&
+          (beatvideoMode === 'photo'
+            ? item.type === 'image' || item.type === 'video'
+            : item.type !== 'audio')
+        )
       })
       const photoCoverId =
         beatvideoMode === 'photo'
