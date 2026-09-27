@@ -11,6 +11,7 @@ const PHOTO_SIDEBAR_TABS = new Set<EditorSidebarTab>(['media', 'beat', 'overlay'
 const VIDEO_SIDEBAR_TABS = new Set<EditorSidebarTab>([
   'media',
   'beat',
+  'master',
   'text',
   'shapes',
   'effects',
