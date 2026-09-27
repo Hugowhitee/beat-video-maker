@@ -5,9 +5,9 @@ import {
   Crosshair,
   Eye,
   EyeOff,
+  Focus,
   LocateFixed,
   Magnet,
-  Play,
   Undo2,
 } from 'lucide-react'
 import { toast } from 'sonner'
@@ -34,6 +34,8 @@ import {
   useTimelineCommandStore,
   useTimelineSettingsStore,
   useTimelineStore,
+  useTimelineViewportStore,
+  useZoomStore,
 } from '@/features/editor/deps/timeline-store'
 import {
   addItemsOnNewTracks,
@@ -48,6 +50,10 @@ import {
   DEFAULT_PROJECT_WIDTH,
 } from '@/shared/projects/defaults'
 import { resolveProducerTagRepeatFrames } from '../utils/producer-tag'
+import {
+  resolveBeatGridFocusZoomLevel,
+  resolveNearestBeatOffsetMs,
+} from '../utils/beat-grid-focus'
 import type {
   BeatvideoGridCorrectionAnchor,
   BeatvideoGridMode,
@@ -55,7 +61,6 @@ import type {
   MusicMap,
 } from '@/types/beatvideo'
 
-const GRID_NUDGE_SECONDS = 0.01
 const ANCHOR_EPSILON = 1e-4
 const ANCHOR_GAP_SECONDS = 0.001
 const ANALYSIS_STRIP_BINS = 96
@@ -260,6 +265,7 @@ export function BeatvideoMusicPanel() {
   const [selectedTagMediaId, setSelectedTagMediaId] = useState('')
   const [selectedWatermarkMediaId, setSelectedWatermarkMediaId] = useState('')
   const [beatTool, setBeatTool] = useState<'grid' | 'tags'>('grid')
+  const [precisionAlignOpen, setPrecisionAlignOpen] = useState(false)
   const [tagTool, setTagTool] = useState<'producer' | 'watermark'>('producer')
   const [tagRepeatBars, setTagRepeatBars] = useState(16)
   const [tagFirstBar, setTagFirstBar] = useState(1)
@@ -283,6 +289,14 @@ export function BeatvideoMusicPanel() {
         : null,
     [fps, items, selectedAnalysis],
   )
+  const playheadBeatOffsetMs = useMemo(
+    () =>
+      timelineGrid && fps > 0
+        ? resolveNearestBeatOffsetMs(timelineGrid.grid.beats, currentFrame / fps)
+        : null,
+    [currentFrame, fps, timelineGrid],
+  )
+
   const effectiveAnalysis = timelineGrid?.analysis ?? selectedAnalysis
   const resolvedSourceGrid = effectiveAnalysis
     ? resolveBeatvideoMusicGrid(effectiveAnalysis)
@@ -878,15 +892,53 @@ export function BeatvideoMusicPanel() {
     toast.success('Bar 1 aligned to playhead')
   }, [persistAnalysis, requirePlacementAtPlayhead])
 
-  const jumpToBarOne = useCallback(() => {
+  const focusTimelineFrame = useCallback(
+    (frame: number) => {
+      if (!timelineGrid || fps <= 0) return
+      if (!beatGridVisible) toggleBeatGridVisible()
+
+      const zoomLevel = resolveBeatGridFocusZoomLevel(timelineGrid.grid)
+      useZoomStore.getState().setZoomLevelSynchronized(zoomLevel)
+      usePlaybackStore.getState().setCurrentFrame(Math.max(0, Math.round(frame)))
+      setPrecisionAlignOpen(true)
+
+      const center = () =>
+        useTimelineViewportStore.getState().requestCenterOnFrame(Math.max(0, Math.round(frame)))
+      if (typeof requestAnimationFrame === 'function') {
+        requestAnimationFrame(center)
+      } else {
+        center()
+      }
+    },
+    [beatGridVisible, fps, timelineGrid, toggleBeatGridVisible],
+  )
+
+  const focusBarOneOnTimeline = useCallback(() => {
     if (!timelineGrid || timelineGrid.barOneTimelineTime === null || fps <= 0) {
       toast.error('Bar 1 is outside the visible beat-source clip')
       return
     }
-    usePlaybackStore
-      .getState()
-      .setCurrentFrame(Math.max(0, Math.round(timelineGrid.barOneTimelineTime * fps)))
-  }, [fps, timelineGrid])
+    focusTimelineFrame(timelineGrid.barOneTimelineTime * fps)
+  }, [focusTimelineFrame, fps, timelineGrid])
+
+  const focusCurrentBeatOnTimeline = useCallback(() => {
+    if (!timelineGrid || fps <= 0) {
+      toast.error('Place the analyzed beat source on the timeline first')
+      return
+    }
+
+    const nearest = timelineGrid.grid.beats.reduce<
+      (typeof timelineGrid.grid.beats)[number] | null
+    >((best, beat) => {
+      if (!best) return beat
+      return Math.abs(beat.time * fps - currentFrame) <
+        Math.abs(best.time * fps - currentFrame)
+        ? beat
+        : best
+    }, null)
+    if (!nearest) return
+    focusTimelineFrame(nearest.time * fps)
+  }, [currentFrame, focusTimelineFrame, fps, timelineGrid])
 
   const setGridMode = useCallback(
     async (mode: BeatvideoGridMode) => {
@@ -1652,6 +1704,147 @@ export function BeatvideoMusicPanel() {
               </div>
             </section>
 
+            <section className="space-y-2 border-t border-border pt-3">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <div className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+                    Precision align
+                  </div>
+                  <p className="mt-1 text-[10px] leading-relaxed text-muted-foreground">
+                    Zoom the real timeline waveform around a beat, drag the playhead onto the onset,
+                    then align the grid. No second waveform or hidden timing axis.
+                  </p>
+                </div>
+                {playheadBeatOffsetMs !== null ? (
+                  <span className="shrink-0 rounded-sm border border-border bg-background/60 px-1.5 py-1 font-mono text-[9px] text-foreground">
+                    {playheadBeatOffsetMs >= 0 ? '+' : ''}
+                    {playheadBeatOffsetMs.toFixed(1)} ms
+                  </span>
+                ) : null}
+              </div>
+
+              <div className="grid grid-cols-2 gap-1.5">
+                <Button
+                  type="button"
+                  size="sm"
+                  className="justify-start"
+                  disabled={!timelineGrid || timelineGrid.barOneTimelineTime === null}
+                  onClick={focusBarOneOnTimeline}
+                >
+                  <Focus className="h-3.5 w-3.5" />
+                  Focus bar 1
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  className="justify-start"
+                  disabled={!timelineGrid}
+                  onClick={focusCurrentBeatOnTimeline}
+                >
+                  <Crosshair className="h-3.5 w-3.5" />
+                  Focus nearest beat
+                </Button>
+              </div>
+
+              {precisionAlignOpen ? (
+                <div className="space-y-2 rounded-md border border-primary/30 bg-primary/5 p-2.5">
+                  <div className="text-[9px] leading-relaxed text-muted-foreground">
+                    The timeline below is now zoomed to onset detail. Drag/scrub the playhead to the
+                    kick or transient you want the line to hit.
+                  </div>
+
+                  <div className="grid grid-cols-4 gap-1">
+                    {[
+                      [-0.01, '−10'],
+                      [-0.001, '−1'],
+                      [0.001, '+1'],
+                      [0.01, '+10'],
+                    ].map(([seconds, label]) => (
+                      <Button
+                        key={label}
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        disabled={!timelineGrid}
+                        onClick={() => void nudgeGrid(Number(seconds))}
+                        className="px-1 font-mono text-[9px]"
+                      >
+                        {label} ms
+                      </Button>
+                    ))}
+                  </div>
+
+                  <Button
+                    type="button"
+                    size="sm"
+                    className="w-full justify-start"
+                    disabled={!timelineGrid}
+                    onClick={() => void alignGridToPlayhead()}
+                  >
+                    <Crosshair className="h-3.5 w-3.5" />
+                    Align whole grid to playhead
+                  </Button>
+
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    className="w-full justify-start"
+                    disabled={!timelineGrid}
+                    onClick={() => void setBarOneAtPlayhead()}
+                  >
+                    Set bar 1 at playhead
+                  </Button>
+
+                  {gridMode === 'detected' ? (
+                    <details className="border-t border-border/70 pt-2">
+                      <summary className="cursor-pointer list-none text-[9px] font-medium text-foreground marker:hidden [&::-webkit-details-marker]:hidden">
+                        Track drifts later?
+                      </summary>
+                      <div className="mt-2 space-y-1.5">
+                        <p className="text-[8px] leading-relaxed text-muted-foreground">
+                          Move to the drifting beat and pin only that local point. Neighboring anchors
+                          stay ordered so the correction cannot fold over itself.
+                        </p>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          className="w-full justify-start"
+                          disabled={!timelineGrid}
+                          onClick={() => void alignNearestBeatToPlayhead()}
+                        >
+                          Pin local beat to playhead
+                        </Button>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="ghost"
+                          className="w-full justify-start"
+                          disabled={(effectiveAnalysis.correctionAnchors?.length ?? 0) === 0}
+                          onClick={() => void undoLastAnchor()}
+                        >
+                          <Undo2 className="h-3.5 w-3.5" />
+                          Undo last local anchor
+                        </Button>
+                      </div>
+                    </details>
+                  ) : null}
+
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="ghost"
+                    className="w-full"
+                    onClick={() => setPrecisionAlignOpen(false)}
+                  >
+                    Done aligning
+                  </Button>
+                </div>
+              ) : null}
+            </section>
+
             <details className="border-t border-border pt-3">
               <summary className="flex cursor-pointer list-none items-center justify-between gap-2 text-xs font-medium text-foreground marker:hidden [&::-webkit-details-marker]:hidden">
                 <span>Manual grid tools</span>
@@ -1707,66 +1900,6 @@ export function BeatvideoMusicPanel() {
                   </div>
                 </section>
 
-                <section className="space-y-2">
-                  <div className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
-                    Grid alignment
-                  </div>
-                  <div className="grid grid-cols-2 gap-1">
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="outline"
-                      disabled={!timelineGrid}
-                      onClick={() => void nudgeGrid(-GRID_NUDGE_SECONDS)}
-                    >
-                      −10 ms
-                    </Button>
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="outline"
-                      disabled={!timelineGrid}
-                      onClick={() => void nudgeGrid(GRID_NUDGE_SECONDS)}
-                    >
-                      +10 ms
-                    </Button>
-                  </div>
-                  {gridMode === 'detected' ? (
-                    <Button
-                      type="button"
-                      size="sm"
-                      className="w-full justify-start"
-                      disabled={!timelineGrid}
-                      onClick={() => void alignNearestBeatToPlayhead()}
-                    >
-                      <Crosshair className="h-3.5 w-3.5" />
-                      Pin local beat to playhead
-                    </Button>
-                  ) : null}
-                  <div className="flex gap-1">
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="ghost"
-                      className="flex-1 justify-start"
-                      disabled={(effectiveAnalysis.correctionAnchors?.length ?? 0) === 0}
-                      onClick={() => void undoLastAnchor()}
-                    >
-                      <Undo2 className="h-3.5 w-3.5" />
-                      Undo anchor
-                    </Button>
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="ghost"
-                      className="flex-1"
-                      onClick={() => void resetCorrections()}
-                    >
-                      Reset grid
-                    </Button>
-                  </div>
-                </section>
-
                 <section className="space-y-2 border-t border-border pt-3">
                   <div className="flex items-center justify-between gap-2">
                     <div>
@@ -1781,27 +1914,14 @@ export function BeatvideoMusicPanel() {
                       {effectiveAnalysis.barOneVerified ? 'Verified' : 'Detected'}
                     </span>
                   </div>
-
                   <Button
                     type="button"
                     size="sm"
+                    variant="ghost"
                     className="w-full justify-start"
-                    disabled={!timelineGrid}
-                    onClick={() => void setBarOneAtPlayhead()}
+                    onClick={() => void resetCorrections()}
                   >
-                    <Crosshair className="h-3.5 w-3.5" />
-                    Set bar 1 at playhead
-                  </Button>
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="outline"
-                    className="w-full justify-start"
-                    disabled={!timelineGrid || timelineGrid.barOneTimelineTime === null}
-                    onClick={jumpToBarOne}
-                  >
-                    <Play className="h-3.5 w-3.5" />
-                    Go to bar 1
+                    Reset grid to analysis
                   </Button>
                 </section>
 
