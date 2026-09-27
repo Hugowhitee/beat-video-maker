@@ -435,3 +435,103 @@ test('single clip loop repeats the full source cleanly and trims only the final 
     [17, 22, 0, 5],
   ])
 })
+
+
+test('section boundaries never pull Auto Arrange cuts off the musical grid', () => {
+  const music = musicMap([
+    {
+      id: 'verse-a',
+      start: 0,
+      end: 7.37,
+      kind: 'verse',
+      energy: 0.5,
+      confidence: 0.9,
+    },
+    {
+      id: 'chorus-b',
+      start: 7.37,
+      end: 16,
+      kind: 'chorus',
+      energy: 0.8,
+      confidence: 0.9,
+    },
+  ], 16)
+
+  const plan = createEditPlan(music, clipMap(), {
+    mode: 'auto',
+    pace: 'balanced',
+    transitionProfile: 'clean',
+    seed: 2,
+  })
+
+  const beatTimes = new Set(music.beats.map((beat) => beat.time.toFixed(6)))
+  for (const segment of plan.segments.slice(0, -1)) {
+    expect(beatTimes.has(segment.timelineEnd.toFixed(6))).toBe(true)
+  }
+  expect(plan.segments.some((segment) => Math.abs(segment.timelineEnd - 7.37) < 1e-6))
+    .toBe(false)
+})
+
+test('Auto Arrange pace changes edit density without changing the grid source', () => {
+  const music = musicMap([
+    {
+      id: 'drop',
+      start: 0,
+      end: 16,
+      kind: 'drop',
+      energy: 0.9,
+      confidence: 0.95,
+    },
+  ], 16)
+
+  const relaxed = createEditPlan(music, clipMap(), {
+    mode: 'auto',
+    pace: 'relaxed',
+    transitionProfile: 'clean',
+    seed: 1,
+  })
+  const energetic = createEditPlan(music, clipMap(), {
+    mode: 'auto',
+    pace: 'energetic',
+    transitionProfile: 'clean',
+    seed: 1,
+  })
+
+  expect(energetic.segments.length).toBeGreaterThan(relaxed.segments.length)
+
+  const beatTimes = new Set(music.beats.map((beat) => beat.time.toFixed(6)))
+  for (const plan of [relaxed, energetic]) {
+    for (const segment of plan.segments.slice(0, -1)) {
+      expect(beatTimes.has(segment.timelineEnd.toFixed(6))).toBe(true)
+    }
+  }
+})
+
+test('excluded shots are never selected by Auto Arrange', () => {
+  const music = musicMap([
+    {
+      id: 'verse',
+      start: 0,
+      end: 16,
+      kind: 'verse',
+      energy: 0.5,
+      confidence: 0.9,
+    },
+  ], 16)
+
+  const baseline = createEditPlan(music, clipMap(), {
+    mode: 'auto',
+    transitionProfile: 'clean',
+    seed: 1,
+  })
+  const excluded = baseline.segments[0]!.shotId
+
+  const rebuilt = createEditPlan(music, clipMap(), {
+    mode: 'auto',
+    transitionProfile: 'clean',
+    excludedShotIds: [excluded],
+    seed: 1,
+  })
+
+  expect(rebuilt.segments.some((segment) => segment.shotId === excluded)).toBe(false)
+})
