@@ -64,6 +64,7 @@ The canonical rule is:
 - Beat This detected beat positions are the default **Detected beatmap** and keep their local timing;
 - **Fixed BPM** is a deliberate alternate mode that creates one mathematically even grid; entering a BPM must not silently flatten detected timing;
 - beats and bars remain fixed to their waveform while the playhead moves;
+- when timeline snapping is enabled and a musical grid exists, move/trim/razor edits snap to those exact mapped beat positions; generic seconds-based snapping is only the fallback before a beat grid exists;
 - bar 1 is visually unambiguous and detected bar 1 is distinguished from a user-verified bar 1;
 - DJ-style corrections (phase nudge and correction anchors) are explicit, reversible source-domain project state;
 - multiple correction anchors form a piecewise timing map so long tracks can be corrected without forcing one global BPM;

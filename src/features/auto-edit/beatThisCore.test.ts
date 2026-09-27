@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  BEAT_THIS_CHUNK_FRAMES,
   buildSparseMelFilterbank,
   computeRmsEnvelope,
   getBeatThisFrameCount,
@@ -11,9 +12,10 @@ import {
 
 describe('Beat This core', () => {
   it('uses the canonical 50 fps frame and overlap geometry', () => {
+    expect(BEAT_THIS_CHUNK_FRAMES).toBe(513)
     expect(getBeatThisFrameCount(22_050)).toBe(51)
     expect(getBeatThisWindowStarts(100)).toEqual([-6])
-    expect(getBeatThisWindowStarts(3_000)).toEqual([-6, 1_482, 1_506])
+    expect(getBeatThisWindowStarts(3_000)).toEqual([-6, 495, 996, 1_497, 1_998, 2_493])
   })
 
   it('projects sparse mel weights without changing the dense result', () => {

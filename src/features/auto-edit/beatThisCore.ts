@@ -12,16 +12,23 @@ export const BEAT_THIS_HOP_LENGTH = 441
 export const BEAT_THIS_FPS = 50
 export const BEAT_THIS_MEL_BINS = 128
 export const BEAT_THIS_LOG_MULTIPLIER = 1_000
-export const BEAT_THIS_CHUNK_FRAMES = 1_500
+// The current browser/mobile graph has a fixed 513-frame time axis. Keep this
+// coupled to the pinned model revision below: changing only the model URL/hash
+// without its tensor geometry makes inference invalid.
+export const BEAT_THIS_CHUNK_FRAMES = 513
 export const BEAT_THIS_BORDER_FRAMES = 6
 
-export const BEAT_THIS_MODEL_URL =
-  'https://huggingface.co/musetric/beat-this-onnx/resolve/main/beat_this.onnx'
+export const BEAT_THIS_MODEL_REVISION =
+  'a076df6f20345e133a73b6d2068b68b60e48fafb'
+const BEAT_THIS_MODEL_BASE_URL =
+  `https://huggingface.co/musetric/beat-this-onnx/resolve/${BEAT_THIS_MODEL_REVISION}`
+
+export const BEAT_THIS_MODEL_URL = `${BEAT_THIS_MODEL_BASE_URL}/beat_this.onnx`
 export const BEAT_THIS_FILTERBANK_URL =
-  'https://huggingface.co/musetric/beat-this-onnx/resolve/main/mel-filterbank.bin'
+  `${BEAT_THIS_MODEL_BASE_URL}/mel-filterbank.bin`
 
 export const BEAT_THIS_MODEL_SHA256 =
-  '3472a3957f25f4c3a2d68b46ee4b784e065a8ebd46132796c1a6bdd817229253'
+  'd6b41a44dbf555e90593f60dc86aea3689e1f5db427956e4c9036c8dfde970e8'
 export const BEAT_THIS_FILTERBANK_SHA256 =
   '1ee975d96f44ccf2c3bfe37825c1c1f0b089f5703c7a12a84b1f0a3bce004533'
 

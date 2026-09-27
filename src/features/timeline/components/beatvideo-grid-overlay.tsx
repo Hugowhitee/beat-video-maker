@@ -64,6 +64,12 @@ export const BeatvideoGridOverlay = memo(function BeatvideoGridOverlay({
   const showIndividualBeats = beatSpacingPx >= 7
 
   const downbeatTimes = grid.beats.filter((beat) => beat.downbeat).map((beat) => beat.time)
+  const barIntervals = downbeatTimes
+    .slice(1)
+    .map((time, index) => time - (downbeatTimes[index] ?? time))
+    .filter((interval) => interval > 0)
+  const barSpacingPx = median(barIntervals) * pixelsPerSecond
+  const labelEveryBars = barSpacingPx >= 42 ? 1 : barSpacingPx >= 20 ? 2 : 4
   const barOneDownbeatIndex =
     barOneTimelineTime === null ? -1 : closestIndex(downbeatTimes, barOneTimelineTime)
 
@@ -99,7 +105,7 @@ export const BeatvideoGridOverlay = memo(function BeatvideoGridOverlay({
           beat.downbeat &&
           barNumber !== null &&
           barNumber >= 1 &&
-          (barNumber === 1 || (barNumber - 1) % 4 === 0)
+          (barNumber === 1 || (barNumber - 1) % labelEveryBars === 0)
 
         return (
           <div
@@ -110,10 +116,10 @@ export const BeatvideoGridOverlay = memo(function BeatvideoGridOverlay({
             <div
               className={
                 isBarOne
-                  ? 'h-full w-[2px] bg-primary/90'
+                  ? 'h-full w-[2px] bg-primary/95'
                   : beat.downbeat
-                    ? 'h-full w-px bg-primary/40'
-                    : 'h-full w-px bg-foreground/10'
+                    ? 'h-full w-px bg-primary/55'
+                    : 'h-full w-px bg-foreground/12'
               }
             />
             {showBarLabel ? (

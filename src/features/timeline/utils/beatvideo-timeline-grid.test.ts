@@ -5,6 +5,7 @@ import {
   findBeatvideoMusicPlacement,
   normalizeBeatvideoAnalysisForPlacement,
   resolveBeatvideoTimelineGrid,
+  resolveBeatvideoTimelineSnapFrames,
 } from './beatvideo-timeline-grid'
 
 function analysis(overrides: Partial<BeatvideoMusicAnalysis> = {}): BeatvideoMusicAnalysis {
@@ -82,6 +83,16 @@ describe('Beatvideo timeline musical grid', () => {
     expect(result).not.toBeNull()
     expect(result!.grid.beats.slice(0, 3).map((beat) => beat.time)).toEqual([3.5, 4, 4.5])
     expect(result!.barOneTimelineTime).toBe(4)
+  })
+
+  it('uses the mapped musical beats as edit snap points', () => {
+    expect(
+      resolveBeatvideoTimelineSnapFrames(
+        analysis(),
+        [audio({ from: 90 })],
+        30,
+      ).slice(0, 3),
+    ).toEqual([105, 120, 135])
   })
 
   it('uses source trim bounds so the visible grid stays locked to the waveform', () => {
