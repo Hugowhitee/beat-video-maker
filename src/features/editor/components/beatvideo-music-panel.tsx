@@ -43,7 +43,6 @@ import {
   addItemsOnNewTracks,
   buildDroppedMediaTimelineItems,
   createClassicTrack,
-  getDroppedMediaDurationInFrames,
 } from '@/features/editor/deps/timeline-contract'
 import { usePlaybackStore } from '@/shared/state/playback'
 import { useSelectionStore } from '@/shared/state/selection'
