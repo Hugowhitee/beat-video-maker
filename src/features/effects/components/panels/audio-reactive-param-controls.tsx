@@ -40,7 +40,9 @@ export const AudioReactiveParamControls = memo(function AudioReactiveParamContro
     (param
       ? getAudioReactiveAmountRange(param)
       : { min: -1, max: 1, step: 0.01 })
-  const releaseMs = Math.max(10, Math.round((binding.releaseFrames / Math.max(1, fps)) * 1000))
+  const safeFps = Math.max(1, fps)
+  const releaseMs = Math.max(10, Math.round((binding.releaseFrames / safeFps) * 1000))
+  const attackMs = Math.max(0, Math.round((binding.attackFrames / safeFps) * 1000))
   const noLiveCommit = () => {}
 
   return (
@@ -80,41 +82,97 @@ export const AudioReactiveParamControls = memo(function AudioReactiveParamContro
           onLiveChange={noLiveCommit}
           onChange={(amount) => onChange({ amount })}
         />
+
+        <span className="text-[10px] text-muted-foreground">Threshold</span>
+        <SliderInput
+          value={binding.threshold}
+          min={0}
+          max={1}
+          step={0.01}
+          formatValue={(value) => `${Math.round(value * 100)}%`}
+          onLiveChange={noLiveCommit}
+          onChange={(threshold) => onChange({ threshold })}
+        />
+
+        <span className="text-[10px] text-muted-foreground">Release</span>
+        <SliderInput
+          value={releaseMs}
+          min={40}
+          max={600}
+          step={10}
+          unit=" ms"
+          onLiveChange={noLiveCommit}
+          onChange={(milliseconds) =>
+            onChange({
+              releaseFrames: Math.max(1, Math.round((milliseconds / 1000) * safeFps)),
+            })
+          }
+        />
       </div>
 
       <details className="mt-2 border-t border-border/70 pt-1.5">
         <summary className="cursor-pointer list-none text-[9px] font-medium text-muted-foreground marker:hidden [&::-webkit-details-marker]:hidden">
-          Fine tune
+          Advanced
         </summary>
         <div className="mt-1.5 grid grid-cols-[64px_minmax(0,1fr)] items-center gap-x-2 gap-y-1.5">
-          <span className="text-[10px] text-muted-foreground">Threshold</span>
+          <span className="text-[10px] text-muted-foreground">Sensitivity</span>
           <SliderInput
-            value={binding.threshold}
-            min={0}
-            max={1}
-            step={0.01}
-            formatValue={(value) => `${Math.round(value * 100)}%`}
+            value={binding.sensitivity}
+            min={0.25}
+            max={2}
+            step={0.05}
+            formatValue={(value) => `${value.toFixed(2)}×`}
             onLiveChange={noLiveCommit}
-            onChange={(threshold) => onChange({ threshold })}
+            onChange={(sensitivity) => onChange({ sensitivity })}
           />
 
-          <span className="text-[10px] text-muted-foreground">Release</span>
+          <span className="text-[10px] text-muted-foreground">Attack</span>
           <SliderInput
-            value={releaseMs}
-            min={40}
-            max={600}
+            value={attackMs}
+            min={0}
+            max={250}
             step={10}
             unit=" ms"
             onLiveChange={noLiveCommit}
             onChange={(milliseconds) =>
               onChange({
-                releaseFrames: Math.max(
-                  1,
-                  Math.round((milliseconds / 1000) * Math.max(1, fps)),
-                ),
+                attackFrames: Math.max(0, Math.round((milliseconds / 1000) * safeFps)),
               })
             }
           />
+
+          <span className="text-[10px] text-muted-foreground">Every hit</span>
+          <SliderInput
+            value={binding.everyNthBeat}
+            min={1}
+            max={16}
+            step={1}
+            formatValue={(value) => `1 / ${Math.round(value)}`}
+            onLiveChange={noLiveCommit}
+            onChange={(everyNthBeat) =>
+              onChange({ everyNthBeat: Math.max(1, Math.round(everyNthBeat)) })
+            }
+          />
+
+          <span className="text-[10px] text-muted-foreground">Options</span>
+          <div className="flex min-w-0 items-center gap-3 text-[9px] text-muted-foreground">
+            <label className="flex items-center gap-1">
+              <input
+                type="checkbox"
+                checked={binding.useStrength}
+                onChange={(event) => onChange({ useStrength: event.target.checked })}
+              />
+              Strength
+            </label>
+            <label className="flex items-center gap-1">
+              <input
+                type="checkbox"
+                checked={binding.invert === true}
+                onChange={(event) => onChange({ invert: event.target.checked })}
+              />
+              Invert
+            </label>
+          </div>
         </div>
       </details>
     </div>
