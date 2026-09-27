@@ -124,7 +124,6 @@ function baseBinding(
     everyNthBeat: 1,
     useStrength: true,
     ...overrides,
-    target,
   }
 }
 
