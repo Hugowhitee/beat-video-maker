@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Activity, Equalizer, Flame, Gauge, Power, RotateCcw, Shield } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { Switch } from '@/components/ui/switch'
 import {
   captureSnapshot,
   useTimelineCommandStore,
@@ -33,11 +32,6 @@ const SLOT_META: ReadonlyArray<{
   { id: 'saturator', label: 'Saturator', hint: 'Harmonics and density', icon: Flame },
   { id: 'limiter', label: 'Peak limiter', hint: 'Final peak control', icon: Shield },
 ]
-
-function formatDb(value: number) {
-  const rounded = Math.abs(value) < 0.005 ? 0 : value
-  return `${rounded > 0 ? '+' : ''}${rounded.toFixed(1)} dB`
-}
 
 function MasterRange({
   label,
@@ -204,18 +198,6 @@ export function BeatvideoMasterPanel() {
       useTimelineCommandStore.getState().addUndoEntry({ type: command, payload: {} }, before)
     },
     [markChanged, setMasterFx],
-  )
-
-  const commitOutput = useCallback(
-    (next: number) => {
-      const before = captureSnapshot()
-      setMasterBusDb(next)
-      markChanged()
-      useTimelineCommandStore
-        .getState()
-        .addUndoEntry({ type: 'UPDATE_MASTER_OUTPUT', payload: {} }, before)
-    },
-    [markChanged, setMasterBusDb],
   )
 
   const beginGesture = useCallback(() => {
