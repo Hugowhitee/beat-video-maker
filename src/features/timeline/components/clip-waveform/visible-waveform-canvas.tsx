@@ -175,12 +175,14 @@ function scheduleLiveCanvasPositionUpdate(): void {
         )
       }
       if (geometry && geometry.width > 0) {
+        const currentLeft = Number.parseFloat(registration.canvas.style.left) || 0
         const currentWidth = Number.parseFloat(registration.canvas.style.width) || 0
         updates.push({
           registration,
           geometry,
           needsRedraw:
             registration.canvas.style.display === 'none' ||
+            Math.abs(currentLeft - geometry.left) > 0.5 ||
             currentWidth + 0.5 < geometry.width ||
             Math.abs(registration.lastPixelsPerSecond - snapshot.pixelsPerSecond) > 0.001,
         })
