@@ -84,6 +84,20 @@ class IIRFilterNodeMock extends ConnectableNodeMock {
   }
 }
 
+class DynamicsCompressorNodeMock extends ConnectableNodeMock {
+  threshold = new AudioParamMock()
+  knee = new AudioParamMock()
+  ratio = new AudioParamMock()
+  attack = new AudioParamMock()
+  release = new AudioParamMock()
+  reduction = 0
+}
+
+class WaveShaperNodeMock extends ConnectableNodeMock {
+  curve: Float32Array | null = null
+  oversample: OverSampleType = 'none'
+}
+
 class AudioContextMock {
   currentTime = 1.5
   state: AudioContextState = 'running'
@@ -100,6 +114,14 @@ class AudioContextMock {
 
   createIIRFilter(feedforward: number[], feedback: number[]) {
     return new IIRFilterNodeMock(feedforward, feedback)
+  }
+
+  createDynamicsCompressor() {
+    return new DynamicsCompressorNodeMock()
+  }
+
+  createWaveShaper() {
+    return new WaveShaperNodeMock()
   }
 }
 
