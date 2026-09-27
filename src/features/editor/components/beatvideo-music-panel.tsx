@@ -169,6 +169,7 @@ export function BeatvideoMusicPanel() {
   const [tagAnchorSeconds, setTagAnchorSeconds] = useState('0')
   const [tagDuckDb, setTagDuckDb] = useState(-3)
   const [progress, setProgress] = useState<MusicAnalysisProgress | null>(null)
+  const [importingBeat, setImportingBeat] = useState(false)
   const [autoArranging, setAutoArranging] = useState(false)
   const [autoArrangeProgress, setAutoArrangeProgress] = useState<string | null>(null)
   const [analyzing, setAnalyzing] = useState(false)
@@ -176,12 +177,14 @@ export function BeatvideoMusicPanel() {
   const abortRef = useRef<AbortController | null>(null)
   const autoEditAbortRef = useRef<AbortController | null>(null)
 
+  const selectedAnalysis =
+    analysis?.mediaId === selectedMediaId ? analysis : null
   const timelineGrid = useMemo(
     () =>
-      analysis
-        ? resolveBeatvideoTimelineGrid(analysis, items, fps)
+      selectedAnalysis
+        ? resolveBeatvideoTimelineGrid(selectedAnalysis, items, fps)
         : null,
-    [analysis, fps, items],
+    [fps, items, selectedAnalysis],
   )
   const reactiveTargets = useMemo(() => {
     const selected = new Set(selectedItemIds)
@@ -194,7 +197,7 @@ export function BeatvideoMusicPanel() {
     }
     return []
   }, [currentProject?.beatvideoMode, items, selectedItemIds])
-  const effectiveAnalysis = timelineGrid?.analysis ?? analysis
+  const effectiveAnalysis = timelineGrid?.analysis ?? selectedAnalysis
   const resolvedSourceGrid = effectiveAnalysis
     ? resolveBeatvideoMusicGrid(effectiveAnalysis)
     : null
@@ -271,6 +274,122 @@ export function BeatvideoMusicPanel() {
     [currentProject],
   )
 
+  const importBeat = useCallback(async () => {
+    if (importingBeat) return
+    setImportingBeat(true)
+    try {
+      const imported = await useMediaLibraryStore.getState().importMedia()
+      if (imported.length === 0) return
+      const beat = imported.find((media) =>
+        sourceSupportsBeatAnalysis(media.mimeType, media.audioCodec),
+      )
+      if (!beat) {
+        toast.error('Choose an audio file, or a video that contains audio')
+        return
+      }
+      setSelectedMediaId(beat.id)
+      toast.success('Beat imported')
+    } catch (error) {
+      toast.error('Could not import beat', {
+        description: error instanceof Error ? error.message : String(error),
+      })
+    } finally {
+      setImportingBeat(false)
+    }
+  }, [importingBeat])
+
+  const ensureBeatPlacement = useCallback(
+    async (mediaId = selectedMediaId) => {
+      const media = useMediaLibraryStore
+        .getState()
+        .mediaItems.find((candidate) => candidate.id === mediaId)
+      if (!media || !sourceSupportsBeatAnalysis(media.mimeType, media.audioCodec)) {
+        throw new Error('Select a valid beat source first')
+      }
+
+      const timeline = useTimelineStore.getState()
+      const existing = timeline.items
+        .filter(
+          (item) =>
+            (item.type === 'audio' || item.type === 'video') &&
+            item.mediaId === media.id,
+        )
+        .sort((left, right) => {
+          const leftAudio = left.type === 'audio'
+          const rightAudio = right.type === 'audio'
+          if (leftAudio !== rightAudio) return leftAudio ? -1 : 1
+          return right.durationInFrames - left.durationInFrames
+        })[0]
+      if (existing) return existing
+
+      const blobUrl = await resolveMediaUrl(media.id)
+      if (!blobUrl) throw new Error('Could not load the selected beat')
+
+      const existingBeatTrack = timeline.tracks.find(
+        (track) => track.kind === 'audio' && track.name === 'Beat',
+      )
+      const maxOrder = timeline.tracks.reduce(
+        (max, track) => Math.max(max, track.order ?? 0),
+        0,
+      )
+      const beatTrack =
+        existingBeatTrack ??
+        {
+          ...createClassicTrack({
+            tracks: timeline.tracks,
+            kind: 'audio',
+            order: maxOrder + 1,
+          }),
+          name: 'Beat',
+        }
+      const nextTracks = existingBeatTrack
+        ? timeline.tracks
+        : [...timeline.tracks, beatTrack]
+      const durationInFrames = Math.max(
+        1,
+        Math.round(media.duration * timeline.fps),
+      )
+      const beatItems = buildDroppedMediaTimelineItems({
+        media,
+        mediaId: media.id,
+        mediaType: 'audio',
+        label: `Beat: ${media.fileName}`,
+        timelineFps: timeline.fps,
+        blobUrl,
+        canvasWidth: currentProject?.metadata.width ?? DEFAULT_PROJECT_WIDTH,
+        canvasHeight: currentProject?.metadata.height ?? DEFAULT_PROJECT_HEIGHT,
+        fallbackSourceFps: timeline.fps,
+        placement: {
+          primary: {
+            trackId: beatTrack.id,
+            from: 0,
+            durationInFrames,
+          },
+        },
+      })
+
+      if (existingBeatTrack) {
+        timeline.addItems(beatItems)
+      } else {
+        addItemsOnNewTracks(beatItems, nextTracks)
+      }
+
+      const placed = beatItems.find(
+        (item) => item.type === 'audio' && item.mediaId === media.id,
+      )
+      if (!placed) throw new Error('Could not place the selected beat')
+
+      useSelectionStore.getState().setActiveTrack(beatTrack.id)
+      useSelectionStore.getState().selectItems([placed.id])
+      return placed
+    },
+    [
+      currentProject?.metadata.height,
+      currentProject?.metadata.width,
+      selectedMediaId,
+    ],
+  )
+
   const analyze = useCallback(async () => {
     if (!selectedMediaId || !currentProject || analyzing) return
 
@@ -286,6 +405,7 @@ export function BeatvideoMusicPanel() {
     })
 
     try {
+      await ensureBeatPlacement(selectedMediaId)
       const result = await analyzeMusicMedia(selectedMediaId, {
         signal: controller.signal,
         onProgress: setProgress,
@@ -363,7 +483,13 @@ export function BeatvideoMusicPanel() {
       setAnalyzing(false)
       setProgress(null)
     }
-  }, [analyzing, currentProject, persistAnalysis, selectedMediaId])
+  }, [
+    analyzing,
+    currentProject,
+    ensureBeatPlacement,
+    persistAnalysis,
+    selectedMediaId,
+  ])
 
   const loopVideoToBeat = useCallback(async () => {
     const media = useMediaLibraryStore
@@ -808,6 +934,15 @@ export function BeatvideoMusicPanel() {
       return
     }
 
+    try {
+      await ensureBeatPlacement(selectedMediaId)
+    } catch (error) {
+      toast.error('Could not use this as the project beat', {
+        description: error instanceof Error ? error.message : String(error),
+      })
+      return
+    }
+
     if (effectiveAnalysis) {
       await persistAnalysis({
         ...effectiveAnalysis,
@@ -846,7 +981,14 @@ export function BeatvideoMusicPanel() {
     }
     await persistAnalysis(next)
     toast.success(`Fixed grid set to ${nextBpm} BPM`)
-  }, [bpmDraft, effectiveAnalysis, mediaItems, persistAnalysis, selectedMediaId])
+  }, [
+    bpmDraft,
+    effectiveAnalysis,
+    ensureBeatPlacement,
+    mediaItems,
+    persistAnalysis,
+    selectedMediaId,
+  ])
 
   const nudgeGrid = useCallback(
     async (timelineDeltaSeconds: number) => {
@@ -1089,7 +1231,7 @@ export function BeatvideoMusicPanel() {
             <select
               value={selectedMediaId}
               onChange={(event) => setSelectedMediaId(event.target.value)}
-              disabled={analyzing}
+              disabled={analyzing || importingBeat}
               className="h-8 w-full rounded-md border border-input bg-secondary px-2 text-xs text-foreground"
             >
               {candidates.map((media) => (
@@ -1100,9 +1242,20 @@ export function BeatvideoMusicPanel() {
             </select>
           ) : (
             <div className="border-l-2 border-border pl-2 text-[10px] leading-relaxed text-muted-foreground">
-              Import an audio file, or a video with audio, in Media first.
+              Start here by importing the beat for this project.
             </div>
           )}
+
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            className="w-full"
+            disabled={analyzing || importingBeat}
+            onClick={() => void importBeat()}
+          >
+            {importingBeat ? 'Importing beat…' : candidates.length > 0 ? 'Import another beat' : 'Import beat'}
+          </Button>
 
           <Button
             type="button"
@@ -1179,7 +1332,7 @@ export function BeatvideoMusicPanel() {
               <div className="mt-1 text-[10px] leading-relaxed text-muted-foreground">
                 {timelineGrid
                   ? `Grid linked to ${timelineGrid.placement.label}. Reactive effects can use it now.`
-                  : 'Analysis is saved. Place this beat on the timeline to show the grid and drive reactive effects.'}
+                  : 'Analysis is saved. Analyze again or set BPM to link this source as the project beat.'}
               </div>
             </div>
           ) : null}
