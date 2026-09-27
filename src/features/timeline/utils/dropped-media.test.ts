@@ -190,6 +190,43 @@ describe('buildDroppedMediaTimelineItem', () => {
     })
   })
 
+  it('preserves an explicit source crop when building audio timeline items', () => {
+    const media = makeMedia({
+      mimeType: 'audio/wav',
+      fileName: 'tag.wav',
+      duration: 6,
+      fps: 0,
+      width: 0,
+      height: 0,
+    })
+
+    const [item] = buildDroppedMediaTimelineItems({
+      media,
+      mediaId: media.id,
+      mediaType: 'audio',
+      label: media.fileName,
+      timelineFps: 30,
+      blobUrl: 'blob:test',
+      canvasWidth: 1920,
+      canvasHeight: 1080,
+      sourceStart: 30,
+      sourceEnd: 120,
+      fallbackSourceFps: 30,
+      placement: {
+        primary: {
+          trackId: 'audio-track',
+          from: 60,
+          durationInFrames: 90,
+        },
+      },
+    })
+
+    expect(item?.type).toBe('audio')
+    expect(item?.sourceStart).toBe(30)
+    expect(item?.sourceEnd).toBe(120)
+    expect(item?.durationInFrames).toBe(90)
+  })
+
   it('builds linked video and audio items that stay in sync', () => {
     const media = makeMedia({ audioCodec: 'aac' })
     const [videoItem, audioItem] = buildDroppedMediaTimelineItems({
