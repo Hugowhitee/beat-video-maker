@@ -21,7 +21,7 @@ interface ProjectSettingsDialogProps {
   project: {
     id: string
     name: string
-    description: string
+    description?: string
     width: number
     height: number
     fps: number
@@ -45,7 +45,7 @@ export function ProjectSettingsDialog({
   const defaultValues = useMemo<Partial<ProjectFormData>>(
     () => ({
       name: liveProject?.name ?? project.name,
-      description: liveProject?.description ?? project.description,
+      description: liveProject?.description ?? project.description ?? '',
       beatvideoMode: liveProject?.beatvideoMode ?? project.beatvideoMode ?? 'video',
       width: liveProject?.metadata.width ?? project.width,
       height: liveProject?.metadata.height ?? project.height,
