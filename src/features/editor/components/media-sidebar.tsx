@@ -899,7 +899,7 @@ export const MediaSidebar = memo(function MediaSidebar({
     { id: 'master' as const, icon: Gauge, label: 'Master' },
     { id: 'overlay' as const, icon: ImagePlus, label: 'Overlay' },
     { id: 'text' as const, icon: Type, label: t('editor.mediaSidebar.text') },
-    { id: 'shapes' as const, icon: Pentagon, label: t('editor.mediaSidebar.shapes') },
+    { id: 'shapes' as const, icon: Pentagon, label: 'Graphics' },
     { id: 'effects' as const, icon: Layers, label: t('editor.mediaSidebar.effects') },
     { id: 'transitions' as const, icon: Blend, label: t('editor.mediaSidebar.transitions') },
     { id: 'lottie' as const, icon: Sticker, label: t('lottieBrowser.tabLabel') },
@@ -910,6 +910,12 @@ export const MediaSidebar = memo(function MediaSidebar({
       isSidebarTabVisibleForBeatvideoMode(id, beatvideoMode) &&
       isSidebarTabVisibleForWorkspace(id, workspace),
   )
+
+  const producerShell =
+    workspace === 'beat' ||
+    workspace === 'edit' ||
+    workspace === 'color' ||
+    workspace === 'master'
 
   useEffect(() => {
     if (
@@ -961,7 +967,9 @@ export const MediaSidebar = memo(function MediaSidebar({
 
   return (
     <div className="flex h-full flex-shrink-0">
-      {/* Vertical Category Bar */}
+      {/* The generic FreeCut icon rail remains available outside the focused
+          Beatvideo producer flow. Producer workspaces use labeled tabs instead. */}
+      {!producerShell ? (
       <div
         className="panel-header border-r border-border flex flex-col items-center flex-shrink-0"
         style={{ width: EDITOR_LAYOUT_CSS_VALUES.sidebarRailWidth }}
@@ -1025,6 +1033,7 @@ export const MediaSidebar = memo(function MediaSidebar({
           </div>
         ) : null}
       </div>
+      ) : null}
 
       {/* Content Panel — width animated via motion for the open/close toggle.
           We intentionally animate `width` (a layout property, not the cheaper
@@ -1037,14 +1046,14 @@ export const MediaSidebar = memo(function MediaSidebar({
       <motion.div
         className="panel-bg border-r border-border overflow-hidden relative"
         initial={false}
-        animate={{ width: leftSidebarOpen ? sidebarWidth : 0 }}
+        animate={{ width: producerShell || leftSidebarOpen ? sidebarWidth : 0 }}
         transition={
           isResizingRef.current || prefersReducedMotion
             ? { duration: 0 }
             : { type: 'tween', duration: leftSidebarOpen ? 0.26 : 0.2, ease: [0.32, 0.72, 0, 1] }
         }
         onAnimationComplete={() => {
-          if (!leftSidebarOpen) setContentInert(true)
+          if (!producerShell && !leftSidebarOpen) setContentInert(true)
         }}
       >
         {/* Promote the content to its own GPU layer so the panel's width/clip
@@ -1054,7 +1063,7 @@ export const MediaSidebar = memo(function MediaSidebar({
         <div
           className="h-full min-h-0 flex flex-col"
           style={{ width: sidebarWidth, transform: 'translateZ(0)' }}
-          inert={contentInert}
+          inert={producerShell ? false : contentInert}
         >
           <>
             {/* Panel Header — sits with the tab content */}
@@ -1133,6 +1142,30 @@ export const MediaSidebar = memo(function MediaSidebar({
               </Button>
               </div>
             </div>
+
+            {producerShell && categories.length > 1 ? (
+              <div className="flex shrink-0 gap-1 overflow-x-auto border-b border-border bg-secondary/10 px-2 py-1.5">
+                {categories.map(({ id, label }) => (
+                  <button
+                    key={id}
+                    type="button"
+                    aria-pressed={activeTab === id}
+                    onClick={() => {
+                      setActiveTab(id)
+                      if (id === 'effects') triggerPreviews()
+                    }}
+                    className={cn(
+                      'h-7 shrink-0 rounded px-2.5 text-[10px] font-medium transition-colors',
+                      activeTab === id
+                        ? 'bg-primary text-primary-foreground'
+                        : 'text-muted-foreground hover:bg-secondary/70 hover:text-foreground',
+                    )}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            ) : null}
 
             {/* Media Tab - Full Media Library */}
             <div
