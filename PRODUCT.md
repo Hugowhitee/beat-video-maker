@@ -17,9 +17,9 @@ The app is project-first, not upload-first.
 1. **Projects** — open an existing project or create one.
 2. **New project** — name, Photo/Video type, output format and FPS.
 3. **Media** — bring in cover/beat or footage/beat.
-4. **Beat** — analyze and verify the musical grid.
+4. **Beat** — analyze and verify the musical grid, then place beat-aware producer tags/watermarks.
 5. **Edit** — preview/timeline plus the controls relevant to the selected mode.
-6. **Export** — local render through the canonical FreeCut export path.
+6. **Export** — finish the project audio, render locally and optionally continue to publishing.
 
 A source upload is never the app's home screen.
 
@@ -65,6 +65,61 @@ The canonical rule is:
 - analysis progress is visible while work is actually running.
 
 The grid should feel closer to mature DJ/DAW beat-grid tooling than a decorative waveform widget: stable waveform lock, clear downbeats, direct seeking, obvious correction controls and no second hidden timeline.
+
+
+## Producer tags and watermarks
+
+Producer tags are a musical-timeline workflow, not generic overlay audio and not a second hidden sequencer.
+
+- the beat grid is the timing authority;
+- tag audio remains a normal one-shot at its natural playback speed by default; changing project BPM or tag spacing must not time-stretch the voice;
+- a tag can define a source trim plus an **anchor inside the trimmed clip** so a meaningful word/hit can land on a bar while a riser or lead-in starts earlier;
+- pattern placement exposes a clear first bar plus repeat interval such as 8, 16, 32 or 64 bars;
+- generated repetitions materialize as normal FreeCut audio clips on a dedicated producer-tag track;
+- after generation, any repetition can be moved, trimmed, faded, turned down or deleted without breaking the rest of the pattern;
+- optional automatic ducking belongs to the tag clip and targets the beat/music track, so the music moves behind the spoken tag without requiring the user to build a manual sidechain graph;
+- do not force producer-tag audio to declare a BPM unless the user explicitly chooses creative time-stretching in an advanced workflow.
+
+This deliberately borrows the useful mental model from a DAW playlist—bar grid, tracks and editable clips—without copying a DAW channel rack, plugin routing graph or other production complexity into the default Beatvideo surface.
+
+## Audio finish and mastering direction
+
+Beatvideo Maker should be able to finish an already-produced stereo beat for publishing without requiring a separate FL Studio session. This is a **finishing/mastering workflow**, not a replacement for full multitrack music production.
+
+The canonical implementation must build on the existing project-scoped master bus, bus EQ, preview pipeline and export mixer so preview and render remain equivalent.
+
+Default surface:
+
+- one small master/finish preset selector;
+- input/output level;
+- loudness and true-peak feedback;
+- a small intensity/drive control only when it maps to real DSP;
+- safe reset/bypass and A/B;
+- advanced access to the existing mixer/bus EQ rather than duplicating those controls.
+
+The eventual finishing DSP may include tonal EQ, low-end control, saturation/soft clipping and final limiting, but a control must not appear until the processing exists in both preview and export. Presets such as Clean, Hard/Flat and 808 Punch are product recipes over the same canonical DSP chain, not separate engines.
+
+A stereo master cannot independently remix a buried 808, kick or hat. Do not imply stem-level control when only a finished stereo beat is available.
+
+## Publishing direction
+
+The export flow may continue directly into YouTube publishing so the common producer job can become:
+
+**beat + cover → grid → tags/watermark → visual → finish → export → YouTube**
+
+Publishing remains an explicit user action after a successful local render. It must not silently upload during export.
+
+For YouTube:
+
+- use the official YouTube Data API and OAuth for the connected channel;
+- upload the already-rendered Beatvideo output; do not create a separate server-render path only for publishing;
+- use resumable uploads with visible progress/retry state;
+- let the user review title, description, tags, thumbnail and privacy before upload;
+- reuse Beatvideo's publication metadata/templates where available instead of asking for the same information twice;
+- keep local export usable without a Google/YouTube connection;
+- treat API-project verification/audit requirements as a deployment constraint rather than hiding them behind a non-working Publish button.
+
+Direct publishing should feel like the last step of Export, not a separate social-media dashboard.
 
 ## Automation
 
