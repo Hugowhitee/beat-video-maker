@@ -98,6 +98,35 @@ describe('TrackHeader', () => {
     expect(onToggleDisabled).toHaveBeenCalledTimes(1)
   })
 
+  it('keeps producer track headers text-first without permanent control icons', () => {
+    render(
+      <TrackHeader
+        track={makeTrack({ name: 'Beat', color: '#38bdf8' })}
+        isActive={false}
+        isSelected={false}
+        canDeleteTrack
+        canDeleteEmptyTracks
+        simplified
+        onToggleLock={() => undefined}
+        onToggleSyncLock={() => undefined}
+        onToggleDisabled={() => undefined}
+        onToggleSolo={() => undefined}
+        onSelect={() => undefined}
+        onCloseGaps={() => undefined}
+        onAddVideoTrack={() => undefined}
+        onAddAudioTrack={() => undefined}
+        onDeleteTrack={() => undefined}
+        onDeleteEmptyTracks={() => undefined}
+      />,
+    )
+
+    expect(screen.getByText('Beat')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Disable track' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Solo track' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Lock track' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Disable sync lock' })).not.toBeInTheDocument()
+  })
+
   it('renders sync lock enabled by default and toggles the label when disabled', () => {
     const { rerender } = render(
       <TrackHeader
