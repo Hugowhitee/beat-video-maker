@@ -7,9 +7,12 @@ import {
   type ItemKeyframes,
 } from '@/types/keyframe'
 import type { GpuEffect, ItemEffect } from '@/types/effects'
-import type { BeatReactiveSettings } from '@/types/beatvideo'
+import type { AudioReactiveState } from '@/types/beatvideo'
 import type { TimelineItem } from '@/types/timeline'
-import { buildBeatReactiveEffects } from '@/shared/beatvideo/beat-reactive'
+import {
+  applyAudioReactiveEffectParamValue,
+  hasEnabledAudioReactiveBindings,
+} from '@/shared/beatvideo/beat-reactive'
 import {
   colorStringToKeyframeValue,
   interpolateColorKeyframesToHex,
@@ -313,17 +316,13 @@ export function resolveAnimatedGpuEffects(
   effects: ItemEffect[] | undefined,
   itemKeyframes: ItemKeyframes | undefined,
   relativeFrame: number,
-  beatReactive?: BeatReactiveSettings,
+  audioReactive?: AudioReactiveState,
 ): ItemEffect[] | undefined {
   const sourceEffects = effects ?? []
-  const reactiveEffects = buildBeatReactiveEffects(beatReactive, relativeFrame)
   const hasAudioPulse = sourceEffects.some((entry) => entry.audioPulse?.enabled)
-  if (sourceEffects.length === 0) {
-    return reactiveEffects.length > 0 ? reactiveEffects : effects
-  }
-  if (!itemKeyframes && !hasAudioPulse) {
-    return reactiveEffects.length > 0 ? [...sourceEffects, ...reactiveEffects] : effects
-  }
+  const hasAudioReactive = hasEnabledAudioReactiveBindings(audioReactive)
+  if (sourceEffects.length === 0) return effects
+  if (!itemKeyframes && !hasAudioPulse && !hasAudioReactive) return effects
 
   let changed = false
 
@@ -384,11 +383,34 @@ export function resolveAnimatedGpuEffects(
                       : interpolatePropertyValue(keyframes, relativeFrame, baseValue)
                   })()
             })()
-      if (value === null) {
-        continue
+      let resolvedValue = value
+      if (resolvedValue === null && isAnimatableGpuNumberParam(gpuEffect, paramKey)) {
+        resolvedValue = getNumericGpuEffectParamValue(gpuEffect, paramKey)
       }
 
-      if (nextParams[paramKey] === value) {
+      if (typeof resolvedValue === 'number') {
+        resolvedValue = applyAudioReactiveEffectParamValue(
+          resolvedValue,
+          audioReactive,
+          relativeFrame,
+          {
+            effectId: effectEntry.id,
+            gpuEffectType: gpuEffect.gpuEffectType,
+            paramKey,
+          },
+        )
+        const paramDefinition = getGpuEffect(gpuEffect.gpuEffectType)?.params[paramKey]
+        if (paramDefinition?.type === 'number') {
+          if (paramDefinition.min !== undefined) {
+            resolvedValue = Math.max(paramDefinition.min, resolvedValue)
+          }
+          if (paramDefinition.max !== undefined) {
+            resolvedValue = Math.min(paramDefinition.max, resolvedValue)
+          }
+        }
+      }
+
+      if (resolvedValue === null || nextParams[paramKey] === resolvedValue) {
         continue
       }
 
@@ -397,7 +419,7 @@ export function resolveAnimatedGpuEffects(
         paramsChanged = true
       }
 
-      nextParams[paramKey] = value
+      nextParams[paramKey] = resolvedValue
     }
 
     if (!paramsChanged) {
@@ -414,8 +436,7 @@ export function resolveAnimatedGpuEffects(
     }
   })
 
-  const baseResolved = changed ? resolvedEffects : sourceEffects
-  return reactiveEffects.length > 0 ? [...baseResolved, ...reactiveEffects] : baseResolved
+  return changed ? resolvedEffects : sourceEffects
 }
 
 export const resolveAnimatedColorEffects = resolveAnimatedGpuEffects

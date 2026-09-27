@@ -384,25 +384,51 @@ const itemEffectSchema = z.object({
   enabled: z.boolean(),
 })
 
-const beatReactiveSchema = z.object({
+const audioReactiveTargetSchema = z.discriminatedUnion('kind', [
+  z.object({
+    kind: z.literal('transform'),
+    property: z.enum(['scale', 'x', 'y', 'rotation', 'opacity']),
+  }),
+  z.object({
+    kind: z.literal('transform-shake'),
+  }),
+  z.object({
+    kind: z.literal('effect-param'),
+    effectId: z.string().min(1),
+    gpuEffectType: z.string().min(1),
+    paramKey: z.string().min(1),
+  }),
+])
+
+const audioReactiveBindingSchema = z.object({
+  id: z.string().min(1),
+  enabled: z.boolean(),
+  target: audioReactiveTargetSchema,
+  driver: z.enum(['beat', 'downbeat']),
+  amount: z.number().min(-10000).max(10000),
+  threshold: z.number().min(0).max(1),
+  sensitivity: z.number().min(0).max(4),
+  attackFrames: z.number().int().min(0).max(600),
+  releaseFrames: z.number().int().min(1).max(1200),
+  everyNthBeat: z.number().int().min(1).max(64),
+  useStrength: z.boolean(),
+  invert: z.boolean().optional(),
+  minOutput: z.number().optional(),
+  maxOutput: z.number().optional(),
+})
+
+const audioReactiveSchema = z.object({
   version: z.literal(1),
   enabled: z.boolean(),
   beats: z.array(
     z.object({
       frame: z.number().int(),
+      index: z.number().int().min(0),
       strength: z.number().min(0).max(1),
       downbeat: z.boolean(),
     }),
   ),
-  threshold: z.number().min(0).max(1),
-  releaseFrames: z.number().int().min(1),
-  zoom: z.number().min(0).max(0.12),
-  shake: z.number().min(0).max(1),
-  brightness: z.number().min(0).max(1),
-  glow: z.number().min(0).max(2),
-  rgbSplit: z.number().min(0).max(0.03),
-  downbeatsOnly: z.boolean(),
-  downbeatBoost: z.number().min(1).max(2),
+  bindings: z.array(audioReactiveBindingSchema),
 })
 
 const transformSchema = z.object({
@@ -624,8 +650,8 @@ const timelineItemSchema = z
     fadeOut: z.number().min(0).optional(),
     // Effects
     effects: z.array(itemEffectSchema).optional(),
-    // Beatvideo sparse beat modulation
-    beatReactive: beatReactiveSchema.optional(),
+    // Sparse audio-reactive modulation bindings
+    audioReactive: audioReactiveSchema.optional(),
     // Adjustment layer
     effectOpacity: z.number().min(0).max(1).optional(),
     // Composition item fields

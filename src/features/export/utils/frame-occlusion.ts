@@ -114,7 +114,7 @@ export function isItemFullyOccluding(
       item.effects ?? [],
       getCurrentKeyframes(item.id),
       frame - item.from,
-      item.beatReactive,
+      item.audioReactive,
     ) ?? []
   const adjEffects = getAdjustmentLayerEffects(
     trackOrder,

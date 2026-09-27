@@ -1,9 +1,12 @@
-import type { BeatReactiveSettings } from '@/types/beatvideo'
-import type { ItemEffect } from '@/types/effects'
+import type {
+  AudioReactiveBinding,
+  AudioReactiveState,
+} from '@/types/beatvideo'
 import type { ResolvedTransform } from '@/types/transform'
 
-export interface BeatReactiveFrameState {
+export interface AudioReactiveFrameState {
   pulse: number
+  delta: number
   sourceStrength: number
   beatFrame: number | null
   downbeat: boolean
@@ -20,45 +23,69 @@ function hashNoise(seed: number): number {
   return (value - Math.floor(value)) * 2 - 1
 }
 
+function clampDelta(value: number, binding: AudioReactiveBinding): number {
+  let next = value
+  if (binding.minOutput !== undefined) next = Math.max(binding.minOutput, next)
+  if (binding.maxOutput !== undefined) next = Math.min(binding.maxOutput, next)
+  return next
+}
+
+export function hasEnabledAudioReactiveBindings(
+  state: AudioReactiveState | undefined,
+): boolean {
+  return state?.enabled === true && state.bindings.some((binding) => binding.enabled)
+}
+
 /**
- * Evaluate one sparse, frame-rate-independent beat envelope.
- *
- * A threshold gates detector evidence rather than changing BPM. The strongest
- * overlapping hit wins, so dense grids do not stack into runaway zoom/flash.
+ * Evaluate one binding against sparse Beat This evidence. The authored/keyframed
+ * value is deliberately not part of this function: callers compose its delta
+ * onto the normal property path, so audio reaction never replaces edit state.
  */
-export function evaluateBeatReactiveFrame(
-  settings: BeatReactiveSettings | undefined,
+export function evaluateAudioReactiveBinding(
+  state: AudioReactiveState | undefined,
+  binding: AudioReactiveBinding,
   relativeFrame: number,
-): BeatReactiveFrameState {
-  const rest: BeatReactiveFrameState = {
+): AudioReactiveFrameState {
+  const rest: AudioReactiveFrameState = {
     pulse: 0,
+    delta: 0,
     sourceStrength: 0,
     beatFrame: null,
     downbeat: false,
   }
-  if (!settings?.enabled || settings.beats.length === 0) return rest
+  if (!state?.enabled || !binding.enabled || state.beats.length === 0) return rest
 
-  const threshold = clamp01(settings.threshold)
-  const releaseFrames = Math.max(1, Math.round(settings.releaseFrames))
+  const threshold = clamp01(binding.threshold)
+  const sensitivity = Math.max(0, binding.sensitivity)
+  const attackFrames = Math.max(0, Math.round(binding.attackFrames))
+  const releaseFrames = Math.max(1, Math.round(binding.releaseFrames))
+  const everyNthBeat = Math.max(1, Math.round(binding.everyNthBeat))
   let winner = rest
 
-  for (const beat of settings.beats) {
-    if (settings.downbeatsOnly && !beat.downbeat) continue
+  for (const beat of state.beats) {
+    if (binding.driver === 'downbeat' && !beat.downbeat) continue
+    if (beat.index % everyNthBeat !== 0) continue
+
     const strength = clamp01(beat.strength)
     if (strength < threshold) continue
 
     const elapsed = relativeFrame - beat.frame
-    if (elapsed < 0 || elapsed > releaseFrames) continue
+    if (elapsed < 0 || elapsed > attackFrames + releaseFrames) continue
 
-    // Immediate attack, smooth musical decay. Keep detector strength audible in
-    // the motion while the threshold only decides whether a hit may trigger.
-    const decay = Math.exp((-4 * elapsed) / releaseFrames)
-    const downbeatBoost = beat.downbeat ? Math.max(1, settings.downbeatBoost) : 1
-    const pulse = clamp01(decay * strength * downbeatBoost)
+    const envelope =
+      attackFrames > 0 && elapsed < attackFrames
+        ? elapsed / attackFrames
+        : Math.exp((-4 * Math.max(0, elapsed - attackFrames)) / releaseFrames)
+    const gatedStrength = binding.useStrength
+      ? clamp01(((strength - threshold) / Math.max(0.001, 1 - threshold)) * sensitivity)
+      : clamp01(sensitivity)
+    const pulse = clamp01(envelope * gatedStrength)
     if (pulse <= winner.pulse) continue
 
+    const direction = binding.invert ? -1 : 1
     winner = {
       pulse,
+      delta: clampDelta(binding.amount * pulse * direction, binding),
       sourceStrength: strength,
       beatFrame: beat.frame,
       downbeat: beat.downbeat,
@@ -68,99 +95,85 @@ export function evaluateBeatReactiveFrame(
   return winner
 }
 
-/**
- * Add a restrained beat punch after ordinary keyframes/procedural motion.
- * Shake is deterministic and deliberately bounded so it reads as impact rather
- * than handheld-camera noise.
- */
-export function applyBeatReactiveTransform(
+export function applyAudioReactiveEffectParamValue(
+  baseValue: number,
+  state: AudioReactiveState | undefined,
+  relativeFrame: number,
+  target: { effectId: string; gpuEffectType: string; paramKey: string },
+): number {
+  if (!state?.enabled) return baseValue
+
+  let value = baseValue
+  for (const binding of state.bindings) {
+    if (
+      !binding.enabled ||
+      binding.target.kind !== 'effect-param' ||
+      binding.target.effectId !== target.effectId ||
+      binding.target.gpuEffectType !== target.gpuEffectType ||
+      binding.target.paramKey !== target.paramKey
+    ) continue
+    value += evaluateAudioReactiveBinding(state, binding, relativeFrame).delta
+  }
+  return value
+}
+
+export function applyAudioReactiveTransform(
   transform: ResolvedTransform,
-  settings: BeatReactiveSettings | undefined,
+  state: AudioReactiveState | undefined,
   relativeFrame: number,
   frameWidth: number,
   frameHeight: number,
 ): ResolvedTransform {
-  const state = evaluateBeatReactiveFrame(settings, relativeFrame)
-  if (!settings?.enabled || state.pulse <= 0) return transform
+  if (!hasEnabledAudioReactiveBindings(state)) return transform
 
-  const zoom = Math.max(0, Math.min(0.12, settings.zoom)) * state.pulse
-  const scale = 1 + zoom
-  const shake = clamp01(settings.shake) * state.pulse
-  const maxShakePx = Math.max(0, Math.min(frameWidth, frameHeight) * 0.004)
-  const seedBase = (state.beatFrame ?? 0) * 17 + Math.round(relativeFrame) * 0.73
-  const dx = hashNoise(seedBase + 11) * maxShakePx * shake
-  const dy = hashNoise(seedBase + 29) * maxShakePx * shake
-  const dr = hashNoise(seedBase + 47) * 0.18 * shake
+  let x = transform.x
+  let y = transform.y
+  let width = transform.width
+  let height = transform.height
+  let rotation = transform.rotation
+  let opacity = transform.opacity
+  let shakeX = 0
+  let shakeY = 0
+  let shakeRotation = 0
+
+  for (const binding of state!.bindings) {
+    if (!binding.enabled) continue
+    const evaluated = evaluateAudioReactiveBinding(state, binding, relativeFrame)
+    if (evaluated.pulse <= 0) continue
+
+    if (binding.target.kind === 'transform') {
+      switch (binding.target.property) {
+        case 'scale': {
+          const factor = Math.max(0.01, 1 + evaluated.delta)
+          width *= factor
+          height *= factor
+          break
+        }
+        case 'x': x += evaluated.delta; break
+        case 'y': y += evaluated.delta; break
+        case 'rotation': rotation += evaluated.delta; break
+        case 'opacity': opacity = clamp01(opacity + evaluated.delta); break
+      }
+      continue
+    }
+
+    if (binding.target.kind === 'transform-shake') {
+      const maxShakePx = Math.max(0, Math.min(frameWidth, frameHeight) * 0.004)
+      const intensity = Math.min(1, Math.abs(evaluated.delta))
+      const seedBase = (evaluated.beatFrame ?? 0) * 17 + Math.round(relativeFrame) * 0.73
+      shakeX += hashNoise(seedBase + 11) * maxShakePx * intensity
+      shakeY += hashNoise(seedBase + 29) * maxShakePx * intensity
+      shakeRotation += hashNoise(seedBase + 47) * 0.18 * intensity
+    }
+  }
 
   return {
     ...transform,
-    x: transform.x + dx,
-    y: transform.y + dy,
-    width: transform.width * scale,
-    height: transform.height * scale,
-    rotation: transform.rotation + dr,
+    x: x + shakeX,
+    y: y + shakeY,
+    width,
+    height,
+    rotation: rotation + shakeRotation,
+    opacity,
   }
-}
-
-/**
- * Build small transient GPU effects from the same sparse beat envelope used by
- * transform punch/shake. These are regular ItemEffect records, so the canonical
- * preview/export GPU pipeline stays the only renderer.
- */
-export function buildBeatReactiveEffects(
-  settings: BeatReactiveSettings | undefined,
-  relativeFrame: number,
-): ItemEffect[] {
-  const state = evaluateBeatReactiveFrame(settings, relativeFrame)
-  if (!settings?.enabled || state.pulse <= 0) return []
-
-  const effects: ItemEffect[] = []
-  const brightness = Math.max(0, Math.min(1, settings.brightness)) * state.pulse
-  const glow = Math.max(0, Math.min(2, settings.glow)) * state.pulse
-  const rgbSplit = Math.max(0, Math.min(0.03, settings.rgbSplit)) * state.pulse
-
-  if (brightness > 0.0001) {
-    effects.push({
-      id: 'beat-reactive-brightness',
-      enabled: true,
-      effect: {
-        type: 'gpu-effect',
-        gpuEffectType: 'gpu-brightness',
-        params: { amount: brightness },
-      },
-    })
-  }
-
-  if (glow > 0.0001) {
-    effects.push({
-      id: 'beat-reactive-glow',
-      enabled: true,
-      effect: {
-        type: 'gpu-effect',
-        gpuEffectType: 'gpu-glow',
-        params: {
-          amount: glow,
-          threshold: 0.62,
-          radius: 12,
-          softness: 0.55,
-          rings: 2,
-          samplesPerRing: 8,
-        },
-      },
-    })
-  }
-
-  if (rgbSplit > 0.00001) {
-    effects.push({
-      id: 'beat-reactive-rgb-split',
-      enabled: true,
-      effect: {
-        type: 'gpu-effect',
-        gpuEffectType: 'gpu-rgb-split',
-        params: { amount: rgbSplit, angle: 0 },
-      },
-    })
-  }
-
-  return effects
 }
