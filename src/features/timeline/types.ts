@@ -171,6 +171,7 @@ export interface TimelineActions {
     updates: Partial<{ effect: VisualEffect; enabled: boolean }>,
   ) => void
   removeEffect: (itemId: string, effectId: string) => void
+  removeEffects: (removals: Array<{ itemId: string; effectId: string }>) => void
   toggleEffect: (itemId: string, effectId: string) => void
   setItemEffects: (updates: Array<{ itemId: string; effects: ItemEffect[] }>) => void
   setItemEffectsAndAudioReactive: (

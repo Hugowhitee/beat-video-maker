@@ -61,14 +61,16 @@ The canonical rule is:
 - FreeCut owns the time axis, playhead, waveform and click/scrub behavior;
 - Beatvideo analysis is stored in **source-media time** and is mapped through the actual FreeCut timeline clip, including move, trim, speed and reverse;
 - never draw raw analysis seconds as absolute timeline seconds;
-- Beat This detected beat positions are the default **Detected beatmap** and keep their local timing;
-- **Fixed BPM** is a deliberate alternate mode that creates one mathematically even grid; entering a BPM must not silently flatten detected timing;
+- Beat This beat/downbeat positions are timing **evidence**, not automatically the final grid. For stable programmed music, fit one global tempo + phase/anchor across the track and accept it only when residual error and local tempo drift stay within confidence bounds;
+- coherent source-audio onset evidence may refine the fitted phase so a detector that consistently fires slightly after a kick/transient does not leave the visible grid late;
+- when timing genuinely varies, preserve a **Variable beat map** instead of forcing a constant grid that drifts away later in the song;
+- **Fixed BPM** entered by the user remains a deliberate manual alternate mode that creates one mathematically even grid; entering a BPM must not silently replace a trusted detected/variable map unless the user chooses it;
 - beats and bars remain fixed to their waveform while the playhead moves; viewport waveform canvases must redraw when their absolute timeline window moves so horizontal scrolling can never make waveform pixels drift under a fixed grid;
 - grid density is zoom-aware: close zoom may show individual beats, medium zoom prioritizes bars, and wide zoom steps through 2/4/8/16-bar phrase landmarks instead of drawing a fence of lines;
 - **Beat grid** visibility and **Beat snap** are separate user controls;
 - when Beat snap is enabled and a musical grid exists, move/trim/razor edits snap to those exact mapped beat positions; generic seconds-based snapping is only the fallback before a beat grid exists or musical snapping is explicitly disabled;
-- low/mid/high transient-energy evidence may add subtle ruler accents and drive effects, but the UI must not label those accents as kick/snare/hat detection unless a real classifier provides that evidence;
-- bar 1 is visually unambiguous and detected bar 1 is distinguished from a user-verified bar 1;
+- low/mid/high transient-energy evidence drives reactive effects and is visualized in a compact DJ-style analysis strip in Beat so the user can inspect what the scan found; do not scatter decorative color dots over the ruler and do not label spectral bands as kick/snare/hat detection unless a real classifier provides that evidence;
+- bar 1 is visually unambiguous, is never assumed to be 0:00, and detected bar 1 is distinguished from a user-verified bar 1;
 - DJ-style corrections (phase nudge and correction anchors) are explicit, reversible source-domain project state;
 - multiple correction anchors form a piecewise timing map so long tracks can be corrected without forcing one global BPM;
 - analysis progress is visible while work is actually running.
@@ -84,8 +86,10 @@ Producer tags are a musical-timeline workflow, not generic overlay audio and not
 - tag audio remains a normal one-shot at its natural playback speed by default; changing project BPM or tag spacing must not time-stretch the voice;
 - a tag can define a source trim plus an **anchor inside the trimmed clip** so a meaningful word/hit can land on a bar while a riser or lead-in starts earlier;
 - pattern placement exposes a clear first bar plus repeat interval such as 8, 16, 32 or 64 bars;
-- generated repetitions materialize as normal FreeCut audio clips on a dedicated producer-tag track;
-- after generation, any repetition can be moved, trimmed, faded, turned down or deleted without breaking the rest of the pattern;
+- **Producer tag** and **Watermark** are separate sources and separate tracks: Producer tags are intentional one-shots placed at the playhead; Watermarks are repeated protection tags aligned to musical bars on a dedicated Watermarks track;
+- a watermark pattern exposes first bar plus repeat interval such as 8, 16, 32 or 64 bars and reapplying the pattern replaces only the Watermarks track, never the producer-tag source or track;
+- generated tag/watermark clips materialize as normal FreeCut audio clips;
+- after generation, any clip can be moved, trimmed, faded, turned down or deleted without breaking unrelated tag/watermark content;
 - optional automatic ducking belongs to the tag clip and targets the beat/music track, so the music moves behind the spoken tag without requiring the user to build a manual sidechain graph;
 - the compact first implementation may use numeric trim/anchor fields, but the intended direct-manipulation UI is a small tag waveform with start/end handles and one draggable anchor marker; do not grow a second waveform/timeline system around it;
 - do not force producer-tag audio to declare a BPM unless the user explicitly chooses creative time-stretching in an advanced workflow.
@@ -169,6 +173,16 @@ Avoid:
 - separate custom editor systems where FreeCut already has a mature implementation.
 
 Prefer direct manipulation, conventional editor behavior, consistent spacing and progressive disclosure.
+
+
+### Interaction safety and density
+
+- effect state has one atomic lifecycle: **add → edit → remove → undo/redo**. Removing an effect also removes its effect-keyframes and audio-reactive bindings in the same history transaction; Undo restores all of them and Redo removes all of them again;
+- removing one mapped effect from a multi-selection is one undoable edit, never one hidden history entry per selected clip;
+- live slider previews must be cleared before effect removal so preview-only state can never survive a deleted effect;
+- the default Beat/Visual/Master path is text-first and progressively disclosed. Do not leave rows of permanent utility icons visible just because FreeCut supports the commands;
+- advanced track controls such as disable/solo/lock/sync-lock/close-gaps remain available through contextual menus in the simplified Beatvideo timeline; richer permanent controls may remain in Advanced editor workspaces where they are expected;
+- Settings, shortcuts, render queue and project-bundle export belong under a compact utility menu; the primary toolbar should emphasize project identity, Beat/Visual/Master, Inspector when relevant, Save and Export.
 
 ## Local-first boundary
 

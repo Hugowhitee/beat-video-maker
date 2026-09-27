@@ -2,11 +2,20 @@
 
 import { beforeEach, describe, expect, it } from 'vite-plus/test'
 import type { VisualEffect } from '@/types/effects'
+import { buildEffectAnimatableProperty } from '@/types/keyframe'
 import { makeTimelineAudioItem, makeTimelineTrack, makeTimelineVideoItem } from '../../test-helpers'
 import { useItemsStore } from '../items-store'
+import { useKeyframesStore } from '../keyframes-store'
 import { useTimelineCommandStore } from '../timeline-command-store'
 import { useTimelineSettingsStore } from '../timeline-settings-store'
-import { addEffect, addEffects, removeEffect, toggleEffect, updateEffect } from './effect-actions'
+import {
+  addEffect,
+  addEffects,
+  removeEffect,
+  removeEffects,
+  toggleEffect,
+  updateEffect,
+} from './effect-actions'
 
 function makeBrightness(value = 0.5): VisualEffect {
   return { type: 'gpu-effect', gpuEffectType: 'gpu-brightness', params: { brightness: value } }
@@ -24,6 +33,7 @@ function getEffects(itemId: string) {
 describe('effect actions', () => {
   beforeEach(() => {
     useTimelineCommandStore.getState().clearHistory()
+    useKeyframesStore.getState().setKeyframes([])
     useTimelineSettingsStore.setState({ fps: 30, isDirty: false })
     useItemsStore
       .getState()
@@ -132,6 +142,50 @@ describe('effect actions', () => {
     useTimelineCommandStore.getState().undo()
     expect(getEffects('a')).toHaveLength(1)
     expect(useItemsStore.getState().itemById.a?.audioReactive?.bindings).toHaveLength(1)
+  })
+
+  it('removing an effect clears its effect keyframes and undo restores them', () => {
+    addEffect('a', makeBrightness(0.5))
+    const effectId = getEffects('a')[0]!.id
+    const property = buildEffectAnimatableProperty('gpu-brightness', effectId, 'brightness')
+    useKeyframesStore.getState()._addKeyframe('a', property, 0, 0.5)
+
+    removeEffect('a', effectId)
+    expect(getEffects('a')).toHaveLength(0)
+    expect(useKeyframesStore.getState().getKeyframesForItem('a')?.properties ?? []).toHaveLength(0)
+
+    useTimelineCommandStore.getState().undo()
+    expect(getEffects('a')).toHaveLength(1)
+    expect(
+      useKeyframesStore.getState().getKeyframesForItem('a')?.properties[0]?.property,
+    ).toBe(property)
+
+    useTimelineCommandStore.getState().redo()
+    expect(getEffects('a')).toHaveLength(0)
+    expect(useKeyframesStore.getState().getKeyframesForItem('a')?.properties ?? []).toHaveLength(0)
+  })
+
+  it('removes mapped effects from multiple items as one undo step', () => {
+    addEffect('a', makeBrightness(0.5))
+    addEffect('b', makeBrightness(0.8))
+    const effectA = getEffects('a')[0]!.id
+    const effectB = getEffects('b')[0]!.id
+    useTimelineCommandStore.getState().clearHistory()
+
+    removeEffects([
+      { itemId: 'a', effectId: effectA },
+      { itemId: 'b', effectId: effectB },
+    ])
+    expect(getEffects('a')).toHaveLength(0)
+    expect(getEffects('b')).toHaveLength(0)
+
+    useTimelineCommandStore.getState().undo()
+    expect(getEffects('a')).toHaveLength(1)
+    expect(getEffects('b')).toHaveLength(1)
+
+    useTimelineCommandStore.getState().redo()
+    expect(getEffects('a')).toHaveLength(0)
+    expect(getEffects('b')).toHaveLength(0)
   })
 
   it('undo and redo preserve the last edited effect values across removal', () => {

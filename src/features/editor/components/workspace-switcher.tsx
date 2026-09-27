@@ -1,7 +1,5 @@
 import { memo } from 'react'
 import { useTranslation } from 'react-i18next'
-import { AudioLines, Gauge, Layers, Palette, SlidersHorizontal, Sparkles } from 'lucide-react'
-import type { LucideIcon } from 'lucide-react'
 import { useEditorStore } from '@/shared/state/editor'
 import { cn } from '@/shared/ui/cn'
 import type { EditorWorkspaceId } from '@/config/editor-workspaces'
@@ -15,21 +13,19 @@ import {
 
 const PRIMARY_WORKSPACES: readonly {
   id: EditorWorkspaceId
-  icon: LucideIcon
   label: string
 }[] = [
-  { id: 'beat', icon: AudioLines, label: 'Beat' },
-  { id: 'edit', icon: Sparkles, label: 'Visual' },
-  { id: 'master', icon: Gauge, label: 'Master' },
+  { id: 'beat', label: 'Beat' },
+  { id: 'edit', label: 'Visual' },
+  { id: 'master', label: 'Master' },
 ]
 
 const ADVANCED_WORKSPACES: readonly {
   id: EditorWorkspaceId
-  icon: LucideIcon
   label: string
 }[] = [
-  { id: 'color', icon: Palette, label: 'Color' },
-  { id: 'motion', icon: Layers, label: 'Motion' },
+  { id: 'color', label: 'Color' },
+  { id: 'motion', label: 'Motion' },
 ]
 
 /**
@@ -55,7 +51,7 @@ export const WorkspaceSwitcher = memo(function WorkspaceSwitcher({
       aria-label={t('toolbar.workspaces.label')}
       className="flex items-center gap-0.5 rounded-sm border border-border/80 bg-secondary/70 p-0.5"
     >
-      {PRIMARY_WORKSPACES.map(({ id, icon: Icon, label }) => {
+      {PRIMARY_WORKSPACES.map(({ id, label }) => {
         const isActive = workspace === id
         return (
           <button
@@ -72,7 +68,6 @@ export const WorkspaceSwitcher = memo(function WorkspaceSwitcher({
                 : 'text-muted-foreground hover:bg-background/60 hover:text-foreground',
             )}
           >
-            <Icon className="h-3.5 w-3.5" />
             {label}
           </button>
         )
@@ -90,14 +85,12 @@ export const WorkspaceSwitcher = memo(function WorkspaceSwitcher({
                 : 'text-muted-foreground hover:bg-background/60 hover:text-foreground',
             )}
           >
-            <SlidersHorizontal className="h-3.5 w-3.5" />
-            <span className="hidden xl:inline">Advanced</span>
+            <span>Advanced</span>
           </button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="min-w-36">
-          {ADVANCED_WORKSPACES.map(({ id, icon: Icon, label }) => (
+          {ADVANCED_WORKSPACES.map(({ id, label }) => (
             <DropdownMenuItem key={id} onSelect={() => setWorkspace(id)}>
-              <Icon className="h-3.5 w-3.5" />
               {label}
             </DropdownMenuItem>
           ))}
