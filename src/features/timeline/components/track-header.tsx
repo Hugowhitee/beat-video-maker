@@ -302,9 +302,9 @@ export const TrackHeader = memo(function TrackHeader({
               <span className="shrink-0 text-[10px] leading-none text-muted-foreground">
                 {itemCountLabel}
               </span>
+            </div>
               </>
             )}
-            </div>
           </div>
         </div>
       </ContextMenuTrigger>
