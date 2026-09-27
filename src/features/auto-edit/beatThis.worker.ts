@@ -36,7 +36,7 @@ type DisposeMessage = {
 
 type WorkerMessage = AnalyzeMessage | DisposeMessage
 
-const MODEL_CACHE = 'beatvideo-rhythm-model-v2'
+const MODEL_CACHE = 'beatvideo-rhythm-model-v3'
 const EMPTY_LOGIT = -1_000
 const FFT_SCALE = 1 / Math.sqrt(BEAT_THIS_N_FFT)
 
