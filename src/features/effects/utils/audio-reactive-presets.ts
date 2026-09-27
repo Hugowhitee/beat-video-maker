@@ -6,7 +6,10 @@ import type {
 } from '@/types/beatvideo'
 import type { ItemEffect } from '@/types/effects'
 import type { TimelineItem } from '@/types/timeline'
-import { projectAudioReactiveBeatsToItem } from '@/shared/beatvideo/beat-reactive'
+import {
+  projectAudioReactiveBeatsToItem,
+  projectAudioReactiveTransientsToItem,
+} from '@/shared/beatvideo/beat-reactive'
 
 export type AudioReactivePresetId =
   | 'gentle-punch'
@@ -109,6 +112,15 @@ function ensureGpuEffect(
     },
   }
   return { effects: [...effects, effect], effect }
+}
+
+function audioDriver(
+  grid: MusicMap,
+  preferred: AudioReactiveBinding['driver'],
+  fallback: AudioReactiveBinding['driver'],
+): AudioReactiveBinding['driver'] {
+  if (preferred === 'beat' || preferred === 'downbeat') return preferred
+  return (grid.transients?.length ?? 0) > 0 ? preferred : fallback
 }
 
 function baseBinding(
@@ -236,7 +248,7 @@ export function buildAudioReactivePresetUpdate(params: {
       { kind: 'transform', property: 'scale' },
       fps,
       {
-        driver: 'beat',
+        driver: audioDriver(grid, 'low', 'beat'),
         amount: 0.018,
         threshold: 0.58,
         releaseFrames: Math.max(1, Math.round(fps * 0.1)),
@@ -248,7 +260,7 @@ export function buildAudioReactivePresetUpdate(params: {
       { kind: 'transform-shake' },
       fps,
       {
-        driver: 'downbeat',
+        driver: audioDriver(grid, 'low', 'downbeat'),
         amount: 0.14,
         threshold: 0.72,
         releaseFrames: Math.max(1, Math.round(fps * 0.09)),
@@ -282,7 +294,12 @@ export function buildAudioReactivePresetUpdate(params: {
       },
       fps,
       {
-        driver: presetId === 'glow-hit' ? 'beat' : 'downbeat',
+        driver:
+          presetId === 'glow-hit'
+            ? audioDriver(grid, 'high', 'beat')
+            : presetId === 'chromatic-hit'
+              ? audioDriver(grid, 'mid', 'downbeat')
+              : 'downbeat',
         amount,
         threshold:
           presetId === 'beat-flash'
@@ -307,6 +324,7 @@ export function buildAudioReactivePresetUpdate(params: {
       version: 1,
       enabled: true,
       beats: projectAudioReactiveBeatsToItem(grid, item, fps),
+      transients: projectAudioReactiveTransientsToItem(grid, item, fps),
       bindings,
     },
   }
