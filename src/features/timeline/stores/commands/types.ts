@@ -1,5 +1,5 @@
 import type { TimelineItem, TimelineTrack, ProjectMarker } from '@/types/timeline'
-import type { AudioEqSettings } from '@/types/audio'
+import type { AudioEqSettings, MasterFxSettings } from '@/types/audio'
 import type { Transition } from '@/types/transition'
 import type { ItemKeyframes } from '@/types/keyframe'
 import type { SubComposition } from '../compositions-store'
@@ -28,6 +28,7 @@ export interface TimelineSnapshot {
   busAudioEq?: AudioEqSettings
   /** Project-scoped master bus gain in dB (0 = unity). */
   masterBusDb: number
+  masterFx?: MasterFxSettings
   projectId: string | null
   projectMetadata: ProjectResolution | null
 }
