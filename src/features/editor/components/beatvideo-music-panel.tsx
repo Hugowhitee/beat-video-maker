@@ -473,9 +473,26 @@ export function BeatvideoMusicPanel() {
         return
       }
 
+      const existingPatternIds =
+        mode === 'repeat'
+          ? timeline.items
+              .filter(
+                (item) =>
+                  item.type === 'audio' &&
+                  item.mediaId === media.id &&
+                  item.label === `Watermark: ${media.fileName}`,
+              )
+              .map((item) => item.id)
+          : []
+      const replacingPatternIds = new Set(existingPatternIds)
       const occupied = new Set(
         timeline.items
-          .filter((item) => item.type === 'audio' && item.mediaId === media.id)
+          .filter(
+            (item) =>
+              item.type === 'audio' &&
+              item.mediaId === media.id &&
+              !replacingPatternIds.has(item.id),
+          )
           .map((item) => Math.round(item.from)),
       )
       frames = frames.filter((frame) => !occupied.has(frame))
@@ -487,6 +504,10 @@ export function BeatvideoMusicPanel() {
             : 'No producer-tag position available',
         )
         return
+      }
+
+      if (existingPatternIds.length > 0) {
+        timeline.removeItems(existingPatternIds)
       }
 
       const existingTagTrack = timeline.tracks.find(
@@ -519,7 +540,10 @@ export function BeatvideoMusicPanel() {
           media,
           mediaId: media.id,
           mediaType: 'audio',
-          label: `Producer tag: ${media.fileName}`,
+          label:
+            mode === 'repeat'
+              ? `Watermark: ${media.fileName}`
+              : `Producer tag: ${media.fileName}`,
           timelineFps: timeline.fps,
           blobUrl,
           canvasWidth,
@@ -561,7 +585,7 @@ export function BeatvideoMusicPanel() {
       useSelectionStore.getState().selectItems(tagItems.map((item) => item.id))
       toast.success(
         mode === 'repeat'
-          ? `Placed ${tagItems.length} producer tags from bar ${tagFirstBar}, every ${tagRepeatBars} bars`
+          ? `Placed ${tagItems.length} watermark tags from bar ${tagFirstBar}, every ${tagRepeatBars} bars`
           : 'Producer tag added at playhead',
       )
     },
@@ -1152,12 +1176,12 @@ export function BeatvideoMusicPanel() {
                 onClick={() => void insertProducerTags('playhead')}
               >
                 <Tag className="h-3.5 w-3.5" />
-                Place at playhead
+                Place tag at playhead
               </Button>
 
               <div className="grid grid-cols-2 gap-1.5">
                 <label className="space-y-1 text-[10px] text-muted-foreground">
-                  <span>First bar</span>
+                  <span>Start bar</span>
                   <input
                     type="number"
                     min={1}
@@ -1194,7 +1218,7 @@ export function BeatvideoMusicPanel() {
                 onClick={() => void insertProducerTags('repeat')}
               >
                 <Repeat2 className="h-3.5 w-3.5" />
-                Place pattern
+                Apply watermark pattern
               </Button>
 
               <details className="border-t border-border pt-2">
