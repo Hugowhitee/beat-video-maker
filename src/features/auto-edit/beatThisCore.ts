@@ -50,7 +50,7 @@ export type BeatThisRhythmResult = {
   beats: number[]
   downbeats: number[]
   beatStrengths: number[]
-  transients: MusicTransient[]
+  transients?: MusicTransient[]
   meter: number
   backend: BeatThisBackend
   energy: Float32Array
