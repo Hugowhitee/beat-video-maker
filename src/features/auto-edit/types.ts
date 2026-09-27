@@ -86,5 +86,7 @@ export type EditPlannerOptions = {
   loopBars?: number;
   transitionProfile?: TransitionProfile;
   pace?: EditPace;
+  /** Stable scene-shot ids the producer explicitly does not want reused. */
+  excludedShotIds?: string[];
   seed?: number;
 };
