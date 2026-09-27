@@ -41,8 +41,8 @@
   --color-timeline-marker: oklch(0.65 0.2 250); /* Blue - timeline markers */
 
   /* Snap/Join indicator colors */
-  --color-timeline-snap: #f97316; /* orange-500 - snap indicator */
-  --color-timeline-join: #fb923c; /* orange-400 - join indicator */
+  --color-timeline-snap: var(--primary); /* canonical snap signal */
+  --color-timeline-join: color-mix(in oklab, var(--primary) 82%, white); /* join signal */
 
   --color-video-preview-background: oklch(0.1914 0 58);
 }
