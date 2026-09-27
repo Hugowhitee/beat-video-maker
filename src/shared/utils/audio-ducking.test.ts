@@ -23,6 +23,7 @@ function track(id: string, overrides: Partial<TimelineTrack> = {}): TimelineTrac
 function audio(id: string, trackId: string, from: number, durationInFrames: number): AudioItem {
   return {
     id,
+    type: 'audio',
     trackId,
     from,
     durationInFrames,
