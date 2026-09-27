@@ -49,6 +49,7 @@ import {
 import { useKeyframesByItemId } from '../hooks/use-keyframes-by-item-id'
 import {
   projectAudioReactiveBeatsToItem,
+  projectAudioReactiveTransientsToItem,
   resolveBeatvideoTimelineGrid,
   useProjectStore,
 } from '@/features/effects/deps/beatvideo-contract'
@@ -335,6 +336,11 @@ export const EffectsSection = memo(function EffectsSection({
                   item,
                   timelineFps,
                 ),
+                transients: projectAudioReactiveTransientsToItem(
+                  audioReactiveGrid.grid,
+                  item,
+                  timelineFps,
+                ),
                 bindings,
               }
             : undefined
@@ -387,6 +393,11 @@ export const EffectsSection = memo(function EffectsSection({
             ...item.audioReactive,
             enabled: true,
             beats: projectAudioReactiveBeatsToItem(
+              audioReactiveGrid.grid,
+              item,
+              timelineFps,
+            ),
+            transients: projectAudioReactiveTransientsToItem(
               audioReactiveGrid.grid,
               item,
               timelineFps,
