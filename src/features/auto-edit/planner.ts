@@ -205,11 +205,7 @@ function chooseShot(
   const candidates = eligible.length > 0 ? eligible : shots;
 
   if (candidates.length === 0) {
-    throw new Error(
-      excludedShotIds.size > 0
-        ? 'Every analyzed footage shot is excluded. Re-enable at least one shot.'
-        : 'Auto edit requires at least one analyzed footage shot.',
-    );
+    throw new Error('Auto edit requires at least one analyzed footage shot.');
   }
 
   const targetMotion = clamp01(sectionIntensity(slot.section));
@@ -629,7 +625,11 @@ export function createEditPlan(
     .flatMap((source) => source.shots)
     .filter((shot) => !excludedShotIds.has(shot.id));
   if (shots.length === 0) {
-    throw new Error('Auto edit requires at least one analyzed footage shot.');
+    throw new Error(
+      excludedShotIds.size > 0
+        ? 'Every analyzed footage shot is excluded. Re-enable at least one shot.'
+        : 'Auto edit requires at least one analyzed footage shot.',
+    );
   }
 
   const maxShotDuration = Math.max(
