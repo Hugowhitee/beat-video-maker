@@ -5,7 +5,12 @@ import {
   buildAudioEqPassIirCoefficients,
   clampAudioEqFrequencyForSampleRate,
 } from '@/shared/utils/audio-eq'
-import type { ResolvedAudioEqSettings } from '@/types/audio'
+import type { MasterFxSettings, ResolvedAudioEqSettings } from '@/types/audio'
+import {
+  createCeilingCurve,
+  createSaturationCurve,
+  resolveMasterFxSettings,
+} from '@/shared/utils/mastering'
 
 export const PREVIEW_AUDIO_GAIN_RAMP_SECONDS = 0.008
 const PREVIEW_AUDIO_EQ_RAMP_SECONDS = 0.012
@@ -483,6 +488,139 @@ function ensurePreviewClipEqStage(
   return currentStage
 }
 
+interface PreviewMasterAudioGraph {
+  context: AudioContext
+  inputGainNode: GainNode
+  compressorNode: DynamicsCompressorNode
+  compressorMakeupNode: GainNode
+  saturatorDryNode: GainNode
+  saturatorNode: WaveShaperNode
+  saturatorWetNode: GainNode
+  saturatorSumNode: GainNode
+  limiterNode: DynamicsCompressorNode
+  ceilingNode: WaveShaperNode
+  outputGainNode: GainNode
+}
+
+let sharedPreviewMasterGraph: PreviewMasterAudioGraph | null = null
+
+function dbToGain(db: number): number {
+  return Math.pow(10, db / 20)
+}
+
+function getOrCreatePreviewMasterAudioGraph(context: AudioContext): PreviewMasterAudioGraph {
+  if (sharedPreviewMasterGraph?.context === context) {
+    return sharedPreviewMasterGraph
+  }
+
+  const inputGainNode = context.createGain()
+  const compressorNode = context.createDynamicsCompressor()
+  const compressorMakeupNode = context.createGain()
+  const saturatorDryNode = context.createGain()
+  const saturatorNode = context.createWaveShaper()
+  const saturatorWetNode = context.createGain()
+  const saturatorSumNode = context.createGain()
+  const limiterNode = context.createDynamicsCompressor()
+  const ceilingNode = context.createWaveShaper()
+  const outputGainNode = context.createGain()
+
+  inputGainNode.connect(compressorNode)
+  compressorNode.connect(compressorMakeupNode)
+  compressorMakeupNode.connect(saturatorDryNode)
+  compressorMakeupNode.connect(saturatorNode)
+  saturatorDryNode.connect(saturatorSumNode)
+  saturatorNode.connect(saturatorWetNode)
+  saturatorWetNode.connect(saturatorSumNode)
+  saturatorSumNode.connect(limiterNode)
+  limiterNode.connect(ceilingNode)
+  ceilingNode.connect(outputGainNode)
+  outputGainNode.connect(context.destination)
+
+  sharedPreviewMasterGraph = {
+    context,
+    inputGainNode,
+    compressorNode,
+    compressorMakeupNode,
+    saturatorDryNode,
+    saturatorNode,
+    saturatorWetNode,
+    saturatorSumNode,
+    limiterNode,
+    ceilingNode,
+    outputGainNode,
+  }
+
+  syncPreviewMasterAudioGraph(undefined, 0, false)
+  return sharedPreviewMasterGraph
+}
+
+export function syncPreviewMasterAudioGraph(
+  value: MasterFxSettings | undefined,
+  masterBusDb: number,
+  ramp = true,
+): void {
+  const context = getSharedPreviewAudioContext()
+  if (!context) return
+
+  const graph = getOrCreatePreviewMasterAudioGraph(context)
+  const resolved = resolveMasterFxSettings(value)
+  const active = resolved.enabled
+  const now = context.currentTime
+  const write = (param: AudioParam, target: number) => {
+    if (ramp) {
+      rampAudioParam(param, target, now, PREVIEW_AUDIO_GAIN_RAMP_SECONDS)
+    } else {
+      param.value = target
+    }
+  }
+
+  write(graph.inputGainNode.gain, active ? dbToGain(resolved.inputGainDb) : 1)
+
+  const compressorEnabled = active && resolved.compressor.enabled
+  write(graph.compressorNode.threshold, compressorEnabled ? resolved.compressor.thresholdDb : 0)
+  write(graph.compressorNode.ratio, compressorEnabled ? resolved.compressor.ratio : 1)
+  write(graph.compressorNode.knee, compressorEnabled ? resolved.compressor.kneeDb : 0)
+  write(graph.compressorNode.attack, compressorEnabled ? resolved.compressor.attackSec : 0.003)
+  write(graph.compressorNode.release, compressorEnabled ? resolved.compressor.releaseSec : 0.25)
+  write(
+    graph.compressorMakeupNode.gain,
+    compressorEnabled ? dbToGain(resolved.compressor.makeupGainDb) : 1,
+  )
+
+  const saturatorEnabled = active && resolved.saturator.enabled
+  const wet = saturatorEnabled ? resolved.saturator.mix : 0
+  write(graph.saturatorDryNode.gain, 1 - wet)
+  write(
+    graph.saturatorWetNode.gain,
+    wet * dbToGain(saturatorEnabled ? resolved.saturator.outputGainDb : 0),
+  )
+  graph.saturatorNode.curve = createSaturationCurve(
+    saturatorEnabled ? resolved.saturator.driveDb : 0,
+  )
+  graph.saturatorNode.oversample = saturatorEnabled ? resolved.saturator.oversample : 'none'
+
+  const limiterEnabled = active && resolved.limiter.enabled
+  write(graph.limiterNode.threshold, limiterEnabled ? resolved.limiter.thresholdDb : 0)
+  write(graph.limiterNode.ratio, limiterEnabled ? 20 : 1)
+  write(graph.limiterNode.knee, 0)
+  write(graph.limiterNode.attack, limiterEnabled ? 0.003 : 0.003)
+  write(graph.limiterNode.release, limiterEnabled ? resolved.limiter.releaseSec : 0.25)
+  graph.ceilingNode.curve = createCeilingCurve(limiterEnabled ? resolved.limiter.ceilingDb : 0)
+  graph.ceilingNode.oversample = limiterEnabled ? '4x' : 'none'
+
+  write(graph.outputGainNode.gain, dbToGain(masterBusDb))
+}
+
+export function getPreviewMasterReduction(): {
+  compressorDb: number
+  limiterDb: number
+} {
+  return {
+    compressorDb: sharedPreviewMasterGraph?.compressorNode.reduction ?? 0,
+    limiterDb: sharedPreviewMasterGraph?.limiterNode.reduction ?? 0,
+  }
+}
+
 export function createPreviewClipAudioGraph(options?: {
   eqStageCount?: number
 }): PreviewClipAudioGraph | null {
@@ -515,7 +653,7 @@ export function createPreviewClipAudioGraph(options?: {
   }
 
   reconnectPreviewClipAudioGraph(graph)
-  outputGainNode.connect(context.destination)
+  outputGainNode.connect(getOrCreatePreviewMasterAudioGraph(context).inputGainNode)
   return graph
 }
 
