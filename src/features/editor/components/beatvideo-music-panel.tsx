@@ -1,12 +1,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
   AudioLines,
+  CheckCircle2,
   Crosshair,
   Film,
   LocateFixed,
   Play,
   Repeat2,
-  RotateCcw,
+  Sparkles,
   Tag,
   Undo2,
 } from 'lucide-react'
@@ -17,6 +18,7 @@ import {
   getBeatvideoGridMode,
   resolveBeatvideoMusicGrid,
   resolveBeatvideoTimelineGrid,
+  projectAudioReactiveBeatsToItem,
   sourceSecondsToTimelineFrame,
   timelineFrameToSourceSeconds,
   type MusicAnalysisProgress,
@@ -27,6 +29,11 @@ import {
 } from '@/features/editor/deps/media-library'
 import { updateStoredProject, useProjectStore } from '@/features/editor/deps/projects'
 import {
+  AUDIO_REACTIVE_PRESETS,
+  buildAudioReactivePresetUpdate,
+  type AudioReactivePresetId,
+} from '@/features/editor/deps/effects-contract'
+import {
   useItemsStore,
   useTimelineSettingsStore,
   useTimelineStore,
@@ -35,7 +42,7 @@ import {
   addItemsOnNewTracks,
   buildDroppedMediaTimelineItems,
   createClassicTrack,
-  getDroppedMediaDurationInFrames,
+  replaceItemsOnTrack,
 } from '@/features/editor/deps/timeline-contract'
 import { usePlaybackStore } from '@/shared/state/playback'
 import { useSelectionStore } from '@/shared/state/selection'
@@ -46,12 +53,17 @@ import {
 import { resolveProducerTagRepeatFrames } from '../utils/producer-tag'
 import {
   applyEditPlanToFreeCutTimeline,
+  buildClipMapForMedia,
+  createEditPlan,
   createSingleClipLoopPlan,
+  offsetEditPlanTimeline,
+  type ClipMapBuildProgress,
 } from '@/features/editor/deps/auto-edit-contract'
 import type {
   BeatvideoGridCorrectionAnchor,
   BeatvideoGridMode,
   BeatvideoMusicAnalysis,
+  MusicMap,
 } from '@/types/beatvideo'
 
 const GRID_NUDGE_SECONDS = 0.01
@@ -134,6 +146,10 @@ export function BeatvideoMusicPanel() {
   const items = useItemsStore((state) => state.items)
   const currentFrame = usePlaybackStore((state) => state.currentFrame)
   const fps = useTimelineSettingsStore((state) => state.fps)
+  const selectedItemIds = useSelectionStore((state) => state.selectedItemIds)
+  const setItemEffectsAndAudioReactive = useTimelineStore(
+    (state) => state.setItemEffectsAndAudioReactive,
+  )
 
   const analysis = currentProject?.beatvideoMusic
   const candidates = useMemo(
@@ -148,19 +164,41 @@ export function BeatvideoMusicPanel() {
   const [selectedLoopMediaId, setSelectedLoopMediaId] = useState('')
   const [selectedTagMediaId, setSelectedTagMediaId] = useState('')
   const [tagRepeatBars, setTagRepeatBars] = useState(16)
+  const [tagFirstBar, setTagFirstBar] = useState(1)
+  const [tagTrimStartSeconds, setTagTrimStartSeconds] = useState('0')
+  const [tagTrimEndSeconds, setTagTrimEndSeconds] = useState('')
+  const [tagAnchorSeconds, setTagAnchorSeconds] = useState('0')
+  const [tagDuckDb, setTagDuckDb] = useState(-3)
   const [progress, setProgress] = useState<MusicAnalysisProgress | null>(null)
+  const [importingBeat, setImportingBeat] = useState(false)
+  const [autoArranging, setAutoArranging] = useState(false)
+  const [autoArrangeProgress, setAutoArrangeProgress] = useState<string | null>(null)
   const [analyzing, setAnalyzing] = useState(false)
   const [bpmDraft, setBpmDraft] = useState('')
   const abortRef = useRef<AbortController | null>(null)
+  const autoEditAbortRef = useRef<AbortController | null>(null)
 
+  const selectedAnalysis =
+    analysis?.mediaId === selectedMediaId ? analysis : null
   const timelineGrid = useMemo(
     () =>
-      analysis
-        ? resolveBeatvideoTimelineGrid(analysis, items, fps)
+      selectedAnalysis
+        ? resolveBeatvideoTimelineGrid(selectedAnalysis, items, fps)
         : null,
-    [analysis, fps, items],
+    [fps, items, selectedAnalysis],
   )
-  const effectiveAnalysis = timelineGrid?.analysis ?? analysis
+  const reactiveTargets = useMemo(() => {
+    const selected = new Set(selectedItemIds)
+    const selectedVisuals = items.filter(
+      (item) => selected.has(item.id) && item.type !== 'audio',
+    )
+    if (selectedVisuals.length > 0) return selectedVisuals
+    if (currentProject?.beatvideoMode === 'photo') {
+      return items.filter((item) => item.type === 'image')
+    }
+    return []
+  }, [currentProject?.beatvideoMode, items, selectedItemIds])
+  const effectiveAnalysis = timelineGrid?.analysis ?? selectedAnalysis
   const resolvedSourceGrid = effectiveAnalysis
     ? resolveBeatvideoMusicGrid(effectiveAnalysis)
     : null
@@ -182,14 +220,14 @@ export function BeatvideoMusicPanel() {
   )
 
   useEffect(() => {
+    if (candidates.some((media) => media.id === selectedMediaId)) return
+
     const preferred = analysis?.mediaId
     if (preferred && candidates.some((media) => media.id === preferred)) {
       setSelectedMediaId(preferred)
       return
     }
-    if (!candidates.some((media) => media.id === selectedMediaId)) {
-      setSelectedMediaId(candidates[0]?.id ?? '')
-    }
+    setSelectedMediaId(candidates[0]?.id ?? '')
   }, [analysis?.mediaId, candidates, selectedMediaId])
 
   useEffect(() => {
@@ -205,6 +243,12 @@ export function BeatvideoMusicPanel() {
   }, [selectedTagMediaId, tagCandidates])
 
   useEffect(() => {
+    setTagTrimStartSeconds('0')
+    setTagTrimEndSeconds('')
+    setTagAnchorSeconds('0')
+  }, [selectedTagMediaId])
+
+  useEffect(() => {
     const bpm =
       effectiveAnalysis?.bpmOverride ??
       effectiveAnalysis?.musicMap.bpm ??
@@ -215,6 +259,7 @@ export function BeatvideoMusicPanel() {
   useEffect(
     () => () => {
       abortRef.current?.abort()
+      autoEditAbortRef.current?.abort()
     },
     [],
   )
@@ -228,6 +273,142 @@ export function BeatvideoMusicPanel() {
       useProjectStore.getState().setCurrentProject(updated)
     },
     [currentProject],
+  )
+
+  const importBeat = useCallback(async () => {
+    if (importingBeat) return
+    setImportingBeat(true)
+    try {
+      const imported = await useMediaLibraryStore.getState().importMedia()
+      if (imported.length === 0) return
+      const beat = imported.find((media) =>
+        sourceSupportsBeatAnalysis(media.mimeType, media.audioCodec),
+      )
+      if (!beat) {
+        toast.error('Choose an audio file, or a video that contains audio')
+        return
+      }
+      setSelectedMediaId(beat.id)
+      toast.success('Beat imported')
+    } catch (error) {
+      toast.error('Could not import beat', {
+        description: error instanceof Error ? error.message : String(error),
+      })
+    } finally {
+      setImportingBeat(false)
+    }
+  }, [importingBeat])
+
+  const ensureBeatPlacement = useCallback(
+    async (mediaId = selectedMediaId) => {
+      const media = useMediaLibraryStore
+        .getState()
+        .mediaItems.find((candidate) => candidate.id === mediaId)
+      if (!media || !sourceSupportsBeatAnalysis(media.mimeType, media.audioCodec)) {
+        throw new Error('Select a valid beat source first')
+      }
+
+      const timeline = useTimelineStore.getState()
+      const existingBeatTrack = timeline.tracks.find(
+        (track) => track.kind === 'audio' && track.name === 'Beat',
+      )
+      const beatTrackItems = existingBeatTrack
+        ? timeline.items.filter((item) => item.trackId === existingBeatTrack.id)
+        : []
+      const matchingBeatTrackItem = beatTrackItems.find(
+        (item) =>
+          (item.type === 'audio' || item.type === 'video') &&
+          item.mediaId === media.id,
+      )
+
+      // A clean canonical Beat track is already exactly what this workflow needs.
+      if (matchingBeatTrackItem && beatTrackItems.length === 1) {
+        return matchingBeatTrackItem
+      }
+
+      // Older/manual projects may already contain this source before the dedicated
+      // Beat track exists. Reuse that placement rather than creating duplicate audio.
+      if (!existingBeatTrack) {
+        const existingPlacement = timeline.items
+          .filter(
+            (item) =>
+              (item.type === 'audio' || item.type === 'video') &&
+              item.mediaId === media.id,
+          )
+          .sort((left, right) => {
+            const leftAudio = left.type === 'audio'
+            const rightAudio = right.type === 'audio'
+            if (leftAudio !== rightAudio) return leftAudio ? -1 : 1
+            return right.durationInFrames - left.durationInFrames
+          })[0]
+        if (existingPlacement) return existingPlacement
+      }
+
+      const blobUrl = await resolveMediaUrl(media.id)
+      if (!blobUrl) throw new Error('Could not load the selected beat')
+      const maxOrder = timeline.tracks.reduce(
+        (max, track) => Math.max(max, track.order ?? 0),
+        0,
+      )
+      const beatTrack =
+        existingBeatTrack ??
+        {
+          ...createClassicTrack({
+            tracks: timeline.tracks,
+            kind: 'audio',
+            order: maxOrder + 1,
+          }),
+          name: 'Beat',
+        }
+      const nextTracks = existingBeatTrack
+        ? timeline.tracks
+        : [...timeline.tracks, beatTrack]
+      const durationInFrames = Math.max(
+        1,
+        Math.round(media.duration * timeline.fps),
+      )
+      const beatItems = buildDroppedMediaTimelineItems({
+        media,
+        mediaId: media.id,
+        mediaType: 'audio',
+        label: `Beat: ${media.fileName}`,
+        timelineFps: timeline.fps,
+        blobUrl,
+        canvasWidth: currentProject?.metadata.width ?? DEFAULT_PROJECT_WIDTH,
+        canvasHeight: currentProject?.metadata.height ?? DEFAULT_PROJECT_HEIGHT,
+        fallbackSourceFps: timeline.fps,
+        placement: {
+          primary: {
+            trackId: beatTrack.id,
+            from: 0,
+            durationInFrames,
+          },
+        },
+      })
+
+      if (existingBeatTrack) {
+        // Switching the project beat replaces the generated Beat track in one
+        // history transaction. Collision placement must never push the new beat
+        // behind the old source.
+        replaceItemsOnTrack(existingBeatTrack.id, beatItems)
+      } else {
+        addItemsOnNewTracks(beatItems, nextTracks)
+      }
+
+      const placed = beatItems.find(
+        (item) => item.type === 'audio' && item.mediaId === media.id,
+      )
+      if (!placed) throw new Error('Could not place the selected beat')
+
+      useSelectionStore.getState().setActiveTrack(beatTrack.id)
+      useSelectionStore.getState().selectItems([placed.id])
+      return placed
+    },
+    [
+      currentProject?.metadata.height,
+      currentProject?.metadata.width,
+      selectedMediaId,
+    ],
   )
 
   const analyze = useCallback(async () => {
@@ -245,10 +426,15 @@ export function BeatvideoMusicPanel() {
     })
 
     try {
+      await ensureBeatPlacement(selectedMediaId)
       const result = await analyzeMusicMedia(selectedMediaId, {
         signal: controller.signal,
         onProgress: setProgress,
       })
+      if (result.musicMap.beats.length === 0) {
+        throw new Error('No usable beats were detected. Try a clean music file or re-run analysis.')
+      }
+
       const detectedBarOneTime =
         result.musicMap.beats.find((beat) => beat.downbeat)?.time ??
         result.musicMap.beats[0]?.time ??
@@ -267,6 +453,39 @@ export function BeatvideoMusicPanel() {
       }
 
       await persistAnalysis(next)
+
+      const timeline = useTimelineStore.getState()
+      const refreshedGrid = resolveBeatvideoTimelineGrid(next, timeline.items, timeline.fps)
+      if (refreshedGrid) {
+        const reactiveUpdates = timeline.items.flatMap((item) =>
+          item.audioReactive?.bindings.length
+            ? [{
+                itemId: item.id,
+                audioReactive: {
+                  ...item.audioReactive,
+                  beats: projectAudioReactiveBeatsToItem(
+                    refreshedGrid.grid,
+                    item,
+                    timeline.fps,
+                  ),
+                },
+              }]
+            : [],
+        )
+        timeline.setAudioReactiveStates(reactiveUpdates)
+      }
+
+      if (currentProject.beatvideoMode === 'photo') {
+        const covers = timeline.items.filter((item) => item.type === 'image')
+        if (covers.length === 1) {
+          const cover = covers[0]!
+          const durationInFrames = Math.max(1, Math.round(result.musicMap.duration * timeline.fps))
+          if (cover.from !== 0 || cover.durationInFrames !== durationInFrames) {
+            timeline.updateItem(cover.id, { from: 0, durationInFrames })
+          }
+        }
+      }
+
       if (result.warnings.length > 0) {
         toast.warning('Beat analysis finished with warnings', {
           description: result.warnings[0],
@@ -285,7 +504,13 @@ export function BeatvideoMusicPanel() {
       setAnalyzing(false)
       setProgress(null)
     }
-  }, [analyzing, currentProject, persistAnalysis, selectedMediaId])
+  }, [
+    analyzing,
+    currentProject,
+    ensureBeatPlacement,
+    persistAnalysis,
+    selectedMediaId,
+  ])
 
   const loopVideoToBeat = useCallback(async () => {
     const media = useMediaLibraryStore
@@ -333,6 +558,108 @@ export function BeatvideoMusicPanel() {
     }
   }, [selectedLoopMediaId, timelineGrid])
 
+  const autoArrangeFootage = useCallback(async () => {
+    if (autoArranging) return
+    if (!timelineGrid) {
+      toast.error('Analyze and place the beat before Auto Arrange')
+      return
+    }
+    if (videoCandidates.length === 0) {
+      toast.error('Import one or more footage clips first')
+      return
+    }
+
+    const timeline = useTimelineStore.getState()
+    const timelineStart = timelineGrid.placement.from / timeline.fps
+    const timelineDuration = timelineGrid.placement.durationInFrames / timeline.fps
+    const rangeEnd = timelineStart + timelineDuration
+
+    const relativeMusic: MusicMap = {
+      ...timelineGrid.grid,
+      duration: timelineDuration,
+      beats: timelineGrid.grid.beats
+        .filter((beat) => beat.time >= timelineStart - 1e-6 && beat.time <= rangeEnd + 1e-6)
+        .map((beat) => ({ ...beat, time: Math.max(0, beat.time - timelineStart) })),
+      sections: timelineGrid.grid.sections
+        .filter(
+          (section) =>
+            section.end > timelineStart + 1e-6 && section.start < rangeEnd - 1e-6,
+        )
+        .map((section) => ({
+          ...section,
+          start: Math.max(0, section.start - timelineStart),
+          end: Math.min(timelineDuration, section.end - timelineStart),
+        }))
+        .filter((section) => section.end > section.start + 1e-6),
+    }
+
+    if (relativeMusic.beats.length === 0) {
+      toast.error('The placed beat has no usable grid points for Auto Arrange')
+      return
+    }
+
+    autoEditAbortRef.current?.abort()
+    const controller = new AbortController()
+    autoEditAbortRef.current = controller
+    setAutoArranging(true)
+    setAutoArrangeProgress('Preparing footage…')
+
+    const describeProgress = (next: ClipMapBuildProgress) => {
+      const sourceNumber = Math.min(next.totalSources, next.completedSources + 1)
+      if (next.phase === 'analyzing') {
+        setAutoArrangeProgress(
+          `Analyzing ${sourceNumber}/${next.totalSources} · ${next.fileName} · ${Math.round(next.analysisPercent ?? 0)}%`,
+        )
+      } else if (next.phase === 'ready') {
+        setAutoArrangeProgress(
+          `Footage ${next.completedSources}/${next.totalSources} ready`,
+        )
+      } else {
+        setAutoArrangeProgress(
+          `Reading footage ${sourceNumber}/${next.totalSources} · ${next.fileName}`,
+        )
+      }
+    }
+
+    try {
+      const clipMap = await buildClipMapForMedia({
+        media: videoCandidates,
+        signal: controller.signal,
+        analyzeMissing: true,
+        onProgress: describeProgress,
+      })
+      const relativePlan = createEditPlan(relativeMusic, clipMap, {
+        mode: 'auto',
+        transitionProfile: 'mixed',
+        seed: 1,
+      })
+      const plan = offsetEditPlanTimeline(relativePlan, timelineStart)
+      const result = await applyEditPlanToFreeCutTimeline(plan)
+
+      useSelectionStore.getState().setActiveTrack(result.targetVideoTrackId)
+      useSelectionStore.getState().selectItems(result.itemIds)
+      toast.success(
+        `Auto arranged ${result.itemIds.length} clip${result.itemIds.length === 1 ? '' : 's'}`,
+        {
+          description:
+            result.warnings.length > 0
+              ? result.warnings[0]
+              : `Built from ${clipMap.sources.length} footage source${clipMap.sources.length === 1 ? '' : 's'} on the verified beat grid.`,
+        },
+      )
+    } catch (error) {
+      if (!(error instanceof DOMException && error.name === 'AbortError')) {
+        toast.error('Could not auto arrange footage', {
+          description: error instanceof Error ? error.message : String(error),
+        })
+      }
+    } finally {
+      if (autoEditAbortRef.current === controller) autoEditAbortRef.current = null
+      setAutoArranging(false)
+      setAutoArrangeProgress(null)
+    }
+  }, [autoArranging, timelineGrid, videoCandidates])
+
   const insertProducerTags = useCallback(
     async (mode: 'playhead' | 'repeat') => {
       const media = useMediaLibraryStore
@@ -350,15 +677,49 @@ export function BeatvideoMusicPanel() {
       }
 
       const timeline = useTimelineStore.getState()
-      const tagDurationInFrames = getDroppedMediaDurationInFrames(media, 'audio', timeline.fps)
+      const requestedTrimStart = Number(tagTrimStartSeconds)
+      const requestedTrimEnd =
+        tagTrimEndSeconds.trim() === '' ? media.duration : Number(tagTrimEndSeconds)
+      if (
+        !Number.isFinite(requestedTrimStart) ||
+        !Number.isFinite(requestedTrimEnd) ||
+        requestedTrimStart < 0 ||
+        requestedTrimEnd <= requestedTrimStart ||
+        requestedTrimEnd > media.duration + 1e-6
+      ) {
+        toast.error('Enter a valid producer-tag trim range')
+        return
+      }
+
+      const tagDurationSeconds = requestedTrimEnd - requestedTrimStart
+      const requestedAnchorSeconds = Number(tagAnchorSeconds)
+      if (
+        !Number.isFinite(requestedAnchorSeconds) ||
+        requestedAnchorSeconds < 0 ||
+        requestedAnchorSeconds > tagDurationSeconds
+      ) {
+        toast.error('Tag anchor must sit inside the trimmed clip')
+        return
+      }
+
+      const tagDurationInFrames = Math.max(
+        1,
+        Math.round(tagDurationSeconds * timeline.fps),
+      )
+      const anchorFrameOffset = Math.round(requestedAnchorSeconds * timeline.fps)
       let frames =
         mode === 'playhead'
-          ? [Math.max(0, Math.round(usePlaybackStore.getState().currentFrame))]
+          ? [
+              Math.round(usePlaybackStore.getState().currentFrame) -
+                anchorFrameOffset,
+            ].filter((frame) => frame >= 0)
           : timelineGrid
             ? resolveProducerTagRepeatFrames({
                 beats: timelineGrid.grid.beats,
                 fps: timeline.fps,
                 everyBars: tagRepeatBars,
+                firstBar: tagFirstBar,
+                anchorFrameOffset,
                 startFrame: timelineGrid.placement.from,
                 endFrame: timelineGrid.placement.from + timelineGrid.placement.durationInFrames,
                 tagDurationInFrames,
@@ -370,9 +731,26 @@ export function BeatvideoMusicPanel() {
         return
       }
 
+      const existingPatternIds =
+        mode === 'repeat'
+          ? timeline.items
+              .filter(
+                (item) =>
+                  item.type === 'audio' &&
+                  item.mediaId === media.id &&
+                  item.label === `Watermark: ${media.fileName}`,
+              )
+              .map((item) => item.id)
+          : []
+      const replacingPatternIds = new Set(existingPatternIds)
       const occupied = new Set(
         timeline.items
-          .filter((item) => item.type === 'audio' && item.mediaId === media.id)
+          .filter(
+            (item) =>
+              item.type === 'audio' &&
+              item.mediaId === media.id &&
+              !replacingPatternIds.has(item.id),
+          )
           .map((item) => Math.round(item.from)),
       )
       frames = frames.filter((frame) => !occupied.has(frame))
@@ -386,10 +764,15 @@ export function BeatvideoMusicPanel() {
         return
       }
 
-      const existingTagTrack = timeline.tracks.find(
+      if (existingPatternIds.length > 0) {
+        timeline.removeItems(existingPatternIds)
+      }
+
+      const currentTimeline = useTimelineStore.getState()
+      const existingTagTrack = currentTimeline.tracks.find(
         (track) => track.kind === 'audio' && track.name === 'Producer tags',
       )
-      const maxOrder = timeline.tracks.reduce(
+      const maxOrder = currentTimeline.tracks.reduce(
         (max, track) => Math.max(max, track.order ?? 0),
         0,
       )
@@ -397,27 +780,36 @@ export function BeatvideoMusicPanel() {
         existingTagTrack ??
         {
           ...createClassicTrack({
-            tracks: timeline.tracks,
+            tracks: currentTimeline.tracks,
             kind: 'audio',
             order: maxOrder + 1,
           }),
           name: 'Producer tags',
         }
       const nextTracks = existingTagTrack
-        ? timeline.tracks
-        : [...timeline.tracks, tagTrack]
+        ? currentTimeline.tracks
+        : [...currentTimeline.tracks, tagTrack]
       const canvasWidth = currentProject?.metadata.width ?? DEFAULT_PROJECT_WIDTH
       const canvasHeight = currentProject?.metadata.height ?? DEFAULT_PROJECT_HEIGHT
+      const sourceStart = Math.round(requestedTrimStart * timeline.fps)
+      const sourceEnd = Math.round(requestedTrimEnd * timeline.fps)
+      const duckTargetTrackId = timelineGrid?.placement.trackId
       const tagItems = frames.flatMap((from) =>
         buildDroppedMediaTimelineItems({
           media,
           mediaId: media.id,
           mediaType: 'audio',
-          label: `Producer tag: ${media.fileName}`,
+          label:
+            mode === 'repeat'
+              ? `Watermark: ${media.fileName}`
+              : `Producer tag: ${media.fileName}`,
           timelineFps: timeline.fps,
           blobUrl,
           canvasWidth,
           canvasHeight,
+          sourceStart,
+          sourceEnd,
+          fallbackSourceFps: timeline.fps,
           placement: {
             primary: {
               trackId: tagTrack.id,
@@ -425,11 +817,25 @@ export function BeatvideoMusicPanel() {
               durationInFrames: tagDurationInFrames,
             },
           },
-        }),
+        }).map((item) =>
+          item.type === 'audio' && tagDuckDb < 0
+            ? {
+                ...item,
+                audioDucking: {
+                  duckOthersDb: tagDuckDb,
+                  attackSec: 0.06,
+                  releaseSec: 0.22,
+                  ...(duckTargetTrackId
+                    ? { targetTrackIds: [duckTargetTrackId] }
+                    : {}),
+                },
+              }
+            : item,
+        ),
       )
 
       if (existingTagTrack) {
-        timeline.addItems(tagItems)
+        currentTimeline.addItems(tagItems)
       } else {
         addItemsOnNewTracks(tagItems, nextTracks)
       }
@@ -438,11 +844,22 @@ export function BeatvideoMusicPanel() {
       useSelectionStore.getState().selectItems(tagItems.map((item) => item.id))
       toast.success(
         mode === 'repeat'
-          ? `Placed ${tagItems.length} producer tags every ${tagRepeatBars} bars`
+          ? `Placed ${tagItems.length} watermark tags from bar ${tagFirstBar}, every ${tagRepeatBars} bars`
           : 'Producer tag added at playhead',
       )
     },
-    [currentProject?.metadata.height, currentProject?.metadata.width, selectedTagMediaId, tagRepeatBars, timelineGrid],
+    [
+      currentProject?.metadata.height,
+      currentProject?.metadata.width,
+      selectedTagMediaId,
+      tagAnchorSeconds,
+      tagDuckDb,
+      tagFirstBar,
+      tagRepeatBars,
+      tagTrimEndSeconds,
+      tagTrimStartSeconds,
+      timelineGrid,
+    ],
   )
 
   const requirePlacementAtPlayhead = useCallback(() => {
@@ -516,6 +933,11 @@ export function BeatvideoMusicPanel() {
         return
       }
 
+      if (effectiveAnalysis.musicMap.beats.length === 0) {
+        toast.info('Run beat analysis first to use detected timing')
+        return
+      }
+
       await persistAnalysis({
         ...effectiveAnalysis,
         version: 2,
@@ -527,31 +949,67 @@ export function BeatvideoMusicPanel() {
   )
 
   const applyBpm = useCallback(async () => {
-    if (!effectiveAnalysis) return
     const nextBpm = Number(bpmDraft)
     if (!Number.isFinite(nextBpm) || nextBpm < 40 || nextBpm > 300) {
       toast.error('Enter a BPM between 40 and 300')
       return
     }
-    await persistAnalysis({
-      ...effectiveAnalysis,
+
+    try {
+      await ensureBeatPlacement(selectedMediaId)
+    } catch (error) {
+      toast.error('Could not use this as the project beat', {
+        description: error instanceof Error ? error.message : String(error),
+      })
+      return
+    }
+
+    if (effectiveAnalysis) {
+      await persistAnalysis({
+        ...effectiveAnalysis,
+        version: 2,
+        bpmOverride: nextBpm,
+        gridMode: 'fixed',
+        correctionAnchors: effectiveAnalysis.correctionAnchors ?? [],
+      })
+      toast.success(`Fixed grid set to ${nextBpm} BPM`)
+      return
+    }
+
+    const media = mediaItems.find((candidate) => candidate.id === selectedMediaId)
+    if (!media || media.duration <= 0) {
+      toast.error('Select a beat with a known duration first')
+      return
+    }
+
+    const next: BeatvideoMusicAnalysis = {
       version: 2,
+      mediaId: media.id,
+      analyzedAt: Date.now(),
+      musicMap: {
+        duration: media.duration,
+        bpm: nextBpm,
+        beatsPerBar: 4,
+        beats: [],
+        sections: [],
+      },
+      detectedBarOneTime: null,
+      barOneTime: 0,
+      barOneVerified: false,
       bpmOverride: nextBpm,
       gridMode: 'fixed',
-      correctionAnchors: effectiveAnalysis.correctionAnchors ?? [],
-    })
-  }, [bpmDraft, effectiveAnalysis, persistAnalysis])
-
-  const resetToDetected = useCallback(async () => {
-    if (!effectiveAnalysis) return
-    await persistAnalysis({
-      ...effectiveAnalysis,
-      version: 2,
-      bpmOverride: null,
-      gridMode: 'detected',
-      correctionAnchors: effectiveAnalysis.correctionAnchors ?? [],
-    })
-  }, [effectiveAnalysis, persistAnalysis])
+      correctionAnchors: [],
+    }
+    await persistAnalysis(next)
+    toast.success(`Fixed grid set to ${nextBpm} BPM`)
+  }, [
+    bpmDraft,
+    effectiveAnalysis,
+    ensureBeatPlacement,
+    mediaItems,
+    persistAnalysis,
+    selectedMediaId,
+  ])
 
   const nudgeGrid = useCallback(
     async (timelineDeltaSeconds: number) => {
@@ -707,17 +1165,71 @@ export function BeatvideoMusicPanel() {
 
   const resetCorrections = useCallback(async () => {
     if (!effectiveAnalysis) return
+    const hasDetectedTiming = effectiveAnalysis.musicMap.beats.length > 0
+    const fixedBpm =
+      effectiveAnalysis.bpmOverride ?? effectiveAnalysis.musicMap.bpm ?? null
     await persistAnalysis({
       ...effectiveAnalysis,
       version: 2,
-      barOneTime: effectiveAnalysis.detectedBarOneTime,
+      barOneTime: hasDetectedTiming ? effectiveAnalysis.detectedBarOneTime : 0,
       barOneVerified: false,
-      bpmOverride: null,
-      gridMode: 'detected',
+      bpmOverride: hasDetectedTiming ? null : fixedBpm,
+      gridMode: hasDetectedTiming ? 'detected' : 'fixed',
       correctionAnchors: [],
     })
-    toast.success('Beat grid reset to detected timing')
+    toast.success(
+      hasDetectedTiming
+        ? 'Beat grid reset to detected timing'
+        : 'Fixed BPM grid reset to bar 1',
+    )
   }, [effectiveAnalysis, persistAnalysis])
+
+  const applyReactivePreset = useCallback(
+    (presetId: AudioReactivePresetId) => {
+      if (!timelineGrid) {
+        toast.error('Analyze and place the beat first')
+        return
+      }
+      if (reactiveTargets.length === 0) {
+        toast.error(
+          currentProject?.beatvideoMode === 'photo'
+            ? 'Add a cover image first'
+            : 'Select one or more visual clips first',
+        )
+        return
+      }
+
+      const updates = reactiveTargets.flatMap((item) => {
+        const update = buildAudioReactivePresetUpdate({
+          item,
+          grid: timelineGrid.grid,
+          fps,
+          presetId,
+        })
+        return update ? [update] : []
+      })
+      if (updates.length === 0) {
+        toast.error('This reactive look cannot be applied to the current selection')
+        return
+      }
+
+      setItemEffectsAndAudioReactive(updates)
+      const preset = AUDIO_REACTIVE_PRESETS.find((candidate) => candidate.id === presetId)
+      toast.success(`${preset?.label ?? 'Reactive look'} applied`, {
+        description:
+          updates.length === 1
+            ? 'The layer stays fully editable in Applied effects.'
+            : `${updates.length} layers updated as one edit.`,
+      })
+    },
+    [
+      currentProject?.beatvideoMode,
+      fps,
+      reactiveTargets,
+      setItemEffectsAndAudioReactive,
+      timelineGrid,
+    ],
+  )
 
   return (
     <div className="h-full overflow-y-auto p-3">
@@ -740,7 +1252,7 @@ export function BeatvideoMusicPanel() {
             <select
               value={selectedMediaId}
               onChange={(event) => setSelectedMediaId(event.target.value)}
-              disabled={analyzing}
+              disabled={analyzing || importingBeat}
               className="h-8 w-full rounded-md border border-input bg-secondary px-2 text-xs text-foreground"
             >
               {candidates.map((media) => (
@@ -751,9 +1263,20 @@ export function BeatvideoMusicPanel() {
             </select>
           ) : (
             <div className="border-l-2 border-border pl-2 text-[10px] leading-relaxed text-muted-foreground">
-              Import an audio file, or a video with audio, in Media first.
+              Start here by importing the beat for this project.
             </div>
           )}
+
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            className="w-full"
+            disabled={analyzing || importingBeat}
+            onClick={() => void importBeat()}
+          >
+            {importingBeat ? 'Importing beat…' : candidates.length > 0 ? 'Import another beat' : 'Import beat'}
+          </Button>
 
           <Button
             type="button"
@@ -765,10 +1288,37 @@ export function BeatvideoMusicPanel() {
             <AudioLines className="h-3.5 w-3.5" />
             {analyzing
               ? 'Analyzing beat…'
-              : analysis
+              : effectiveAnalysis
                 ? 'Analyze / replace grid'
                 : 'Analyze beat'}
           </Button>
+
+          <div className="flex items-center gap-1.5">
+            <input
+              type="number"
+              min={40}
+              max={300}
+              step={0.01}
+              value={bpmDraft}
+              placeholder="BPM"
+              disabled={!selectedMediaId || analyzing}
+              onChange={(event) => setBpmDraft(event.target.value)}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter') void applyBpm()
+              }}
+              className="h-8 min-w-0 flex-1 rounded-md border border-input bg-secondary px-2 font-mono text-xs text-foreground"
+              aria-label="Manual fixed BPM"
+            />
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              disabled={!selectedMediaId || analyzing || bpmDraft.trim() === ''}
+              onClick={() => void applyBpm()}
+            >
+              Use BPM
+            </Button>
+          </div>
 
           {analyzing && progress ? (
             <div className="space-y-1.5">
@@ -786,59 +1336,150 @@ export function BeatvideoMusicPanel() {
               </div>
             </div>
           ) : null}
+
+          {!analyzing && effectiveAnalysis && resolvedSourceGrid ? (
+            <div className="rounded-md border border-border bg-secondary/35 p-2.5">
+              <div className="flex items-center gap-1.5 text-xs font-semibold text-foreground">
+                <CheckCircle2 className="h-3.5 w-3.5 text-primary" />
+                Beat analysis ready
+              </div>
+              <div className="mt-1 font-mono text-[11px] text-foreground">
+                {resolvedSourceGrid.bpm?.toFixed(2).replace(/\.00$/, '') ?? '—'} BPM
+                <span className="mx-1.5 text-muted-foreground">·</span>
+                {resolvedSourceGrid.beats.length} beats
+                <span className="mx-1.5 text-muted-foreground">·</span>
+                {barCount} bars
+              </div>
+              <div className="mt-1 text-[10px] leading-relaxed text-muted-foreground">
+                {timelineGrid
+                  ? `Grid linked to ${timelineGrid.placement.label}. Reactive effects can use it now.`
+                  : 'Analysis is saved. Analyze again or set BPM to link this source as the project beat.'}
+              </div>
+            </div>
+          ) : null}
         </section>
+
+        {effectiveAnalysis ? (
+          <section className="space-y-2 border-t border-border pt-3">
+            <div className="flex items-center gap-2">
+              <Sparkles className="h-3.5 w-3.5 text-primary" />
+              <div className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+                Reactive looks
+              </div>
+            </div>
+            <p className="text-[10px] leading-relaxed text-muted-foreground">
+              {timelineGrid
+                ? reactiveTargets.length > 0
+                  ? currentProject?.beatvideoMode === 'photo'
+                    ? 'Applies to the cover. Fine-tune the same bindings later in Applied effects.'
+                    : `Applies to ${reactiveTargets.length} selected visual layer${reactiveTargets.length === 1 ? '' : 's'}.`
+                  : 'Select a visual layer to apply a look.'
+                : 'Place the analyzed beat on the timeline before applying reactive looks.'}
+            </p>
+            <div className="grid grid-cols-2 gap-1.5">
+              {AUDIO_REACTIVE_PRESETS.map((preset) => (
+                <Button
+                  key={preset.id}
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  className="h-auto min-h-8 justify-start whitespace-normal px-2 py-1.5 text-left text-[10px]"
+                  disabled={!timelineGrid || reactiveTargets.length === 0}
+                  title={preset.description}
+                  onClick={() => applyReactivePreset(preset.id)}
+                >
+                  {preset.label}
+                </Button>
+              ))}
+            </div>
+          </section>
+        ) : null}
 
         {currentProject?.beatvideoMode === 'video' ? (
           <section className="space-y-2 border-t border-border pt-3">
             <div className="flex items-center gap-2">
               <Film className="h-3.5 w-3.5 text-muted-foreground" />
               <div className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
-                Footage loop
+                Footage arrangement
               </div>
             </div>
 
             {videoCandidates.length > 0 ? (
               <>
-                <select
-                  value={selectedLoopMediaId}
-                  onChange={(event) => setSelectedLoopMediaId(event.target.value)}
-                  className="h-8 w-full rounded-md border border-input bg-secondary px-2 text-xs text-foreground"
-                >
-                  {videoCandidates.map((media) => (
-                    <option key={media.id} value={media.id}>
-                      {media.fileName}
-                    </option>
-                  ))}
-                </select>
                 <Button
                   type="button"
                   size="sm"
                   className="w-full justify-start"
-                  onClick={() => void loopVideoToBeat()}
+                  disabled={!timelineGrid || autoArranging}
+                  onClick={() => void autoArrangeFootage()}
                 >
-                  <Repeat2 className="h-3.5 w-3.5" />
-                  Loop clip to beat
+                  <Sparkles className="h-3.5 w-3.5" />
+                  {autoArranging ? 'Auto arranging…' : 'Auto arrange footage'}
                 </Button>
                 <p className="text-[10px] leading-relaxed text-muted-foreground">
-                  Repeats the full clip with clean cuts, trims only the final repeat,
-                  fills the frame and keeps footage audio muted.
+                  Uses all imported footage. Existing FreeCut scene detection supplies
+                  shot boundaries; the verified beat grid and music sections choose the
+                  cut cadence. It does not cut on every beat.
                 </p>
+                {autoArrangeProgress ? (
+                  <div className="border-l-2 border-border pl-2 font-mono text-[10px] leading-relaxed text-muted-foreground">
+                    {autoArrangeProgress}
+                  </div>
+                ) : null}
+
+                <details className="border-t border-border pt-2">
+                  <summary className="cursor-pointer list-none text-[10px] font-medium text-foreground marker:hidden [&::-webkit-details-marker]:hidden">
+                    Simple loop
+                  </summary>
+                  <div className="mt-2 space-y-1.5">
+                    <select
+                      value={selectedLoopMediaId}
+                      onChange={(event) => setSelectedLoopMediaId(event.target.value)}
+                      disabled={autoArranging}
+                      className="h-8 w-full rounded-md border border-input bg-secondary px-2 text-xs text-foreground"
+                    >
+                      {videoCandidates.map((media) => (
+                        <option key={media.id} value={media.id}>
+                          {media.fileName}
+                        </option>
+                      ))}
+                    </select>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      className="w-full justify-start"
+                      disabled={autoArranging}
+                      onClick={() => void loopVideoToBeat()}
+                    >
+                      <Repeat2 className="h-3.5 w-3.5" />
+                      Loop one clip across beat
+                    </Button>
+                    <p className="text-[10px] leading-relaxed text-muted-foreground">
+                      Repeats the full source cleanly and trims only the last repeat.
+                    </p>
+                  </div>
+                </details>
               </>
             ) : (
               <div className="border-l-2 border-border pl-2 text-[10px] leading-relaxed text-muted-foreground">
-                Import one short video clip in Media first.
+                Import one or more footage clips in Media first.
               </div>
             )}
           </section>
         ) : null}
 
-        <section className="space-y-2 border-t border-border pt-3">
-          <div className="flex items-center gap-2">
-            <Tag className="h-3.5 w-3.5 text-muted-foreground" />
-            <div className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
-              Producer tag
-            </div>
-          </div>
+        <details className="border-t border-border pt-3">
+          <summary className="flex cursor-pointer list-none items-center justify-between gap-2 text-xs font-medium text-foreground marker:hidden [&::-webkit-details-marker]:hidden">
+            <span className="flex items-center gap-2">
+              <Tag className="h-3.5 w-3.5 text-muted-foreground" />
+              Tags & watermark
+            </span>
+            <span className="text-[10px] font-normal text-muted-foreground">
+              Optional
+            </span>
+          </summary>
+          <div className="mt-3 space-y-2">
 
           {tagCandidates.length > 0 ? (
             <>
@@ -862,35 +1503,117 @@ export function BeatvideoMusicPanel() {
                 onClick={() => void insertProducerTags('playhead')}
               >
                 <Tag className="h-3.5 w-3.5" />
-                Place at playhead
+                Place tag at playhead
               </Button>
 
-              <div className="grid grid-cols-[1fr_auto] gap-1.5">
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="outline"
-                  className="justify-start"
-                  disabled={!timelineGrid}
-                  onClick={() => void insertProducerTags('repeat')}
-                >
-                  <Repeat2 className="h-3.5 w-3.5" />
-                  Repeat across beat
-                </Button>
-                <select
-                  value={tagRepeatBars}
-                  onChange={(event) => setTagRepeatBars(Number(event.target.value))}
-                  className="h-8 rounded-md border border-input bg-secondary px-2 text-xs text-foreground"
-                  aria-label="Producer tag repeat interval"
-                >
-                  <option value={8}>8 bars</option>
-                  <option value={16}>16 bars</option>
-                  <option value={32}>32 bars</option>
-                </select>
+              <div className="grid grid-cols-2 gap-1.5">
+                <label className="space-y-1 text-[10px] text-muted-foreground">
+                  <span>Start bar</span>
+                  <input
+                    type="number"
+                    min={1}
+                    step={1}
+                    value={tagFirstBar}
+                    onChange={(event) =>
+                      setTagFirstBar(Math.max(1, Number(event.target.value) || 1))
+                    }
+                    className="h-8 w-full rounded-md border border-input bg-secondary px-2 font-mono text-xs text-foreground"
+                  />
+                </label>
+                <label className="space-y-1 text-[10px] text-muted-foreground">
+                  <span>Every</span>
+                  <select
+                    value={tagRepeatBars}
+                    onChange={(event) => setTagRepeatBars(Number(event.target.value))}
+                    className="h-8 w-full rounded-md border border-input bg-secondary px-2 text-xs text-foreground"
+                    aria-label="Producer tag repeat interval"
+                  >
+                    <option value={8}>8 bars</option>
+                    <option value={16}>16 bars</option>
+                    <option value={32}>32 bars</option>
+                    <option value={64}>64 bars</option>
+                  </select>
+                </label>
               </div>
+
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                className="w-full justify-start"
+                disabled={!timelineGrid}
+                onClick={() => void insertProducerTags('repeat')}
+              >
+                <Repeat2 className="h-3.5 w-3.5" />
+                Apply watermark pattern
+              </Button>
+
+              <details className="border-t border-border pt-2">
+                <summary className="cursor-pointer list-none text-[10px] font-medium text-foreground marker:hidden [&::-webkit-details-marker]:hidden">
+                  Timing & ducking
+                </summary>
+                <div className="mt-2 grid grid-cols-2 gap-1.5">
+                  <label className="space-y-1 text-[10px] text-muted-foreground">
+                    <span>Trim start</span>
+                    <input
+                      type="number"
+                      min={0}
+                      step={0.01}
+                      value={tagTrimStartSeconds}
+                      onChange={(event) => setTagTrimStartSeconds(event.target.value)}
+                      className="h-8 w-full rounded-md border border-input bg-secondary px-2 font-mono text-xs text-foreground"
+                      aria-label="Producer tag trim start in seconds"
+                    />
+                  </label>
+                  <label className="space-y-1 text-[10px] text-muted-foreground">
+                    <span>Trim end</span>
+                    <input
+                      type="number"
+                      min={0}
+                      step={0.01}
+                      placeholder="Full"
+                      value={tagTrimEndSeconds}
+                      onChange={(event) => setTagTrimEndSeconds(event.target.value)}
+                      className="h-8 w-full rounded-md border border-input bg-secondary px-2 font-mono text-xs text-foreground"
+                      aria-label="Producer tag trim end in seconds"
+                    />
+                  </label>
+                  <label className="space-y-1 text-[10px] text-muted-foreground">
+                    <span>Anchor in clip</span>
+                    <input
+                      type="number"
+                      min={0}
+                      step={0.01}
+                      value={tagAnchorSeconds}
+                      onChange={(event) => setTagAnchorSeconds(event.target.value)}
+                      className="h-8 w-full rounded-md border border-input bg-secondary px-2 font-mono text-xs text-foreground"
+                      aria-label="Producer tag anchor in seconds"
+                    />
+                  </label>
+                  <label className="space-y-1 text-[10px] text-muted-foreground">
+                    <span>Duck beat</span>
+                    <select
+                      value={tagDuckDb}
+                      onChange={(event) => setTagDuckDb(Number(event.target.value))}
+                      className="h-8 w-full rounded-md border border-input bg-secondary px-2 text-xs text-foreground"
+                    >
+                      <option value={0}>Off</option>
+                      <option value={-2}>−2 dB</option>
+                      <option value={-3}>−3 dB</option>
+                      <option value={-4}>−4 dB</option>
+                      <option value={-6}>−6 dB</option>
+                    </select>
+                  </label>
+                </div>
+                <p className="mt-2 text-[10px] leading-relaxed text-muted-foreground">
+                  Anchor is the moment inside the tag that lands on the bar. The voice
+                  keeps its natural speed; only placement changes.
+                </p>
+              </details>
+
               <p className="text-[10px] leading-relaxed text-muted-foreground">
-                Tags are normal audio clips on the Producer tags track. Move, trim,
-                change volume, fade or delete them like any other clip.
+                Repeats stay as normal timeline clips. Move, trim, fade, mute at −60 dB
+                or delete any occurrence without changing the rest.
               </p>
             </>
           ) : (
@@ -898,7 +1621,8 @@ export function BeatvideoMusicPanel() {
               Import a short producer-tag audio file in Media. The beat source itself is not used as a tag.
             </div>
           )}
-        </section>
+          </div>
+        </details>
 
         {effectiveAnalysis && resolvedSourceGrid ? (
           <>
@@ -946,6 +1670,7 @@ export function BeatvideoMusicPanel() {
                       type="button"
                       size="sm"
                       variant={gridMode === 'detected' ? 'default' : 'outline'}
+                      disabled={effectiveAnalysis.musicMap.beats.length === 0}
                       onClick={() => void setGridMode('detected')}
                     >
                       Detected beatmap
@@ -964,48 +1689,6 @@ export function BeatvideoMusicPanel() {
                     one even tempo grid.
                   </p>
                 </section>
-
-                {gridMode === 'fixed' ? (
-                  <section className="space-y-2">
-                    <div className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
-                      Fixed tempo
-                    </div>
-                    <div className="flex gap-1.5">
-                      <input
-                        type="number"
-                        min={40}
-                        max={300}
-                        step={0.01}
-                        value={bpmDraft}
-                        onChange={(event) => setBpmDraft(event.target.value)}
-                        onKeyDown={(event) => {
-                          if (event.key === 'Enter') void applyBpm()
-                        }}
-                        className="h-8 min-w-0 flex-1 rounded-md border border-input bg-secondary px-2 font-mono text-xs text-foreground"
-                        aria-label="Fixed BPM"
-                      />
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="outline"
-                        onClick={() => void applyBpm()}
-                      >
-                        Apply
-                      </Button>
-                      <Button
-                        type="button"
-                        size="icon"
-                        variant="ghost"
-                        className="h-8 w-8"
-                        onClick={() => void resetToDetected()}
-                        aria-label="Use detected timing"
-                        data-tooltip="Use detected timing"
-                      >
-                        <RotateCcw className="h-3.5 w-3.5" />
-                      </Button>
-                    </div>
-                  </section>
-                ) : null}
 
                 <section className="space-y-2 border-t border-border pt-3">
                   <div className="flex items-center justify-between gap-2">

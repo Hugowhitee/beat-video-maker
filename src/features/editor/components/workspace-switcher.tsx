@@ -1,26 +1,41 @@
 import { memo } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Layers, Palette, Scissors } from 'lucide-react'
+import { AudioLines, Gauge, Layers, Palette, SlidersHorizontal, Sparkles } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { useEditorStore } from '@/shared/state/editor'
 import { cn } from '@/shared/ui/cn'
 import type { EditorWorkspaceId } from '@/config/editor-workspaces'
 import type { BeatvideoProjectMode } from '@/types/project'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 
-const WORKSPACE_ITEMS: readonly {
+const PRIMARY_WORKSPACES: readonly {
   id: EditorWorkspaceId
   icon: LucideIcon
-  labelKey: string
+  label: string
 }[] = [
-  { id: 'edit', icon: Scissors, labelKey: 'toolbar.workspaces.edit' },
-  { id: 'color', icon: Palette, labelKey: 'toolbar.workspaces.color' },
-  { id: 'motion', icon: Layers, labelKey: 'toolbar.workspaces.motion' },
+  { id: 'beat', icon: AudioLines, label: 'Beat' },
+  { id: 'edit', icon: Sparkles, label: 'Visual' },
+  { id: 'master', icon: Gauge, label: 'Master' },
+]
+
+const ADVANCED_WORKSPACES: readonly {
+  id: EditorWorkspaceId
+  icon: LucideIcon
+  label: string
+}[] = [
+  { id: 'color', icon: Palette, label: 'Color' },
+  { id: 'motion', icon: Layers, label: 'Motion' },
 ]
 
 /**
- * DaVinci-style workspace tabs. Switching applies a panel layout preset
- * (scopes, inspector tab, sidebar tab, timeline split) without touching
- * selection, playhead, or project state.
+ * Producer-first Beatvideo workspaces. The primary path is Beat → Visual → Master.
+ * Mature FreeCut Color/Motion workspaces remain available behind Advanced instead
+ * of competing with the common publication flow.
  */
 export const WorkspaceSwitcher = memo(function WorkspaceSwitcher({
   beatvideoMode = 'video',
@@ -30,14 +45,17 @@ export const WorkspaceSwitcher = memo(function WorkspaceSwitcher({
   const { t } = useTranslation()
   const workspace = useEditorStore((s) => s.workspace)
   const setWorkspace = useEditorStore((s) => s.setWorkspace)
+  const advancedActive = ADVANCED_WORKSPACES.some((item) => item.id === workspace)
+  const visualHint =
+    beatvideoMode === 'photo' ? 'Design the cover visual' : 'Edit footage and visuals'
 
   return (
     <div
       role="tablist"
       aria-label={t('toolbar.workspaces.label')}
-      className="flex items-center gap-0.5 rounded-md bg-muted p-0.5"
+      className="flex items-center gap-0.5 rounded-sm border border-border/80 bg-secondary/70 p-0.5"
     >
-      {WORKSPACE_ITEMS.map(({ id, icon: Icon, labelKey }) => {
+      {PRIMARY_WORKSPACES.map(({ id, icon: Icon, label }) => {
         const isActive = workspace === id
         return (
           <button
@@ -45,19 +63,46 @@ export const WorkspaceSwitcher = memo(function WorkspaceSwitcher({
             type="button"
             role="tab"
             aria-selected={isActive}
+            title={id === 'edit' ? visualHint : undefined}
             onClick={() => setWorkspace(id)}
             className={cn(
-              'flex h-7 items-center gap-1.5 rounded-[5px] px-3 text-xs font-medium transition-colors',
+              'flex h-7 items-center gap-1.5 rounded-[3px] px-3 text-xs font-medium transition-colors',
               isActive
-                ? 'bg-background text-foreground shadow-sm'
-                : 'text-muted-foreground hover:text-foreground',
+                ? 'bg-primary text-primary-foreground'
+                : 'text-muted-foreground hover:bg-background/60 hover:text-foreground',
             )}
           >
             <Icon className="h-3.5 w-3.5" />
-            {beatvideoMode === 'photo' && id === 'edit' ? 'Design' : t(labelKey)}
+            {label}
           </button>
         )
       })}
+
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <button
+            type="button"
+            aria-label="Advanced workspaces"
+            className={cn(
+              'flex h-7 items-center gap-1 rounded-[3px] px-2 text-xs font-medium transition-colors',
+              advancedActive
+                ? 'bg-primary text-primary-foreground'
+                : 'text-muted-foreground hover:bg-background/60 hover:text-foreground',
+            )}
+          >
+            <SlidersHorizontal className="h-3.5 w-3.5" />
+            <span className="hidden xl:inline">Advanced</span>
+          </button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" className="min-w-36">
+          {ADVANCED_WORKSPACES.map(({ id, icon: Icon, label }) => (
+            <DropdownMenuItem key={id} onSelect={() => setWorkspace(id)}>
+              <Icon className="h-3.5 w-3.5" />
+              {label}
+            </DropdownMenuItem>
+          ))}
+        </DropdownMenuContent>
+      </DropdownMenu>
     </div>
   )
 })

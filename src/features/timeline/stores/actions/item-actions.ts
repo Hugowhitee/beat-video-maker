@@ -3,6 +3,7 @@
  */
 
 import type { ControllerItem, TimelineItem, TimelineTrack, VideoItem } from '@/types/timeline'
+import type { AudioReactiveState } from '@/types/beatvideo'
 import type {
   CanvasSettings,
   ResolvedTransform,
@@ -714,6 +715,48 @@ export function addItemsOnNewTracks(items: TimelineItem[], tracks: TimelineTrack
   )
 }
 
+/**
+ * Replace the contents of one dedicated track as a single undoable transaction.
+ *
+ * This is intentionally narrower than removeItems(): generated workflow tracks
+ * (for example Beatvideo's canonical Beat track) are isolated and should swap
+ * their source without leaving the previous source behind or producing two
+ * separate undo steps.
+ */
+export function replaceItemsOnTrack(trackId: string, items: TimelineItem[]): void {
+  if (items.some((item) => item.trackId !== trackId)) {
+    throw new Error('replaceItemsOnTrack expects every replacement item on the target track')
+  }
+
+  const existingIds = useItemsStore
+    .getState()
+    .items.filter((item) => item.trackId === trackId)
+    .map((item) => item.id)
+
+  if (existingIds.length === 0 && items.length === 0) return
+
+  execute(
+    'REPLACE_ITEMS_ON_TRACK',
+    () => {
+      const store = useItemsStore.getState()
+
+      if (existingIds.length > 0) {
+        store._removeItems(existingIds)
+        useTransitionsStore.getState()._removeTransitionsForItems(existingIds)
+        useKeyframesStore.getState()._removeKeyframesForItems(existingIds)
+      }
+
+      if (items.length > 0) {
+        store._addItems(items)
+      }
+
+      pruneLayerGroupsAfterItemRemoval()
+      useTimelineSettingsStore.getState().markDirty()
+    },
+    { trackId, removedCount: existingIds.length, addedCount: items.length },
+  )
+}
+
 export function updateItem(id: string, updates: Partial<TimelineItem>): void {
   execute(
     'UPDATE_ITEM',
@@ -730,6 +773,29 @@ export function updateItem(id: string, updates: Partial<TimelineItem>): void {
       useTimelineSettingsStore.getState().markDirty()
     },
     { id, updates },
+  )
+}
+
+/**
+ * Replace audio-reactive state on one or more items as one history transaction.
+ * Used by effect-property bindings and beat re-analysis re-projection.
+ */
+export function setAudioReactiveStates(
+  updates: Array<{ itemId: string; audioReactive?: AudioReactiveState }>,
+): void {
+  if (updates.length === 0) return
+
+  execute(
+    'SET_AUDIO_REACTIVE',
+    () => {
+      const store = useItemsStore.getState()
+      for (const update of updates) {
+        if (!store.itemById[update.itemId]) continue
+        store._updateItem(update.itemId, { audioReactive: update.audioReactive })
+      }
+      useTimelineSettingsStore.getState().markDirty()
+    },
+    { count: updates.length },
   )
 }
 

@@ -5,7 +5,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { EffectMoveButtons, type EffectMoveProps } from './effect-move-buttons'
 
 const EFFECT_HEADER_CLASS =
-  'flex min-w-0 items-center justify-between gap-2 border-y border-border/60 bg-muted/35 px-2 py-1'
+  'flex min-w-0 items-center justify-between gap-2 border-y border-border/70 bg-secondary/35 px-2 py-1.5'
 
 interface EffectPanelHeaderActionsProps extends EffectMoveProps {
   effectId: string
@@ -84,12 +84,12 @@ function EffectPanelHeaderActions({
       <Button
         variant="ghost"
         size="icon"
-        className="h-6 w-6 flex-shrink-0"
+        className="h-6 w-6 flex-shrink-0 text-muted-foreground hover:text-destructive"
         onClick={() => onRemove(effectId)}
         title={removeLabel}
         aria-label={removeLabel}
       >
-        <Trash2 className="w-3 h-3" />
+        <Trash2 className="h-3.5 w-3.5" />
       </Button>
     </>
   )
@@ -158,7 +158,7 @@ export function EffectPanelHeaderRow({
 
   return (
     <div className={EFFECT_HEADER_CLASS}>
-      <span className="min-w-0 truncate text-xs font-medium text-foreground/90">{label}</span>
+      <span className="min-w-0 truncate text-xs font-semibold text-foreground">{label}</span>
       <div className="flex min-w-0 items-center justify-end gap-1">
         <EffectPanelHeaderActions {...actions} />
       </div>

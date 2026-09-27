@@ -1,4 +1,5 @@
-import type { AudioEqSettings } from '@/types/audio'
+import type { AudioEqSettings, MasterFxSettings } from '@/types/audio'
+import { isMasterFxActive } from '@/shared/utils/mastering'
 import type { ItemKeyframes } from '@/types/keyframe'
 import type { MediaMetadata } from '@/types/storage'
 import type { TimelineItem, TimelineTrack, VideoItem, AudioItem } from '@/types/timeline'
@@ -40,6 +41,7 @@ export interface SmartCopyContext {
   outPoint: number | null
   busAudioEq?: AudioEqSettings
   masterBusDb?: number
+  masterFx?: MasterFxSettings
   source?: MediaMetadata
 }
 
@@ -144,6 +146,8 @@ function hasVisualProcessing(item: VideoItem, width: number, height: number): bo
     hasEntries(item.effects),
     hasEntries(item.motionModifiers),
     hasEntries(item.motionLayers),
+    item.audioReactive?.enabled === true &&
+      item.audioReactive.bindings.some((binding) => binding.enabled),
   ].some(Boolean)
   return [
     transformChanged,
@@ -253,7 +257,8 @@ function hasTimelineAudioProcessing(
     itemProcessing ||
     trackProcessing ||
     (context.masterBusDb ?? 0) !== 0 ||
-    hasEqProcessing(context.busAudioEq)
+    hasEqProcessing(context.busAudioEq) ||
+    isMasterFxActive(context.masterFx)
   )
 }
 

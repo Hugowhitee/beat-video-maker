@@ -7,6 +7,7 @@ import type { TextStylePresetId } from '@/shared/typography/text-style-preset-id
 import type { TextMotionSpec } from './text-motion'
 import type { TextLayoutDrafts, TextSpan, TextStyleFields } from './text'
 import type { CompositionControlOverrides } from './composition-controls'
+import type { AudioReactiveState } from './beatvideo'
 
 export interface TimelineItemCornerPin {
   topLeft: [number, number]
@@ -161,6 +162,8 @@ type BaseTimelineItem = {
   // Procedural motion modifiers — continuous drift/breath/shake evaluated at
   // render time (no baked keyframes). See @/types/motion.
   motionModifiers?: MotionModifier[]
+  /** Sparse audio modulation bindings evaluated analytically in preview/export. */
+  audioReactive?: AudioReactiveState
   // Named post-keyframe animation layers. Unlike Merge Keys, these remain
   // independently removable and preserve the underlying editable animation.
   motionLayers?: MotionAnimationLayer[]

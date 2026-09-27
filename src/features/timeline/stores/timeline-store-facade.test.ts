@@ -13,12 +13,16 @@ const playbackMocks = vi.hoisted(() => ({
   currentFrame: 0,
   busAudioEq: undefined,
   masterBusDb: 0,
+  masterFx: undefined as unknown,
   setCurrentFrame: vi.fn(),
   setBusAudioEq: vi.fn((value) => {
     playbackMocks.busAudioEq = value
   }),
   setMasterBusDb: vi.fn((value: number) => {
     playbackMocks.masterBusDb = value
+  }),
+  setMasterFx: vi.fn((value) => {
+    playbackMocks.masterFx = value
   }),
   pause: vi.fn(),
   play: vi.fn(),
@@ -120,6 +124,7 @@ describe('TimelineStoreFacade', () => {
     playbackMocks.currentFrame = 0
     playbackMocks.busAudioEq = undefined
     playbackMocks.masterBusDb = 0
+    playbackMocks.masterFx = undefined
     playbackMocks.setCurrentFrame.mockImplementation((frame: number) => {
       playbackMocks.currentFrame = frame
     })
@@ -128,6 +133,9 @@ describe('TimelineStoreFacade', () => {
     })
     playbackMocks.setMasterBusDb.mockImplementation((value: number) => {
       playbackMocks.masterBusDb = value
+    })
+    playbackMocks.setMasterFx.mockImplementation((value) => {
+      playbackMocks.masterFx = value
     })
     zoomMocks.level = 1
     zoomMocks.setZoomLevel.mockImplementation((level: number) => {

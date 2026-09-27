@@ -25,61 +25,61 @@ body.canvas-translate-cursor-not-allowed * {
 
 @layer base {
   :root {
-    /* Professional Video Editor Dark Theme - OKLCH Colors */
-    /* Inspired by Premiere Pro & DaVinci Resolve */
+    /* Warm graphite editor theme - lighter, calmer, still dark enough for long sessions. */
+    /* Beatvideo uses a restrained studio-hardware feel instead of a near-black NLE shell. */
 
     /* Base - Very dark, reduced eye strain */
-    --background: oklch(0.15 0 0); /* #262626 - Main canvas */
-    --foreground: oklch(0.95 0 0); /* #f2f2f2 - Primary text */
+    --background: oklch(0.225 0.008 78); /* warm graphite workspace */
+    --foreground: oklch(0.94 0.004 78); /* soft off-white */
 
     /* Panels - Layered depth */
-    --card: oklch(0.18 0 0); /* #2e2e2e - Panel backgrounds */
-    --card-foreground: oklch(0.92 0 0); /* #ebebeb - Panel text */
+    --card: oklch(0.265 0.008 78); /* raised panels */
+    --card-foreground: oklch(0.92 0.004 78);
 
-    --popover: oklch(0.16 0 0); /* #292929 - Dropdowns */
-    --popover-foreground: oklch(0.92 0 0);
+    --popover: oklch(0.255 0.008 78);
+    --popover-foreground: oklch(0.92 0.004 78);
 
     /* Primary - Orange accent (playback, active states) */
-    --primary: oklch(0.68 0.19 45); /* #FF8C3A - Vibrant orange */
-    --primary-foreground: oklch(0.12 0 0); /* Dark text on primary */
+    --primary: oklch(0.72 0.16 50); /* warm signal orange */
+    --primary-foreground: oklch(0.16 0.006 78);
 
     /* Secondary - Subtle panel variation */
-    --secondary: oklch(0.22 0 0); /* #383838 - Secondary surfaces */
-    --secondary-foreground: oklch(0.88 0 0);
+    --secondary: oklch(0.31 0.008 78);
+    --secondary-foreground: oklch(0.89 0.004 78);
 
     /* Muted - Backgrounds and disabled states */
-    --muted: oklch(0.2 0 0); /* #333333 - Muted backgrounds */
-    --muted-foreground: oklch(0.6 0 0); /* #999999 - Muted text */
+    --muted: oklch(0.285 0.007 78);
+    --muted-foreground: oklch(0.68 0.006 78);
 
     /* Accent - Hover states and highlights */
-    --accent: oklch(0.24 0 0); /* #3d3d3d - Hover backgrounds */
-    --accent-foreground: oklch(0.95 0 0);
+    --accent: oklch(0.34 0.009 78);
+    --accent-foreground: oklch(0.95 0.004 78);
 
     /* Destructive - Red for delete/errors */
     --destructive: oklch(0.58 0.22 25); /* #E53E3E - Error red */
     --destructive-foreground: oklch(0.98 0 0);
 
     /* Borders - Subtle separators */
-    --border: oklch(0.25 0 0); /* #404040 - Borders */
-    --input: oklch(0.24 0 0); /* #3d3d3d - Input borders */
-    --ring: oklch(0.68 0.19 45); /* Orange focus ring */
+    --border: oklch(0.365 0.008 78);
+    --input: oklch(0.35 0.008 78);
+    --ring: oklch(0.72 0.16 50);
 
     /* Panel system - Layered depth */
-    --panel-bg: oklch(0.18 0 0); /* #2e2e2e - Panels */
-    --panel-header: oklch(0.14 0 0); /* #242424 - Panel headers */
-    --timeline-bg: oklch(0.12 0 0); /* #1f1f1f - Timeline darker */
+    --panel-bg: oklch(0.265 0.008 78);
+    --panel-header: oklch(0.23 0.008 78);
+    --timeline-bg: oklch(0.19 0.007 78);
 
     /* Sidebar */
-    --sidebar: oklch(0.18 0 0);
-    --sidebar-foreground: oklch(0.92 0 0);
-    --sidebar-primary: oklch(0.68 0.19 45);
-    --sidebar-primary-foreground: oklch(0.12 0 0);
-    --sidebar-accent: oklch(0.22 0 0);
-    --sidebar-accent-foreground: oklch(0.92 0 0);
-    --sidebar-border: oklch(0.25 0 0);
-    --sidebar-ring: oklch(0.68 0.19 45);
+    --sidebar: oklch(0.265 0.008 78);
+    --sidebar-foreground: oklch(0.92 0.004 78);
+    --sidebar-primary: oklch(0.72 0.16 50);
+    --sidebar-primary-foreground: oklch(0.16 0.006 78);
+    --sidebar-accent: oklch(0.31 0.008 78);
+    --sidebar-accent-foreground: oklch(0.92 0.004 78);
+    --sidebar-border: oklch(0.365 0.008 78);
+    --sidebar-ring: oklch(0.72 0.16 50);
 
-    --radius: 0.5rem;
+    --radius: 0.4rem;
   }
 }
 
@@ -89,9 +89,8 @@ body.canvas-translate-cursor-not-allowed * {
   }
 
   *:focus-visible {
-    outline: none !important;
-    box-shadow: none !important;
-    --tw-ring-shadow: none !important;
+    outline: 1px solid var(--ring);
+    outline-offset: 1px;
   }
 
   body {
@@ -135,17 +134,17 @@ body.canvas-translate-cursor-not-allowed * {
   }
 
   ::-webkit-scrollbar-track {
-    background: oklch(0.15 0 0);
+    background: var(--background);
   }
 
   ::-webkit-scrollbar-thumb {
-    background: oklch(0.3 0 0);
+    background: oklch(0.36 0.008 78);
     border-radius: 6px;
-    border: 2px solid oklch(0.15 0 0);
+    border: 2px solid var(--background);
   }
 
   ::-webkit-scrollbar-thumb:hover {
-    background: oklch(0.35 0 0);
+    background: oklch(0.42 0.008 78);
   }
 
   ::-webkit-scrollbar-corner {
@@ -205,24 +204,24 @@ body.canvas-translate-cursor-not-allowed * {
 /* Professional video editor utility classes */
 @layer utilities {
   .panel-bg {
-    background-color: oklch(var(--panel-bg));
+    background-color: var(--panel-bg);
   }
 
   .panel-header {
-    background-color: oklch(var(--panel-header));
+    background-color: var(--panel-header);
   }
 
   .timeline-bg {
-    background-color: oklch(var(--timeline-bg));
+    background-color: var(--timeline-bg);
   }
 
-  /* Subtle glow for active elements */
+  /* Subtle glow for genuinely live/active elements only. */
   .glow-primary {
-    box-shadow: 0 0 12px oklch(var(--primary) / 0.3);
+    box-shadow: 0 0 12px color-mix(in oklab, var(--primary) 30%, transparent);
   }
 
   .glow-primary-sm {
-    box-shadow: 0 0 6px oklch(var(--primary) / 0.25);
+    box-shadow: 0 0 6px color-mix(in oklab, var(--primary) 25%, transparent);
   }
 
   /* Text shadows for better readability on dark */
@@ -296,8 +295,8 @@ body.canvas-translate-cursor-not-allowed * {
 }
 
 [data-media-id].media-marquee-preview > * {
-  border-color: oklch(var(--primary));
-  box-shadow: 0 0 0 1px oklch(var(--primary) / 0.2);
+  border-color: var(--primary);
+  box-shadow: 0 0 0 1px color-mix(in oklab, var(--primary) 20%, transparent);
 }
 
 [data-composition-id].composition-marquee-preview {

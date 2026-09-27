@@ -1,4 +1,4 @@
-import type { AudioEqSettings } from './audio'
+import type { AudioEqSettings, MasterFxSettings } from './audio'
 import type { TimelineTrack } from './timeline'
 import type { Transition } from './transition'
 import type { ItemKeyframes } from './keyframe'
@@ -71,4 +71,6 @@ export interface CompositionInputProps {
   busAudioEq?: AudioEqSettings
   /** Project-scoped master bus gain in dB (0 = unity). Applied to final mix. */
   masterBusDb?: number
+  /** Project-scoped post-mix mastering chain. */
+  masterFx?: MasterFxSettings
 }

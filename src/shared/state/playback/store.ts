@@ -116,6 +116,7 @@ export const usePlaybackStore = create<PlaybackState & PlaybackActions>()(
       muted: false,
       masterBusDb: 0,
       busAudioEq: undefined,
+      masterFx: undefined,
       zoom: -1, // -1 = auto-fit, positive values = specific zoom percentage
       previewFrame: null,
       previewFrameEpoch: 0,
@@ -230,6 +231,7 @@ export const usePlaybackStore = create<PlaybackState & PlaybackActions>()(
       setMasterBusDb: (masterBusDb) =>
         set({ masterBusDb: Math.max(-60, Math.min(12, masterBusDb)) }),
       setBusAudioEq: (busAudioEq) => set({ busAudioEq }),
+      setMasterFx: (masterFx) => set({ masterFx }),
       setZoom: (zoom) => set({ zoom }),
       setPreviewFrame: (frame, itemId) =>
         set((state) => {

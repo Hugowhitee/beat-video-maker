@@ -12,7 +12,7 @@ import { create } from 'zustand'
 import type { TimelineTrack, TimelineItem } from '@/types/timeline'
 import type { Transition } from '@/types/transition'
 import type { ItemKeyframes } from '@/types/keyframe'
-import type { AudioEqSettings } from '@/types/audio'
+import type { AudioEqSettings, MasterFxSettings } from '@/types/audio'
 import type { ClientExportSettings, RenderProgress } from '../utils/client-renderer'
 import { abortJob } from '../utils/render-queue-control'
 
@@ -30,6 +30,7 @@ export interface RenderJobSnapshot {
   backgroundColor?: string
   busAudioEq?: AudioEqSettings
   masterBusDb?: number
+  masterFx?: MasterFxSettings
 }
 
 export interface RenderJob {

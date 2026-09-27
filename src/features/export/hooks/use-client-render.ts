@@ -145,6 +145,7 @@ export function useClientRender(): UseClientRenderReturn {
         const currentProject = useProjectStore.getState().currentProject
         const busAudioEq = usePlaybackStore.getState().busAudioEq
         const masterBusDb = usePlaybackStore.getState().masterBusDb
+        const masterFx = usePlaybackStore.getState().masterFx
         const backgroundColor = currentProject?.metadata?.backgroundColor
         // Use PROJECT resolution for composition (transform calculations match preview)
         const projectWidth = currentProject?.metadata?.width ?? DEFAULT_PROJECT_WIDTH
@@ -171,6 +172,7 @@ export function useClientRender(): UseClientRenderReturn {
             outPoint: effectiveOutPoint,
             busAudioEq,
             masterBusDb,
+            masterFx,
           },
           signal,
           handleProgress,
@@ -229,6 +231,7 @@ export function useClientRender(): UseClientRenderReturn {
           backgroundColor,
           busAudioEq,
           masterBusDb,
+          masterFx,
         )
 
         const totalCompositionItems = composition.tracks.reduce(

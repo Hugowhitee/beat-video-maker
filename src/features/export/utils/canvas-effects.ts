@@ -195,6 +195,7 @@ export function getAdjustmentLayerEffects(
         effectiveEffects,
         getCurrentKeyframes?.(layer.id),
         frame - layer.from,
+        layer.audioReactive,
       )
       return animatedEffects?.filter((e) => e.enabled) ?? []
     })

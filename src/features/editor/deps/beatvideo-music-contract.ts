@@ -15,3 +15,5 @@ export {
   sourceSecondsToTimelineFrame,
   timelineFrameToSourceSeconds,
 } from '@/features/timeline/utils/media-item-frames'
+
+export { projectAudioReactiveBeatsToItem } from '@/shared/beatvideo/beat-reactive'

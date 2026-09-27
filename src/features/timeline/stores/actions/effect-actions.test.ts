@@ -94,4 +94,69 @@ describe('effect actions', () => {
     useTimelineCommandStore.getState().undo()
     expect(getEffects('a')).toHaveLength(0)
   })
+
+  it('removing an effect cleans its reactive binding and undo restores both', () => {
+    addEffect('a', makeBrightness(0.5))
+    const effectId = getEffects('a')[0]!.id
+
+    useItemsStore.getState()._updateItem('a', {
+      audioReactive: {
+        version: 1,
+        enabled: true,
+        beats: [{ frame: 0, index: 0, strength: 1, downbeat: true }],
+        bindings: [{
+          id: 'binding-1',
+          enabled: true,
+          target: {
+            kind: 'effect-param',
+            effectId,
+            gpuEffectType: 'gpu-brightness',
+            paramKey: 'brightness',
+          },
+          driver: 'beat',
+          amount: 0.2,
+          threshold: 0.5,
+          sensitivity: 1,
+          attackFrames: 0,
+          releaseFrames: 4,
+          everyNthBeat: 1,
+          useStrength: true,
+        }],
+      },
+    })
+
+    removeEffect('a', effectId)
+    expect(getEffects('a')).toHaveLength(0)
+    expect(useItemsStore.getState().itemById.a?.audioReactive).toBeUndefined()
+
+    useTimelineCommandStore.getState().undo()
+    expect(getEffects('a')).toHaveLength(1)
+    expect(useItemsStore.getState().itemById.a?.audioReactive?.bindings).toHaveLength(1)
+  })
+
+  it('undo and redo preserve the last edited effect values across removal', () => {
+    addEffect('a', makeBrightness(0.5))
+    const effectId = getEffects('a')[0]!.id
+
+    updateEffect('a', effectId, { effect: makeBrightness(0.9) })
+    expect(getEffects('a')[0]?.effect.params.brightness).toBe(0.9)
+
+    removeEffect('a', effectId)
+    expect(getEffects('a')).toHaveLength(0)
+
+    useTimelineCommandStore.getState().undo()
+    expect(getEffects('a')).toHaveLength(1)
+    expect(getEffects('a')[0]?.id).toBe(effectId)
+    expect(getEffects('a')[0]?.effect.params.brightness).toBe(0.9)
+
+    useTimelineCommandStore.getState().undo()
+    expect(getEffects('a')[0]?.effect.params.brightness).toBe(0.5)
+
+    useTimelineCommandStore.getState().redo()
+    expect(getEffects('a')[0]?.effect.params.brightness).toBe(0.9)
+
+    useTimelineCommandStore.getState().redo()
+    expect(getEffects('a')).toHaveLength(0)
+  })
+
 })

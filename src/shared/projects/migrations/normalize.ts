@@ -19,6 +19,7 @@
 import type { Project, ProjectTimeline } from '@/types/project'
 import { DEFAULT_TRACK_HEIGHT, DEFAULT_FPS } from '@/shared/timeline/defaults'
 import { normalizeAudioEqSettings } from '@/shared/utils/audio-eq'
+import { resolveMasterFxSettings } from '@/shared/utils/mastering'
 import { applyOptionalClamps } from '@/shared/timeline/item-clamps'
 import { sanitizeTextMotion } from './sanitize-text-motion'
 import type { ProjectWarning } from './types'
@@ -292,6 +293,7 @@ function normalizeTimeline(
     // Normalize tracks
     tracks: normalizedTracks,
     busAudioEq: normalizeAudioEqSettings(timeline.busAudioEq),
+    masterFx: timeline.masterFx ? resolveMasterFxSettings(timeline.masterFx) : undefined,
     // Normalize items and repair overlaps
     items: repairOverlappingItems(normalizedItems, normalizedTransitions, warnings),
     // Normalize transitions if present

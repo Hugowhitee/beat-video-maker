@@ -15,6 +15,71 @@ export type MusicBeat = {
   strength: number
 }
 
+export type AudioReactiveBeat = {
+  /** Frame relative to the visual item's start. */
+  frame: number
+  /** Original source-grid beat index. Used for sparse every-N triggering. */
+  index: number
+  /** Detector strength normalized to 0..1. */
+  strength: number
+  downbeat: boolean
+}
+
+export type AudioReactiveDriver = 'beat' | 'downbeat'
+
+export type AudioReactiveTransformProperty = 'scale' | 'x' | 'y' | 'rotation' | 'opacity'
+
+export type AudioReactiveTarget =
+  | {
+      kind: 'transform'
+      property: AudioReactiveTransformProperty
+    }
+  | {
+      /** Deterministic low-amplitude jitter; not representable as one scalar property. */
+      kind: 'transform-shake'
+    }
+  | {
+      kind: 'effect-param'
+      effectId: string
+      gpuEffectType: string
+      paramKey: string
+    }
+
+export type AudioReactiveBinding = {
+  id: string
+  enabled: boolean
+  target: AudioReactiveTarget
+  /** Only drivers the current Beat This analysis can produce are exposed for now. */
+  driver: AudioReactiveDriver
+  /** Additive contribution at a full-strength hit. Scale uses a fractional factor. */
+  amount: number
+  /** Detector hits below this strength are ignored. */
+  threshold: number
+  /** Multiplier applied after threshold gating. */
+  sensitivity: number
+  /** Envelope attack/release stored in frames for deterministic preview/export parity. */
+  attackFrames: number
+  releaseFrames: number
+  /** 1 = every eligible hit, 2 = every other hit, etc. */
+  everyNthBeat: number
+  /** Use detector strength after thresholding instead of a binary trigger. */
+  useStrength: boolean
+  /** Reverse the modulation direction without changing the authored value. */
+  invert?: boolean
+  /** Optional clamp applied to the modulation delta before composition. */
+  minOutput?: number
+  maxOutput?: number
+}
+
+export type AudioReactiveState = {
+  version: 1
+  enabled: boolean
+  /** Beat evidence projected onto the target visual item's local timeline. */
+  beats: AudioReactiveBeat[]
+  /** Reusable property bindings. Presets only create/edit these records. */
+  bindings: AudioReactiveBinding[]
+}
+
 export type MusicSection = {
   id: string
   start: number

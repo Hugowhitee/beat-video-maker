@@ -14,7 +14,7 @@ import type {
   TimelineItem,
   TimelineTrack,
 } from '@/types/timeline'
-import type { AudioEqSettings, ResolvedAudioEqSettings } from '@/types/audio'
+import type { AudioEqSettings, MasterFxSettings, ResolvedAudioEqSettings } from '@/types/audio'
 import type { Keyframe as VolumeKeyframe } from '@/types/keyframe'
 import type { Transition } from '@/types/transition'
 import { createLogger } from '@/shared/logging/logger'
@@ -50,6 +50,12 @@ import {
   getAudioEqSettings,
   isAudioEqStageActive,
 } from '@/shared/utils/audio-eq'
+import {
+  createCeilingCurve,
+  createSaturationCurve,
+  isMasterFxActive,
+  resolveMasterFxSettings,
+} from '@/shared/utils/mastering'
 import {
   getAudioPitchRatioFromSemitones,
   getAudioPitchShiftSemitones,
@@ -2133,6 +2139,88 @@ function softClipAudioMix(output: Float32Array[]): void {
   }
 }
 
+
+async function applyMasterFxToMix(
+  output: Float32Array[],
+  sampleRate: number,
+  settings: MasterFxSettings | undefined,
+): Promise<void> {
+  if (!isMasterFxActive(settings) || output.length === 0 || !output[0]?.length) return
+
+  const resolved = resolveMasterFxSettings(settings)
+  const frameCount = output[0]!.length
+  const channels = Math.max(1, output.length)
+  const context = new OfflineAudioContext(channels, frameCount, sampleRate)
+  const source = context.createBufferSource()
+  const buffer = context.createBuffer(channels, frameCount, sampleRate)
+  for (let channelIndex = 0; channelIndex < channels; channelIndex++) {
+    buffer
+      .getChannelData(channelIndex)
+      .set(output[channelIndex] ?? output[0]!)
+  }
+  source.buffer = buffer
+
+  const inputGain = context.createGain()
+  inputGain.gain.value = dbToGain(resolved.inputGainDb)
+
+  const compressor = context.createDynamicsCompressor()
+  const compressorEnabled = resolved.compressor.enabled
+  compressor.threshold.value = compressorEnabled ? resolved.compressor.thresholdDb : 0
+  compressor.ratio.value = compressorEnabled ? resolved.compressor.ratio : 1
+  compressor.knee.value = compressorEnabled ? resolved.compressor.kneeDb : 0
+  compressor.attack.value = compressorEnabled ? resolved.compressor.attackSec : 0.003
+  compressor.release.value = compressorEnabled ? resolved.compressor.releaseSec : 0.25
+
+  const compressorMakeup = context.createGain()
+  compressorMakeup.gain.value = compressorEnabled
+    ? dbToGain(resolved.compressor.makeupGainDb)
+    : 1
+
+  const saturatorDry = context.createGain()
+  const saturator = context.createWaveShaper()
+  const saturatorWet = context.createGain()
+  const saturatorSum = context.createGain()
+  const saturatorEnabled = resolved.saturator.enabled
+  const wet = saturatorEnabled ? resolved.saturator.mix : 0
+  saturatorDry.gain.value = 1 - wet
+  saturatorWet.gain.value =
+    wet * dbToGain(saturatorEnabled ? resolved.saturator.outputGainDb : 0)
+  saturator.curve = createSaturationCurve(saturatorEnabled ? resolved.saturator.driveDb : 0)
+  saturator.oversample = saturatorEnabled ? resolved.saturator.oversample : 'none'
+
+  const limiter = context.createDynamicsCompressor()
+  const limiterEnabled = resolved.limiter.enabled
+  limiter.threshold.value = limiterEnabled ? resolved.limiter.thresholdDb : 0
+  limiter.ratio.value = limiterEnabled ? 20 : 1
+  limiter.knee.value = 0
+  limiter.attack.value = 0.003
+  limiter.release.value = limiterEnabled ? resolved.limiter.releaseSec : 0.25
+
+  const ceiling = context.createWaveShaper()
+  ceiling.curve = createCeilingCurve(limiterEnabled ? resolved.limiter.ceilingDb : 0)
+  ceiling.oversample = limiterEnabled ? '4x' : 'none'
+
+  source.connect(inputGain)
+  inputGain.connect(compressor)
+  compressor.connect(compressorMakeup)
+  compressorMakeup.connect(saturatorDry)
+  compressorMakeup.connect(saturator)
+  saturatorDry.connect(saturatorSum)
+  saturator.connect(saturatorWet)
+  saturatorWet.connect(saturatorSum)
+  saturatorSum.connect(limiter)
+  limiter.connect(ceiling)
+  ceiling.connect(context.destination)
+
+  source.start()
+  const rendered = await context.startRendering()
+  for (let channelIndex = 0; channelIndex < output.length; channelIndex++) {
+    output[channelIndex]!.set(
+      rendered.getChannelData(Math.min(channelIndex, rendered.numberOfChannels - 1)),
+    )
+  }
+}
+
 /**
  * Pre-resolve sub-composition media URLs so extractAudioSegments can access them.
  * blobUrlManager.get() is synchronous but may not have URLs for sub-comp items
@@ -2176,6 +2264,7 @@ function supportsWindowedAudioSegment(segment: AudioSegment): boolean {
  * identical to preview.
  */
 export function supportsWindowedAudioProcessing(composition: CompositionInputProps): boolean {
+  if (isMasterFxActive(composition.masterFx)) return false
   const segments = extractAudioSegments(composition, composition.fps).filter(
     (segment) => !segment.muted,
   )
@@ -2241,7 +2330,12 @@ export function getAudioPacketPassthroughPlan(
   composition: CompositionInputProps,
 ): AudioPacketPassthroughPlan | null {
   const durationInFrames = composition.durationInFrames ?? 0
-  if (durationInFrames <= 0 || composition.fps <= 0 || (composition.masterBusDb ?? 0) !== 0) {
+  if (
+    durationInFrames <= 0 ||
+    composition.fps <= 0 ||
+    (composition.masterBusDb ?? 0) !== 0 ||
+    isMasterFxActive(composition.masterFx)
+  ) {
     return null
   }
 
@@ -2896,7 +2990,11 @@ export async function processAudio(
     return null
   }
 
-  softClipAudioMix(mixedSamples)
+  if (isMasterFxActive(composition.masterFx)) {
+    await applyMasterFxToMix(mixedSamples, config.sampleRate, composition.masterFx)
+  } else {
+    softClipAudioMix(mixedSamples)
+  }
 
   // Apply project-scoped master bus gain to the final mix. Monitor volume
   // (per-device) is intentionally NOT applied during export — it's a

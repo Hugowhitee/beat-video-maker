@@ -70,6 +70,7 @@ function captureTimeline(sequence?: ExportableSequence): TimelineCapture {
     backgroundColor: seq.backgroundColor,
     busAudioEq: seq.busAudioEq,
     masterBusDb: seq.masterBusDb,
+    masterFx: seq.masterFx,
   }
 
   // Distinguish exported sequence files from the Main-timeline export.
@@ -169,6 +170,7 @@ export async function buildRenderJob({
     outPoint,
     busAudioEq: cap.snapshot.busAudioEq,
     masterBusDb: cap.snapshot.masterBusDb,
+    masterFx: cap.snapshot.masterFx,
   })
   const { clientSettings, exportMode } = smartCopy.eligible
     ? requested

@@ -7,6 +7,8 @@ import type { ResolvedAudioEqSettings } from '@/types/audio'
  */
 export interface AudioPlaybackProps {
   itemId: string
+  /** Absolute parent-timeline frame where this playback segment starts. */
+  timelineFrom?: number
   liveGainItemIds?: string[]
   trimBefore?: number
   sourceFps?: number

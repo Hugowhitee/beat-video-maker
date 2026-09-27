@@ -118,6 +118,7 @@ function getItemAudioPlaybackProps({
 }): AudioPlaybackProps {
   return {
     itemId: item.id,
+    timelineFrom: item.from,
     trimBefore,
     volume,
     playbackRate,

@@ -88,6 +88,46 @@ describe('effect animatable properties', () => {
     expect(resolved[0].effect.params.colorSaturation).toBe(100)
   })
 
+  it('adds audio modulation after the authored effect value', () => {
+    const effectEntry: ItemEffect = {
+      id: 'brightness-1',
+      enabled: true,
+      effect: {
+        type: 'gpu-effect',
+        gpuEffectType: 'gpu-brightness',
+        params: { amount: 0.1 },
+      },
+    }
+
+    const resolved = resolveAnimatedGpuEffects([effectEntry], undefined, 12, {
+      version: 1,
+      enabled: true,
+      beats: [{ frame: 12, index: 0, strength: 1, downbeat: true }],
+      bindings: [{
+        id: 'reactive-brightness',
+        enabled: true,
+        target: {
+          kind: 'effect-param',
+          effectId: 'brightness-1',
+          gpuEffectType: 'gpu-brightness',
+          paramKey: 'amount',
+        },
+        driver: 'beat',
+        amount: 0.2,
+        threshold: 0.5,
+        sensitivity: 1,
+        attackFrames: 0,
+        releaseFrames: 4,
+        everyNthBeat: 1,
+        useStrength: true,
+      }],
+    })
+
+    expect(resolved?.[0]?.effect.type).toBe('gpu-effect')
+    if (resolved?.[0]?.effect.type !== 'gpu-effect') throw new Error('Expected gpu effect')
+    expect(resolved[0].effect.params.amount).toBeCloseTo(0.3)
+  })
+
   it('exposes and resolves animatable color params as packed RGB keyframes', () => {
     const effectEntry: ItemEffect = {
       id: 'effect-1',

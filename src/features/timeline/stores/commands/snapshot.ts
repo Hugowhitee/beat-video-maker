@@ -112,6 +112,7 @@ export function captureSnapshot(): TimelineSnapshot {
     currentFrame: playbackState.currentFrame,
     busAudioEq: playbackState.busAudioEq,
     masterBusDb: playbackState.masterBusDb,
+    masterFx: playbackState.masterFx,
     projectId: currentProject?.id ?? null,
     projectMetadata: currentProject ? { ...currentProject.metadata } : null,
   }
@@ -159,6 +160,7 @@ export function restoreSnapshot(snapshot: TimelineSnapshot): void {
   usePlaybackStore.getState().setCurrentFrame(snapshot.currentFrame)
   usePlaybackStore.getState().setBusAudioEq(snapshot.busAudioEq)
   usePlaybackStore.getState().setMasterBusDb(snapshot.masterBusDb ?? 0)
+  usePlaybackStore.getState().setMasterFx(snapshot.masterFx)
 
   // Restore current project metadata so canvas/project changes undo with the editor history.
   restoreProjectMetadata(snapshot)

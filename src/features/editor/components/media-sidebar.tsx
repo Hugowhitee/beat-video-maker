@@ -6,6 +6,7 @@ import {
   ChevronRight,
   ChevronUp,
   AudioLines,
+  Gauge,
   Film,
   ImagePlus,
   Layers,
@@ -23,10 +24,17 @@ import {
   Sticker,
   WandSparkles,
   Maximize2,
+  Plus,
 } from 'lucide-react'
 import { motion, useReducedMotion } from 'motion/react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 import { cn } from '@/shared/ui/cn'
 import { useEditorStore } from '@/shared/state/editor'
 import {
@@ -41,6 +49,7 @@ import { DEFAULT_PROJECT_HEIGHT, DEFAULT_PROJECT_WIDTH } from '@/shared/projects
 import {
   clearMediaDragData,
   MediaLibrary,
+  resolveMediaUrl,
   setMediaDragData,
   useMediaLibraryStore,
 } from '@/features/editor/deps/media-library'
@@ -51,12 +60,18 @@ import {
   createDefaultGradientItem,
   createDefaultShapeItem,
   createDefaultSolidColorItem,
+  createClassicTrack,
   createOverlayLayerTrack,
   createTextTemplateItem,
   getDefaultGeneratedLayerDurationInFrames,
   resolvePhotoPublishingDurationInFrames,
   computeInitialTransform,
 } from '@/features/editor/deps/timeline-utils'
+import {
+  addItemsOnNewTracks,
+  buildDroppedMediaTimelineItems,
+  replaceItemsOnTrack,
+} from '@/features/editor/deps/timeline-contract'
 import { addAdjustmentLayer } from '../utils/add-adjustment-layer'
 import type { TextItem, ShapeItem, ShapeType } from '@/types/timeline'
 import { useMaskEditorStore } from '@/features/editor/deps/preview'
@@ -69,8 +84,12 @@ import { useSettingsStore } from '@/features/editor/deps/settings'
 import { resolveGeneratedLayerCanvasSize } from '../utils/generated-layer-canvas-size'
 import type { BeatvideoProjectMode } from '@/types/project'
 import { isSidebarTabVisibleForBeatvideoMode } from '@/config/beatvideo'
+import type { EditorSidebarTab, EditorWorkspaceId } from '@/config/editor-workspaces'
 const LazyBeatvideoMusicPanel = lazy(() =>
   import('./beatvideo-music-panel').then((module) => ({ default: module.BeatvideoMusicPanel })),
+)
+const LazyBeatvideoMasterPanel = lazy(() =>
+  import('./beatvideo-master-panel').then((module) => ({ default: module.BeatvideoMasterPanel })),
 )
 const LazyAiPanel = lazy(() => import('./ai-tab').then((m) => ({ default: m.AiTab })))
 const LazyTranscriptEditorPanel = lazy(() =>
@@ -90,6 +109,25 @@ import {
 } from '@/config/editor-layout'
 
 const logger = createLogger('MediaSidebar')
+
+function isSidebarTabVisibleForWorkspace(
+  tab: EditorSidebarTab,
+  workspace: EditorWorkspaceId,
+): boolean {
+  if (workspace === 'beat') return tab === 'beat'
+  if (workspace === 'master') return tab === 'master'
+  if (workspace === 'color') return tab === 'effects'
+  if (workspace === 'motion') return tab === 'media'
+  return tab !== 'beat' && tab !== 'master'
+}
+
+function getWorkspaceSidebarFallback(workspace: EditorWorkspaceId): EditorSidebarTab {
+  if (workspace === 'beat') return 'beat'
+  if (workspace === 'master') return 'master'
+  if (workspace === 'color') return 'effects'
+  return 'media'
+}
+
 const TEXT_TEMPLATE_PREVIEW_SHELL =
   'w-full aspect-video rounded-sm border border-border bg-slate-950'
 
@@ -320,6 +358,7 @@ export const MediaSidebar = memo(function MediaSidebar({
   const mediaFullColumn = useEditorStore((s) => s.mediaFullColumn)
   const toggleMediaFullColumn = useEditorStore((s) => s.toggleMediaFullColumn)
   const activeTab = useEditorStore((s) => s.activeTab)
+  const workspace = useEditorStore((s) => s.workspace)
   const setActiveTab = useEditorStore((s) => s.setActiveTab)
   const sidebarWidth = useEditorStore((s) => s.sidebarWidth)
   const setSidebarWidth = useEditorStore((s) => s.setSidebarWidth)
@@ -328,6 +367,7 @@ export const MediaSidebar = memo(function MediaSidebar({
   const [beatTabActivated, setBeatTabActivated] = useState(activeTab === 'beat')
   const [aiTabActivated, setAiTabActivated] = useState(activeTab === 'ai')
   const [showAllPhotoEffects, setShowAllPhotoEffects] = useState(false)
+  const [importingPhotoCover, setImportingPhotoCover] = useState(false)
   // The Lottie panel hits an external API on mount, so keep it unmounted until
   // the tab is first opened; it then stays mounted (state preserved).
   const [lottieTabActivated, setLottieTabActivated] = useState(activeTab === 'lottie')
@@ -530,6 +570,103 @@ export const MediaSidebar = memo(function MediaSidebar({
     selectItems([textItem.id])
   }, [])
 
+  const handleImportPhotoCover = useCallback(async () => {
+    if (importingPhotoCover) return
+
+    setImportingPhotoCover(true)
+    try {
+      const mediaStore = useMediaLibraryStore.getState()
+      const imported = await mediaStore.importMedia({ storageMode: 'copy' })
+      const coverMedia = imported.find((media) => media.mimeType.startsWith('image/'))
+
+      if (!coverMedia) {
+        if (imported.length > 0) {
+          toast.warning('Choose an image file for the cover')
+        }
+        return
+      }
+
+      const blobUrl = await resolveMediaUrl(coverMedia.id)
+      if (!blobUrl) {
+        toast.error('Could not load the imported cover')
+        return
+      }
+
+      const timeline = useTimelineStore.getState()
+      const currentProject = useProjectStore.getState().currentProject
+      const existingCoverTrack = timeline.tracks.find(
+        (track) => track.kind === 'video' && track.name === 'Cover',
+      )
+      const maxOrder = timeline.tracks.reduce(
+        (max, track) => Math.max(max, track.order ?? 0),
+        0,
+      )
+      const coverTrack =
+        existingCoverTrack ??
+        {
+          ...createClassicTrack({
+            tracks: timeline.tracks,
+            kind: 'video',
+            order: maxOrder + 1,
+          }),
+          name: 'Cover',
+        }
+      const nextTracks = existingCoverTrack
+        ? timeline.tracks
+        : [...timeline.tracks, coverTrack]
+      const publishDuration = resolvePhotoPublishingDurationInFrames(timeline.fps, {
+        beatvideoMode: 'photo',
+        beatvideoMusic: currentProject?.beatvideoMusic,
+        projectMedia: useMediaLibraryStore.getState().mediaItems,
+        timelineItems: timeline.items,
+      })
+      const durationInFrames =
+        publishDuration > 0
+          ? publishDuration
+          : getDefaultGeneratedLayerDurationInFrames(timeline.fps)
+      const coverItems = buildDroppedMediaTimelineItems({
+        media: coverMedia,
+        mediaId: coverMedia.id,
+        mediaType: 'image',
+        label: `Cover: ${coverMedia.fileName}`,
+        timelineFps: timeline.fps,
+        blobUrl,
+        canvasWidth: currentProject?.metadata.width ?? DEFAULT_PROJECT_WIDTH,
+        canvasHeight: currentProject?.metadata.height ?? DEFAULT_PROJECT_HEIGHT,
+        initialFit: 'cover',
+        placement: {
+          primary: {
+            trackId: coverTrack.id,
+            from: 0,
+            durationInFrames,
+          },
+        },
+      })
+      const coverItem = coverItems.find((item) => item.type === 'image')
+      if (!coverItem) {
+        toast.error('Could not place the imported cover')
+        return
+      }
+
+      if (existingCoverTrack) {
+        replaceItemsOnTrack(existingCoverTrack.id, coverItems)
+      } else {
+        addItemsOnNewTracks(coverItems, nextTracks)
+      }
+
+      const selection = useSelectionStore.getState()
+      selection.setActiveTrack(coverTrack.id)
+      selection.selectItems([coverItem.id])
+      toast.success(publishDuration > 0 ? 'Cover placed for the full beat' : 'Cover placed')
+    } catch (error) {
+      toast.error('Could not import the cover', {
+        description: error instanceof Error ? error.message : String(error),
+      })
+    } finally {
+      setImportingPhotoCover(false)
+    }
+  }, [importingPhotoCover])
+
   const handleFitPhotoCoverToBeat = useCallback(() => {
     const timeline = useTimelineStore.getState()
     const selection = useSelectionStore.getState()
@@ -620,11 +757,26 @@ export const MediaSidebar = memo(function MediaSidebar({
     selectItems([shapeItem.id])
   }, [])
 
-  // Add adjustment layer to timeline at the best available position
-  // Optionally with pre-applied effects and custom label
-  const handleAddAdjustmentLayer = useCallback((effects?: VisualEffect[], label?: string) => {
-    addAdjustmentLayer(effects, label)
+  const revealAppliedEffects = useCallback((itemIds?: string[]) => {
+    if (itemIds && itemIds.length > 0) {
+      useSelectionStore.getState().selectItems(itemIds)
+    }
+    const editor = useEditorStore.getState()
+    editor.setRightSidebarOpen(true)
+    editor.setClipInspectorTab('effects')
   }, [])
+
+  // Add adjustment layer to timeline at the best available position.
+  // Selection is created by addAdjustmentLayer; immediately expose its applied
+  // effect stack so adding an effect never feels like a silent action.
+  const handleAddAdjustmentLayer = useCallback(
+    (effects?: VisualEffect[], label?: string) => {
+      if (addAdjustmentLayer(effects, label)) {
+        revealAppliedEffects()
+      }
+    },
+    [revealAppliedEffects],
+  )
 
   // Create adjustment layer with preset effects
   const handleAddPreset = useCallback(
@@ -651,14 +803,14 @@ export const MediaSidebar = memo(function MediaSidebar({
           preset.effects.forEach((effect) => {
             visualIds.forEach((id) => addEffect(id, effect))
           })
-          useSelectionStore.getState().selectItems(visualIds)
+          revealAppliedEffects(visualIds)
           return
         }
       }
 
       handleAddAdjustmentLayer(preset.effects, preset.name)
     },
-    [beatvideoMode, handleAddAdjustmentLayer],
+    [beatvideoMode, handleAddAdjustmentLayer, revealAppliedEffects],
   )
 
   // Add a single GPU effect ââ‚¬” to selected clips, or as adjustment layer if nothing selected
@@ -696,6 +848,7 @@ export const MediaSidebar = memo(function MediaSidebar({
           params: defaults,
         }
         visualIds.forEach((id) => addEffect(id, effect))
+        revealAppliedEffects(visualIds)
       } else {
         // No visual selection ââ‚¬” create adjustment layer with this effect
         const defaults = getGpuEffectDefaultParams(gpuEffectId)
@@ -704,7 +857,7 @@ export const MediaSidebar = memo(function MediaSidebar({
         ])
       }
     },
-    [beatvideoMode, handleAddAdjustmentLayer],
+    [beatvideoMode, handleAddAdjustmentLayer, revealAppliedEffects],
   )
 
   const { gpuCategories, triggerPreviews } = useGpuEffectPreviewData()
@@ -735,6 +888,7 @@ export const MediaSidebar = memo(function MediaSidebar({
   const categories = [
     { id: 'media' as const, icon: Film, label: t('editor.mediaSidebar.media') },
     { id: 'beat' as const, icon: AudioLines, label: 'Beat' },
+    { id: 'master' as const, icon: Gauge, label: 'Master' },
     { id: 'overlay' as const, icon: ImagePlus, label: 'Overlay' },
     { id: 'text' as const, icon: Type, label: t('editor.mediaSidebar.text') },
     { id: 'shapes' as const, icon: Pentagon, label: t('editor.mediaSidebar.shapes') },
@@ -743,13 +897,20 @@ export const MediaSidebar = memo(function MediaSidebar({
     { id: 'lottie' as const, icon: Sticker, label: t('lottieBrowser.tabLabel') },
     { id: 'transcript' as const, icon: Captions, label: t('transcript.tabLabel') },
     { id: 'ai' as const, icon: WandSparkles, label: t('editor.mediaSidebar.ai') },
-  ].filter(({ id }) => isSidebarTabVisibleForBeatvideoMode(id, beatvideoMode))
+  ].filter(
+    ({ id }) =>
+      isSidebarTabVisibleForBeatvideoMode(id, beatvideoMode) &&
+      isSidebarTabVisibleForWorkspace(id, workspace),
+  )
 
   useEffect(() => {
-    if (!isSidebarTabVisibleForBeatvideoMode(activeTab, beatvideoMode)) {
-      setActiveTab('media')
+    if (
+      !isSidebarTabVisibleForBeatvideoMode(activeTab, beatvideoMode) ||
+      !isSidebarTabVisibleForWorkspace(activeTab, workspace)
+    ) {
+      setActiveTab(getWorkspaceSidebarFallback(workspace))
     }
-  }, [activeTab, beatvideoMode, setActiveTab])
+  }, [activeTab, beatvideoMode, setActiveTab, workspace])
 
   const shouldSuppressGeneratedItemClick = useCallback(() => {
     if (!suppressGeneratedItemClickRef.current) {
@@ -824,8 +985,9 @@ export const MediaSidebar = memo(function MediaSidebar({
           </button>
         </div>
 
-        {/* Category Icons */}
-        <div className="flex flex-col gap-1 py-1.5">
+        {/* Category Icons — single-purpose Beat/Master workspaces do not repeat themselves here. */}
+        {categories.length > 1 ? (
+          <div className="flex flex-col gap-1 py-1.5">
           {categories.map(({ id, icon: Icon, label }) => (
             <button
               key={id}
@@ -852,7 +1014,8 @@ export const MediaSidebar = memo(function MediaSidebar({
               <Icon className="w-4 h-4" />
             </button>
           ))}
-        </div>
+          </div>
+        ) : null}
       </div>
 
       {/* Content Panel — width animated via motion for the open/close toggle.
@@ -894,7 +1057,46 @@ export const MediaSidebar = memo(function MediaSidebar({
               <span className="text-sm font-medium text-foreground">
                 {categories.find((c) => c.id === activeTab)?.label}
               </span>
-              <Button
+              <div className="flex items-center gap-1">
+                {workspace === 'edit' ? (
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 gap-1 px-2 text-xs"
+                        aria-label="Add layer"
+                        data-tooltip="Add layer"
+                        data-tooltip-side="bottom"
+                      >
+                        <Plus className="h-3.5 w-3.5" />
+                        Add layer
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="min-w-40">
+                      <DropdownMenuItem
+                        onSelect={() =>
+                          beatvideoMode === 'photo'
+                            ? handleAddPhotoText('bold')
+                            : handleAddText()
+                        }
+                      >
+                        <Type className="mr-2 h-3.5 w-3.5" />
+                        Text layer
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onSelect={() => handleAddShape('rectangle')}>
+                        <Square className="mr-2 h-3.5 w-3.5" />
+                        Shape layer
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onSelect={() => handleAddAdjustmentLayer()}>
+                        <Layers className="mr-2 h-3.5 w-3.5" />
+                        Adjustment layer
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                ) : null}
+                <Button
                 variant="ghost"
                 size="icon"
                 className="shrink-0"
@@ -921,6 +1123,7 @@ export const MediaSidebar = memo(function MediaSidebar({
                   <ChevronDown className="w-3 h-3" />
                 )}
               </Button>
+              </div>
             </div>
 
             {/* Media Tab - Full Media Library */}
@@ -929,9 +1132,27 @@ export const MediaSidebar = memo(function MediaSidebar({
             >
               <div className="flex h-full min-h-0 flex-col">
                 <div className="shrink-0 border-b border-border bg-secondary/15 px-3 py-2 text-[10px] leading-relaxed text-muted-foreground">
-                  {beatvideoMode === 'photo'
-                    ? 'Import a cover and beat, then drag both onto the timeline.'
-                    : 'Video: import footage and a beat. Drag clips onto the timeline; double-click a card to inspect it first.'}
+                  {beatvideoMode === 'photo' ? (
+                    <div className="space-y-2">
+                      <p>
+                        Beat owns the project beat and grid. Place one cover here and it will span
+                        the full song automatically when the beat is ready.
+                      </p>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        className="h-7 w-full justify-start text-xs"
+                        disabled={importingPhotoCover}
+                        onClick={() => void handleImportPhotoCover()}
+                      >
+                        <ImagePlus className="h-3.5 w-3.5" />
+                        {importingPhotoCover ? 'Importing cover…' : 'Import & place cover'}
+                      </Button>
+                    </div>
+                  ) : (
+                    'Import footage here. Beat owns the music grid; return to Visual for cuts, layers and effects.'
+                  )}
                 </div>
                 <div className="min-h-0 flex-1 overflow-hidden">
                   <MediaLibrary />
@@ -950,12 +1171,34 @@ export const MediaSidebar = memo(function MediaSidebar({
               ) : null}
             </div>
 
+            {/* Project-scoped mastering rack. */}
+            <div
+              className={`min-h-0 flex-1 overflow-hidden ${activeTab === 'master' ? 'block' : 'hidden'}`}
+            >
+              {activeTab === 'master' ? (
+                <Suspense fallback={null}>
+                  <LazyBeatvideoMasterPanel />
+                </Suspense>
+              ) : null}
+            </div>
+
             {/* Beatvideo Photo overlay hub — composed from canonical FreeCut text layers. */}
             <div
               className={`min-h-0 flex-1 overflow-y-auto p-3 ${activeTab === 'overlay' ? 'block' : 'hidden'}`}
             >
               <section className="space-y-2 border-b border-border pb-3">
                 <div className="text-xs font-medium text-foreground">Cover</div>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  className="w-full justify-start"
+                  disabled={importingPhotoCover}
+                  onClick={() => void handleImportPhotoCover()}
+                >
+                  <ImagePlus className="h-3.5 w-3.5" />
+                  {importingPhotoCover ? 'Importing cover…' : 'Import & place cover'}
+                </Button>
                 <Button
                   type="button"
                   size="sm"

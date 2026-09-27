@@ -7,7 +7,12 @@ import {
   type ItemKeyframes,
 } from '@/types/keyframe'
 import type { GpuEffect, ItemEffect } from '@/types/effects'
+import type { AudioReactiveState } from '@/types/beatvideo'
 import type { TimelineItem } from '@/types/timeline'
+import {
+  applyAudioReactiveEffectParamValue,
+  hasEnabledAudioReactiveBindings,
+} from '@/shared/beatvideo/beat-reactive'
 import {
   colorStringToKeyframeValue,
   interpolateColorKeyframesToHex,
@@ -311,15 +316,17 @@ export function resolveAnimatedGpuEffects(
   effects: ItemEffect[] | undefined,
   itemKeyframes: ItemKeyframes | undefined,
   relativeFrame: number,
+  audioReactive?: AudioReactiveState,
 ): ItemEffect[] | undefined {
-  const hasAudioPulse = effects?.some((entry) => entry.audioPulse?.enabled) ?? false
-  if (!effects || effects.length === 0 || (!itemKeyframes && !hasAudioPulse)) {
-    return effects
-  }
+  const sourceEffects = effects ?? []
+  const hasAudioPulse = sourceEffects.some((entry) => entry.audioPulse?.enabled)
+  const hasAudioReactive = hasEnabledAudioReactiveBindings(audioReactive)
+  if (sourceEffects.length === 0) return effects
+  if (!itemKeyframes && !hasAudioPulse && !hasAudioReactive) return effects
 
   let changed = false
 
-  const resolvedEffects = effects.map((effectEntry) => {
+  const resolvedEffects = sourceEffects.map((effectEntry) => {
     if (effectEntry.effect.type !== 'gpu-effect') {
       return effectEntry
     }
@@ -376,11 +383,34 @@ export function resolveAnimatedGpuEffects(
                       : interpolatePropertyValue(keyframes, relativeFrame, baseValue)
                   })()
             })()
-      if (value === null) {
-        continue
+      let resolvedValue = value
+      if (resolvedValue === null && isAnimatableGpuNumberParam(gpuEffect, paramKey)) {
+        resolvedValue = getNumericGpuEffectParamValue(gpuEffect, paramKey)
       }
 
-      if (nextParams[paramKey] === value) {
+      if (typeof resolvedValue === 'number') {
+        resolvedValue = applyAudioReactiveEffectParamValue(
+          resolvedValue,
+          audioReactive,
+          relativeFrame,
+          {
+            effectId: effectEntry.id,
+            gpuEffectType: gpuEffect.gpuEffectType,
+            paramKey,
+          },
+        )
+        const paramDefinition = getGpuEffect(gpuEffect.gpuEffectType)?.params[paramKey]
+        if (paramDefinition?.type === 'number') {
+          if (paramDefinition.min !== undefined) {
+            resolvedValue = Math.max(paramDefinition.min, resolvedValue)
+          }
+          if (paramDefinition.max !== undefined) {
+            resolvedValue = Math.min(paramDefinition.max, resolvedValue)
+          }
+        }
+      }
+
+      if (resolvedValue === null || nextParams[paramKey] === resolvedValue) {
         continue
       }
 
@@ -389,7 +419,7 @@ export function resolveAnimatedGpuEffects(
         paramsChanged = true
       }
 
-      nextParams[paramKey] = value
+      nextParams[paramKey] = resolvedValue
     }
 
     if (!paramsChanged) {
@@ -406,7 +436,7 @@ export function resolveAnimatedGpuEffects(
     }
   })
 
-  return changed ? resolvedEffects : effects
+  return changed ? resolvedEffects : sourceEffects
 }
 
 export const resolveAnimatedColorEffects = resolveAnimatedGpuEffects

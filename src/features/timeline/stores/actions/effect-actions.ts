@@ -3,6 +3,7 @@
  */
 
 import type { ItemEffect, VisualEffect } from '@/types/effects'
+import type { AudioReactiveState } from '@/types/beatvideo'
 import { useItemsStore } from '../items-store'
 import { useTimelineSettingsStore } from '../timeline-settings-store'
 import { execute } from './shared'
@@ -49,7 +50,23 @@ export function removeEffect(itemId: string, effectId: string): void {
   execute(
     'REMOVE_EFFECT',
     () => {
-      useItemsStore.getState()._removeEffect(itemId, effectId)
+      const store = useItemsStore.getState()
+      const item = store.itemById[itemId]
+      store._removeEffect(itemId, effectId)
+
+      if (item?.audioReactive) {
+        const bindings = item.audioReactive.bindings.filter(
+          (binding) =>
+            binding.target.kind !== 'effect-param' || binding.target.effectId !== effectId,
+        )
+        if (bindings.length !== item.audioReactive.bindings.length) {
+          store._updateItem(itemId, {
+            audioReactive:
+              bindings.length > 0 ? { ...item.audioReactive, bindings } : undefined,
+          })
+        }
+      }
+
       useTimelineSettingsStore.getState().markDirty()
     },
     { itemId, effectId },
@@ -65,7 +82,56 @@ export function setItemEffects(updates: Array<{ itemId: string; effects: ItemEff
   execute(
     'SET_ITEM_EFFECTS',
     () => {
-      useItemsStore.getState()._setItemEffects(updates)
+      const store = useItemsStore.getState()
+      store._setItemEffects(updates)
+
+      for (const update of updates) {
+        const item = store.itemById[update.itemId]
+        if (!item?.audioReactive) continue
+        const effectIds = new Set(update.effects.map((effect) => effect.id))
+        const bindings = item.audioReactive.bindings.filter(
+          (binding) =>
+            binding.target.kind !== 'effect-param' || effectIds.has(binding.target.effectId),
+        )
+        if (bindings.length !== item.audioReactive.bindings.length) {
+          store._updateItem(update.itemId, {
+            audioReactive:
+              bindings.length > 0 ? { ...item.audioReactive, bindings } : undefined,
+          })
+        }
+      }
+
+      useTimelineSettingsStore.getState().markDirty()
+    },
+    { count: updates.length },
+  )
+}
+
+/**
+ * Commit an effect stack and its canonical audio-reactive bindings together.
+ * Quick reactive looks use this so adding a required GPU effect + its binding is
+ * one undoable edit rather than two unrelated history entries.
+ */
+export function setItemEffectsAndAudioReactive(
+  updates: Array<{
+    itemId: string
+    effects: ItemEffect[]
+    audioReactive?: AudioReactiveState
+  }>,
+): void {
+  if (updates.length === 0) return
+
+  execute(
+    'SET_REACTIVE_EFFECTS',
+    () => {
+      const store = useItemsStore.getState()
+      store._setItemEffects(
+        updates.map(({ itemId, effects }) => ({ itemId, effects })),
+      )
+      for (const update of updates) {
+        if (!store.itemById[update.itemId]) continue
+        store._updateItem(update.itemId, { audioReactive: update.audioReactive })
+      }
       useTimelineSettingsStore.getState().markDirty()
     },
     { count: updates.length },

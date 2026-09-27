@@ -8,3 +8,9 @@ export { ColorGradeSection } from '@/features/effects/components/color-grade-sec
 export { EffectThumbnail } from '@/features/effects/components/effect-thumbnail'
 export { prewarmEffectPreviews } from '@/features/effects/components/effect-thumbnail/engine'
 export { useGpuEffectPreviewData } from '@/features/effects/hooks/use-gpu-effect-preview-data'
+
+export {
+  AUDIO_REACTIVE_PRESETS,
+  buildAudioReactivePresetUpdate,
+  type AudioReactivePresetId,
+} from '@/features/effects/utils/audio-reactive-presets'

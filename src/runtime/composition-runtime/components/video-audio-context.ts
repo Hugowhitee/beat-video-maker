@@ -24,6 +24,7 @@ import {
   rampPreviewClipGain,
   setPreviewClipEq,
   setPreviewClipGain,
+  syncPreviewMasterAudioGraph,
   type PreviewClipAudioGraph,
 } from '../utils/preview-audio-graph'
 
@@ -180,6 +181,11 @@ export function useVideoAudioState(
   const previewMasterVolume = usePlaybackStore((s) => s.volume)
   const previewMasterMuted = usePlaybackStore((s) => s.muted)
   const masterBusDb = usePlaybackStore((s) => s.masterBusDb)
+  const masterFx = usePlaybackStore((s) => s.masterFx)
+  const effectiveMonitorVolume = previewMasterMuted ? 0 : previewMasterVolume
+  useEffect(() => {
+    syncPreviewMasterAudioGraph(masterFx, masterBusDb, effectiveMonitorVolume)
+  }, [effectiveMonitorVolume, masterBusDb, masterFx])
 
   const itemKeyframes = useRuntimeItemKeyframes(item.id)
 
@@ -271,12 +277,8 @@ export function useVideoAudioState(
   // Item volume with fades - allow values > 1 for volume boost (Web Audio API handles this)
   const itemVolume = Math.max(0, linearVolume * fadeMultiplier)
 
-  // Apply master bus gain (project) then monitor volume (per-device).
-  const masterBusGain = Math.pow(10, masterBusDb / 20)
-  const effectiveMonitorVolume = previewMasterMuted ? 0 : previewMasterVolume
-
   return {
-    audioVolume: itemVolume * masterBusGain * effectiveMonitorVolume * mixerGain,
+    audioVolume: itemVolume * mixerGain,
     resolvedAudioEqStages,
   }
 }
