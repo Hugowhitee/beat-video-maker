@@ -550,13 +550,14 @@ function getOrCreatePreviewMasterAudioGraph(context: AudioContext): PreviewMaste
     outputGainNode,
   }
 
-  syncPreviewMasterAudioGraph(undefined, 0, false)
+  syncPreviewMasterAudioGraph(undefined, 0, 1, false)
   return sharedPreviewMasterGraph
 }
 
 export function syncPreviewMasterAudioGraph(
   value: MasterFxSettings | undefined,
   masterBusDb: number,
+  monitorGain = 1,
   ramp = true,
 ): void {
   const context = getSharedPreviewAudioContext()
@@ -608,7 +609,7 @@ export function syncPreviewMasterAudioGraph(
   graph.ceilingNode.curve = createCeilingCurve(limiterEnabled ? resolved.limiter.ceilingDb : 0)
   graph.ceilingNode.oversample = limiterEnabled ? '4x' : 'none'
 
-  write(graph.outputGainNode.gain, dbToGain(masterBusDb))
+  write(graph.outputGainNode.gain, dbToGain(masterBusDb) * Math.max(0, monitorGain))
 }
 
 export function getPreviewMasterReduction(): {
