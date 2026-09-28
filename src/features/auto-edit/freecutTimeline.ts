@@ -166,6 +166,7 @@ function resolveTargetVideoTrack(params: {
 
 function transitionPresentation(transition: EditTransition): TransitionPresentation {
   if (transition.kind === 'film-burn') return 'lightLeakBurn'
+  if (transition.kind === 'film-gate') return 'filmGateSlip'
   return 'fade'
 }
 
