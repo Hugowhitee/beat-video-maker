@@ -176,6 +176,9 @@ The interface is precise, calm and dense enough to scan quickly. The preview and
 
 Photo and Video are two workflows over the same studio shell, not two separate editors.
 
+- **Beat information architecture:** Beat source/import, analysis and grid correction form one continuous primary flow. Producer tag/watermark audio is an optional secondary disclosure after the grid tools; never create a competing `Grid / Tags` mode switch for these different jobs.
+- **Compact/mobile shell:** below the compact breakpoint, never squeeze the desktop sidebars, Program monitor and timeline into one miniature three-column editor. Render one canonical editor surface at a time and keep them reachable through a persistent bottom dock. Visual uses Tools / Preview / Inspector / Timeline; Master uses Master / Preview / Mixer / Timeline; Color uses Color / Preview / Timeline. These are views over the same stores and project state, not a separate mobile editor.
+
 - **Program monitor:** fullscreen enlarges only the real Program surface. Speaker mute is a one-click temporary monitor mute; monitor volume never changes project/export gain.
 - **Mixer:** Master exposes the existing project mixer as a floating/resizable utility window, closer to a DAW mixer than a new top-level workspace. It edits the same Beat / Producer tags / Watermarks / timeline track state as the docked mixer.
 - **Timeline:** the timeline is the shared direct-manipulation surface for Photo layers and Video edits. Video adds scene-aware arrangement, Loop A and transitions; Photo leans on layers/text/graphics and the Inspector.
