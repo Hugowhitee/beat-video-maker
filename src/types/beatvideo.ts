@@ -160,6 +160,8 @@ export type BeatvideoMusicAnalysis = {
   version: 1 | 2
   mediaId: string
   analyzedAt: number
+  /** Detector/reconciliation revision; independent from the correction-coordinate schema version. */
+  analysisRevision?: number
   musicMap: MusicMap
   /**
    * A detected downbeat is useful evidence but not treated as user-verified bar 1.
