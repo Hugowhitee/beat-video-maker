@@ -108,6 +108,8 @@ describe('stabilizeBeatGrid', () => {
     expect(result.fit.mode).toBe('fixed')
     expect(result.fit.phaseShiftMs).toBeLessThan(-230)
     expect(result.rhythm.beats[0]).toBeCloseTo(kickPhase, 2)
+    expect(result.rhythm.downbeats[0]).toBeCloseTo(kickPhase, 2)
+    expect(result.fit.anchorTime).toBeCloseTo(kickPhase, 2)
   })
 
   it('does not let strong off-beat hats steal the grid from low-end beat onsets', () => {
