@@ -576,7 +576,7 @@ export function BeatvideoVisualSourcePanel({
                   className="h-8 w-full rounded-md border border-input bg-secondary px-2 text-xs text-foreground"
                 >
                   <option value="clean">Clean cuts</option>
-                  <option value="mixed">Accent burns</option>
+                  <option value="detroit">Detroit accents</option>
                 </select>
               </label>
 
