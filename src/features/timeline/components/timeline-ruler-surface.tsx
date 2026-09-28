@@ -26,9 +26,13 @@ export const TimelineRulerSurface = memo(function TimelineRulerSurface({
   coordinateSurfaceRef,
   musicalRuler = false,
 }: TimelineRulerSurfaceProps) {
-  const hasBeatGrid = useProjectStore(
-    (state) => (state.currentProject?.beatvideoMusic?.musicMap.beats.length ?? 0) > 0,
-  )
+  const hasBeatGrid = useProjectStore((state) => {
+    const analysis = state.currentProject?.beatvideoMusic
+    if (!analysis) return false
+    if (analysis.musicMap.beats.length > 0) return true
+    const bpm = analysis.bpmOverride ?? analysis.musicMap.bpm
+    return typeof bpm === 'number' && Number.isFinite(bpm) && bpm > 0
+  })
   const localRulerRef = useRef<HTMLDivElement>(null)
   const rulerRef = coordinateSurfaceRef ?? localRulerRef
   const committedSurfaceRef = useRef<HTMLDivElement>(null)
