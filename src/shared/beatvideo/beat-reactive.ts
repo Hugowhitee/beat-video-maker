@@ -268,12 +268,15 @@ export function applyAudioReactiveTransform(
     }
 
     if (binding.target.kind === 'transform-shake') {
-      const maxShakePx = Math.max(0, Math.min(frameWidth, frameHeight) * 0.004)
+      // Keep the full control range useful: Medium should read clearly on a
+      // 1080p frame without turning into short-form-video chaos. The preset
+      // uses only part of this bounded range, while Amount=1 remains modest.
+      const maxShakePx = Math.max(0, Math.min(frameWidth, frameHeight) * 0.012)
       const intensity = Math.min(1, Math.abs(evaluated.delta))
       const seedBase = (evaluated.beatFrame ?? 0) * 17 + Math.round(relativeFrame) * 0.73
       shakeX += hashNoise(seedBase + 11) * maxShakePx * intensity
       shakeY += hashNoise(seedBase + 29) * maxShakePx * intensity
-      shakeRotation += hashNoise(seedBase + 47) * 0.18 * intensity
+      shakeRotation += hashNoise(seedBase + 47) * 0.45 * intensity
     }
   }
 

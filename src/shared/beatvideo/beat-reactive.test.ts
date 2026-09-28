@@ -201,7 +201,8 @@ describe('audio reactive modulation', () => {
     expect(first).toEqual(second)
     expect(first.width).toBeCloseTo(1030)
     expect(first.height).toBeCloseTo(1030)
-    expect(Math.abs(first.x)).toBeLessThanOrEqual(1080 * 0.004 * 0.25)
+    expect(Math.abs(first.x)).toBeLessThanOrEqual(1080 * 0.012 * 0.25)
+    expect(Math.abs(first.rotation)).toBeLessThanOrEqual(0.45 * 0.25)
   })
   it('projects spectral transients into the same item-local timeline', () => {
     const transients = projectAudioReactiveTransientsToItem(

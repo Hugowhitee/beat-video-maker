@@ -155,6 +155,19 @@ describe('EffectsSection', () => {
     )
   })
 
+  it('keeps reactive starters inside Add Effect instead of a separate permanent panel', () => {
+    render(<EffectsSection items={[makeItem('clip-a', [])]} />)
+
+    expect(screen.queryByText('Reactive starters')).not.toBeInTheDocument()
+    expect(screen.queryByText('Reactive motion')).not.toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: /add effect/i }))
+
+    expect(screen.getByText('Reactive starters')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /add pulse reaction/i })).toBeDisabled()
+    expect(screen.getByText('Analyze beat first')).toBeInTheDocument()
+  })
+
   it('reorders visible effects across selected items while preserving hidden color dock effects', () => {
     const hiddenWheels = makeEffect('wheels-a', 'gpu-color-wheels')
     const blurA = makeEffect('blur-a', 'gpu-gaussian-blur')

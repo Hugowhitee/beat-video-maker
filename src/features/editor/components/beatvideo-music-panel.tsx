@@ -50,6 +50,7 @@ import {
 import { resolveProducerTagRepeatFrames } from '../utils/producer-tag'
 import {
   resolveBeatGridFocusZoomLevel,
+  resolveBeatGridReviewState,
   resolveNearestBeatOffsetMs,
 } from '../utils/beat-grid-focus'
 import type {
@@ -196,6 +197,9 @@ export function BeatvideoMusicPanel() {
   const gridMode = effectiveAnalysis
     ? getBeatvideoGridMode(effectiveAnalysis)
     : 'detected'
+  const gridReviewState = effectiveAnalysis
+    ? resolveBeatGridReviewState(effectiveAnalysis)
+    : 'hidden'
   const barCount =
     resolvedSourceGrid?.beats.filter((beat) => beat.downbeat).length ?? 0
   const tagCandidates = useMemo(
@@ -1268,7 +1272,11 @@ export function BeatvideoMusicPanel() {
                 <div className="min-w-0">
                   <div className="flex items-center gap-1.5 text-xs font-semibold text-foreground">
                     <CheckCircle2 className="h-3.5 w-3.5 text-primary" />
-                    Grid ready
+                    {gridReviewState === 'recommended'
+                      ? 'Check grid'
+                      : gridReviewState === 'manual'
+                        ? 'Grid adjusted'
+                        : 'Grid ready'}
                   </div>
                   <div className="mt-1 font-mono text-[11px] text-muted-foreground">
                     {resolvedSourceGrid.bpm?.toFixed(2).replace(/\.00$/, '') ?? '—'} BPM
@@ -1279,7 +1287,11 @@ export function BeatvideoMusicPanel() {
                   </div>
                 </div>
                 <span className="shrink-0 text-[10px] text-muted-foreground">
-                  {effectiveAnalysis.barOneVerified ? 'Bar 1 verified' : 'Bar 1 detected'}
+                  {gridReviewState === 'recommended'
+                    ? 'Check waveform'
+                    : effectiveAnalysis.barOneVerified
+                      ? 'Bar 1 verified'
+                      : 'Bar 1 detected'}
                 </span>
               </div>
             </div>
@@ -1300,142 +1312,115 @@ export function BeatvideoMusicPanel() {
           />
         ) : null}
 
-        {effectiveAnalysis && resolvedSourceGrid ? (
-          <>
-            <details
-              className="border-t border-border pt-3"
-              open={precisionAlignOpen}
-              onToggle={(event) => setPrecisionAlignOpen(event.currentTarget.open)}
-            >
-              <summary className="flex cursor-pointer list-none items-center justify-between gap-2 text-xs font-medium text-foreground marker:hidden [&::-webkit-details-marker]:hidden">
-                <span>Fix grid alignment</span>
-                {playheadBeatOffsetMs !== null ? (
-                  <span className="font-mono text-[10px] font-normal text-muted-foreground">
-                    {playheadBeatOffsetMs >= 0 ? '+' : ''}
-                    {playheadBeatOffsetMs.toFixed(1)} ms
-                  </span>
-                ) : (
-                  <span className="text-[10px] font-normal text-muted-foreground">Optional</span>
-                )}
-              </summary>
+        {effectiveAnalysis && resolvedSourceGrid && gridReviewState !== 'hidden' ? (
+          <details
+            className="border-t border-border pt-3"
+            open={precisionAlignOpen || gridReviewState === 'recommended'}
+            onToggle={(event) => setPrecisionAlignOpen(event.currentTarget.open)}
+          >
+            <summary className="flex cursor-pointer list-none items-center justify-between gap-2 text-xs font-medium text-foreground marker:hidden [&::-webkit-details-marker]:hidden">
+              <span>{gridReviewState === 'recommended' ? 'Review grid' : 'Grid corrections'}</span>
+              {playheadBeatOffsetMs !== null ? (
+                <span className="font-mono text-[10px] font-normal text-muted-foreground">
+                  {playheadBeatOffsetMs >= 0 ? '+' : ''}
+                  {playheadBeatOffsetMs.toFixed(1)} ms
+                </span>
+              ) : (
+                <span className="text-[10px] font-normal text-muted-foreground">
+                  {gridReviewState === 'recommended' ? 'Needs confirmation' : 'Manual'}
+                </span>
+              )}
+            </summary>
 
-              <div className="mt-3 space-y-2">
-                <p className="text-[10px] leading-relaxed text-muted-foreground">
-                  Only use this when a grid line visibly misses the waveform onset.
-                </p>
+            <div className="mt-3 space-y-2">
+              <p className="text-[10px] leading-relaxed text-muted-foreground">
+                {gridReviewState === 'recommended'
+                  ? 'Check Bar 1 against the waveform. Correct it only when the grid visibly misses the musical onset.'
+                  : 'These controls stay available because this grid has manual timing edits.'}
+              </p>
 
-                <div className="grid grid-cols-2 gap-1.5">
-                  <Button
-                    type="button"
-                    size="sm"
-                    className="justify-start"
-                    disabled={!timelineGrid || timelineGrid.barOneTimelineTime === null}
-                    onClick={focusBarOneOnTimeline}
-                  >
-                    <Focus className="h-3.5 w-3.5" />
-                    Bar 1
-                  </Button>
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="outline"
-                    className="justify-start"
-                    disabled={!timelineGrid}
-                    onClick={focusCurrentBeatOnTimeline}
-                  >
-                    <Crosshair className="h-3.5 w-3.5" />
-                    Nearest beat
-                  </Button>
-                </div>
-
-                <div className="grid grid-cols-4 gap-1">
-                  {[
-                    [-0.01, '−10'],
-                    [-0.001, '−1'],
-                    [0.001, '+1'],
-                    [0.01, '+10'],
-                  ].map(([seconds, label]) => (
-                    <Button
-                      key={label}
-                      type="button"
-                      size="sm"
-                      variant="outline"
-                      disabled={!timelineGrid}
-                      onClick={() => void nudgeGrid(Number(seconds))}
-                      className="px-1 font-mono text-[9px]"
-                    >
-                      {label} ms
-                    </Button>
-                  ))}
-                </div>
-
+              <div className="grid grid-cols-2 gap-1.5">
                 <Button
                   type="button"
                   size="sm"
-                  className="w-full justify-start"
-                  disabled={!timelineGrid}
-                  onClick={() => void alignGridToPlayhead()}
+                  className="justify-start"
+                  disabled={!timelineGrid || timelineGrid.barOneTimelineTime === null}
+                  onClick={focusBarOneOnTimeline}
                 >
-                  <Crosshair className="h-3.5 w-3.5" />
-                  Put nearest grid line on playhead
+                  <Focus className="h-3.5 w-3.5" />
+                  Bar 1
                 </Button>
-
                 <Button
                   type="button"
                   size="sm"
                   variant="outline"
-                  className="w-full justify-start"
+                  className="justify-start"
                   disabled={!timelineGrid}
-                  onClick={() => void setBarOneAtPlayhead()}
+                  onClick={focusCurrentBeatOnTimeline}
                 >
-                  Set Bar 1 at playhead
+                  <Crosshair className="h-3.5 w-3.5" />
+                  Nearest beat
                 </Button>
-
-                {gridMode === 'detected' ? (
-                  <details className="border-t border-border/70 pt-2">
-                    <summary className="cursor-pointer list-none text-[10px] font-medium text-muted-foreground marker:hidden [&::-webkit-details-marker]:hidden">
-                      Fix drift later in the song
-                    </summary>
-                    <div className="mt-2 space-y-1.5">
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="outline"
-                        className="w-full justify-start"
-                        disabled={!timelineGrid}
-                        onClick={() => void alignNearestBeatToPlayhead()}
-                      >
-                        Pin this beat to playhead
-                      </Button>
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="ghost"
-                        className="w-full justify-start"
-                        disabled={(effectiveAnalysis.correctionAnchors?.length ?? 0) === 0}
-                        onClick={() => void undoLastAnchor()}
-                      >
-                        <Undo2 className="h-3.5 w-3.5" />
-                        Undo last local anchor
-                      </Button>
-                    </div>
-                  </details>
-                ) : null}
               </div>
-            </details>
 
-            <details className="border-t border-border pt-3">
-              <summary className="flex cursor-pointer list-none items-center justify-between gap-2 text-xs font-medium text-foreground marker:hidden [&::-webkit-details-marker]:hidden">
-                <span>Advanced grid repair</span>
-                <span className="text-[10px] font-normal text-muted-foreground">
-                  {gridMode === 'fixed' ? 'Fixed BPM' : 'Detected timing'}
-                </span>
-              </summary>
-              <div className="mt-3 space-y-3">
-                <section className="space-y-2">
-                  <div className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
-                    Known BPM
+              <Button
+                type="button"
+                size="sm"
+                className="w-full justify-start"
+                disabled={!timelineGrid}
+                onClick={() => void alignGridToPlayhead()}
+              >
+                <Crosshair className="h-3.5 w-3.5" />
+                Align nearest grid line to playhead
+              </Button>
+
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                className="w-full justify-start"
+                disabled={!timelineGrid}
+                onClick={() => void setBarOneAtPlayhead()}
+              >
+                Set Bar 1 at playhead
+              </Button>
+
+              {gridMode === 'detected' ? (
+                <details className="border-t border-border/70 pt-2">
+                  <summary className="cursor-pointer list-none text-[10px] font-medium text-muted-foreground marker:hidden [&::-webkit-details-marker]:hidden">
+                    Local drift correction
+                  </summary>
+                  <div className="mt-2 space-y-1.5">
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      className="w-full justify-start"
+                      disabled={!timelineGrid}
+                      onClick={() => void alignNearestBeatToPlayhead()}
+                    >
+                      Pin this beat to playhead
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="ghost"
+                      className="w-full justify-start"
+                      disabled={(effectiveAnalysis.correctionAnchors?.length ?? 0) === 0}
+                      onClick={() => void undoLastAnchor()}
+                    >
+                      <Undo2 className="h-3.5 w-3.5" />
+                      Undo last local anchor
+                    </Button>
                   </div>
+                </details>
+              ) : null}
+
+              <details className="border-t border-border/70 pt-2">
+                <summary className="cursor-pointer list-none text-[10px] font-medium text-muted-foreground marker:hidden [&::-webkit-details-marker]:hidden">
+                  Manual timing
+                </summary>
+                <div className="mt-2 space-y-3">
                   <div className="flex items-center gap-1.5">
                     <input
                       type="number"
@@ -1462,11 +1447,7 @@ export function BeatvideoMusicPanel() {
                       Use BPM
                     </Button>
                   </div>
-                </section>
-                <section className="space-y-2 border-t border-border pt-3">
-                  <div className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
-                    Grid type
-                  </div>
+
                   <div className="grid grid-cols-2 gap-1">
                     <Button
                       type="button"
@@ -1486,43 +1467,7 @@ export function BeatvideoMusicPanel() {
                       Fixed BPM
                     </Button>
                   </div>
-                  <p className="text-[10px] leading-relaxed text-muted-foreground">
-                    Normally leave this on Detected timing. Use Fixed BPM only when you know the song tempo.
-                  </p>
-                </section>
 
-                <section className="space-y-2 border-t border-border pt-3">
-                  <div className="flex items-center justify-between gap-2">
-                    <div>
-                      <div className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
-                        Timeline link
-                      </div>
-                      <div className="mt-1 text-[10px] text-muted-foreground">
-                        {timelineGrid
-                          ? `Linked to ${timelineGrid.placement.label}`
-                          : 'Place this beat source on the timeline to show its grid.'}
-                      </div>
-                    </div>
-                    {timelineGrid ? (
-                      <LocateFixed className="h-3.5 w-3.5 text-primary" />
-                    ) : null}
-                  </div>
-                </section>
-
-                <section className="space-y-2 border-t border-border pt-3">
-                  <div className="flex items-center justify-between gap-2">
-                    <div>
-                      <div className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
-                        Bar 1
-                      </div>
-                      <div className="mt-1 font-mono text-sm text-foreground">
-                        {formatClock(timelineGrid?.barOneTimelineTime ?? null)}
-                      </div>
-                    </div>
-                    <span className="text-[9px] text-muted-foreground">
-                      {effectiveAnalysis.barOneVerified ? 'Verified' : 'Detected'}
-                    </span>
-                  </div>
                   <Button
                     type="button"
                     size="sm"
@@ -1532,11 +1477,10 @@ export function BeatvideoMusicPanel() {
                   >
                     Reset grid to analysis
                   </Button>
-                </section>
-
-              </div>
-            </details>
-          </>
+                </div>
+              </details>
+            </div>
+          </details>
         ) : null}
 
         <details className="border-t border-border pt-3">

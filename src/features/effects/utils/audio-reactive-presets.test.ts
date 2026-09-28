@@ -191,7 +191,7 @@ describe('audio reactive presets', () => {
     const binding = update?.audioReactive.bindings[0]
     expect(binding?.target).toEqual({ kind: 'transform-shake' })
     expect(binding?.driver).toBe('downbeat')
-    expect(binding?.amount).toBeCloseTo(0.3)
-    expect(binding?.threshold).toBeCloseTo(0.62)
+    expect(binding?.amount).toBeCloseTo(0.4)
+    expect(binding?.threshold).toBeCloseTo(0.58)
   })
 })

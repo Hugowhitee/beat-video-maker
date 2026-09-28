@@ -261,8 +261,8 @@ export function buildAudioReactivePresetUpdate(params: {
       fps,
       {
         driver: audioDriver(grid, 'low', 'downbeat'),
-        amount: 0.3,
-        threshold: 0.62,
+        amount: 0.4,
+        threshold: 0.58,
         releaseFrames: Math.max(1, Math.round(fps * 0.08)),
       },
     )

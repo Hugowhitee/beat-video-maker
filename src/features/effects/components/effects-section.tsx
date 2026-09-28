@@ -58,7 +58,6 @@ import {
 } from '@/features/effects/utils/audio-reactive-bindings'
 import {
   AUDIO_REACTIVE_PRESETS,
-  buildAudioReactivePresetRemovalUpdate,
   buildAudioReactivePresetUpdate,
   isAudioReactivePresetApplied,
   type AudioReactivePresetId,
@@ -814,6 +813,24 @@ export const EffectsSection = memo(function EffectsSection({
     [clearPreview, getMappedEffectEntry, removeEffects, visualItems],
   )
 
+  const handleApplyReactiveStarter = useCallback(
+    (presetId: AudioReactivePresetId) => {
+      if (!audioReactiveGrid || visualItems.length === 0) return
+
+      const updates = visualItems.flatMap((item) => {
+        const update = buildAudioReactivePresetUpdate({
+          item,
+          grid: audioReactiveGrid.grid,
+          fps: timelineFps,
+          presetId,
+        })
+        return update ? [update] : []
+      })
+      if (updates.length > 0) setItemEffectsAndAudioReactive(updates)
+    },
+    [audioReactiveGrid, setItemEffectsAndAudioReactive, timelineFps, visualItems],
+  )
+
   // Effect picker popover state
   const [pickerOpen, setPickerOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
@@ -903,6 +920,15 @@ export const EffectsSection = memo(function EffectsSection({
     })
   }, [hiddenGpuEffectTypeSet, searchQuery])
 
+  const reactiveStarterDefinitions = useMemo(() => {
+    if (isDock) return []
+    const query = searchQuery.trim().toLowerCase()
+    if (!query) return AUDIO_REACTIVE_PRESETS
+    return AUDIO_REACTIVE_PRESETS.filter((preset) =>
+      `${preset.label} ${preset.description}`.toLowerCase().includes(query),
+    )
+  }, [isDock, searchQuery])
+
   const filteredCategories = useMemo(() => {
     const hasSearch = searchQuery.trim().length > 0
     const visibleCategories = gpuCategories
@@ -947,6 +973,7 @@ export const EffectsSection = memo(function EffectsSection({
   }, [hasHiddenGpuEffect, hiddenGpuEffectTypeSet, searchQuery, userPresets])
 
   const hasResults =
+    reactiveStarterDefinitions.length > 0 ||
     quickEffectDefinitions.length > 0 ||
     filteredCategories.length > 0 ||
     filteredPresets.length > 0 ||
@@ -988,7 +1015,59 @@ export const EffectsSection = memo(function EffectsSection({
 
             {/* Scrollable effect list */}
             <div className="max-h-[420px] overflow-y-auto overflow-x-hidden p-1">
+              {reactiveStarterDefinitions.length > 0 ? (
+                <div>
+                  <div className="flex items-center justify-between gap-2 px-2 py-1">
+                    <span className="text-xs font-medium text-muted-foreground">
+                      Reactive starters
+                    </span>
+                    {!audioReactiveAvailable ? (
+                      <span className="text-[10px] text-muted-foreground">
+                        Analyze beat first
+                      </span>
+                    ) : null}
+                  </div>
+                  {reactiveStarterDefinitions.map((preset) => {
+                    const applied =
+                      visualItems.length > 0 &&
+                      visualItems.every((item) =>
+                        isAudioReactivePresetApplied(item, preset.id),
+                      )
+                    return (
+                      <button
+                        key={preset.id}
+                        type="button"
+                        disabled={!audioReactiveAvailable || applied}
+                        aria-label={applied ? `${preset.label} reaction added` : `Add ${preset.label} reaction`}
+                        className="flex w-full select-none items-center gap-2 rounded-sm px-2 py-1.5 text-left text-xs outline-none enabled:hover:bg-accent enabled:hover:text-accent-foreground disabled:opacity-50"
+                        onClick={() => {
+                          handleApplyReactiveStarter(preset.id)
+                          closePicker()
+                        }}
+                      >
+                        <AudioLines className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+                        <span className="min-w-0 flex-1">
+                          <span className="block font-medium text-foreground">
+                            {preset.label}
+                          </span>
+                          <span className="block truncate text-[10px] text-muted-foreground">
+                            {preset.description}
+                          </span>
+                        </span>
+                        {applied ? (
+                          <span className="text-[10px] text-muted-foreground">Added</span>
+                        ) : null}
+                      </button>
+                    )
+                  })}
+                </div>
+              ) : null}
+
               {quickEffectDefinitions.length > 0 ? (
+                <div>
+                  {reactiveStarterDefinitions.length > 0 ? (
+                    <div className="-mx-1 my-1 h-px bg-muted" />
+                  ) : null}
                 <div>
                   <div className="px-2 py-1 text-xs font-medium text-muted-foreground">
                     Quick effects
@@ -1019,7 +1098,7 @@ export const EffectsSection = memo(function EffectsSection({
               {/* Full effect catalog */}
               {filteredCategories.map(({ category, effects: catEffects }, index) => (
                 <div key={category}>
-                  {(index > 0 || quickEffectDefinitions.length > 0) && (
+                  {(index > 0 || quickEffectDefinitions.length > 0 || reactiveStarterDefinitions.length > 0) && (
                     <div className="-mx-1 my-1 h-px bg-muted" />
                   )}
                   <div className="px-2 py-1 text-xs font-medium text-muted-foreground">
@@ -1050,7 +1129,7 @@ export const EffectsSection = memo(function EffectsSection({
 
               {filteredPresets.length > 0 && (
                 <>
-                  {(quickEffectDefinitions.length > 0 || filteredCategories.length > 0) && (
+                  {(reactiveStarterDefinitions.length > 0 || quickEffectDefinitions.length > 0 || filteredCategories.length > 0) && (
                     <div className="-mx-1 my-1 h-px bg-muted" />
                   )}
                   <div className="px-2 py-1 text-xs font-medium text-muted-foreground">
@@ -1083,7 +1162,8 @@ export const EffectsSection = memo(function EffectsSection({
 
               {filteredUserPresets.length > 0 && (
                 <>
-                  {(quickEffectDefinitions.length > 0 ||
+                  {(reactiveStarterDefinitions.length > 0 ||
+                    quickEffectDefinitions.length > 0 ||
                     filteredCategories.length > 0 ||
                     filteredPresets.length > 0) && (
                     <div className="-mx-1 my-1 h-px bg-muted" />
@@ -1146,97 +1226,45 @@ export const EffectsSection = memo(function EffectsSection({
     </div>
   )
 
-  const handleReactiveQuickStart = useCallback(
-    (presetId: AudioReactivePresetId) => {
-      if (!audioReactiveGrid || visualItems.length === 0) return
-
-      const removePreset = visualItems.every((item) =>
-        isAudioReactivePresetApplied(item, presetId),
-      )
-      const updates = visualItems.flatMap((item) => {
-        const update = removePreset
-          ? buildAudioReactivePresetRemovalUpdate({ item, presetId })
-          : buildAudioReactivePresetUpdate({
-              item,
-              grid: audioReactiveGrid.grid,
-              fps: timelineFps,
-              presetId,
-            })
-        return update ? [update] : []
-      })
-      if (updates.length > 0) setItemEffectsAndAudioReactive(updates)
-    },
-    [audioReactiveGrid, setItemEffectsAndAudioReactive, timelineFps, visualItems],
-  )
-
-  const reactiveQuickStarts = !isDock ? (
-    <div className="mx-2 mb-2 border-t border-border/70 pt-2">
-      <div className="mb-1.5 flex items-center gap-2">
-        <span className="text-xs font-medium text-foreground">Reactive</span>
-        {!audioReactiveAvailable ? (
-          <span className="ml-auto text-[11px] text-muted-foreground">Analyze beat first</span>
-        ) : null}
-      </div>
-      <div className="flex flex-wrap gap-1">
-        {AUDIO_REACTIVE_PRESETS.map((preset) => {
-          const applied =
-            visualItems.length > 0 &&
-            visualItems.every((item) => isAudioReactivePresetApplied(item, preset.id))
-          return (
-            <Button
-              key={preset.id}
-              type="button"
-              size="sm"
-              variant={applied ? 'secondary' : 'outline'}
-              className="h-7 px-2 text-xs"
-              disabled={!audioReactiveAvailable}
-              aria-pressed={applied}
-              title={applied ? `Remove ${preset.label}` : preset.description}
-              onClick={() => handleReactiveQuickStart(preset.id)}
-            >
-              {preset.label}
-            </Button>
-          )
-        })}
-      </div>
-    </div>
-  ) : null
-
-  const motionReactiveControls = motionReactiveBindings.length > 0 ? (
-    <div className="mx-2 mb-2 border-t border-border/70 pt-2">
-      <div className="flex items-center gap-1.5 px-2 pb-1">
-        <AudioLines className="h-3.5 w-3.5 text-muted-foreground" aria-hidden="true" />
-        <span className="text-xs font-medium text-foreground">Reactive motion</span>
-      </div>
-      {motionReactiveBindings.map((binding) => (
-        <div key={binding.id} className="relative">
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            className="absolute right-3 top-1.5 z-10 h-6 w-6 text-muted-foreground hover:text-destructive"
-            aria-label={`Remove ${getMotionReactiveLabel(binding)} reaction`}
-            title={`Remove ${getMotionReactiveLabel(binding)} reaction`}
-            onClick={() => handleRemoveMotionReactiveBinding(binding.id)}
-          >
-            <X className="h-3 w-3" />
-          </Button>
-          <AudioReactiveParamControls
-            binding={binding}
-            label={getMotionReactiveLabel(binding)}
-            amountRange={getMotionReactiveAmountRange(binding)}
-            fps={timelineFps}
-            onChange={(patch) => handleUpdateMotionReactiveBinding(binding.id, patch)}
-          />
-        </div>
-      ))}
-    </div>
+  const motionReactiveRows = motionReactiveBindings.length > 0 ? (
+    <>
+      {motionReactiveBindings.map((binding) => {
+        const label = getMotionReactiveLabel(binding)
+        return (
+          <div key={binding.id} className="border-y border-border/70 bg-secondary/20">
+            <div className="flex min-w-0 items-center gap-2 px-2 py-1.5">
+              <span className="min-w-0 flex-1 truncate text-xs font-semibold text-foreground">
+                {label}
+              </span>
+              <span className="text-[10px] text-muted-foreground">Reactive</span>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="h-6 w-6 shrink-0 text-muted-foreground hover:text-destructive"
+                aria-label={`Remove ${label} reaction`}
+                title={`Remove ${label} reaction`}
+                onClick={() => handleRemoveMotionReactiveBinding(binding.id)}
+              >
+                <X className="h-3 w-3" />
+              </Button>
+            </div>
+            <AudioReactiveParamControls
+              binding={binding}
+              label={null}
+              amountRange={getMotionReactiveAmountRange(binding)}
+              fps={timelineFps}
+              onChange={(patch) => handleUpdateMotionReactiveBinding(binding.id, patch)}
+            />
+          </div>
+        )
+      })}
+    </>
   ) : null
 
   const effectList = (
     <div className="space-y-0">
-      {reactiveQuickStarts}
-      {motionReactiveControls}
+      {motionReactiveRows}
       {effects.map((effect, effectIndex) => {
         if (effect.effect.type === 'gpu-effect') {
           const gpuEff = effect.effect as GpuEffect

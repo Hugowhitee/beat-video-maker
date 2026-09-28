@@ -22,7 +22,7 @@ interface AudioReactiveParamControlsProps {
   binding: AudioReactiveBinding
   param?: EffectParam
   amountRange?: AudioReactiveAmountRange
-  label?: string
+  label?: string | null
   fps: number
   onChange: (patch: Partial<AudioReactiveBinding>) => void
 }
@@ -46,12 +46,16 @@ export const AudioReactiveParamControls = memo(function AudioReactiveParamContro
   const noLiveCommit = () => {}
 
   return (
-    <div className="mx-2 mb-2 mt-0.5 border-t border-border/70 pt-2">
+    <div className="px-2 pb-2 pt-1.5">
       <div className="mb-2 flex items-center gap-1.5">
-        <AudioLines className="h-3.5 w-3.5 text-muted-foreground" aria-hidden="true" />
-        <span className="text-xs font-medium text-foreground">
-          {label}
-        </span>
+        {label ? (
+          <>
+            <AudioLines className="h-3.5 w-3.5 text-muted-foreground" aria-hidden="true" />
+            <span className="text-xs font-medium text-foreground">{label}</span>
+          </>
+        ) : (
+          <span className="text-[11px] text-muted-foreground">Source</span>
+        )}
         <Select
           value={binding.driver}
           onValueChange={(driver) =>

@@ -290,7 +290,7 @@ export const GpuEffectPanel = memo(function GpuEffectPanel({
                         onClick={() => onToggleAudioReactive?.(effect.id, key, param)}
                       >
                         <AudioLines className="h-3 w-3" />
-                        React
+                        Reactive
                       </Button>
                     ) : null}
                     {keyframeProperty ? (
