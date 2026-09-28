@@ -1,7 +1,14 @@
 import type { MusicBeat } from '@/types/beatvideo'
 import { resolveBeatGridDensity } from './beatvideo-grid-density'
 
-export type BeatGridResolution = 'auto' | 'beat' | 'bar' | '2-bars' | '4-bars'
+export type BeatGridResolution =
+  | 'auto'
+  | 'beat'
+  | 'bar'
+  | '2-bars'
+  | '4-bars'
+  | '8-bars'
+  | '16-bars'
 
 export const BEAT_GRID_RESOLUTION_OPTIONS: readonly {
   value: BeatGridResolution
@@ -12,7 +19,33 @@ export const BEAT_GRID_RESOLUTION_OPTIONS: readonly {
   { value: 'bar', label: '1 bar' },
   { value: '2-bars', label: '2 bars' },
   { value: '4-bars', label: '4 bars' },
+  { value: '8-bars', label: '8 bars' },
+  { value: '16-bars', label: '16 bars' },
 ]
+
+const MANUAL_GRID_RESOLUTION_ORDER: readonly Exclude<BeatGridResolution, 'auto'>[] = [
+  'beat',
+  'bar',
+  '2-bars',
+  '4-bars',
+  '8-bars',
+  '16-bars',
+]
+
+export function stepBeatGridResolution(
+  resolution: BeatGridResolution,
+  direction: 'denser' | 'sparser',
+): BeatGridResolution {
+  if (resolution === 'auto') {
+    return direction === 'denser' ? 'beat' : '2-bars'
+  }
+
+  const index = MANUAL_GRID_RESOLUTION_ORDER.indexOf(resolution)
+  if (index < 0) return resolution
+  const delta = direction === 'denser' ? -1 : 1
+  const nextIndex = Math.max(0, Math.min(MANUAL_GRID_RESOLUTION_ORDER.length - 1, index + delta))
+  return MANUAL_GRID_RESOLUTION_ORDER[nextIndex] ?? resolution
+}
 
 export interface BeatGridMarker {
   beat: MusicBeat
@@ -45,6 +78,8 @@ function manualBarStride(resolution: BeatGridResolution): number | null {
   if (resolution === 'bar') return 1
   if (resolution === '2-bars') return 2
   if (resolution === '4-bars') return 4
+  if (resolution === '8-bars') return 8
+  if (resolution === '16-bars') return 16
   return null
 }
 
