@@ -58,7 +58,6 @@ import type {
   BeatvideoGridCorrectionAnchor,
   BeatvideoGridMode,
   BeatvideoMusicAnalysis,
-  MusicMap,
 } from '@/types/beatvideo'
 
 const ANCHOR_EPSILON = 1e-4
