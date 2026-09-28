@@ -39,8 +39,9 @@ describe('Beatvideo reactive graphics', () => {
 
     expect(items).toHaveLength(1)
     const item = items[0]!
-    expect(item.transform.opacity).toBe(0)
-    expect(item.transform.width).toBe(1920)
+    const transform = item.transform!
+    expect(transform.opacity).toBe(0)
+    expect(transform.width).toBe(1920)
     expect(item.audioReactive?.bindings[0]?.driver).toBe('downbeat')
     expect(item.audioReactive?.beats.length).toBeGreaterThan(0)
   })
