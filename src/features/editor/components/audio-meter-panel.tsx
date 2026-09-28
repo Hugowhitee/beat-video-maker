@@ -198,14 +198,17 @@ const AudioEqPanelSurface = memo(function AudioEqPanelSurface({
 
 export const AudioMeterPanel = memo(function AudioMeterPanel({
   initialMode = 'meter',
+  mobile = false,
 }: {
   initialMode?: PanelMode
+  mobile?: boolean
 }) {
   const { t } = useTranslation()
   const [panelMode, setPanelMode] = useState<PanelMode>(initialMode)
   const [eqPanelTarget, setEqPanelTarget] = useState<EqPanelTarget | null>(null)
   const mixerFloating = useEditorStore((s) => s.mixerFloating)
   const setMixerFloating = useEditorStore((s) => s.setMixerFloating)
+  const effectiveMixerFloating = mobile ? false : mixerFloating
   const [trackSnapshotVersion, setTrackSnapshotVersion] = useState(0)
   const eqDetachedWindowRef = useRef<Window | null>(null)
 
@@ -960,18 +963,22 @@ export const AudioMeterPanel = memo(function AudioMeterPanel({
           </span>
           {t('editor.audioMeters.mixer')}
         </DropdownMenuItem>
-        <DropdownMenuSeparator />
-        <DropdownMenuItem
-          onClick={() => {
-            if (!mixerFloating) setPanelMode('mixer')
-            setMixerFloating(!mixerFloating)
-          }}
-        >
-          <span className="w-4 inline-flex items-center justify-start">
-            {mixerFloating && <Check className="h-3.5 w-3.5" />}
-          </span>
-          {t('editor.audioMeters.floatMixer')}
-        </DropdownMenuItem>
+        {!mobile ? (
+          <>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              onClick={() => {
+                if (!mixerFloating) setPanelMode('mixer')
+                setMixerFloating(!mixerFloating)
+              }}
+            >
+              <span className="w-4 inline-flex items-center justify-start">
+                {mixerFloating && <Check className="h-3.5 w-3.5" />}
+              </span>
+              {t('editor.audioMeters.floatMixer')}
+            </DropdownMenuItem>
+          </>
+        ) : null}
       </DropdownMenuContent>
     </DropdownMenu>
   )
@@ -1013,7 +1020,7 @@ export const AudioMeterPanel = memo(function AudioMeterPanel({
   // Floating mixer (rendered via portal, independent of panel mode)
   // ---------------------------------------------------------------------------
 
-  const floatingMixer = mixerFloating ? (
+  const floatingMixer = effectiveMixerFloating ? (
     <FloatingPanel
       title={t('editor.audioMeters.mixer')}
       defaultBounds={FLOATING_MIXER_DEFAULT_BOUNDS}
@@ -1072,7 +1079,7 @@ export const AudioMeterPanel = memo(function AudioMeterPanel({
   // Mixer mode (docked)
   // ---------------------------------------------------------------------------
 
-  if (panelMode === 'mixer' && !mixerFloating) {
+  if (panelMode === 'mixer' && !effectiveMixerFloating) {
     return (
       <>
         {detachedEqPanel}
