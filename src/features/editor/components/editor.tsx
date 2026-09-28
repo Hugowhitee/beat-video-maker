@@ -852,6 +852,7 @@ export const LoadedEditor = memo(function LoadedEditor({
           </nav>
         </div>
       ) : (
+        <>
       {/* Main Layout: Full-height sidebar + vertical split */}
       <div className="flex-1 flex overflow-hidden">
         {/* Left Sidebar - Media Library (full column mode) */}
@@ -973,6 +974,7 @@ export const LoadedEditor = memo(function LoadedEditor({
           </InteractionLockRegion>
         )}
       </div>
+        </>
       )}
 
       <Suspense fallback={null}>
