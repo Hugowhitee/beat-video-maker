@@ -204,6 +204,55 @@ test('mixed transition profile still uses mostly clean cuts and reserves film bu
   expect(burns[0]?.alignment).toBe(0.5);
 });
 
+test('Detroit transition profile stays sparse and varies the accent treatment', () => {
+  const music = musicMap([
+    {
+      id: 'intro',
+      start: 0,
+      end: 8,
+      kind: 'intro',
+      energy: 0.2,
+      confidence: 0.95,
+    },
+    {
+      id: 'drop-a',
+      start: 8,
+      end: 16,
+      kind: 'drop',
+      energy: 0.95,
+      confidence: 0.98,
+    },
+    {
+      id: 'verse',
+      start: 16,
+      end: 24,
+      kind: 'verse',
+      energy: 0.42,
+      confidence: 0.92,
+    },
+    {
+      id: 'drop-b',
+      start: 24,
+      end: 32,
+      kind: 'drop',
+      energy: 0.93,
+      confidence: 0.98,
+    },
+  ])
+
+  const plan = createEditPlan(music, clipMap(), {
+    mode: 'auto',
+    transitionProfile: 'detroit',
+    seed: 2,
+  })
+
+  expect(plan.transitions.length).toBeGreaterThanOrEqual(2)
+  expect(plan.transitions[0]?.kind).toBe('film-burn')
+  expect(plan.transitions[1]?.kind).toBe('film-gate')
+  expect(plan.transitions.every((transition) => transition.duration <= 0.42)).toBe(true)
+  expect(plan.segments.length - 1).toBeGreaterThan(plan.transitions.length * 3)
+})
+
 test('loop mode creates one editable motif and repeats the exact cut/source pattern', () => {
   const music = musicMap([
     {
