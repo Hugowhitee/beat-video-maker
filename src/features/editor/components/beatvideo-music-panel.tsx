@@ -4,7 +4,6 @@ import {
   CheckCircle2,
   Crosshair,
   Focus,
-  LocateFixed,
   Undo2,
 } from 'lucide-react'
 import { toast } from 'sonner'
@@ -65,13 +64,6 @@ import {
 
 const ANCHOR_EPSILON = 1e-4
 const ANCHOR_GAP_SECONDS = 0.001
-function formatClock(seconds: number | null) {
-  if (seconds === null || !Number.isFinite(seconds)) return '—'
-  const minutes = Math.floor(seconds / 60)
-  const remainder = Math.max(0, seconds - minutes * 60)
-  return `${minutes}:${remainder.toFixed(2).padStart(5, '0')}`
-}
-
 function sourceSupportsBeatAnalysis(mimeType: string, audioCodec?: string) {
   if (mimeType.startsWith('audio/')) return true
   return mimeType.startsWith('video/') && Boolean(audioCodec)
@@ -200,6 +192,11 @@ export function BeatvideoMusicPanel() {
   const gridReviewState = effectiveAnalysis
     ? resolveBeatGridReviewState(effectiveAnalysis)
     : 'hidden'
+
+  useEffect(() => {
+    if (gridReviewState === 'recommended') setPrecisionAlignOpen(true)
+  }, [effectiveAnalysis?.analyzedAt, gridReviewState])
+
   const barCount =
     resolvedSourceGrid?.beats.filter((beat) => beat.downbeat).length ?? 0
   const tagCandidates = useMemo(
@@ -1271,7 +1268,11 @@ export function BeatvideoMusicPanel() {
               <div className="flex items-center justify-between gap-3">
                 <div className="min-w-0">
                   <div className="flex items-center gap-1.5 text-xs font-semibold text-foreground">
-                    <CheckCircle2 className="h-3.5 w-3.5 text-primary" />
+                    {gridReviewState === 'recommended' ? (
+                      <Crosshair className="h-3.5 w-3.5 text-muted-foreground" />
+                    ) : (
+                      <CheckCircle2 className="h-3.5 w-3.5 text-primary" />
+                    )}
                     {gridReviewState === 'recommended'
                       ? 'Check grid'
                       : gridReviewState === 'manual'
@@ -1315,7 +1316,7 @@ export function BeatvideoMusicPanel() {
         {effectiveAnalysis && resolvedSourceGrid && gridReviewState !== 'hidden' ? (
           <details
             className="border-t border-border pt-3"
-            open={precisionAlignOpen || gridReviewState === 'recommended'}
+            open={precisionAlignOpen}
             onToggle={(event) => setPrecisionAlignOpen(event.currentTarget.open)}
           >
             <summary className="flex cursor-pointer list-none items-center justify-between gap-2 text-xs font-medium text-foreground marker:hidden [&::-webkit-details-marker]:hidden">

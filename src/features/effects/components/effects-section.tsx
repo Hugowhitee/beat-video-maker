@@ -1038,7 +1038,11 @@ export const EffectsSection = memo(function EffectsSection({
                         key={preset.id}
                         type="button"
                         disabled={!audioReactiveAvailable || applied}
-                        aria-label={applied ? `${preset.label} reaction added` : `Add ${preset.label} reaction`}
+                        aria-label={
+                          applied
+                            ? `${preset.label} reaction added`
+                            : `Add ${preset.label} reaction`
+                        }
                         className="flex w-full select-none items-center gap-2 rounded-sm px-2 py-1.5 text-left text-xs outline-none enabled:hover:bg-accent enabled:hover:text-accent-foreground disabled:opacity-50"
                         onClick={() => {
                           handleApplyReactiveStarter(preset.id)
@@ -1068,7 +1072,6 @@ export const EffectsSection = memo(function EffectsSection({
                   {reactiveStarterDefinitions.length > 0 ? (
                     <div className="-mx-1 my-1 h-px bg-muted" />
                   ) : null}
-                <div>
                   <div className="px-2 py-1 text-xs font-medium text-muted-foreground">
                     Quick effects
                   </div>
@@ -1098,7 +1101,9 @@ export const EffectsSection = memo(function EffectsSection({
               {/* Full effect catalog */}
               {filteredCategories.map(({ category, effects: catEffects }, index) => (
                 <div key={category}>
-                  {(index > 0 || quickEffectDefinitions.length > 0 || reactiveStarterDefinitions.length > 0) && (
+                  {(index > 0 ||
+                    quickEffectDefinitions.length > 0 ||
+                    reactiveStarterDefinitions.length > 0) && (
                     <div className="-mx-1 my-1 h-px bg-muted" />
                   )}
                   <div className="px-2 py-1 text-xs font-medium text-muted-foreground">
@@ -1129,7 +1134,9 @@ export const EffectsSection = memo(function EffectsSection({
 
               {filteredPresets.length > 0 && (
                 <>
-                  {(reactiveStarterDefinitions.length > 0 || quickEffectDefinitions.length > 0 || filteredCategories.length > 0) && (
+                  {(reactiveStarterDefinitions.length > 0 ||
+                    quickEffectDefinitions.length > 0 ||
+                    filteredCategories.length > 0) && (
                     <div className="-mx-1 my-1 h-px bg-muted" />
                   )}
                   <div className="px-2 py-1 text-xs font-medium text-muted-foreground">
