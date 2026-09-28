@@ -280,8 +280,8 @@ export const GpuEffectPanel = memo(function GpuEffectPanel({
                         size="sm"
                         className={
                           reactiveBinding
-                            ? 'h-6 shrink-0 gap-1 bg-primary/10 px-1.5 text-[9px] font-semibold text-primary hover:bg-primary/20 hover:text-primary'
-                            : 'h-6 shrink-0 gap-1 px-1.5 text-[9px] text-muted-foreground'
+                            ? 'h-6 shrink-0 gap-1 bg-primary/10 px-1.5 text-xs font-medium text-primary hover:bg-primary/20 hover:text-primary'
+                            : 'h-6 shrink-0 gap-1 px-1.5 text-xs text-muted-foreground'
                         }
                         disabled={!paramEnabled || !audioReactiveAvailable}
                         aria-pressed={Boolean(reactiveBinding)}

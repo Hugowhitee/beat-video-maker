@@ -42,14 +42,14 @@ export const AudioReactiveParamControls = memo(function AudioReactiveParamContro
       : { min: -1, max: 1, step: 0.01 })
   const safeFps = Math.max(1, fps)
   const releaseMs = Math.max(10, Math.round((binding.releaseFrames / safeFps) * 1000))
-  const attackMs = Math.max(0, Math.round((binding.attackFrames / safeFps) * 1000))
+  const leadInMs = Math.max(0, Math.round((binding.attackFrames / safeFps) * 1000))
   const noLiveCommit = () => {}
 
   return (
-    <div className="mx-2 mb-2 mt-0.5 rounded-md border border-border/80 bg-secondary/25 px-2 py-2">
+    <div className="mx-2 mb-2 mt-0.5 border-t border-border/70 pt-2">
       <div className="mb-2 flex items-center gap-1.5">
-        <AudioLines className="h-3.5 w-3.5 text-primary" aria-hidden="true" />
-        <span className="text-[10px] font-semibold uppercase tracking-wide text-foreground">
+        <AudioLines className="h-3.5 w-3.5 text-muted-foreground" aria-hidden="true" />
+        <span className="text-xs font-medium text-foreground">
           {label}
         </span>
         <Select
@@ -58,7 +58,7 @@ export const AudioReactiveParamControls = memo(function AudioReactiveParamContro
             onChange({ driver: driver as AudioReactiveBinding['driver'] })
           }
         >
-          <SelectTrigger className="ml-auto h-6 w-[92px] px-2 text-[10px]">
+          <SelectTrigger className="ml-auto h-7 w-[104px] px-2 text-xs">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
@@ -73,7 +73,7 @@ export const AudioReactiveParamControls = memo(function AudioReactiveParamContro
       </div>
 
       <div className="grid grid-cols-[64px_minmax(0,1fr)] items-center gap-x-2 gap-y-1.5">
-        <span className="text-[10px] text-muted-foreground">Amount</span>
+        <span className="text-[11px] text-muted-foreground">Amount</span>
         <SliderInput
           value={binding.amount}
           min={resolvedAmountRange.min}
@@ -83,7 +83,7 @@ export const AudioReactiveParamControls = memo(function AudioReactiveParamContro
           onChange={(amount) => onChange({ amount })}
         />
 
-        <span className="text-[10px] text-muted-foreground">Threshold</span>
+        <span className="text-[11px] text-muted-foreground">Threshold</span>
         <SliderInput
           value={binding.threshold}
           min={0}
@@ -94,7 +94,7 @@ export const AudioReactiveParamControls = memo(function AudioReactiveParamContro
           onChange={(threshold) => onChange({ threshold })}
         />
 
-        <span className="text-[10px] text-muted-foreground">Release</span>
+        <span className="text-[11px] text-muted-foreground">Release</span>
         <SliderInput
           value={releaseMs}
           min={40}
@@ -111,11 +111,11 @@ export const AudioReactiveParamControls = memo(function AudioReactiveParamContro
       </div>
 
       <details className="mt-2 border-t border-border/70 pt-1.5">
-        <summary className="cursor-pointer list-none text-[9px] font-medium text-muted-foreground marker:hidden [&::-webkit-details-marker]:hidden">
+        <summary className="cursor-pointer list-none text-[11px] font-medium text-muted-foreground marker:hidden [&::-webkit-details-marker]:hidden">
           Advanced
         </summary>
         <div className="mt-1.5 grid grid-cols-[64px_minmax(0,1fr)] items-center gap-x-2 gap-y-1.5">
-          <span className="text-[10px] text-muted-foreground">Sensitivity</span>
+          <span className="text-[11px] text-muted-foreground">Sensitivity</span>
           <SliderInput
             value={binding.sensitivity}
             min={0.25}
@@ -126,9 +126,9 @@ export const AudioReactiveParamControls = memo(function AudioReactiveParamContro
             onChange={(sensitivity) => onChange({ sensitivity })}
           />
 
-          <span className="text-[10px] text-muted-foreground">Attack</span>
+          <span className="text-[11px] text-muted-foreground">Lead-in</span>
           <SliderInput
-            value={attackMs}
+            value={leadInMs}
             min={0}
             max={250}
             step={10}
@@ -141,7 +141,7 @@ export const AudioReactiveParamControls = memo(function AudioReactiveParamContro
             }
           />
 
-          <span className="text-[10px] text-muted-foreground">Every hit</span>
+          <span className="text-[11px] text-muted-foreground">Every hit</span>
           <SliderInput
             value={binding.everyNthBeat}
             min={1}
@@ -154,8 +154,8 @@ export const AudioReactiveParamControls = memo(function AudioReactiveParamContro
             }
           />
 
-          <span className="text-[10px] text-muted-foreground">Options</span>
-          <div className="flex min-w-0 items-center gap-3 text-[9px] text-muted-foreground">
+          <span className="text-[11px] text-muted-foreground">Options</span>
+          <div className="flex min-w-0 items-center gap-3 text-[11px] text-muted-foreground">
             <label className="flex items-center gap-1">
               <input
                 type="checkbox"
