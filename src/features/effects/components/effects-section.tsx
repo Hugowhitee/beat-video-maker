@@ -81,6 +81,17 @@ interface EffectsSectionProps {
 
 const EMPTY_HIDDEN_GPU_EFFECT_TYPES: readonly string[] = []
 
+const PRODUCER_QUICK_EFFECT_IDS = [
+  'gpu-grain',
+  'gpu-glow',
+  'gpu-rgb-split',
+  'gpu-gaussian-blur',
+  'gpu-brightness',
+  'gpu-vignette',
+] as const
+
+const PRODUCER_QUICK_EFFECT_ID_SET = new Set<string>(PRODUCER_QUICK_EFFECT_IDS)
+
 function getMotionReactiveLabel(binding: AudioReactiveBinding): string {
   if (binding.target.kind === 'transform-shake') return 'Shake'
   if (binding.target.kind !== 'transform') return 'Motion'
@@ -880,19 +891,32 @@ export const EffectsSection = memo(function EffectsSection({
     }
   }, [pickerOpen, closePicker])
 
-  // Filter effects and presets by search query
-  const filteredCategories = useMemo(() => {
-    const visibleCategories =
-      hiddenGpuEffectTypeSet.size === 0
-        ? gpuCategories
-        : gpuCategories
-            .map(({ category, effects: catEffects }) => ({
-              category,
-              effects: catEffects.filter((def) => !hiddenGpuEffectTypeSet.has(def.id)),
-            }))
-            .filter(({ effects: catEffects }) => catEffects.length > 0)
+  // Put common beat-video effects first without hiding the full FreeCut catalog.
+  // Search always covers the complete catalog; the default picker avoids
+  // repeating quick effects again inside their normal category.
+  const quickEffectDefinitions = useMemo(() => {
+    if (searchQuery.trim()) return []
+    return PRODUCER_QUICK_EFFECT_IDS.flatMap((id) => {
+      if (hiddenGpuEffectTypeSet.has(id)) return []
+      const definition = getGpuEffect(id)
+      return definition ? [definition] : []
+    })
+  }, [hiddenGpuEffectTypeSet, searchQuery])
 
-    if (!searchQuery.trim()) return visibleCategories
+  const filteredCategories = useMemo(() => {
+    const hasSearch = searchQuery.trim().length > 0
+    const visibleCategories = gpuCategories
+      .map(({ category, effects: catEffects }) => ({
+        category,
+        effects: catEffects.filter(
+          (def) =>
+            !hiddenGpuEffectTypeSet.has(def.id) &&
+            (hasSearch || !PRODUCER_QUICK_EFFECT_ID_SET.has(def.id)),
+        ),
+      }))
+      .filter(({ effects: catEffects }) => catEffects.length > 0)
+
+    if (!hasSearch) return visibleCategories
     const q = searchQuery.toLowerCase()
     return visibleCategories
       .map(({ category, effects: catEffects }) => ({
@@ -923,7 +947,10 @@ export const EffectsSection = memo(function EffectsSection({
   }, [hasHiddenGpuEffect, hiddenGpuEffectTypeSet, searchQuery, userPresets])
 
   const hasResults =
-    filteredCategories.length > 0 || filteredPresets.length > 0 || filteredUserPresets.length > 0
+    quickEffectDefinitions.length > 0 ||
+    filteredCategories.length > 0 ||
+    filteredPresets.length > 0 ||
+    filteredUserPresets.length > 0
 
   const addEffectControls = (
     <div className={isDock ? 'flex min-w-0 flex-1 gap-1' : 'px-2 pb-2 flex gap-1'}>
