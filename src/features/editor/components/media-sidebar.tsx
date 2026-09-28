@@ -102,6 +102,12 @@ const LazyBeatvideoMasterPanel = lazy(() =>
   import('./beatvideo-master-panel').then((module) => ({ default: module.BeatvideoMasterPanel })),
 )
 import { BeatvideoVisualSourcePanel } from './beatvideo-visual-source-panel'
+import { resolveBeatvideoTimelineGrid } from '@/features/editor/deps/beatvideo-music'
+import {
+  BEATVIDEO_REACTIVE_GRAPHIC_PRESETS,
+  buildBeatvideoReactiveGraphicItems,
+  type BeatvideoReactiveGraphicPresetId,
+} from '../utils/beatvideo-reactive-graphics'
 const LazyAiPanel = lazy(() => import('./ai-tab').then((m) => ({ default: m.AiTab })))
 const LazyTranscriptEditorPanel = lazy(() =>
   importTranscriptEditorPanel().then(({ TranscriptEditorPanel }) => ({
@@ -867,6 +873,86 @@ export const MediaSidebar = memo(function MediaSidebar({
     selectItems([shapeItem.id])
   }, [])
 
+  const handleAddReactiveGraphic = useCallback(
+    (presetId: BeatvideoReactiveGraphicPresetId) => {
+      const timeline = useTimelineStore.getState()
+      const selection = useSelectionStore.getState()
+      const currentProject = useProjectStore.getState().currentProject
+      const activeCompositionId =
+        useCompositionNavigationStore.getState().activeCompositionId
+
+      if (activeCompositionId) {
+        toast.warning('Return to Main to add beat-driven graphics')
+        return
+      }
+
+      const analysis = currentProject?.beatvideoMusic
+      if (!analysis) {
+        toast.error('Analyze and place the beat first')
+        return
+      }
+
+      const timelineGrid = resolveBeatvideoTimelineGrid(
+        analysis,
+        timeline.items,
+        timeline.fps,
+      )
+      if (!timelineGrid) {
+        toast.error('Place the analyzed beat on the timeline first')
+        return
+      }
+
+      const preset = BEATVIDEO_REACTIVE_GRAPHIC_PRESETS.find(
+        (candidate) => candidate.id === presetId,
+      )
+      if (!preset) return
+
+      let workingTracks = timeline.tracks
+      let anchorTrackId = selection.activeTrackId
+      const trackIds: string[] = []
+
+      for (const trackName of preset.trackNames) {
+        const created = createOverlayLayerTrack({
+          tracks: workingTracks,
+          activeTrackId: anchorTrackId,
+        })
+        if (!created) {
+          toast.error('Could not create the reactive graphic layers')
+          return
+        }
+
+        workingTracks = created.tracks.map((track) =>
+          track.id === created.trackId ? { ...track, name: trackName } : track,
+        )
+        trackIds.push(created.trackId)
+        anchorTrackId = created.trackId
+      }
+
+      const canvasWidth = currentProject?.metadata.width ?? DEFAULT_PROJECT_WIDTH
+      const canvasHeight = currentProject?.metadata.height ?? DEFAULT_PROJECT_HEIGHT
+      const items = buildBeatvideoReactiveGraphicItems({
+        presetId,
+        grid: timelineGrid.grid,
+        fps: timeline.fps,
+        from: timelineGrid.placement.from,
+        durationInFrames: timelineGrid.placement.durationInFrames,
+        canvasWidth,
+        canvasHeight,
+        trackIds,
+      })
+      if (items.length === 0) {
+        toast.error('Could not build the reactive graphic')
+        return
+      }
+
+      addItemsOnNewTracks(items, workingTracks)
+      selection.setActiveTrack(items[0]!.trackId)
+      selection.selectItems(items.map((item) => item.id))
+      toast.success(`${preset.label} added`)
+    },
+    [],
+  )
+
   const revealAppliedEffects = useCallback((itemIds?: string[]) => {
     if (itemIds && itemIds.length > 0) {
       useSelectionStore.getState().selectItems(itemIds)
@@ -1579,6 +1665,41 @@ export const MediaSidebar = memo(function MediaSidebar({
             <div
               className={`min-h-0 flex-1 overflow-y-auto p-3 ${activeTab === 'shapes' ? 'block' : 'hidden'}`}
             >
+              <section className="mb-3 border-b border-border pb-3">
+                <div className="mb-2 text-[11px] font-medium text-foreground">
+                  Reactive graphics
+                </div>
+                <div className="grid grid-cols-3 border-y border-border">
+                  {BEATVIDEO_REACTIVE_GRAPHIC_PRESETS.map((preset, index) => (
+                    <button
+                      key={preset.id}
+                      type="button"
+                      onClick={() => handleAddReactiveGraphic(preset.id)}
+                      className={cn(
+                        'flex h-14 flex-col items-center justify-center gap-1 text-[9px] text-muted-foreground transition-colors hover:bg-secondary/30 hover:text-foreground',
+                        index < BEATVIDEO_REACTIVE_GRAPHIC_PRESETS.length - 1 &&
+                          'border-r border-border',
+                      )}
+                    >
+                      <span className="flex h-5 w-9 items-end justify-center gap-0.5">
+                        {preset.id === 'beat-flash' ? (
+                          <span className="h-4 w-7 border border-foreground/55 bg-foreground/10" />
+                        ) : preset.id === 'pulse-frame' ? (
+                          <span className="h-4 w-7 border-2 border-foreground/55" />
+                        ) : (
+                          <>
+                            <span className="h-2 w-1.5 bg-foreground/55" />
+                            <span className="h-4 w-1.5 bg-foreground/55" />
+                            <span className="h-3 w-1.5 bg-foreground/55" />
+                          </>
+                        )}
+                      </span>
+                      <span>{preset.label}</span>
+                    </button>
+                  ))}
+                </div>
+              </section>
+
               <div className="grid grid-cols-3 gap-1.5">
                 <button
                   draggable={true}
