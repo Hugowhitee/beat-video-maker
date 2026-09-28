@@ -264,7 +264,6 @@ export function BeatvideoMusicPanel() {
   const [selectedMediaId, setSelectedMediaId] = useState('')
   const [selectedTagMediaId, setSelectedTagMediaId] = useState('')
   const [selectedWatermarkMediaId, setSelectedWatermarkMediaId] = useState('')
-  const [beatTool, setBeatTool] = useState<'grid' | 'tags'>('grid')
   const [precisionAlignOpen, setPrecisionAlignOpen] = useState(false)
   const [tagTool, setTagTool] = useState<'producer' | 'watermark'>('producer')
   const [tagRepeatBars, setTagRepeatBars] = useState(16)
@@ -1254,38 +1253,11 @@ export function BeatvideoMusicPanel() {
             Beat
           </div>
           <p className="mt-1.5 text-[10px] leading-relaxed text-muted-foreground">
-            One project beat owns the grid, snapping, reactive timing and tag placement.
+            One project beat drives the musical grid, snapping and reactive timing.
           </p>
         </div>
 
-        <div className="grid grid-cols-2 gap-1 rounded-md border border-border bg-secondary/20 p-1">
-          <button
-            type="button"
-            aria-pressed={beatTool === 'grid'}
-            onClick={() => setBeatTool('grid')}
-            className={`h-8 rounded text-[10px] font-semibold transition-colors ${
-              beatTool === 'grid'
-                ? 'bg-primary text-primary-foreground'
-                : 'text-muted-foreground hover:bg-background/60 hover:text-foreground'
-            }`}
-          >
-            Grid
-          </button>
-          <button
-            type="button"
-            aria-pressed={beatTool === 'tags'}
-            onClick={() => setBeatTool('tags')}
-            className={`h-8 rounded text-[10px] font-semibold transition-colors ${
-              beatTool === 'tags'
-                ? 'bg-primary text-primary-foreground'
-                : 'text-muted-foreground hover:bg-background/60 hover:text-foreground'
-            }`}
-          >
-            Tags
-          </button>
-        </div>
-
-        <section className={beatTool === 'grid' ? 'space-y-2' : 'hidden'}>
+        <section className="space-y-2">
           <label className="block text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
             Beat source
           </label>
@@ -1456,226 +1428,7 @@ export function BeatvideoMusicPanel() {
           ) : null}
         </section>
 
-        <section
-          className={
-            beatTool === 'tags'
-              ? 'space-y-3 border-t border-border pt-3'
-              : 'hidden'
-          }
-        >
-          <div className="flex items-start justify-between gap-3">
-            <div>
-              <div className="text-xs font-medium text-foreground">Tag audio</div>
-              <p className="mt-1 text-[10px] leading-relaxed text-muted-foreground">
-                Place one producer tag, or repeat a watermark across musical bars.
-              </p>
-            </div>
-            <span className="text-[9px] text-muted-foreground">Optional</span>
-          </div>
-
-          <div className="grid grid-cols-2 gap-1.5">
-            <button
-              type="button"
-              aria-pressed={tagTool === 'producer'}
-              onClick={() => setTagTool('producer')}
-              className={`min-h-12 rounded-md border px-2.5 py-2 text-left transition-colors ${
-                tagTool === 'producer'
-                  ? 'border-primary/60 bg-primary/10 text-foreground'
-                  : 'border-border bg-secondary/25 text-muted-foreground hover:border-foreground/25 hover:bg-secondary/50 hover:text-foreground'
-              }`}
-            >
-              <span className="block text-[11px] font-semibold">Producer tag</span>
-              <span className="mt-0.5 block text-[9px] leading-tight opacity-75">
-                Place once at playhead
-              </span>
-            </button>
-            <button
-              type="button"
-              aria-pressed={tagTool === 'watermark'}
-              onClick={() => setTagTool('watermark')}
-              className={`min-h-12 rounded-md border px-2.5 py-2 text-left transition-colors ${
-                tagTool === 'watermark'
-                  ? 'border-primary/60 bg-primary/10 text-foreground'
-                  : 'border-border bg-secondary/25 text-muted-foreground hover:border-foreground/25 hover:bg-secondary/50 hover:text-foreground'
-              }`}
-            >
-              <span className="block text-[11px] font-semibold">Watermark</span>
-              <span className="mt-0.5 block text-[9px] leading-tight opacity-75">
-                Repeat across bars
-              </span>
-            </button>
-          </div>
-
-          <div className="space-y-2">
-
-            <Button
-              type="button"
-              size="sm"
-              variant="outline"
-              className="w-full"
-              disabled={importingTag}
-              onClick={() => void importTagAudio(tagTool)}
-            >
-              {importingTag
-                ? 'Importing…'
-                : tagTool === 'producer'
-                  ? 'Import producer tag'
-                  : 'Import watermark'}
-            </Button>
-
-            <p className="text-[9px] leading-relaxed text-muted-foreground">
-              {tagTool === 'producer'
-                ? 'One-shot producer tags go on their own Producer tags track.'
-                : 'Repeated protection tags use a separate Watermarks track and never replace the producer tag.'}
-            </p>
-
-            {tagCandidates.length > 0 ? (
-              <>
-                <select
-                  value={activeTagMediaId}
-                  onChange={(event) => {
-                    if (tagTool === 'producer') setSelectedTagMediaId(event.target.value)
-                    else setSelectedWatermarkMediaId(event.target.value)
-                  }}
-                  className="h-8 w-full rounded-md border border-input bg-secondary px-2 text-xs text-foreground"
-                >
-                  <option value="">
-                    {tagTool === 'producer' ? 'Choose producer tag…' : 'Choose watermark…'}
-                  </option>
-                  {tagCandidates.map((media) => (
-                    <option key={media.id} value={media.id}>
-                      {media.fileName}
-                    </option>
-                  ))}
-                </select>
-
-                {tagTool === 'producer' ? (
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="outline"
-                    className="w-full"
-                    disabled={!selectedTagMediaId}
-                    onClick={() => void insertTagAudio('producer')}
-                  >
-                    Place at playhead
-                  </Button>
-                ) : (
-                  <>
-                    <div className="grid grid-cols-2 gap-1.5">
-                      <label className="space-y-1 text-[10px] text-muted-foreground">
-                        <span>Start bar</span>
-                        <input
-                          type="number"
-                          min={1}
-                          step={1}
-                          value={tagFirstBar}
-                          onChange={(event) =>
-                            setTagFirstBar(Math.max(1, Number(event.target.value) || 1))
-                          }
-                          className="h-8 w-full rounded-md border border-input bg-secondary px-2 font-mono text-xs text-foreground"
-                        />
-                      </label>
-                      <label className="space-y-1 text-[10px] text-muted-foreground">
-                        <span>Every bars</span>
-                        <input
-                          type="number"
-                          min={1}
-                          step={1}
-                          list="watermark-repeat-presets"
-                          value={tagRepeatBars}
-                          onChange={(event) =>
-                            setTagRepeatBars(Math.max(1, Number(event.target.value) || 1))
-                          }
-                          className="h-8 w-full rounded-md border border-input bg-secondary px-2 font-mono text-xs text-foreground"
-                          aria-label="Watermark repeat interval"
-                        />
-                        <datalist id="watermark-repeat-presets">
-                          <option value="8" />
-                          <option value="16" />
-                          <option value="32" />
-                          <option value="64" />
-                        </datalist>
-                      </label>
-                    </div>
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="outline"
-                      className="w-full"
-                      disabled={!timelineGrid || !selectedWatermarkMediaId}
-                      onClick={() => void insertTagAudio('watermark')}
-                    >
-                      Apply watermark pattern
-                    </Button>
-                  </>
-                )}
-
-                <details className="border-t border-border pt-2">
-                  <summary className="cursor-pointer list-none text-[10px] font-medium text-foreground marker:hidden [&::-webkit-details-marker]:hidden">
-                    More timing options
-                  </summary>
-                  <div className="mt-2 grid grid-cols-2 gap-1.5">
-                    <label className="space-y-1 text-[10px] text-muted-foreground">
-                      <span>Trim start</span>
-                      <input
-                        type="number"
-                        min={0}
-                        step={0.01}
-                        value={tagTrimStartSeconds}
-                        onChange={(event) => setTagTrimStartSeconds(event.target.value)}
-                        className="h-8 w-full rounded-md border border-input bg-secondary px-2 font-mono text-xs text-foreground"
-                      />
-                    </label>
-                    <label className="space-y-1 text-[10px] text-muted-foreground">
-                      <span>Trim end</span>
-                      <input
-                        type="number"
-                        min={0}
-                        step={0.01}
-                        placeholder="Full"
-                        value={tagTrimEndSeconds}
-                        onChange={(event) => setTagTrimEndSeconds(event.target.value)}
-                        className="h-8 w-full rounded-md border border-input bg-secondary px-2 font-mono text-xs text-foreground"
-                      />
-                    </label>
-                    <label className="space-y-1 text-[10px] text-muted-foreground">
-                      <span>Tag hit (s)</span>
-                      <input
-                        type="number"
-                        min={0}
-                        step={0.01}
-                        value={tagAnchorSeconds}
-                        onChange={(event) => setTagAnchorSeconds(event.target.value)}
-                        className="h-8 w-full rounded-md border border-input bg-secondary px-2 font-mono text-xs text-foreground"
-                      />
-                    </label>
-                    <label className="space-y-1 text-[10px] text-muted-foreground">
-                      <span>Duck beat</span>
-                      <select
-                        value={tagDuckDb}
-                        onChange={(event) => setTagDuckDb(Number(event.target.value))}
-                        className="h-8 w-full rounded-md border border-input bg-secondary px-2 text-xs text-foreground"
-                      >
-                        <option value={0}>Off</option>
-                        <option value={-2}>−2 dB</option>
-                        <option value={-3}>−3 dB</option>
-                        <option value={-4}>−4 dB</option>
-                        <option value={-6}>−6 dB</option>
-                      </select>
-                    </label>
-                  </div>
-                </details>
-              </>
-            ) : (
-              <div className="border-l-2 border-border pl-2 text-[10px] leading-relaxed text-muted-foreground">
-                Import a short audio file for the selected tag type.
-              </div>
-            )}
-          </div>
-        </section>
-
-        {beatTool === 'grid' && effectiveAnalysis && resolvedSourceGrid ? (
+        {effectiveAnalysis && resolvedSourceGrid ? (
           <>
             <section className="grid grid-cols-3 gap-1.5">
               <div className="border-t border-border pt-2">
@@ -1929,6 +1682,216 @@ export function BeatvideoMusicPanel() {
             </details>
           </>
         ) : null}
+
+        <details className="border-t border-border pt-3">
+          <summary className="flex cursor-pointer list-none items-center justify-between gap-2 text-xs font-medium text-foreground marker:hidden [&::-webkit-details-marker]:hidden">
+            <span>Producer audio</span>
+            <span className="text-[9px] font-normal text-muted-foreground">Optional</span>
+          </summary>
+          <div className="mt-3 space-y-3">
+          <div className="grid grid-cols-2 gap-1.5">
+            <button
+              type="button"
+              aria-pressed={tagTool === 'producer'}
+              onClick={() => setTagTool('producer')}
+              className={`min-h-12 rounded-md border px-2.5 py-2 text-left transition-colors ${
+                tagTool === 'producer'
+                  ? 'border-primary/60 bg-primary/10 text-foreground'
+                  : 'border-border bg-secondary/25 text-muted-foreground hover:border-foreground/25 hover:bg-secondary/50 hover:text-foreground'
+              }`}
+            >
+              <span className="block text-[11px] font-semibold">Producer tag</span>
+              <span className="mt-0.5 block text-[9px] leading-tight opacity-75">
+                Place once at playhead
+              </span>
+            </button>
+            <button
+              type="button"
+              aria-pressed={tagTool === 'watermark'}
+              onClick={() => setTagTool('watermark')}
+              className={`min-h-12 rounded-md border px-2.5 py-2 text-left transition-colors ${
+                tagTool === 'watermark'
+                  ? 'border-primary/60 bg-primary/10 text-foreground'
+                  : 'border-border bg-secondary/25 text-muted-foreground hover:border-foreground/25 hover:bg-secondary/50 hover:text-foreground'
+              }`}
+            >
+              <span className="block text-[11px] font-semibold">Watermark</span>
+              <span className="mt-0.5 block text-[9px] leading-tight opacity-75">
+                Repeat across bars
+              </span>
+            </button>
+          </div>
+
+          <div className="space-y-2">
+
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              className="w-full"
+              disabled={importingTag}
+              onClick={() => void importTagAudio(tagTool)}
+            >
+              {importingTag
+                ? 'Importing…'
+                : tagTool === 'producer'
+                  ? 'Import producer tag'
+                  : 'Import watermark'}
+            </Button>
+
+            <p className="text-[9px] leading-relaxed text-muted-foreground">
+              {tagTool === 'producer'
+                ? 'One-shot producer tags go on their own Producer tags track.'
+                : 'Repeated protection tags use a separate Watermarks track and never replace the producer tag.'}
+            </p>
+
+            {tagCandidates.length > 0 ? (
+              <>
+                <select
+                  value={activeTagMediaId}
+                  onChange={(event) => {
+                    if (tagTool === 'producer') setSelectedTagMediaId(event.target.value)
+                    else setSelectedWatermarkMediaId(event.target.value)
+                  }}
+                  className="h-8 w-full rounded-md border border-input bg-secondary px-2 text-xs text-foreground"
+                >
+                  <option value="">
+                    {tagTool === 'producer' ? 'Choose producer tag…' : 'Choose watermark…'}
+                  </option>
+                  {tagCandidates.map((media) => (
+                    <option key={media.id} value={media.id}>
+                      {media.fileName}
+                    </option>
+                  ))}
+                </select>
+
+                {tagTool === 'producer' ? (
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    className="w-full"
+                    disabled={!selectedTagMediaId}
+                    onClick={() => void insertTagAudio('producer')}
+                  >
+                    Place at playhead
+                  </Button>
+                ) : (
+                  <>
+                    <div className="grid grid-cols-2 gap-1.5">
+                      <label className="space-y-1 text-[10px] text-muted-foreground">
+                        <span>Start bar</span>
+                        <input
+                          type="number"
+                          min={1}
+                          step={1}
+                          value={tagFirstBar}
+                          onChange={(event) =>
+                            setTagFirstBar(Math.max(1, Number(event.target.value) || 1))
+                          }
+                          className="h-8 w-full rounded-md border border-input bg-secondary px-2 font-mono text-xs text-foreground"
+                        />
+                      </label>
+                      <label className="space-y-1 text-[10px] text-muted-foreground">
+                        <span>Every bars</span>
+                        <input
+                          type="number"
+                          min={1}
+                          step={1}
+                          list="watermark-repeat-presets"
+                          value={tagRepeatBars}
+                          onChange={(event) =>
+                            setTagRepeatBars(Math.max(1, Number(event.target.value) || 1))
+                          }
+                          className="h-8 w-full rounded-md border border-input bg-secondary px-2 font-mono text-xs text-foreground"
+                          aria-label="Watermark repeat interval"
+                        />
+                        <datalist id="watermark-repeat-presets">
+                          <option value="8" />
+                          <option value="16" />
+                          <option value="32" />
+                          <option value="64" />
+                        </datalist>
+                      </label>
+                    </div>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      className="w-full"
+                      disabled={!timelineGrid || !selectedWatermarkMediaId}
+                      onClick={() => void insertTagAudio('watermark')}
+                    >
+                      Apply watermark pattern
+                    </Button>
+                  </>
+                )}
+
+                <details className="border-t border-border pt-2">
+                  <summary className="cursor-pointer list-none text-[10px] font-medium text-foreground marker:hidden [&::-webkit-details-marker]:hidden">
+                    More timing options
+                  </summary>
+                  <div className="mt-2 grid grid-cols-2 gap-1.5">
+                    <label className="space-y-1 text-[10px] text-muted-foreground">
+                      <span>Trim start</span>
+                      <input
+                        type="number"
+                        min={0}
+                        step={0.01}
+                        value={tagTrimStartSeconds}
+                        onChange={(event) => setTagTrimStartSeconds(event.target.value)}
+                        className="h-8 w-full rounded-md border border-input bg-secondary px-2 font-mono text-xs text-foreground"
+                      />
+                    </label>
+                    <label className="space-y-1 text-[10px] text-muted-foreground">
+                      <span>Trim end</span>
+                      <input
+                        type="number"
+                        min={0}
+                        step={0.01}
+                        placeholder="Full"
+                        value={tagTrimEndSeconds}
+                        onChange={(event) => setTagTrimEndSeconds(event.target.value)}
+                        className="h-8 w-full rounded-md border border-input bg-secondary px-2 font-mono text-xs text-foreground"
+                      />
+                    </label>
+                    <label className="space-y-1 text-[10px] text-muted-foreground">
+                      <span>Tag hit (s)</span>
+                      <input
+                        type="number"
+                        min={0}
+                        step={0.01}
+                        value={tagAnchorSeconds}
+                        onChange={(event) => setTagAnchorSeconds(event.target.value)}
+                        className="h-8 w-full rounded-md border border-input bg-secondary px-2 font-mono text-xs text-foreground"
+                      />
+                    </label>
+                    <label className="space-y-1 text-[10px] text-muted-foreground">
+                      <span>Duck beat</span>
+                      <select
+                        value={tagDuckDb}
+                        onChange={(event) => setTagDuckDb(Number(event.target.value))}
+                        className="h-8 w-full rounded-md border border-input bg-secondary px-2 text-xs text-foreground"
+                      >
+                        <option value={0}>Off</option>
+                        <option value={-2}>−2 dB</option>
+                        <option value={-3}>−3 dB</option>
+                        <option value={-4}>−4 dB</option>
+                        <option value={-6}>−6 dB</option>
+                      </select>
+                    </label>
+                  </div>
+                </details>
+              </>
+            ) : (
+              <div className="border-l-2 border-border pl-2 text-[10px] leading-relaxed text-muted-foreground">
+                Import a short audio file for the selected tag type.
+              </div>
+            )}
+          </div>
+          </div>
+        </details>
+
       </div>
     </div>
   )
