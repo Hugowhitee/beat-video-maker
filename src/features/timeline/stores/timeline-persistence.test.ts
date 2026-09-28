@@ -7,6 +7,7 @@ import {
   resetTimelineCompositionTestState,
 } from '@/features/timeline/test-helpers'
 import { useItemsStore } from './items-store'
+import { useTransitionsStore } from './transitions-store'
 import { useCompositionsStore } from './compositions-store'
 import { useCompositionNavigationStore } from './composition-navigation-store'
 import { useKeyframesStore } from './keyframes-store'
@@ -278,6 +279,126 @@ describe('timeline project hydration', () => {
         ],
       },
     ])
+  })
+
+  it('round-trips reactive GPU effect state and transition properties through project persistence', async () => {
+    const left = makeTimelineVideoItem({
+      id: 'reactive-left',
+      trackId: rootTrack.id,
+      from: 0,
+      durationInFrames: 60,
+      effects: [
+        {
+          id: 'brightness-1',
+          enabled: true,
+          effect: {
+            type: 'gpu-effect',
+            gpuEffectType: 'gpu-brightness',
+            params: { brightness: 0.12 },
+          },
+        },
+      ],
+      audioReactive: {
+        version: 1,
+        enabled: true,
+        beats: [
+          { frame: 0, index: 0, strength: 1, downbeat: true },
+          { frame: 15, index: 1, strength: 0.8, downbeat: false },
+        ],
+        transients: [
+          { frame: 0, index: 0, strength: 0.9, low: 0.95, mid: 0.2, high: 0.05 },
+        ],
+        bindings: [
+          {
+            id: 'reactive-brightness-1',
+            enabled: true,
+            target: {
+              kind: 'effect-param',
+              effectId: 'brightness-1',
+              gpuEffectType: 'gpu-brightness',
+              paramKey: 'brightness',
+            },
+            driver: 'low',
+            amount: 0.15,
+            threshold: 0.55,
+            sensitivity: 1,
+            attackFrames: 0,
+            releaseFrames: 4,
+            everyNthBeat: 1,
+            useStrength: true,
+          },
+        ],
+      },
+    })
+    const right = makeTimelineVideoItem({
+      id: 'reactive-right',
+      trackId: rootTrack.id,
+      from: 60,
+      durationInFrames: 60,
+    })
+
+    useItemsStore.getState().setTracks([rootTrack])
+    useItemsStore.getState().setItems([left, right])
+    useTransitionsStore.setState({
+      transitions: [
+        {
+          id: 'reactive-transition',
+          type: 'crossfade',
+          leftClipId: left.id,
+          rightClipId: right.id,
+          trackId: rootTrack.id,
+          durationInFrames: 12,
+          presentation: 'lightLeakBurn',
+          timing: 'ease-out',
+          alignment: 0.5,
+          properties: { intensity: 0.7 },
+        },
+      ],
+    })
+
+    const timeline = buildTimelineFromStores()
+    expect(timeline.items[0]?.audioReactive?.bindings[0]).toMatchObject({
+      driver: 'low',
+      amount: 0.15,
+      target: {
+        kind: 'effect-param',
+        effectId: 'brightness-1',
+        gpuEffectType: 'gpu-brightness',
+        paramKey: 'brightness',
+      },
+    })
+    expect(timeline.transitions?.[0]).toMatchObject({
+      id: 'reactive-transition',
+      presentation: 'lightLeakBurn',
+      timing: 'ease-out',
+      durationInFrames: 12,
+      properties: { intensity: 0.7 },
+    })
+
+    await hydrateTimelineStoresFromProject({
+      id: 'reactive-project',
+      name: 'Reactive project',
+      description: '',
+      createdAt: 1,
+      updatedAt: 1,
+      duration: 4,
+      metadata: { width: 1920, height: 1080, fps: 30 },
+      timeline,
+    })
+
+    expect(useItemsStore.getState().itemById[left.id]?.audioReactive).toEqual(
+      timeline.items[0]?.audioReactive,
+    )
+    expect(useItemsStore.getState().itemById[left.id]?.effects).toEqual(
+      timeline.items[0]?.effects,
+    )
+    expect(useTransitionsStore.getState().transitions[0]).toMatchObject({
+      id: 'reactive-transition',
+      presentation: 'lightLeakBurn',
+      timing: 'ease-out',
+      durationInFrames: 12,
+      properties: { intensity: 0.7 },
+    })
   })
 
   it('round-trips composition control definitions and per-instance values', async () => {
