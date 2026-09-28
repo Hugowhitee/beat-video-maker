@@ -29,8 +29,10 @@ import {
   unlinkItems,
 } from '../../stores/actions/item-actions'
 import {
+  canMakeCompositionInstanceUnique,
   createPreComp,
   dissolvePreComp,
+  makeCompositionInstanceUnique,
   openComposition,
 } from '../../stores/actions/composition-actions'
 import {
@@ -342,6 +344,8 @@ export function useTimelineItemActions({
 
   const compositionId = item.compositionId
   const itemLabel = item.label
+  const canMakeCompositionUnique =
+    isCompositionItem && canMakeCompositionInstanceUnique(item.id)
   const handleEnterComposition = useCallback(() => {
     if (!isCompositionItem || !compositionId) {
       return
@@ -356,6 +360,11 @@ export function useTimelineItemActions({
     }
 
     dissolvePreComp(item.id)
+  }, [isCompositionItem, item.id])
+
+  const handleMakeCompositionUnique = useCallback(() => {
+    if (!isCompositionItem) return
+    makeCompositionInstanceUnique(item.id)
   }, [isCompositionItem, item.id])
 
   const sceneDetectionAbortRef = useRef<AbortController | null>(null)
@@ -595,6 +604,7 @@ export function useTimelineItemActions({
     isSceneDetectionActive,
     isRemovingFillers,
     isCompositionItem,
+    canMakeCompositionUnique,
     handleJoinSelected,
     handleJoinLeft,
     handleJoinRight,
@@ -612,6 +622,7 @@ export function useTimelineItemActions({
     handleCreatePreComp,
     handleEnterComposition,
     handleDissolveComposition,
+    handleMakeCompositionUnique,
     handleDetectScenes,
     handleRemoveSilence,
     handleRemoveFillers,
