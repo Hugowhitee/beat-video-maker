@@ -741,15 +741,13 @@ export const PreviewArea = memo(function PreviewArea({
 
                 {/* Playback controls row */}
                 {compact ? (
-                  <div
-                    className="@container flex items-center justify-center overflow-x-auto border-t border-border panel-header px-1"
-                    style={{ height: EDITOR_LAYOUT_CSS_VALUES.previewControlsHeight }}
-                  >
+                  <div className="@container flex h-10 items-center justify-center overflow-x-auto border-t border-border panel-header px-1">
                     <PlaybackControls
                       totalFrames={totalFrames}
                       fps={fps}
                       isFullscreen={isProgramFullscreen}
                       onToggleFullscreen={toggleProgramFullscreen}
+                      compact
                     />
                   </div>
                 ) : (

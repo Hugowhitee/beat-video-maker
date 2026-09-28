@@ -842,7 +842,7 @@ export const LoadedEditor = memo(function LoadedEditor({
               className="flex h-10 shrink-0 items-center justify-center overflow-x-auto border-t border-border bg-background/95 px-1"
               aria-label="Playback"
             >
-              <PlaybackControls totalFrames={mobileTotalFrames} fps={project.fps} />
+              <PlaybackControls totalFrames={mobileTotalFrames} fps={project.fps} compact />
             </div>
           ) : null}
 

@@ -225,8 +225,18 @@ vi.mock('@/features/editor/deps/settings', () => ({
 }))
 
 vi.mock('@/features/editor/deps/preview', () => ({
-  PlaybackControls: ({ totalFrames }: { totalFrames: number }) => (
-    <div data-testid="mobile-playback-controls" data-total-frames={totalFrames} />
+  PlaybackControls: ({
+    totalFrames,
+    compact,
+  }: {
+    totalFrames: number
+    compact?: boolean
+  }) => (
+    <div
+      data-testid="mobile-playback-controls"
+      data-total-frames={totalFrames}
+      data-compact={compact ? 'true' : 'false'}
+    />
   ),
   useItemsStore: (selector: (state: { maxItemEndFrame: number }) => unknown) =>
     selector({ maxItemEndFrame: 900 }),
@@ -533,6 +543,10 @@ describe('LoadedEditor migration metadata refresh', () => {
     expect(screen.getByTestId('mobile-playback-controls')).toHaveAttribute(
       'data-total-frames',
       '900',
+    )
+    expect(screen.getByTestId('mobile-playback-controls')).toHaveAttribute(
+      'data-compact',
+      'true',
     )
     expect(screen.queryByTestId('preview-area')).not.toBeInTheDocument()
 

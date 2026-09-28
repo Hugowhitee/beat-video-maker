@@ -32,6 +32,7 @@ interface PlaybackControlsProps {
   fps: number
   isFullscreen?: boolean
   onToggleFullscreen?: () => void
+  compact?: boolean
 }
 
 async function canvasToBlob(
@@ -97,19 +98,20 @@ function buildFrameFileName(frame: number, fps: number, totalFrames: number): st
  * - Frame capture
  * - Volume control
  */
-const btnSize = {
-  width: EDITOR_LAYOUT_CSS_VALUES.toolbarButtonSize,
-  height: EDITOR_LAYOUT_CSS_VALUES.toolbarButtonSize,
-} as const
-
 export function PlaybackControls({
   totalFrames,
   fps,
   isFullscreen = false,
   onToggleFullscreen,
+  compact = false,
 }: PlaybackControlsProps) {
   const { t } = useTranslation()
   const [isSavingFrame, setIsSavingFrame] = useState(false)
+
+  const btnSize = {
+    width: compact ? '40px' : EDITOR_LAYOUT_CSS_VALUES.toolbarButtonSize,
+    height: compact ? '40px' : EDITOR_LAYOUT_CSS_VALUES.toolbarButtonSize,
+  } as const
 
   // Use granular selectors - Zustand v5 best practice
   // NOTE: Don't subscribe to currentFrame - only needed in click handlers
@@ -228,7 +230,10 @@ export function PlaybackControls({
   return (
     <>
       {/* Transport Controls */}
-      <div className="flex items-center gap-0.5 flex-shrink-0">
+      <div
+        className="flex items-center gap-0.5 flex-shrink-0"
+        data-compact={compact ? 'true' : 'false'}
+      >
         <Button
           variant="ghost"
           size="icon"

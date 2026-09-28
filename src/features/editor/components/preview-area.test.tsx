@@ -32,11 +32,17 @@ vi.mock('@/features/editor/deps/preview', async () => {
     PlaybackControls: ({
       totalFrames,
       onToggleFullscreen,
+      compact,
     }: {
       totalFrames: number
       onToggleFullscreen?: () => void
+      compact?: boolean
     }) => (
-      <div data-testid="playback-controls" data-total-frames={totalFrames}>
+      <div
+        data-testid="playback-controls"
+        data-total-frames={totalFrames}
+        data-compact={compact ? 'true' : 'false'}
+      >
         {onToggleFullscreen ? (
           <button type="button" onClick={onToggleFullscreen}>
             toggle-fullscreen
@@ -248,7 +254,7 @@ describe('PreviewArea mask editor toolbar', () => {
     )
 
     expect(screen.getByTestId('alignment-toolbar')).toBeInTheDocument()
-    expect(screen.getByTestId('playback-controls')).toBeInTheDocument()
+    expect(screen.getByTestId('playback-controls')).toHaveAttribute('data-compact', 'true')
     expect(screen.queryByTestId('timecode-display')).not.toBeInTheDocument()
     expect(screen.queryByTestId('preview-zoom-controls')).not.toBeInTheDocument()
   })
