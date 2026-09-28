@@ -328,9 +328,9 @@ export function BeatvideoMasterPanel() {
       const preset = MASTERING_PRESETS.find((candidate) => candidate.id === presetId)
       if (!preset) return
 
-      // Built-ins are complete recipes, not deltas over whatever happened to
-      // be left in EQ/output. This keeps A/B comparisons repeatable and avoids
-      // an old EQ curve making a new preset sound unexpectedly hollow.
+      // Built-ins are complete mastering recipes, not deltas over leftover EQ/FX.
+      // The Mixer owns project output gain, so presets deliberately leave its
+      // bus fader untouched.
       const before = captureSnapshot()
       setBusAudioEq(undefined)
       setMasterFx(preset.settings)
