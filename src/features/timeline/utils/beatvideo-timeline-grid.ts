@@ -11,6 +11,10 @@ import {
   getItemSourceSpanSeconds,
   timelineFrameToSourceSeconds,
 } from './media-item-frames'
+import {
+  resolveBeatGridMarkers,
+  type BeatGridResolution,
+} from './beatvideo-grid-resolution'
 
 const EPSILON = 1e-6
 
@@ -253,13 +257,30 @@ export function resolveBeatvideoTimelineSnapFrames(
   analysis: BeatvideoMusicAnalysis,
   items: readonly TimelineItem[],
   timelineFps: number,
+  options: {
+    resolution?: BeatGridResolution
+    pixelsPerSecond?: number
+  } = {},
 ): number[] {
   const timelineGrid = resolveBeatvideoTimelineGrid(analysis, items, timelineFps)
   if (!timelineGrid) return []
 
+  // Calls that do not opt into a view resolution preserve the historical
+  // all-beat behavior. The interactive timeline always supplies its current
+  // resolution + zoom so visible musical lines and snap targets stay identical.
+  const resolution = options.resolution ?? 'beat'
+  const pixelsPerSecond = options.pixelsPerSecond ?? Number.MAX_SAFE_INTEGER
+  const { markers } = resolveBeatGridMarkers({
+    beats: timelineGrid.grid.beats,
+    beatsPerBar: timelineGrid.grid.beatsPerBar,
+    barOneTime: timelineGrid.barOneTimelineTime,
+    resolution,
+    pixelsPerSecond,
+  })
+
   return [
     ...new Set(
-      timelineGrid.grid.beats.map((beat) =>
+      markers.map(({ beat }) =>
         Math.max(0, Math.round(beat.time * timelineFps)),
       ),
     ),
