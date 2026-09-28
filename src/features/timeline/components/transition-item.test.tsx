@@ -195,9 +195,13 @@ describe('TransitionItem preview bridge motion', () => {
     setTransitionClips({ right: { from: 160 } })
     useZoomStore.getState().setZoomLevelSynchronized(0.1)
 
-    render(<TransitionItem transition={{ ...transition, durationInFrames: 4 }} />)
+    const { container } = render(
+      <TransitionItem transition={{ ...transition, durationInFrames: 4 }} />,
+    )
 
-    fireEvent.click(screen.getByTitle('Fade (0.1s)'))
+    const cutHandle = container.querySelector('[data-transition-hit-zone="cut"]')
+    expect(cutHandle).not.toBeNull()
+    fireEvent.click(cutHandle!)
 
     expect(useSelectionStore.getState().selectedTransitionId).toBe('tr-1')
   })

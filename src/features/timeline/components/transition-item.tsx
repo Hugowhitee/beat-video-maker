@@ -652,7 +652,7 @@ export const TransitionItem = memo(function TransitionItem({
           ref={containerRef}
           data-transition-id={transition.id}
           className={cn(
-            'absolute inset-y-0 overflow-visible rounded-sm pointer-events-auto',
+            'absolute inset-y-0 overflow-visible rounded-sm pointer-events-none',
             isSelected && 'ring-2 ring-inset ring-primary',
             dragPreviewMatches && 'ring-2 ring-inset ring-primary/60',
             isResizing && 'ring-2 ring-inset ring-purple-400',
@@ -672,16 +672,6 @@ export const TransitionItem = memo(function TransitionItem({
             } as React.CSSProperties
           }
           title={`${presentationLabel} (${durationSec}s)`}
-          onMouseEnter={() => setIsBridgeHovered(true)}
-          onMouseLeave={() => {
-            setIsBridgeHovered(false)
-            if (!isResizing) setHoveredEdge(null)
-          }}
-          onMouseDown={handleMouseDown}
-          onClick={handleClick}
-          onDragOver={handleDragOver}
-          onDragLeave={handleDragLeave}
-          onDrop={handleDrop}
         >
           <div
             className={cn(
@@ -749,6 +739,28 @@ export const TransitionItem = memo(function TransitionItem({
               onDrop={handleDrop}
             />
           )}
+
+          <div
+            className="absolute inset-y-0 z-20 w-5 -translate-x-1/2 cursor-pointer pointer-events-auto"
+            style={{ left: `${position.cutOffset}px` }}
+            data-transition-hit-zone="cut"
+            role="button"
+            tabIndex={0}
+            aria-label={`Select ${presentationLabel} transition`}
+            onMouseEnter={() => setIsBridgeHovered(true)}
+            onMouseLeave={() => setIsBridgeHovered(false)}
+            onMouseDown={handleMouseDown}
+            onClick={handleClick}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault()
+                selectTransition(transition.id)
+              }
+            }}
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
+            onDrop={handleDrop}
+          />
 
           {draggedTransition && (
             <div
