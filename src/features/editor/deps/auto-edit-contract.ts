@@ -21,3 +21,8 @@ export type {
   EditSegment,
   ClipShot,
 } from '@/features/auto-edit/types'
+
+export {
+  BEATVIDEO_ANALYSIS_REVISION,
+  shouldRefreshBeatvideoAnalysis,
+} from '@/features/auto-edit/analysis-revision'

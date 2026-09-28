@@ -59,7 +59,7 @@ import type {
 import {
   BEATVIDEO_ANALYSIS_REVISION,
   shouldRefreshBeatvideoAnalysis,
-} from '@/features/auto-edit/analysis-revision'
+} from '@/features/editor/deps/auto-edit-contract'
 
 const ANCHOR_EPSILON = 1e-4
 const ANCHOR_GAP_SECONDS = 0.001
