@@ -86,13 +86,16 @@ export function useSnapCalculator(
   )
 
   const generateSnapTargets = useCallback(() => {
-    const { fps } = useTimelineSettingsStore.getState()
+    const timelineSettings = useTimelineSettingsStore.getState()
+    const { fps, beatGridSnapEnabled, beatGridResolution } = timelineSettings
     const { items } = useItemsStore.getState()
     const analysis = useProjectStore.getState().currentProject?.beatvideoMusic
-    const beatGridSnapEnabled = useTimelineSettingsStore.getState().beatGridSnapEnabled
     const musicalFrames =
       analysis && beatGridSnapEnabled
-        ? resolveBeatvideoTimelineSnapFrames(analysis, items, fps)
+        ? resolveBeatvideoTimelineSnapFrames(analysis, items, fps, {
+            resolution: beatGridResolution,
+            pixelsPerSecond: getPixelsPerSecondNow(),
+          })
         : []
     const gridFrames =
       musicalFrames.length > 0
