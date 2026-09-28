@@ -243,7 +243,7 @@ export function buildBeatvideoReactiveGraphicItems(
         canvasWidth,
         canvasHeight,
       }),
-      label: labels[index],
+      label: labels[index]!,
       cornerRadius: Math.max(1, Math.round(barWidth * 0.18)),
       transform: {
         x: xPositions[index]!,
