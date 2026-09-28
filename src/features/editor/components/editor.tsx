@@ -65,6 +65,7 @@ import {
   useSubtitleScanProgressStore,
 } from '@/features/editor/deps/media-library'
 import { IoDragReadout } from '@/shared/timeline/io-range'
+import { useCompactEditorViewport } from './use-compact-editor-viewport'
 const logger = createLogger('Editor')
 const LazyTimeline = lazy(() => importTimeline().then(({ Timeline }) => ({ default: Timeline })))
 const LazyProjectSettingsDialog = lazy(() =>
@@ -81,6 +82,40 @@ const LazyColorTimelineNavigator = lazy(() =>
   })),
 )
 const EDITOR_PROJECT_ROUTE_ID = '/editor/$projectId'
+
+type MobileEditorSurface = 'tools' | 'preview' | 'inspector' | 'timeline' | 'mixer' | 'color'
+
+function defaultMobileEditorSurface(workspace: EditorWorkspaceId): MobileEditorSurface {
+  if (workspace === 'beat' || workspace === 'master') return 'tools'
+  if (workspace === 'color') return 'color'
+  return 'preview'
+}
+
+function getMobileEditorSurfaces(
+  workspace: EditorWorkspaceId,
+): readonly { id: MobileEditorSurface; label: string }[] {
+  if (workspace === 'master') {
+    return [
+      { id: 'tools', label: 'Master' },
+      { id: 'preview', label: 'Preview' },
+      { id: 'mixer', label: 'Mixer' },
+      { id: 'timeline', label: 'Timeline' },
+    ]
+  }
+  if (workspace === 'color') {
+    return [
+      { id: 'color', label: 'Color' },
+      { id: 'preview', label: 'Preview' },
+      { id: 'timeline', label: 'Timeline' },
+    ]
+  }
+  return [
+    { id: 'tools', label: 'Tools' },
+    { id: 'preview', label: 'Preview' },
+    { id: 'inspector', label: 'Inspector' },
+    { id: 'timeline', label: 'Timeline' },
+  ]
+}
 
 function workspaceTimelineSizeStorageKey(workspace: EditorWorkspaceId): string {
   return `editor:workspaceTimelineSize:${workspace}`
@@ -412,6 +447,10 @@ export const LoadedEditor = memo(function LoadedEditor({
   const propertiesFullColumn = useEditorStore((s) => s.propertiesFullColumn)
   const mediaFullColumn = useEditorStore((s) => s.mediaFullColumn)
   const workspace = useEditorStore((s) => s.workspace)
+  const compactViewport = useCompactEditorViewport()
+  const [mobileSurface, setMobileSurface] = useState<MobileEditorSurface>(() =>
+    defaultMobileEditorSurface(workspace),
+  )
   const isMaskEditingActive = useMaskEditorStore((s) => s.isEditing)
   const hasRefreshedMigrationStateRef = useRef(false)
   const timelinePanelRef = useRef<ImperativePanelHandle>(null)
@@ -565,6 +604,11 @@ export const LoadedEditor = memo(function LoadedEditor({
   // Apply the per-workspace timeline split when switching workspaces:
   // snapshot the outgoing workspace's split, then restore the incoming
   // workspace's saved split (or its preset default on first visit).
+  useEffect(() => {
+    if (!compactViewport) return
+    setMobileSurface(defaultMobileEditorSurface(workspace))
+  }, [compactViewport, workspace])
+
   useEffect(() => {
     const previousWorkspace = previousWorkspaceRef.current
     if (previousWorkspace === workspace) return
@@ -722,9 +766,92 @@ export const LoadedEditor = memo(function LoadedEditor({
           onProjectSettings={() => setProjectSettingsOpen(true)}
           onOpenRenderQueue={handleOpenRenderQueue}
           renderQueueCount={renderQueueActiveCount}
+          compact={compactViewport}
         />
       </InteractionLockRegion>
 
+      {compactViewport ? (
+        <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+          <div className="min-h-0 flex-1 overflow-hidden">
+            {mobileSurface === 'tools' ? (
+              <InteractionLockRegion locked={isMaskEditingActive} className="h-full">
+                <ErrorBoundary level="feature">
+                  <MediaSidebar beatvideoMode={beatvideoMode} mobile />
+                </ErrorBoundary>
+              </InteractionLockRegion>
+            ) : mobileSurface === 'preview' ? (
+              <ErrorBoundary level="feature">
+                {isMotionWorkspace ? (
+                  <MotionPreviewArea project={project} />
+                ) : (
+                  <PreviewArea project={project} />
+                )}
+              </ErrorBoundary>
+            ) : mobileSurface === 'inspector' ? (
+              <InteractionLockRegion locked={isMaskEditingActive} className="h-full">
+                <ErrorBoundary level="feature">
+                  <PropertiesSidebar mobile />
+                </ErrorBoundary>
+              </InteractionLockRegion>
+            ) : mobileSurface === 'timeline' ? (
+              <InteractionLockRegion locked={isMaskEditingActive} className="h-full">
+                <ErrorBoundary level="feature">
+                  <div className="h-full min-w-0 overflow-hidden">
+                    {isMotionWorkspace ? (
+                      <MotionTimelineDock project={project} />
+                    ) : (
+                      <Suspense fallback={null}>
+                        <LazyTimeline duration={timelineDuration} beatvideoMode={beatvideoMode} />
+                      </Suspense>
+                    )}
+                  </div>
+                </ErrorBoundary>
+              </InteractionLockRegion>
+            ) : mobileSurface === 'mixer' ? (
+              <ErrorBoundary level="feature">
+                <div className="h-full min-w-0 overflow-hidden">
+                  <AudioMeterPanel initialMode="mixer" mobile />
+                </div>
+              </ErrorBoundary>
+            ) : (
+              <ErrorBoundary level="feature">
+                <div className="h-full min-w-0 overflow-y-auto">
+                  <Suspense fallback={null}>
+                    <LazyColorGradingDock />
+                  </Suspense>
+                </div>
+              </ErrorBoundary>
+            )}
+          </div>
+
+          <nav
+            className="grid shrink-0 border-t border-border bg-background/95 pb-[env(safe-area-inset-bottom)]"
+            style={{
+              gridTemplateColumns: `repeat(${getMobileEditorSurfaces(workspace).length}, minmax(0, 1fr))`,
+            }}
+            aria-label="Editor surfaces"
+          >
+            {getMobileEditorSurfaces(workspace).map((surface) => {
+              const active = mobileSurface === surface.id
+              return (
+                <button
+                  key={surface.id}
+                  type="button"
+                  aria-pressed={active}
+                  onClick={() => setMobileSurface(surface.id)}
+                  className={
+                    active
+                      ? 'relative min-h-11 px-1 text-[11px] font-medium text-foreground after:absolute after:inset-x-3 after:top-0 after:h-[2px] after:bg-primary'
+                      : 'min-h-11 px-1 text-[11px] font-medium text-muted-foreground active:bg-secondary/50'
+                  }
+                >
+                  {surface.label}
+                </button>
+              )
+            })}
+          </nav>
+        </div>
+      ) : (
       {/* Main Layout: Full-height sidebar + vertical split */}
       <div className="flex-1 flex overflow-hidden">
         {/* Left Sidebar - Media Library (full column mode) */}
@@ -846,6 +973,7 @@ export const LoadedEditor = memo(function LoadedEditor({
           </InteractionLockRegion>
         )}
       </div>
+      )}
 
       <Suspense fallback={null}>
         {projectSettingsOpen ? (
