@@ -19,7 +19,7 @@ import { resolveBeatvideoTimelineGrid } from '@/features/editor/deps/beatvideo-m
 import { useMediaLibraryStore } from '@/features/editor/deps/media-library'
 import { useProjectStore } from '@/features/editor/deps/projects'
 import {
-  createPreCompBatch,
+  createLinkedPreCompPattern,
   useItemsStore,
   useTimelineSettingsStore,
   useTimelineStore,
@@ -406,13 +406,11 @@ export function BeatvideoVisualSourcePanel({
       groups.set(repeatIndex, ids)
     }
 
-    const wrappers = createPreCompBatch(
+    const wrappers = createLinkedPreCompPattern(
+      'Loop A',
       [...groups.entries()]
         .sort(([left], [right]) => left - right)
-        .map(([index, itemIds]) => ({
-          name: `Loop ${index + 1}`,
-          itemIds,
-        })),
+        .map(([, itemIds]) => itemIds),
     )
     if (wrappers.length === 0) return
 
@@ -420,9 +418,9 @@ export function BeatvideoVisualSourcePanel({
     setLoopBlocksGrouped(true)
     useSelectionStore.getState().selectItems(wrappers.map((wrapper) => wrapper.id))
     toast.success(
-      `${wrappers.length} loop block${wrappers.length === 1 ? '' : 's'} grouped`,
+      `Loop A linked across ${wrappers.length} repeat${wrappers.length === 1 ? '' : 's'}`,
       {
-        description: 'Open a Loop block to edit its individual cuts.',
+        description: 'Double-click any Loop A block to edit the shared cuts.',
       },
     )
   }, [lastItemIdBySegmentId, lastPlan, loopBlocksGrouped])
@@ -687,14 +685,15 @@ export function BeatvideoVisualSourcePanel({
               onClick={groupLoopRepeats}
             >
               <Repeat2 className="h-3.5 w-3.5" />
-              Group repeats into Loop blocks
+              Link repeats as Loop A
             </Button>
           ) : null}
 
           {loopBlocksGrouped ? (
             <div className="rounded-md border border-primary/30 bg-primary/5 px-2 py-1.5 text-[9px] leading-relaxed text-muted-foreground">
-              Repeats are now real compound clips. Open a Loop block to edit its cuts.
-              Undo once to return to the editable generated arrangement before rebuilding.
+              Every block is an instance of Loop A. Double-click any block to edit the
+              underlying cuts once; all repeats update together. Undo once to return to
+              the generated cuts before linking.
             </div>
           ) : null}
 
