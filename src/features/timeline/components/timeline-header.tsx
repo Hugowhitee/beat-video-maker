@@ -50,6 +50,7 @@ import type { BeatvideoProjectMode } from '@/types/project'
 interface TimelineHeaderProps {
   beatvideoMode?: BeatvideoProjectMode
   simplifiedBeatvideo?: boolean
+  compact?: boolean
   onZoomChange?: (newZoom: number) => void
   onZoomIn?: () => void
   onZoomOut?: () => void
@@ -115,6 +116,7 @@ function blurSliderFocus(root: HTMLElement | null): void {
 }
 
 const TimelineZoomControls = memo(function TimelineZoomControls({
+  compact = false,
   onZoomChange,
   onZoomIn,
   onZoomOut,
@@ -139,8 +141,8 @@ const TimelineZoomControls = memo(function TimelineZoomControls({
   const liveZoomLevelRef = useRef(useZoomStore.getState().level)
   const [, forceKeyboardSliderRender] = useReducer((revision: number) => revision + 1, 0)
   const btnSize = {
-    width: EDITOR_LAYOUT_CSS_VALUES.toolbarButtonSize,
-    height: EDITOR_LAYOUT_CSS_VALUES.toolbarButtonSize,
+    width: compact ? '36px' : EDITOR_LAYOUT_CSS_VALUES.toolbarButtonSize,
+    height: compact ? '36px' : EDITOR_LAYOUT_CSS_VALUES.toolbarButtonSize,
   } as const
 
   const applyZoom = useCallback(
@@ -374,7 +376,7 @@ const TimelineZoomControls = memo(function TimelineZoomControls({
         isSameZoomLevel(liveZoomLevelRef.current, sliderCommitBaseZoom)))
 
   return (
-    <div className="flex items-center justify-end gap-1.5">
+    <div className="flex shrink-0 items-center justify-end gap-1.5">
       <Button
         variant="ghost"
         size="icon"
@@ -386,6 +388,7 @@ const TimelineZoomControls = memo(function TimelineZoomControls({
         <ZoomOut className="w-3.5 h-3.5" />
       </Button>
 
+      {!compact ? (
       <Slider
         ref={sliderRef}
         value={[
@@ -416,6 +419,7 @@ const TimelineZoomControls = memo(function TimelineZoomControls({
         className="w-24"
         aria-label={t('timeline.header.zoomSlider')}
       />
+      ) : null}
 
       <Button
         variant="ghost"
@@ -454,6 +458,7 @@ const TimelineZoomControls = memo(function TimelineZoomControls({
 export const TimelineHeader = memo(function TimelineHeader({
   beatvideoMode = 'video',
   simplifiedBeatvideo = false,
+  compact = false,
   onZoomChange,
   onZoomIn,
   onZoomOut,
@@ -528,8 +533,8 @@ export const TimelineHeader = memo(function TimelineHeader({
   }, [activeTool, isPhotoMode, isSimplified, setActiveTool])
 
   const btnSize = {
-    width: EDITOR_LAYOUT_CSS_VALUES.toolbarButtonSize,
-    height: EDITOR_LAYOUT_CSS_VALUES.toolbarButtonSize,
+    width: compact ? '36px' : EDITOR_LAYOUT_CSS_VALUES.toolbarButtonSize,
+    height: compact ? '36px' : EDITOR_LAYOUT_CSS_VALUES.toolbarButtonSize,
   } as const
 
   const handleUndo = () => {
@@ -542,21 +547,33 @@ export const TimelineHeader = memo(function TimelineHeader({
 
   return (
     <div
-      className="grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 border-b border-border px-3"
+      className={
+        compact
+          ? 'flex items-center gap-1 border-b border-border px-1'
+          : 'grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 border-b border-border px-3'
+      }
       style={{ height: EDITOR_LAYOUT_CSS_VALUES.timelineHeaderHeight }}
       role="toolbar"
       aria-label={t('timeline.header.controls')}
     >
-      {/* Left: quiet region label; the timeline itself is the hierarchy. */}
-      <div className="flex min-w-0 items-center">
-        <h2 className="text-xs font-medium text-muted-foreground">
-          {t('timeline.header.title')}
-        </h2>
-      </div>
+      {/* The phone surface is already named Timeline in the persistent dock. */}
+      {!compact ? (
+        <div className="flex min-w-0 items-center">
+          <h2 className="text-xs font-medium text-muted-foreground">
+            {t('timeline.header.title')}
+          </h2>
+        </div>
+      ) : null}
 
       {/* Middle: Timeline Controls */}
       <div className="min-w-0 overflow-x-auto overflow-y-hidden">
-        <div className="flex w-max min-w-full items-center justify-center gap-2.5">
+        <div
+          className={
+            compact
+              ? 'flex w-max min-w-full items-center justify-start gap-1.5'
+              : 'flex w-max min-w-full items-center justify-center gap-2.5'
+          }
+        >
           {/* Timeline Tools */}
           <div className="flex items-center gap-1">
             <Button
@@ -856,7 +873,11 @@ export const TimelineHeader = memo(function TimelineHeader({
                 <DropdownMenuTrigger asChild>
                   <Button
                     variant="ghost"
-                    className="h-7 gap-1 px-2 font-mono text-xs text-foreground"
+                    className={
+                      compact
+                        ? 'h-9 gap-1 px-2 font-mono text-xs text-foreground'
+                        : 'h-7 gap-1 px-2 font-mono text-xs text-foreground'
+                    }
                     aria-label={`Grid: ${beatGridResolutionLabel}`}
                     data-tooltip="Musical grid"
                   >
@@ -964,6 +985,7 @@ export const TimelineHeader = memo(function TimelineHeader({
       </div>
 
       <TimelineZoomControls
+        compact={compact}
         onZoomChange={onZoomChange}
         onZoomIn={onZoomIn}
         onZoomOut={onZoomOut}

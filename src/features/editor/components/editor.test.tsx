@@ -120,7 +120,11 @@ vi.mock('./audio-meter-panel', () => ({
 }))
 
 vi.mock('@/features/editor/deps/timeline-ui', () => ({
-  importTimeline: vi.fn().mockResolvedValue({ Timeline: () => <div data-testid="timeline" /> }),
+  importTimeline: vi.fn().mockResolvedValue({
+    Timeline: ({ compact }: { compact?: boolean }) => (
+      <div data-testid="timeline" data-compact={compact ? 'true' : 'false'} />
+    ),
+  }),
   importBentoLayoutDialog: vi.fn().mockResolvedValue({ BentoLayoutDialog: () => null }),
   importFillerRemovalDialog: vi.fn().mockResolvedValue({ FillerRemovalDialog: () => null }),
   importReverseConformDialog: vi.fn().mockResolvedValue({ ReverseConformDialog: () => null }),
@@ -536,7 +540,7 @@ describe('LoadedEditor migration metadata refresh', () => {
     expect(screen.getByTestId('properties-sidebar')).toHaveAttribute('data-mobile', 'true')
 
     fireEvent.click(screen.getByRole('button', { name: 'Timeline' }))
-    expect(await screen.findByTestId('timeline')).toBeInTheDocument()
+    expect(await screen.findByTestId('timeline')).toHaveAttribute('data-compact', 'true')
     expect(screen.getByTestId('mobile-playback-controls')).toBeInTheDocument()
     expect(dock).toBeInTheDocument()
   })

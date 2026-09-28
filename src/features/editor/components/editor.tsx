@@ -810,7 +810,11 @@ export const LoadedEditor = memo(function LoadedEditor({
                       <MotionTimelineDock project={project} />
                     ) : (
                       <Suspense fallback={null}>
-                        <LazyTimeline duration={timelineDuration} beatvideoMode={beatvideoMode} />
+                        <LazyTimeline
+                          duration={timelineDuration}
+                          beatvideoMode={beatvideoMode}
+                          compact
+                        />
                       </Suspense>
                     )}
                   </div>

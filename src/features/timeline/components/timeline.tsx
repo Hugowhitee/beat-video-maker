@@ -74,6 +74,7 @@ const TRACK_SIZE_OPTIONS = [
 interface TimelineProps {
   duration: number // Total timeline duration in seconds
   beatvideoMode?: BeatvideoProjectMode
+  compact?: boolean
 }
 
 /**
@@ -86,7 +87,11 @@ interface TimelineProps {
  *
  * Follows modular architecture with granular Zustand selectors
  */
-export const Timeline = memo(function Timeline({ duration, beatvideoMode = 'video' }: TimelineProps) {
+export const Timeline = memo(function Timeline({
+  duration,
+  beatvideoMode = 'video',
+  compact = false,
+}: TimelineProps) {
   const { t } = useTranslation()
   const editorDensity = useSettingsStore((s) => s.editorDensity)
   const editorLayout = getEditorLayout(editorDensity)
@@ -176,7 +181,9 @@ export const Timeline = memo(function Timeline({ duration, beatvideoMode = 'vide
 
   const trackSizePreset = useEditorStore((s) => s.trackSizePreset)
   const timelineSidebarWidth = simplifiedBeatvideoTimeline
-    ? `clamp(108px, 28vw, ${PRODUCER_TIMELINE_SIDEBAR_WIDTH}px)`
+    ? compact
+      ? 'clamp(96px, 27vw, 112px)'
+      : `${PRODUCER_TIMELINE_SIDEBAR_WIDTH}px`
     : EDITOR_LAYOUT_CSS_VALUES.timelineSidebarWidth
   const setTimelineTracks = useTimelineStore((s) => s.setTracks)
 
@@ -954,6 +961,7 @@ export const Timeline = memo(function Timeline({ duration, beatvideoMode = 'vide
       <TimelineHeader
         beatvideoMode={beatvideoMode}
         simplifiedBeatvideo={simplifiedBeatvideoTimeline}
+        compact={compact}
         onZoomChange={zoomHandlers?.handleZoomChange}
         onZoomIn={zoomHandlers?.handleZoomIn}
         onZoomOut={zoomHandlers?.handleZoomOut}
@@ -1151,7 +1159,9 @@ export const Timeline = memo(function Timeline({ duration, beatvideoMode = 'vide
         surface="edit"
         propertyColumnWidth={
           (simplifiedBeatvideoTimeline
-            ? PRODUCER_TIMELINE_SIDEBAR_WIDTH
+            ? compact
+              ? 96
+              : PRODUCER_TIMELINE_SIDEBAR_WIDTH
             : editorLayout.timelineSidebarWidth) - 1
         }
         timelineScrollContainerRef={timelineContentRef}
