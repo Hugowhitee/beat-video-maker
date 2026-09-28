@@ -4,12 +4,14 @@ import { TimelineMarkers } from './timeline-markers'
 import { BeatvideoGridOverlay } from './beatvideo-grid-overlay'
 import { applyTimelineLiveGeometry } from '../utils/timeline-live-geometry'
 import { EDITOR_LAYOUT_CSS_VALUES } from '@/config/editor-layout'
+import { useProjectStore } from '@/features/timeline/deps/projects'
 
 interface TimelineRulerSurfaceProps {
   duration: number
   containerWidth: number
   initialWidth: number
   coordinateSurfaceRef?: RefObject<HTMLDivElement | null>
+  musicalRuler?: boolean
 }
 
 /**
@@ -22,7 +24,11 @@ export const TimelineRulerSurface = memo(function TimelineRulerSurface({
   containerWidth,
   initialWidth,
   coordinateSurfaceRef,
+  musicalRuler = false,
 }: TimelineRulerSurfaceProps) {
+  const hasBeatGrid = useProjectStore(
+    (state) => (state.currentProject?.beatvideoMusic?.musicMap.beats.length ?? 0) > 0,
+  )
   const localRulerRef = useRef<HTMLDivElement>(null)
   const rulerRef = coordinateSurfaceRef ?? localRulerRef
   const committedSurfaceRef = useRef<HTMLDivElement>(null)
@@ -70,7 +76,10 @@ export const TimelineRulerSurface = memo(function TimelineRulerSurface({
           contain: 'layout style paint',
         }}
       >
-        <TimelineMarkers duration={duration} />
+        <TimelineMarkers
+          duration={duration}
+          hideTimecodeLabels={musicalRuler && hasBeatGrid}
+        />
         <BeatvideoGridOverlay duration={duration} variant="ruler" />
       </div>
     </div>

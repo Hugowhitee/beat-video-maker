@@ -2240,6 +2240,7 @@ export const TimelineContent = memo(function TimelineContent({
           containerWidth={containerWidth}
           initialWidth={timelineWidth}
           coordinateSurfaceRef={rulerCoordinateSurfaceRef}
+          musicalRuler={unifiedTrackStack}
         />
 
         <TimelineSettledContentZoomProvider>

@@ -80,16 +80,16 @@ export const BeatvideoGridOverlay = memo(function BeatvideoGridOverlay({
                 isBarOne
                   ? 'h-full w-[2px] bg-primary/95'
                   : beat.downbeat
-                    ? 'h-full w-px bg-primary/55'
-                    : 'h-full w-px bg-foreground/12'
+                    ? 'h-full w-px bg-primary/45'
+                    : 'h-full w-px bg-foreground/16'
               }
             />
             {showBarLabel ? (
               <span
                 className={
                   isBarOne
-                    ? 'absolute left-1 top-3 rounded-sm bg-primary px-1 py-0.5 font-mono text-[9px] font-semibold leading-none text-primary-foreground shadow-sm'
-                    : 'absolute left-1 top-3 rounded-sm bg-background/85 px-1 py-0.5 font-mono text-[8px] leading-none text-muted-foreground'
+                    ? 'absolute left-1 top-1 bg-primary px-1 py-0.5 font-mono text-[10px] font-semibold leading-none text-primary-foreground'
+                    : 'absolute left-1 top-1 bg-background/80 px-1 py-0.5 font-mono text-[10px] leading-none text-foreground/70'
                 }
               >
                 {barNumber}

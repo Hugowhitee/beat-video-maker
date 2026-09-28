@@ -1029,7 +1029,7 @@ export function BeatvideoMusicPanel() {
 
     const base = mapped.timelineGrid.analysis
     if (getBeatvideoGridMode(base) !== 'detected') {
-      toast.error('Switch to Detected beatmap before adding correction anchors')
+      toast.error('Switch to Detected timing before adding correction anchors')
       return
     }
 
@@ -1221,32 +1221,7 @@ export function BeatvideoMusicPanel() {
                 : 'Analyze beat'}
           </Button>
 
-          <div className="flex items-center gap-1.5">
-            <input
-              type="number"
-              min={40}
-              max={300}
-              step={0.01}
-              value={bpmDraft}
-              placeholder="BPM"
-              disabled={!selectedMediaId || analyzing}
-              onChange={(event) => setBpmDraft(event.target.value)}
-              onKeyDown={(event) => {
-                if (event.key === 'Enter') void applyBpm()
-              }}
-              className="h-8 min-w-0 flex-1 rounded-md border border-input bg-secondary px-2 font-mono text-xs text-foreground"
-              aria-label="Manual fixed BPM"
-            />
-            <Button
-              type="button"
-              size="sm"
-              variant="outline"
-              disabled={!selectedMediaId || analyzing || bpmDraft.trim() === ''}
-              onClick={() => void applyBpm()}
-            >
-              Use BPM
-            </Button>
-          </div>
+
 
           {analyzing && progress ? (
             <div className="space-y-1.5">
@@ -1265,54 +1240,25 @@ export function BeatvideoMusicPanel() {
             </div>
           ) : null}
 
-          {effectiveAnalysis ? (
-            <div className="grid grid-cols-2 gap-1.5">
-              <Button
-                type="button"
-                size="sm"
-                variant={beatGridVisible ? 'secondary' : 'outline'}
-                aria-pressed={beatGridVisible}
-                onClick={toggleBeatGridVisible}
-                className="justify-start"
-              >
-                {beatGridVisible ? (
-                  <Eye className="h-3.5 w-3.5" />
-                ) : (
-                  <EyeOff className="h-3.5 w-3.5" />
-                )}
-                Beat grid
-              </Button>
-              <Button
-                type="button"
-                size="sm"
-                variant={beatGridSnapEnabled ? 'secondary' : 'outline'}
-                aria-pressed={beatGridSnapEnabled}
-                onClick={toggleBeatGridSnap}
-                className="justify-start"
-              >
-                <Magnet className="h-3.5 w-3.5" />
-                Beat snap
-              </Button>
-            </div>
-          ) : null}
-
           {!analyzing && effectiveAnalysis && resolvedSourceGrid ? (
-            <div className="rounded-md border border-border bg-secondary/35 p-2.5">
-              <div className="flex items-center gap-1.5 text-xs font-semibold text-foreground">
-                <CheckCircle2 className="h-3.5 w-3.5 text-primary" />
-                Beat analysis ready
-              </div>
-              <div className="mt-1 font-mono text-[11px] text-foreground">
-                {resolvedSourceGrid.bpm?.toFixed(2).replace(/\.00$/, '') ?? '—'} BPM
-                <span className="mx-1.5 text-muted-foreground">·</span>
-                {resolvedSourceGrid.beats.length} beats
-                <span className="mx-1.5 text-muted-foreground">·</span>
-                {barCount} bars
-              </div>
-              <div className="mt-1 text-[10px] leading-relaxed text-muted-foreground">
-                {timelineGrid
-                  ? `Grid linked to ${timelineGrid.placement.label}. Reactive effects can use it now.`
-                  : 'Analysis is saved. Analyze again or set BPM to link this source as the project beat.'}
+            <div className="border-y border-border py-2.5">
+              <div className="flex items-center justify-between gap-3">
+                <div className="min-w-0">
+                  <div className="flex items-center gap-1.5 text-xs font-semibold text-foreground">
+                    <CheckCircle2 className="h-3.5 w-3.5 text-primary" />
+                    Grid ready
+                  </div>
+                  <div className="mt-1 font-mono text-[11px] text-muted-foreground">
+                    {resolvedSourceGrid.bpm?.toFixed(2).replace(/\.00$/, '') ?? '—'} BPM
+                    <span className="mx-1.5">·</span>
+                    {resolvedSourceGrid.beatsPerBar}/4
+                    <span className="mx-1.5">·</span>
+                    {barCount} bars
+                  </div>
+                </div>
+                <span className="shrink-0 text-[10px] text-muted-foreground">
+                  {effectiveAnalysis.barOneVerified ? 'Bar 1 verified' : 'Bar 1 detected'}
+                </span>
               </div>
               {timelineGrid ? (
                 <Button
@@ -1326,46 +1272,13 @@ export function BeatvideoMusicPanel() {
                   Align whole grid to playhead
                 </Button>
               ) : null}
-              {resolvedSourceGrid.gridFit ? (
-                <div className="mt-1.5 font-mono text-[9px] leading-relaxed text-muted-foreground">
-                  {resolvedSourceGrid.gridFit.mode === 'fixed'
-                    ? `Stable phase · ${resolvedSourceGrid.gridFit.medianErrorMs ?? '—'} ms detector error · ${resolvedSourceGrid.gridFit.phaseShiftMs >= 0 ? '+' : ''}${resolvedSourceGrid.gridFit.phaseShiftMs} ms onset correction`
-                    : 'Variable timing preserved · use Grid correction only where the scan is visibly wrong'}
-                </div>
-              ) : null}
+
             </div>
           ) : null}
         </section>
 
         {effectiveAnalysis && resolvedSourceGrid ? (
           <>
-            <section className="grid grid-cols-3 gap-1.5">
-              <div className="border-t border-border pt-2">
-                <div className="text-[9px] uppercase tracking-wider text-muted-foreground">
-                  BPM
-                </div>
-                <div className="mt-1 font-mono text-sm text-foreground">
-                  {resolvedSourceGrid.bpm?.toFixed(2).replace(/\.00$/, '') ?? '—'}
-                </div>
-              </div>
-              <div className="border-t border-border pt-2">
-                <div className="text-[9px] uppercase tracking-wider text-muted-foreground">
-                  Beats / bar
-                </div>
-                <div className="mt-1 font-mono text-sm text-foreground">
-                  {resolvedSourceGrid.beatsPerBar}
-                </div>
-              </div>
-              <div className="border-t border-border pt-2">
-                <div className="text-[9px] uppercase tracking-wider text-muted-foreground">
-                  Bars
-                </div>
-                <div className="mt-1 font-mono text-sm text-foreground">
-                  {barCount}
-                </div>
-              </div>
-            </section>
-
             <section className="space-y-2 border-t border-border pt-3">
               <div className="flex items-start justify-between gap-3">
                 <div>
@@ -1509,13 +1422,44 @@ export function BeatvideoMusicPanel() {
 
             <details className="border-t border-border pt-3">
               <summary className="flex cursor-pointer list-none items-center justify-between gap-2 text-xs font-medium text-foreground marker:hidden [&::-webkit-details-marker]:hidden">
-                <span>Manual grid tools</span>
+                <span>Advanced grid repair</span>
                 <span className="text-[10px] font-normal text-muted-foreground">
                   {gridMode === 'fixed' ? 'Fixed BPM' : 'Detected beatmap'}
                 </span>
               </summary>
               <div className="mt-3 space-y-3">
                 <section className="space-y-2">
+                  <div className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+                    Known BPM
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <input
+                      type="number"
+                      min={40}
+                      max={300}
+                      step={0.01}
+                      value={bpmDraft}
+                      placeholder="BPM"
+                      disabled={!selectedMediaId || analyzing}
+                      onChange={(event) => setBpmDraft(event.target.value)}
+                      onKeyDown={(event) => {
+                        if (event.key === 'Enter') void applyBpm()
+                      }}
+                      className="h-8 min-w-0 flex-1 rounded-md border border-input bg-secondary px-2 font-mono text-xs text-foreground"
+                      aria-label="Manual fixed BPM"
+                    />
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      disabled={!selectedMediaId || analyzing || bpmDraft.trim() === ''}
+                      onClick={() => void applyBpm()}
+                    >
+                      Use BPM
+                    </Button>
+                  </div>
+                </section>
+                <section className="space-y-2 border-t border-border pt-3">
                   <div className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
                     Grid type
                   </div>
@@ -1539,8 +1483,7 @@ export function BeatvideoMusicPanel() {
                     </Button>
                   </div>
                   <p className="text-[10px] leading-relaxed text-muted-foreground">
-                    Detected keeps Beat This beat timing. Fixed BPM intentionally makes
-                    one even tempo grid.
+                    Normally leave this on Detected timing. Use Fixed BPM only when you know the song tempo.
                   </p>
                 </section>
 

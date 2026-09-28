@@ -58,6 +58,7 @@ import { createRafCoalescedCallback } from '../utils/raf-coalesced-callback'
 import type { BeatvideoProjectMode } from '@/types/project'
 
 const logger = createLogger('Timeline')
+const PRODUCER_TIMELINE_SIDEBAR_WIDTH = 144
 
 /**
  * Track height presets exposed through the track-size flyout. Their heights
@@ -174,6 +175,9 @@ export const Timeline = memo(function Timeline({ duration, beatvideoMode = 'vide
   )
 
   const trackSizePreset = useEditorStore((s) => s.trackSizePreset)
+  const timelineSidebarWidth = simplifiedBeatvideoTimeline
+    ? `${PRODUCER_TIMELINE_SIDEBAR_WIDTH}px`
+    : EDITOR_LAYOUT_CSS_VALUES.timelineSidebarWidth
   const setTimelineTracks = useTimelineStore((s) => s.setTracks)
 
   useEffect(() => {
@@ -972,7 +976,7 @@ export const Timeline = memo(function Timeline({ duration, beatvideoMode = 'vide
         {/* Track Headers Sidebar */}
         <div
           className="border-r border-border panel-bg flex-shrink-0 flex flex-col overflow-x-hidden"
-          style={{ width: EDITOR_LAYOUT_CSS_VALUES.timelineSidebarWidth }}
+          style={{ width: timelineSidebarWidth }}
         >
           {/* Beatvideo keeps layer creation in Visual instead of exposing raw track plumbing. */}
           <div
@@ -1135,7 +1139,7 @@ export const Timeline = memo(function Timeline({ duration, beatvideoMode = 'vide
       <div className="flex flex-shrink-0 overflow-hidden">
         <div
           className="border-r border-border panel-bg flex-shrink-0"
-          style={{ width: EDITOR_LAYOUT_CSS_VALUES.timelineSidebarWidth }}
+          style={{ width: timelineSidebarWidth }}
         />
         <div className="flex-1 min-w-0">
           <TimelineNavigator actualDuration={duration} scrollContainerRef={timelineContentRef} />
@@ -1145,7 +1149,11 @@ export const Timeline = memo(function Timeline({ duration, beatvideoMode = 'vide
         isOpen={beatvideoMode === 'video' && keyframePanelOpen}
         placement="bottom"
         surface="edit"
-        propertyColumnWidth={editorLayout.timelineSidebarWidth - 1}
+        propertyColumnWidth={
+          (simplifiedBeatvideoTimeline
+            ? PRODUCER_TIMELINE_SIDEBAR_WIDTH
+            : editorLayout.timelineSidebarWidth) - 1
+        }
         timelineScrollContainerRef={timelineContentRef}
         onClose={() => setKeyframePanelOpen(false)}
       />

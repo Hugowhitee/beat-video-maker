@@ -39,6 +39,7 @@ import { drawTimelineRulerViewportCanvas } from './timeline-ruler-viewport-canva
 interface TimelineMarkersProps {
   duration: number // Total timeline duration in seconds
   width?: number // Explicit width in pixels (optional)
+  hideTimecodeLabels?: boolean
 }
 
 interface MarkerInterval {
@@ -386,6 +387,7 @@ function clearLabelPool(pool: Map<number, HTMLSpanElement>) {
 export const TimelineMarkers = memo(function TimelineMarkers({
   duration,
   width,
+  hideTimecodeLabels = false,
 }: TimelineMarkersProps) {
   perfMarkRender('TimelineMarkers')
   const editorDensity = useSettingsStore((s) => s.editorDensity)
