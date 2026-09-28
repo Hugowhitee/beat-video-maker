@@ -45,6 +45,14 @@ const MAX_PREFERRED_BPM = 160
 
 export type BeatThisBackend = 'webgpu' | 'wasm'
 
+export type BeatThisWorkerProgressPhase =
+  | 'energy'
+  | 'model-download'
+  | 'model-init'
+  | 'features'
+  | 'inference'
+  | 'finalize'
+
 export type BeatThisRhythmResult = {
   bpm: number
   beats: number[]

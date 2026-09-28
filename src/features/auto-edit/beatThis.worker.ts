@@ -23,6 +23,7 @@ import {
   projectMagnitudeToLogMel,
   summarizeRhythm,
   type BeatThisBackend,
+  type BeatThisWorkerProgressPhase,
 } from './beatThisCore'
 import { deriveSpectralTransients } from './spectral-transients'
 
@@ -54,7 +55,7 @@ function post(message: Record<string, unknown>, transfer: Transferable[] = []) {
   self.postMessage(message, transfer)
 }
 
-function progress(phase: string, value: number, detail?: string) {
+function progress(phase: BeatThisWorkerProgressPhase, value: number, detail?: string) {
   post({
     type: 'progress',
     phase,
@@ -83,7 +84,7 @@ async function verifySha256(bytes: Uint8Array, expected: string, label: string) 
 
 async function readResponseWithProgress(
   response: Response,
-  phase: string,
+  phase: BeatThisWorkerProgressPhase,
   start: number,
   span: number,
 ) {

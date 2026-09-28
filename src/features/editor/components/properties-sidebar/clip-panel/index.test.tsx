@@ -134,7 +134,7 @@ const NULL_OBJECT: ControllerItem = {
 
 const TRANSFORM_REFERENCE = { x: 0, y: 0, width: 1920, height: 1080, rotation: 0 }
 
-function activateTab(name: 'Animate' | 'Animation' | 'Audio' | 'Effects' | 'Video') {
+function activateTab(name: 'Animate' | 'Animation' | 'Motion' | 'Audio' | 'Effects' | 'Video') {
   const tab = screen.getByRole('tab', { name })
   fireEvent.mouseDown(tab, { button: 0, ctrlKey: false })
   fireEvent.focus(tab)

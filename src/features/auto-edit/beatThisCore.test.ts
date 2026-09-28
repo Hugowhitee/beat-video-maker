@@ -68,6 +68,29 @@ describe('Beat This core', () => {
     expect(result.bpm).toBe(98)
   })
 
+  it('keeps a stable programmed tempo when one detector beat is missing', () => {
+    const period = 60 / 100
+    const fullBeats = Array.from({ length: 81 }, (_, index) => index * period)
+    const beats = fullBeats.filter((_, index) => index !== 31)
+    const downbeats = fullBeats.filter((_, index) => index % 4 === 0)
+
+    const result = summarizeRhythm(beats, downbeats, [])
+
+    expect(result.bpm).toBeCloseTo(100, 0)
+    expect(result.meter).toBe(4)
+  })
+
+  it('preserves a stable 3/4 meter instead of forcing four beats per bar', () => {
+    const period = 60 / 105
+    const beats = Array.from({ length: 37 }, (_, index) => index * period)
+    const downbeats = beats.filter((_, index) => index % 3 === 0)
+
+    const result = summarizeRhythm(beats, downbeats, [105, 105.1, 104.9])
+
+    expect(result.bpm).toBeCloseTo(105, 0)
+    expect(result.meter).toBe(3)
+  })
+
   it('recovers a 90 BPM project grid from stable 45 BPM half-time detections', () => {
     const rawPeriod = 60 / 45
     const beats = Array.from({ length: 17 }, (_, index) => index * rawPeriod)
