@@ -30,7 +30,9 @@ function loadBeatGridResolution(): BeatGridResolution {
       stored === 'beat' ||
       stored === 'bar' ||
       stored === '2-bars' ||
-      stored === '4-bars'
+      stored === '4-bars' ||
+      stored === '8-bars' ||
+      stored === '16-bars'
     ) {
       return stored
     }
