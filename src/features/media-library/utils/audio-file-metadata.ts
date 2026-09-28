@@ -21,6 +21,18 @@ const NORMALIZED_MP3_RAW_KEYS = new Set([
   'PIC',
 ])
 
+const INVALID_FILE_NAME_CHARACTERS = new Set([
+  '<',
+  '>',
+  ':',
+  '"',
+  '/',
+  '\\',
+  '|',
+  '?',
+  '*',
+])
+
 export type Mp3MetadataBaseMode = 'preserve' | 'clean'
 export type Mp3ArtworkMode = 'keep' | 'remove' | 'replace'
 
@@ -74,17 +86,22 @@ function keepUnknownRawTags(raw: MetadataTags['raw']): MetadataTags['raw'] {
   return Object.keys(kept).length > 0 ? kept : undefined
 }
 
+export function mp3BpmFromTags(tags: MetadataTags): number | null {
+  const rawBpm = tags.raw?.TBPM
+  if (typeof rawBpm !== 'string') return null
+  const parsed = Number(rawBpm.replace(',', '.').trim())
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : null
+}
+
 export function mp3MetadataDraftFromTags(tags: MetadataTags): Mp3MetadataDraft {
+  const bpm = mp3BpmFromTags(tags)
   return {
     title: tags.title ?? '',
     artist: tags.artist ?? '',
     album: tags.album ?? '',
     genre: tags.genre ?? '',
     date: tags.date ? tags.date.toISOString().slice(0, 10) : '',
-    beatsPerMinute:
-      typeof tags.beatsPerMinute === 'number' && Number.isFinite(tags.beatsPerMinute)
-        ? String(tags.beatsPerMinute)
-        : '',
+    beatsPerMinute: bpm === null ? '' : String(bpm),
     comment: tags.comment ?? '',
   }
 }
@@ -95,6 +112,9 @@ export function mp3MetadataDraftFromTags(tags: MetadataTags): Mp3MetadataDraft {
  * Preserve mode keeps normalized fields the tool does not edit plus unknown raw
  * frames, while stripping raw duplicates for normalized ID3 fields. Clean mode
  * intentionally starts from no descriptive tags at all.
+ *
+ * Mediabunny 1.50.x predates its normalized beatsPerMinute field, so BPM is
+ * read/written through the standard ID3 TBPM frame in raw metadata.
  */
 export function buildMp3MetadataTags(
   sourceTags: MetadataTags,
@@ -114,8 +134,15 @@ export function buildMp3MetadataTags(
   tags.album = optionalText(draft.album)
   tags.genre = optionalText(draft.genre)
   tags.date = optionalDate(draft.date)
-  tags.beatsPerMinute = optionalNumber(draft.beatsPerMinute)
   tags.comment = optionalText(draft.comment)
+
+  const bpm = optionalNumber(draft.beatsPerMinute)
+  if (bpm !== undefined) {
+    tags.raw = {
+      ...(tags.raw ?? {}),
+      TBPM: String(bpm),
+    }
+  }
 
   if (options.artworkMode === 'remove') {
     tags.images = undefined
@@ -150,11 +177,8 @@ export async function readMp3Metadata(source: Blob): Promise<Mp3MetadataSnapshot
 }
 
 /**
- * Rewrites MP3 descriptive metadata while requiring packet-copy audio.
- *
- * The audio track is never intentionally transcoded just to edit tags. If a
- * source cannot be copied into a fresh MP3 container, the operation fails
- * instead of silently re-encoding the beat.
+ * Rewrites MP3 descriptive metadata by copying the encoded MP3 packets into a
+ * fresh MP3 container. Audio is never decoded or re-encoded for this operation.
  */
 export async function rewriteMp3Metadata(
   source: Blob,
@@ -172,30 +196,58 @@ export async function rewriteMp3Metadata(
     target,
   })
 
+  let outputStarted = false
   try {
-    const conversion = await mediabunny.Conversion.init({
-      input,
-      output,
-      tracks: 'primary',
-      copy: { mode: 'forced' },
-      tags,
-      showWarnings: false,
-    })
+    const track = await input.getPrimaryAudioTrack()
+    if (!track) throw new Error('This MP3 has no audio track')
 
-    if (!conversion.isValid) {
-      const reason = conversion.discardedTracks[0]?.reason
-      throw new Error(
-        reason
-          ? `This MP3 cannot be copied without re-encoding (${reason}).`
-          : 'This MP3 cannot be copied without re-encoding.',
-      )
+    const codec = await track.getCodec()
+    if (codec !== 'mp3') {
+      throw new Error('This file is not an MP3 audio stream')
     }
 
-    if (onProgress) conversion.onProgress = onProgress
-    await conversion.execute()
+    const packetSource = new mediabunny.EncodedAudioPacketSource(codec)
+    output.addAudioTrack(packetSource)
+    output.setMetadataTags(tags)
+
+    const firstTimestamp = await track.getFirstTimestamp()
+    const duration = await input.computeDuration()
+    const packetSink = new mediabunny.EncodedPacketSink(track)
+    const decoderConfig = await track.getDecoderConfig()
+    const packetMetadata = {
+      decoderConfig: decoderConfig ?? undefined,
+    }
+
+    await output.start()
+    outputStarted = true
+
+    for await (const packet of packetSink.packets()) {
+      const timestamp = Math.max(0, packet.timestamp - firstTimestamp)
+      const copiedPacket =
+        timestamp === packet.timestamp
+          ? packet
+          : packet.clone({ timestamp })
+
+      await packetSource.add(copiedPacket, packetMetadata)
+
+      if (onProgress && duration > 0) {
+        onProgress(
+          Math.min(1, (packet.timestamp + packet.duration - firstTimestamp) / duration),
+        )
+      }
+    }
+
+    packetSource.close()
+    await output.finalize()
+    onProgress?.(1)
 
     if (!target.buffer) throw new Error('No MP3 output was generated')
     return new Blob([target.buffer], { type: 'audio/mpeg' })
+  } catch (error) {
+    if (outputStarted && output.state !== 'finalized') {
+      await output.cancel().catch(() => undefined)
+    }
+    throw error
   } finally {
     input.dispose()
   }
@@ -206,6 +258,10 @@ export function metadataCopyFileName(
   kind: 'clean' | 'tagged' = 'tagged',
 ): string {
   const base = sourceFileName.replace(/\.mp3$/i, '').trim() || 'beat'
-  const safe = base.replace(/[<>:"/\\|?*\u0000-\u001f]/g, '_')
+  const safe = Array.from(base, (character) =>
+    character.charCodeAt(0) < 32 || INVALID_FILE_NAME_CHARACTERS.has(character)
+      ? '_'
+      : character,
+  ).join('')
   return `${safe}-${kind}.mp3`
 }
