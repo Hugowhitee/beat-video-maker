@@ -515,8 +515,9 @@ export function useTimelineDrag(
   const pixelsToFramePrecise = pixelsToFramePreciseNow
   const frameToPixels = frameToPixelsNow
 
-  // Build magnetic targets only after the drag threshold is crossed. The
-  // gesture's actual cohort is excluded for moves; Alt-drag keeps originals.
+  // Build the complete snap target set only after the drag threshold is crossed.
+  // This includes the mapped Beatvideo grid plus clip edges; the gesture's actual
+  // cohort is excluded for moves while Alt-drag keeps originals as valid targets.
   const { generateSnapTargets, getSnapThresholdFrames, isSnapEnabled } = useSnapCalculator(
     timelineDuration,
     item.id,
@@ -685,8 +686,8 @@ export function useTimelineDrag(
   )
 
   /**
-   * Calculate magnetic snap for item position (start and end edges)
-   * Only snaps to other item edges, not grid lines
+   * Calculate timeline snap for item position (start and end edges).
+   * Targets include the visible musical grid and normal magnetic edit points.
    */
   const calculateMagneticSnap = useCallback(
     (
@@ -862,6 +863,7 @@ export function useTimelineDrag(
         // Clean up if mouse released before threshold
         dragStateRef.current = null
         magneticSnapTargetsRef.current = []
+        snapBypassRef.current = false
         dragVisualTopByTrackIdRef.current.clear()
         dragPreviewOffsetByItemRef.current = {}
         clearLargeAltDragCanvas()
@@ -1437,7 +1439,11 @@ export function useTimelineDrag(
         let proposedFrame = Math.max(0, dragState.startFrame + deltaFrames)
 
         // Apply snapping
-        const snapResult = calculateMagneticSnap(proposedFrame, item.durationInFrames)
+        const snapResult = calculateMagneticSnap(
+          proposedFrame,
+          item.durationInFrames,
+          snapBypassRef.current,
+        )
         // Clamp after snapping to ensure we don't go below frame 0
         proposedFrame = Math.max(0, snapResult.snappedFrame)
 
@@ -1503,6 +1509,7 @@ export function useTimelineDrag(
       clearLinkedMovePreview()
       prevSnapTargetRef.current = null // Reset snap target tracking
       magneticSnapTargetsRef.current = []
+      snapBypassRef.current = false
       dragStateRef.current = null
       isAltDragRef.current = false // Reset alt drag state
       clearGlobalDragCursor()
@@ -1536,6 +1543,7 @@ export function useTimelineDrag(
         window.removeEventListener('mouseup', handleCoalescedMouseUp)
         coalescedMouseMove.cancel()
         magneticSnapTargetsRef.current = []
+        snapBypassRef.current = false
         dragVisualTopByTrackIdRef.current.clear()
         clearLargeAltDragCanvas()
         clearLinkedMovePreview()
