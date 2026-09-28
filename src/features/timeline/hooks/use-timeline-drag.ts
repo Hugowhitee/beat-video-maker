@@ -452,6 +452,9 @@ export function useTimelineDrag(
 
   // Track Alt key state for duplication mode (dynamic toggle during drag)
   const isAltDragRef = useRef(false)
+  // Ctrl/Cmd is the Beatvideo-friendly temporary snap bypass. Alt is already
+  // reserved by FreeCut for duplicate-drag, so overloading it would be ambiguous.
+  const snapBypassRef = useRef(false)
 
   // Track previous snap target to avoid unnecessary store updates
   const prevSnapTargetRef = useRef<{ frame: number; type: string } | null>(null)
@@ -514,7 +517,7 @@ export function useTimelineDrag(
 
   // Build magnetic targets only after the drag threshold is crossed. The
   // gesture's actual cohort is excluded for moves; Alt-drag keeps originals.
-  const { getMagneticSnapTargets, getSnapThresholdFrames, isSnapEnabled } = useSnapCalculator(
+  const { generateSnapTargets, getSnapThresholdFrames, isSnapEnabled } = useSnapCalculator(
     timelineDuration,
     item.id,
     { includeTransitionMidpoints: false },
@@ -689,7 +692,12 @@ export function useTimelineDrag(
     (
       targetStartFrame: number,
       itemDurationInFrames: number,
+      bypassSnap = false,
     ): { snappedFrame: number; snapTarget: SnapTarget | null } => {
+      if (bypassSnap) {
+        return { snappedFrame: targetStartFrame, snapTarget: null }
+      }
+
       const targets = magneticSnapTargetsRef.current
       const threshold = getSnapThresholdFramesRef.current()
       const enabled = isSnapEnabled()
@@ -821,15 +829,16 @@ export function useTimelineDrag(
 
         // Check if we've moved enough to start dragging
         if (Math.abs(deltaX) > DRAG_THRESHOLD_PIXELS || Math.abs(deltaY) > DRAG_THRESHOLD_PIXELS) {
-          // Start the drag - track Alt key state
+          // Start the drag - track modifier state
           isAltDragRef.current = e.altKey
+          snapBypassRef.current = e.ctrlKey || e.metaKey
           setIsDragging(true)
           setGlobalDragCursor(e.altKey ? 'copy' : 'grabbing')
           document.body.style.userSelect = 'none'
 
           // Broadcast drag state to all selected items
           const draggedIds = dragStateRef.current?.draggedItems.map((item) => item.id) || []
-          magneticSnapTargetsRef.current = getMagneticSnapTargets(e.altKey ? null : draggedIds)
+          magneticSnapTargetsRef.current = generateSnapTargets(e.altKey ? null : draggedIds)
           if (e.altKey) {
             startLargeAltDragCanvas(draggedIds)
           }
@@ -875,7 +884,7 @@ export function useTimelineDrag(
       setActiveSnapTarget,
       setDragState,
       getItems,
-      getMagneticSnapTargets,
+      generateSnapTargets,
     ],
   )
 
@@ -890,13 +899,15 @@ export function useTimelineDrag(
 
       const deltaX = e.clientX - dragStateRef.current.startMouseX
       const deltaY = e.clientY - dragStateRef.current.startMouseY
+      const bypassSnap = e.ctrlKey || e.metaKey
+      snapBypassRef.current = bypassSnap
 
       // Dynamic Alt key toggle - update state and cursor
       const altKeyChanged = isAltDragRef.current !== e.altKey
       isAltDragRef.current = e.altKey
       if (altKeyChanged) {
         const draggedIds = dragStateRef.current.draggedItems.map((dragged) => dragged.id)
-        magneticSnapTargetsRef.current = getMagneticSnapTargets(e.altKey ? null : draggedIds)
+        magneticSnapTargetsRef.current = generateSnapTargets(e.altKey ? null : draggedIds)
         if (e.altKey) {
           startLargeAltDragCanvas(draggedIds)
         } else {
@@ -1008,7 +1019,7 @@ export function useTimelineDrag(
         snapDuration = draggedItem?.durationInFrames || 0
       }
 
-      const snapResult = calculateMagneticSnap(snapStartFrame, snapDuration)
+      const snapResult = calculateMagneticSnap(snapStartFrame, snapDuration, bypassSnap)
       const previewVisualTopByTrackId = buildTrackVisualTopMap(
         (previewTrackTargets?.tracks ?? tracksRef.current).map((track) => ({
           id: track.id,
@@ -1259,7 +1270,11 @@ export function useTimelineDrag(
         // Calculate snap using the group's bounding box
         let snapDelta = 0
         if (groupDuration > 0) {
-          const snapResult = calculateMagneticSnap(groupStartFrame, groupDuration)
+          const snapResult = calculateMagneticSnap(
+            groupStartFrame,
+            groupDuration,
+            snapBypassRef.current,
+          )
           snapDelta = snapResult.snappedFrame - groupStartFrame
         }
 
@@ -1355,6 +1370,7 @@ export function useTimelineDrag(
             clearLinkedMovePreview()
             prevSnapTargetRef.current = null
             magneticSnapTargetsRef.current = []
+            snapBypassRef.current = false
             dragStateRef.current = null
             isAltDragRef.current = false
             clearGlobalDragCursor()
@@ -1535,7 +1551,7 @@ export function useTimelineDrag(
     getCompatibleTrackIdFromMouseY,
     getTrackDropTarget,
     calculateMagneticSnap,
-    getMagneticSnapTargets,
+    generateSnapTargets,
     clearLinkedMovePreview,
     elementRef,
     getItems,
