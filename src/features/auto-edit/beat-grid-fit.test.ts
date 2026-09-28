@@ -172,6 +172,35 @@ describe('stabilizeBeatGrid', () => {
     expect(result.rhythm.beats[0]).toBeCloseTo(phase, 2)
   })
 
+  it('fits a long stable grid without cycle slip when the seed BPM is slightly wrong', () => {
+    const actualBpm = 89.72
+    const seedBpm = 90
+    const period = 60 / actualBpm
+    const phase = 0.37
+    const duration = 180
+    const beats = Array.from(
+      { length: Math.floor((duration - phase) / period) },
+      (_, index) =>
+        phase + index * period + (index % 4 === 0 ? 0.009 : index % 4 === 1 ? -0.006 : 0),
+    )
+
+    const result = stabilizeBeatGrid(
+      rhythm({
+        beats,
+        bpm: seedBpm,
+        downbeats: beats.filter((_, index) => index % 4 === 0),
+      }),
+      duration,
+    )
+
+    expect(result.fit.mode).toBe('fixed')
+    expect(result.rhythm.bpm).toBeCloseTo(actualBpm, 1)
+    const lateBeat = result.rhythm.beats.findLast((time) => time < 170)
+    expect(lateBeat).toBeDefined()
+    const cycle = Math.round(((lateBeat ?? phase) - phase) / period)
+    expect(Math.abs((lateBeat ?? 0) - (phase + cycle * period))).toBeLessThan(0.03)
+  })
+
   it('uses recurring low-end onset measurements to correct cumulative BPM drift', () => {
     const detectorBpm = 119.4
     const actualBpm = 120

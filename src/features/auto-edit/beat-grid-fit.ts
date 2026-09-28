@@ -71,35 +71,67 @@ function uniqueCycleObservations(
   phase: number,
   period: number,
 ): Observation[] {
-  const byCycle = new Map<number, Observation>()
-
-  beats.forEach((time, index) => {
-    if (!Number.isFinite(time)) return
-    const cycle = Math.round((time - phase) / period)
-    const candidate: Observation = {
-      cycle,
+  const candidates = beats
+    .map((time, index) => ({
       time,
       strength: Math.max(0, Math.min(1, strengths[index] ?? 0.5)),
-    }
-    const existing = byCycle.get(cycle)
-    if (!existing) {
-      byCycle.set(cycle, candidate)
-      return
+    }))
+    .filter((candidate) => Number.isFinite(candidate.time))
+    .sort((left, right) => left.time - right.time)
+
+  const first = candidates[0]
+  if (!first || !Number.isFinite(period) || period <= 0) return []
+
+  const observations: Observation[] = [{
+    cycle: 0,
+    time: first.time,
+    strength: first.strength,
+  }]
+  let previous = observations[0]!
+
+  for (let index = 1; index < candidates.length; index += 1) {
+    const candidate = candidates[index]!
+    const gap = candidate.time - previous.time
+    if (!Number.isFinite(gap) || gap <= 0) continue
+
+    const rawSteps = gap / period
+
+    // A short extra peak is an off-beat candidate, not another musical cycle.
+    // Keeping the current cycle here prevents a dense hat/snare from advancing
+    // the index before the following real beat arrives.
+    if (rawSteps < 0.55) {
+      const predicted = phase + previous.cycle * period
+      const previousDistance = Math.abs(previous.time - predicted)
+      const candidateDistance = Math.abs(candidate.time - predicted)
+      if (
+        candidateDistance + 1e-6 < previousDistance ||
+        (Math.abs(candidateDistance - previousDistance) <= 1e-6 &&
+          candidate.strength > previous.strength)
+      ) {
+        previous.time = candidate.time
+        previous.strength = candidate.strength
+      }
+      continue
     }
 
-    const predicted = phase + cycle * period
-    const existingDistance = Math.abs(existing.time - predicted)
-    const nextDistance = Math.abs(candidate.time - predicted)
-    if (
-      nextDistance + 1e-6 < existingDistance ||
-      (Math.abs(nextDistance - existingDistance) <= 1e-6 &&
-        candidate.strength > existing.strength)
-    ) {
-      byCycle.set(cycle, candidate)
-    }
-  })
+    // Infer missing beats from each local gap. Do not repeatedly round absolute
+    // song time against the seed BPM: a seed a few tenths off can otherwise
+    // accumulate enough phase error to slip an entire cycle late in a long song.
+    const steps = Math.max(1, Math.round(rawSteps))
+    const normalizedGap = gap / steps
+    const localDeviation = Math.abs(normalizedGap - period) / period
+    if (localDeviation > 0.3) continue
 
-  return [...byCycle.values()].sort((left, right) => left.cycle - right.cycle)
+    const observation: Observation = {
+      cycle: previous.cycle + steps,
+      time: candidate.time,
+      strength: candidate.strength,
+    }
+    observations.push(observation)
+    previous = observation
+  }
+
+  return observations
 }
 
 function rawTempoDriftRatio(

@@ -325,12 +325,11 @@ export function estimateBpm(beats: number[]): number {
 
 function reconcileProgrammedTempo(bpm: number): number {
   if (!Number.isFinite(bpm) || bpm <= 0) return bpm
-  const nearestInteger = Math.round(bpm)
 
-  // Modern programmed beats are commonly authored at integer DAW tempos. Only
-  // use that prior when the measured long-span tempo is already very close;
-  // real 97.5 BPM / live / automated material must remain fractional.
-  return Math.abs(bpm - nearestInteger) <= 0.35 ? nearestInteger : bpm
+  // Preserve measured precision. Snapping 89.72 to a visually tidy 90 BPM can
+  // move the grid hundreds of milliseconds over a full song. Integer DAW
+  // tempos should emerge from the measurements; presentation may round, timing may not.
+  return bpm
 }
 
 function mapProbeBpm(bpm: number): number {
@@ -351,23 +350,32 @@ function mapProbeBpm(bpm: number): number {
 }
 
 export function consecutiveProbeBpms(beats: number[], duration: number): number[] {
-  if (duration < 20) return [estimateBpm(beats)]
+  const global = estimateBpm(beats)
+  if (duration < 20) return [global]
 
-  const length = Math.min(60, duration)
-  const bpms: number[] = []
+  // Measure overlapping regions distributed over beginning, middle and end.
+  // The former non-overlapping 60 s chunks left many normal 20-40 s beats with
+  // only one local measurement, even though a small bias becomes obvious later.
+  const windowLength = Math.min(45, Math.max(20, duration / 3))
+  const maxStart = Math.max(0, duration - windowLength)
+  const probeCount =
+    maxStart <= 1e-6
+      ? 1
+      : Math.min(5, Math.max(3, Math.ceil(duration / windowLength) + 1))
+  const starts = Array.from({ length: probeCount }, (_, index) =>
+    probeCount === 1 ? 0 : (maxStart * index) / (probeCount - 1),
+  )
 
-  for (
-    let start = 0;
-    start + 20 <= duration && bpms.length < 5;
-    start += length
-  ) {
+  const bpms = global > 0 ? [global] : []
+  for (const start of starts) {
     const window = beats
-      .filter((time) => time >= start && time < start + length)
+      .filter((time) => time >= start && time < start + windowLength)
       .map((time) => time - start)
-    bpms.push(estimateBpm(window))
+    const bpm = estimateBpm(window)
+    if (bpm > 0) bpms.push(bpm)
   }
 
-  return bpms
+  return bpms.length > 0 ? bpms : [0]
 }
 
 function consensusBpm(bpms: number[]): number {
@@ -380,7 +388,7 @@ function consensusBpm(bpms: number[]): number {
   let start = 0
 
   for (let end = 0; end < sorted.length; end += 1) {
-    while ((sorted[end] ?? 0) / Math.max(sorted[start] ?? 1, 1e-9) > 1.08) {
+    while ((sorted[end] ?? 0) / Math.max(sorted[start] ?? 1, 1e-9) > 1.018) {
       start += 1
     }
     const size = end - start + 1

@@ -3,6 +3,7 @@ import {
   BEAT_THIS_CHUNK_FRAMES,
   buildSparseMelFilterbank,
   computeRmsEnvelope,
+  consecutiveProbeBpms,
   getBeatThisFrameCount,
   getBeatThisWindowStarts,
   pickBeatFrames,
@@ -135,6 +136,39 @@ describe('Beat This core', () => {
     const result = summarizeRhythm(beats, downbeats, [])
 
     expect(result.bpm).toBeCloseTo(97.5, 4)
+  })
+
+  it('keeps a precise near-integer tempo instead of introducing long-song drift', () => {
+    const bpm = 89.72
+    const period = 60 / bpm
+    const beats = Array.from({ length: 270 }, (_, index) =>
+      0.31 + index * period + (index % 3 === 0 ? 0.008 : index % 3 === 1 ? -0.006 : 0),
+    )
+    const downbeats = beats.filter((_, index) => index % 4 === 0)
+
+    const result = summarizeRhythm(
+      beats,
+      downbeats,
+      consecutiveProbeBpms(beats, beats.at(-1) ?? 180),
+    )
+
+    expect(result.bpm).toBeCloseTo(bpm, 2)
+    expect(Math.abs(result.bpm - 90)).toBeGreaterThan(0.15)
+  })
+
+  it('takes distributed overlapping tempo probes across a normal full song', () => {
+    const bpm = 96.4
+    const period = 60 / bpm
+    const duration = 150
+    const beats = Array.from(
+      { length: Math.floor(duration / period) },
+      (_, index) => 0.27 + index * period,
+    )
+
+    const probes = consecutiveProbeBpms(beats, duration)
+
+    expect(probes.length).toBeGreaterThanOrEqual(5)
+    for (const probe of probes) expect(probe).toBeCloseTo(bpm, 1)
   })
 
   it('normalizes RMS energy without inventing values above one', () => {
