@@ -291,6 +291,107 @@ test('loop mode creates one editable motif and repeats the exact cut/source patt
   )).toBeTruthy();
 });
 
+test('loop mode keeps reliable intro and outro outside the repeated body motif', () => {
+  const music = musicMap([
+    {
+      id: 'intro',
+      start: 0,
+      end: 4,
+      kind: 'intro',
+      energy: 0.2,
+      confidence: 0.92,
+    },
+    {
+      id: 'body',
+      start: 4,
+      end: 24,
+      kind: 'verse',
+      energy: 0.55,
+      confidence: 0.9,
+    },
+    {
+      id: 'outro',
+      start: 24,
+      end: 32,
+      kind: 'outro',
+      energy: 0.18,
+      confidence: 0.93,
+    },
+  ], 32)
+
+  const plan = createEditPlan(music, clipMap(), {
+    mode: 'loop',
+    loopBars: 4,
+    transitionProfile: 'clean',
+    seed: 8,
+  })
+
+  expect(plan.motifs).toHaveLength(1)
+  expect(plan.motifs[0]?.start).toBeCloseTo(4, 5)
+  expect(plan.motifs[0]?.duration).toBeCloseTo(8, 5)
+
+  const intro = plan.segments.filter((segment) => segment.timelineStart < 4)
+  const body = plan.segments.filter(
+    (segment) => segment.timelineStart >= 4 && segment.timelineStart < 24,
+  )
+  const outro = plan.segments.filter((segment) => segment.timelineStart >= 24)
+
+  expect(intro.length).toBeGreaterThan(0)
+  expect(outro.length).toBeGreaterThan(0)
+  expect(intro.every((segment) => segment.motifId === undefined)).toBe(true)
+  expect(outro.every((segment) => segment.motifId === undefined)).toBe(true)
+  expect(body.every((segment) => segment.motifId === 'motif-1')).toBe(true)
+  expect(plan.warnings).toContain('Reliable intro kept outside Loop A.')
+  expect(plan.warnings).toContain('Reliable outro kept outside Loop A.')
+
+  const firstBodyLoop = body.filter((segment) => segment.timelineStart < 12)
+  const secondBodyLoop = body.filter(
+    (segment) => segment.timelineStart >= 12 && segment.timelineStart < 20,
+  )
+  expect(secondBodyLoop.map((segment) => segment.shotId))
+    .toEqual(firstBodyLoop.map((segment) => segment.shotId))
+})
+
+test('loop mode ignores low-confidence edge labels instead of inventing structure', () => {
+  const music = musicMap([
+    {
+      id: 'intro',
+      start: 0,
+      end: 4,
+      kind: 'intro',
+      energy: 0.2,
+      confidence: 0.3,
+    },
+    {
+      id: 'body',
+      start: 4,
+      end: 28,
+      kind: 'verse',
+      energy: 0.55,
+      confidence: 0.9,
+    },
+    {
+      id: 'outro',
+      start: 28,
+      end: 32,
+      kind: 'outro',
+      energy: 0.18,
+      confidence: 0.4,
+    },
+  ], 32)
+
+  const plan = createEditPlan(music, clipMap(), {
+    mode: 'loop',
+    loopBars: 4,
+    transitionProfile: 'clean',
+    seed: 8,
+  })
+
+  expect(plan.motifs[0]?.start).toBe(0)
+  expect(plan.segments.every((segment) => segment.motifId === 'motif-1')).toBe(true)
+  expect(plan.warnings).toEqual([])
+})
+
 test('planned source ranges stay inside detected shots and avoid immediate reuse when alternatives fit', () => {
   const music = musicMap([
     {
