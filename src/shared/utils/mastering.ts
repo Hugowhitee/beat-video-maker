@@ -181,9 +181,11 @@ export const MASTERING_PRESETS: ReadonlyArray<{
     },
   },
   {
+    // Keep the historical id for saved-project compatibility; the visible
+    // preset name is intentionally genre-neutral.
     id: 'detroit',
-    label: 'Detroit',
-    description: 'Dry rap-beat punch with fast recovery, restrained harmonics and safe peaks.',
+    label: 'Dry Punch',
+    description: 'Dry punch with fast recovery, restrained harmonics and safe peaks.',
     settings: {
       enabled: true,
       inputGainDb: 1.2,
