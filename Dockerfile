@@ -12,6 +12,8 @@ RUN npm run check
 RUN npm run check:boundaries
 RUN npm run check:deps-contracts
 RUN npx vp test run \
+  src/features/editor/components/use-compact-editor-viewport.test.ts \
+  src/features/editor/components/editor.test.tsx \
   src/features/editor/components/arrangement-shot-drag.test.ts \
   src/features/auto-edit/manualEdit.test.ts \
   src/features/timeline/stores/actions/composition-actions.test.ts
