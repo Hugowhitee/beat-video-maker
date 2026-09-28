@@ -18,6 +18,7 @@ import {
   useTimelineStore,
 } from '@/features/editor/deps/timeline-store'
 import { usePlaybackStore } from '@/shared/state/playback'
+import { useEditorStore } from '@/shared/state/editor'
 import {
   MASTERING_PRESETS,
   analyzeProgramLevel,
@@ -237,6 +238,8 @@ export function BeatvideoMasterPanel() {
   const busAudioEq = usePlaybackStore((state) => state.busAudioEq)
   const setBusAudioEq = usePlaybackStore((state) => state.setBusAudioEq)
   const currentProject = useProjectStore((state) => state.currentProject)
+  const mixerFloating = useEditorStore((state) => state.mixerFloating)
+  const toggleMixerFloating = useEditorStore((state) => state.toggleMixerFloating)
   const resolved = useMemo(() => resolveMasterFxSettings(masterFx), [masterFx])
   const [selectedSlot, setSelectedSlot] = useState<MasterSlot>('eq')
   const [reduction, setReduction] = useState({ compressorDb: 0, limiterDb: 0 })
@@ -522,17 +525,24 @@ export function BeatvideoMasterPanel() {
     <div className="flex h-full min-h-0 flex-col bg-background">
       <div className="shrink-0 border-b border-border px-3 py-3">
         <div className="flex items-center gap-2">
-          <Gauge className="h-4 w-4" />
-          <div>
-            <div className="text-sm font-medium text-foreground">Master</div>
-            <div className="text-[10px] text-muted-foreground">Stereo finish · preview = export</div>
-          </div>
+          <Gauge className="h-4 w-4 text-muted-foreground" />
+          <div className="text-sm font-medium text-foreground">Master</div>
+          <Button
+            type="button"
+            size="sm"
+            variant={mixerFloating ? 'secondary' : 'outline'}
+            className="ml-auto h-7 px-2.5 text-[10px]"
+            onClick={toggleMixerFloating}
+            aria-pressed={mixerFloating}
+          >
+            Mixer
+          </Button>
           <Button
             type="button"
             size="icon"
             variant="ghost"
             className={cn(
-              'ml-auto h-7 w-7',
+              'h-7 w-7',
               resolved.enabled &&
                 'border border-emerald-500/60 bg-emerald-500/15 text-emerald-300 hover:bg-emerald-500/20 hover:text-emerald-200',
             )}
