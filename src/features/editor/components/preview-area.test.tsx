@@ -28,7 +28,9 @@ vi.mock('@/features/editor/deps/preview', async () => {
       />
     ),
     ColorVideoPreview: () => <div data-testid="color-video-preview" />,
-    AlignmentToolbar: () => <div data-testid="alignment-toolbar" />,
+    AlignmentToolbar: ({ compact }: { compact?: boolean }) => (
+      <div data-testid="alignment-toolbar" data-compact={compact ? 'true' : 'false'} />
+    ),
     PlaybackControls: ({
       totalFrames,
       onToggleFullscreen,
@@ -253,7 +255,7 @@ describe('PreviewArea mask editor toolbar', () => {
       />,
     )
 
-    expect(screen.getByTestId('alignment-toolbar')).toBeInTheDocument()
+    expect(screen.getByTestId('alignment-toolbar')).toHaveAttribute('data-compact', 'true')
     expect(screen.getByTestId('playback-controls')).toHaveAttribute('data-compact', 'true')
     expect(screen.queryByTestId('timecode-display')).not.toBeInTheDocument()
     expect(screen.queryByTestId('preview-zoom-controls')).not.toBeInTheDocument()

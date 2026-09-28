@@ -729,12 +729,12 @@ export const PreviewArea = memo(function PreviewArea({
                   <div
                     className={
                       compact
-                        ? 'border-t border-border panel-header flex h-7 items-center justify-start overflow-x-auto px-1'
+                        ? 'border-t border-border panel-header flex h-10 items-center justify-start overflow-x-auto px-1'
                         : 'border-t border-border panel-header flex h-7 items-center justify-center overflow-hidden px-3'
                     }
                   >
                     <div className="flex w-max items-center gap-0">
-                      <AlignmentToolbar projectSize={{ width, height }} />
+                      <AlignmentToolbar projectSize={{ width, height }} compact={compact} />
                     </div>
                   </div>
                 )}
