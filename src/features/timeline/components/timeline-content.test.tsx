@@ -113,6 +113,14 @@ const VIDEO_TRACK: TimelineTrack = {
   items: [],
 }
 
+const AUDIO_TRACK: TimelineTrack = {
+  ...VIDEO_TRACK,
+  id: 'track-audio-1',
+  name: 'A1',
+  kind: 'audio',
+  order: 1,
+}
+
 const VIDEO_ITEM: VideoItem = {
   id: 'clip-video-1',
   type: 'video',
@@ -214,6 +222,38 @@ describe('TimelineContent playback selection behavior', () => {
     expect(getAllByTestId('unified-timeline-preview-scrubber')).toHaveLength(1)
     expect(getByTestId('unified-timeline-preview-scrubber')).toBeInTheDocument()
     expect(container.querySelector('.timeline-container')).toHaveClass('isolate')
+  })
+
+  it('uses one vertical scroller for mixed audio and video in the Beatvideo track stack', () => {
+    const tracks = [VIDEO_TRACK, AUDIO_TRACK]
+    useTimelineStore.setState({ tracks, items: [] })
+    useItemsStore.getState().setTracks(tracks)
+    useItemsStore.getState().setItems([])
+
+    const allTracksScrollRef = createRef<HTMLDivElement>()
+    const videoTracksScrollRef = createRef<HTMLDivElement>()
+    const audioTracksScrollRef = createRef<HTMLDivElement>()
+
+    const { container } = render(
+      <TimelineContent
+        duration={10}
+        tracks={tracks}
+        allTracksScrollRef={allTracksScrollRef}
+        videoTracksScrollRef={videoTracksScrollRef}
+        audioTracksScrollRef={audioTracksScrollRef}
+        videoPaneHeight={240}
+        audioPaneHeight={0}
+        unifiedTrackStack
+      />,
+    )
+
+    const sectionScrollers = container.querySelectorAll('[data-track-section-scroll]')
+    expect(sectionScrollers).toHaveLength(1)
+    expect(allTracksScrollRef.current).toBe(sectionScrollers[0])
+    expect(videoTracksScrollRef.current).toBeNull()
+    expect(audioTracksScrollRef.current).toBeNull()
+    expect(sectionScrollers[0]?.querySelector('[data-track-id="track-video-1"]')).toBeTruthy()
+    expect(sectionScrollers[0]?.querySelector('[data-track-id="track-audio-1"]')).toBeTruthy()
   })
 
   it('keeps the selected clip selected after the playhead moves past it', async () => {
