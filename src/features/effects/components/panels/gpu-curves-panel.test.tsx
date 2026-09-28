@@ -277,7 +277,10 @@ describe('GpuCurvesPanel', () => {
   it('disables the header reset action when every channel is identity', () => {
     render(<GpuCurvesPanel {...makeProps()} />)
 
-    fireEvent.click(screen.getByRole('button', { name: 'More options' }))
+    fireEvent.pointerDown(screen.getByRole('button', { name: 'More options' }), {
+      button: 0,
+      ctrlKey: false,
+    })
 
     expect(screen.getByRole('menuitem', { name: 'Reset To Defaults' })).toHaveAttribute(
       'data-disabled',
@@ -293,7 +296,10 @@ describe('GpuCurvesPanel', () => {
       <GpuCurvesPanel {...makeProps({ redPoints: serializeGpuCurvesChannelPoints(points) })} />,
     )
 
-    fireEvent.click(screen.getByRole('button', { name: 'More options' }))
+    fireEvent.pointerDown(screen.getByRole('button', { name: 'More options' }), {
+      button: 0,
+      ctrlKey: false,
+    })
 
     expect(screen.getByRole('menuitem', { name: 'Reset To Defaults' })).not.toHaveAttribute(
       'data-disabled',
