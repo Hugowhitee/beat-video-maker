@@ -988,10 +988,40 @@ export const EffectsSection = memo(function EffectsSection({
 
             {/* Scrollable effect list */}
             <div className="max-h-[420px] overflow-y-auto overflow-x-hidden p-1">
-              {/* GPU Shader Effects */}
+              {quickEffectDefinitions.length > 0 ? (
+                <div>
+                  <div className="px-2 py-1 text-xs font-medium text-muted-foreground">
+                    Quick effects
+                  </div>
+                  {quickEffectDefinitions.map((def) => (
+                    <button
+                      key={def.id}
+                      type="button"
+                      className="relative flex w-full cursor-default select-none items-center gap-2 rounded-sm px-2 py-1.5 text-xs outline-none hover:bg-accent hover:text-accent-foreground"
+                      onMouseEnter={() => setHoveredPickerKey(def.id)}
+                      onMouseLeave={() => setHoveredPickerKey((key) => (key === def.id ? null : key))}
+                      onClick={() => {
+                        handleAddGpuEffect(def.id)
+                        closePicker()
+                      }}
+                    >
+                      <EffectThumbnail
+                        effectId={def.id}
+                        active={hoveredPickerKey === def.id}
+                        className="h-[18px] w-8 flex-shrink-0 rounded-sm"
+                      />
+                      {getEffectDefinitionName(def)}
+                    </button>
+                  ))}
+                </div>
+              ) : null}
+
+              {/* Full effect catalog */}
               {filteredCategories.map(({ category, effects: catEffects }, index) => (
                 <div key={category}>
-                  {index > 0 && <div className="-mx-1 my-1 h-px bg-muted" />}
+                  {(index > 0 || quickEffectDefinitions.length > 0) && (
+                    <div className="-mx-1 my-1 h-px bg-muted" />
+                  )}
                   <div className="px-2 py-1 text-xs font-medium text-muted-foreground">
                     {getEffectCategoryLabel(t, category)}
                   </div>
@@ -1020,7 +1050,9 @@ export const EffectsSection = memo(function EffectsSection({
 
               {filteredPresets.length > 0 && (
                 <>
-                  {filteredCategories.length > 0 && <div className="-mx-1 my-1 h-px bg-muted" />}
+                  {(quickEffectDefinitions.length > 0 || filteredCategories.length > 0) && (
+                    <div className="-mx-1 my-1 h-px bg-muted" />
+                  )}
                   <div className="px-2 py-1 text-xs font-medium text-muted-foreground">
                     {t('effects.section.presets')}
                   </div>
@@ -1051,7 +1083,9 @@ export const EffectsSection = memo(function EffectsSection({
 
               {filteredUserPresets.length > 0 && (
                 <>
-                  {(filteredCategories.length > 0 || filteredPresets.length > 0) && (
+                  {(quickEffectDefinitions.length > 0 ||
+                    filteredCategories.length > 0 ||
+                    filteredPresets.length > 0) && (
                     <div className="-mx-1 my-1 h-px bg-muted" />
                   )}
                   <div className="px-2 py-1 text-xs font-medium text-muted-foreground">
@@ -1136,15 +1170,12 @@ export const EffectsSection = memo(function EffectsSection({
   )
 
   const reactiveQuickStarts = !isDock ? (
-    <div className="mx-2 mb-2 rounded-md border border-border bg-secondary/20 p-2">
-      <div className="mb-1.5 flex items-center gap-1.5">
-        <AudioLines className="h-3.5 w-3.5 text-primary" aria-hidden="true" />
-        <span className="text-[10px] font-semibold uppercase tracking-wide text-foreground">
-          React to audio
-        </span>
-        <span className="ml-auto text-[9px] text-muted-foreground">
-          {audioReactiveAvailable ? 'Audio ready' : 'Analyze beat first'}
-        </span>
+    <div className="mx-2 mb-2 border-t border-border/70 pt-2">
+      <div className="mb-1.5 flex items-center gap-2">
+        <span className="text-xs font-medium text-foreground">Reactive</span>
+        {!audioReactiveAvailable ? (
+          <span className="ml-auto text-[11px] text-muted-foreground">Analyze beat first</span>
+        ) : null}
       </div>
       <div className="flex flex-wrap gap-1">
         {AUDIO_REACTIVE_PRESETS.map((preset) => {
@@ -1157,7 +1188,7 @@ export const EffectsSection = memo(function EffectsSection({
               type="button"
               size="sm"
               variant={applied ? 'secondary' : 'outline'}
-              className="h-6 px-2 text-[9px]"
+              className="h-7 px-2 text-xs"
               disabled={!audioReactiveAvailable}
               aria-pressed={applied}
               title={applied ? `Remove ${preset.label}` : preset.description}
@@ -1172,16 +1203,11 @@ export const EffectsSection = memo(function EffectsSection({
   ) : null
 
   const motionReactiveControls = motionReactiveBindings.length > 0 ? (
-    <div className="mx-2 mb-2 rounded-md border border-primary/25 bg-primary/5 py-2">
+    <div className="mx-2 mb-2 border-t border-border/70 pt-2">
       <div className="flex items-center gap-1.5 px-2 pb-1">
-        <AudioLines className="h-3.5 w-3.5 text-primary" aria-hidden="true" />
-        <span className="text-[10px] font-semibold uppercase tracking-wide text-foreground">
-          Audio Reactive Motion
-        </span>
+        <AudioLines className="h-3.5 w-3.5 text-muted-foreground" aria-hidden="true" />
+        <span className="text-xs font-medium text-foreground">Reactive motion</span>
       </div>
-      <p className="px-2 pb-1 text-[9px] leading-relaxed text-muted-foreground">
-        Transform reactions from a reactive look. These stay editable instead of becoming baked animation.
-      </p>
       {motionReactiveBindings.map((binding) => (
         <div key={binding.id} className="relative">
           <Button
