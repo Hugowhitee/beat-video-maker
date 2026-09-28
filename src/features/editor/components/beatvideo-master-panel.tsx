@@ -20,10 +20,11 @@ import {
 import { usePlaybackStore } from '@/shared/state/playback'
 import { useEditorStore } from '@/shared/state/editor'
 import {
+  AUTO_LEVEL_LIMITER_CEILING_DB,
   MASTERING_PRESETS,
   analyzeProgramLevel,
   createSaturationCurve,
-  resolveAutoLevelInputGainDb,
+  resolveAutoLevelPlan,
   resolveMasterFxSettings,
 } from '@/shared/utils/mastering'
 import { getSparseAudioEqSettings } from '@/shared/utils/audio-eq'
@@ -56,7 +57,6 @@ interface SavedMasterPreset {
   name: string
   masterFx: MasterFxSettings
   busAudioEq?: AudioEqSettings
-  masterBusDb: number
 }
 
 function loadSavedMasterPresets(): SavedMasterPreset[] {
@@ -72,7 +72,6 @@ function loadSavedMasterPresets(): SavedMasterPreset[] {
         typeof candidate !== 'object' ||
         typeof candidate.id !== 'string' ||
         typeof candidate.name !== 'string' ||
-        typeof candidate.masterBusDb !== 'number' ||
         !candidate.masterFx ||
         typeof candidate.masterFx !== 'object'
       ) {
@@ -86,7 +85,6 @@ function loadSavedMasterPresets(): SavedMasterPreset[] {
           candidate.busAudioEq && typeof candidate.busAudioEq === 'object'
             ? candidate.busAudioEq as AudioEqSettings
             : undefined,
-        masterBusDb: candidate.masterBusDb,
       }]
     })
   } catch {
@@ -234,7 +232,6 @@ export function BeatvideoMasterPanel() {
   const masterFx = usePlaybackStore((state) => state.masterFx)
   const setMasterFx = usePlaybackStore((state) => state.setMasterFx)
   const masterBusDb = usePlaybackStore((state) => state.masterBusDb)
-  const setMasterBusDb = usePlaybackStore((state) => state.setMasterBusDb)
   const busAudioEq = usePlaybackStore((state) => state.busAudioEq)
   const setBusAudioEq = usePlaybackStore((state) => state.setBusAudioEq)
   const currentProject = useProjectStore((state) => state.currentProject)
@@ -252,10 +249,15 @@ export function BeatvideoMasterPanel() {
     rmsDb: number
     peakDb: number
     inputGainDb: number
+    targetRmsDb: number
+    projectedRmsDb: number
+    projectedPeakDb: number
+    estimatedLimiterReductionDb: number
+    limitedByPeak: boolean
   } | null>(null)
 
   const activeBuiltInPresetId = useMemo(() => {
-    if (busAudioEq !== undefined || Math.abs(masterBusDb) > 0.0001) return null
+    if (busAudioEq !== undefined) return null
     const current = JSON.stringify(resolved)
     return (
       MASTERING_PRESETS.find(
@@ -263,7 +265,7 @@ export function BeatvideoMasterPanel() {
           JSON.stringify(resolveMasterFxSettings(preset.settings)) === current,
       )?.id ?? null
     )
-  }, [busAudioEq, masterBusDb, resolved])
+  }, [busAudioEq, resolved])
 
   useEffect(() => {
     let frame = 0
@@ -331,7 +333,6 @@ export function BeatvideoMasterPanel() {
       // an old EQ curve making a new preset sound unexpectedly hollow.
       const before = captureSnapshot()
       setBusAudioEq(undefined)
-      setMasterBusDb(0)
       setMasterFx(preset.settings)
       setAutoLevelResult(null)
       markChanged()
@@ -339,7 +340,7 @@ export function BeatvideoMasterPanel() {
         .getState()
         .addUndoEntry({ type: 'APPLY_MASTER_PRESET', payload: { presetId } }, before)
     },
-    [markChanged, setBusAudioEq, setMasterBusDb, setMasterFx],
+    [markChanged, setBusAudioEq, setMasterFx],
   )
 
   const applySavedPreset = useCallback(
@@ -347,13 +348,13 @@ export function BeatvideoMasterPanel() {
       const before = captureSnapshot()
       setMasterFx(preset.masterFx)
       setBusAudioEq(preset.busAudioEq)
-      setMasterBusDb(preset.masterBusDb)
+      setAutoLevelResult(null)
       markChanged()
       useTimelineCommandStore
         .getState()
         .addUndoEntry({ type: 'APPLY_MASTER_PRESET', payload: { presetId: preset.id } }, before)
     },
-    [markChanged, setBusAudioEq, setMasterBusDb, setMasterFx],
+    [markChanged, setBusAudioEq, setMasterFx],
   )
 
   const saveCurrentPreset = useCallback(() => {
@@ -373,7 +374,6 @@ export function BeatvideoMasterPanel() {
         limiter: { ...resolved.limiter },
       },
       busAudioEq: busAudioEq ? { ...busAudioEq } : undefined,
-      masterBusDb,
     }
     const next = existing
       ? savedPresets.map((preset) => preset.id === existing.id ? nextPreset : preset)
@@ -382,7 +382,7 @@ export function BeatvideoMasterPanel() {
     setSavedPresets(next)
     setPresetName('')
     setSavingPreset(false)
-  }, [busAudioEq, masterBusDb, presetName, resolved, savedPresets])
+  }, [busAudioEq, presetName, resolved, savedPresets])
 
   const removeSavedPreset = useCallback((presetId: string) => {
     setSavedPresets((current) => {
@@ -439,17 +439,19 @@ export function BeatvideoMasterPanel() {
         throw new Error('No usable audio level was detected')
       }
 
-      const inputGainDb = resolveAutoLevelInputGainDb(level)
+      const plan = resolveAutoLevelPlan(level)
       const before = captureSnapshot()
-      setMasterBusDb(0)
       setMasterFx({
         ...resolved,
         enabled: true,
-        inputGainDb,
+        inputGainDb: plan.inputGainDb,
         limiter: {
           ...resolved.limiter,
           enabled: true,
-          ceilingDb: Math.min(resolved.limiter.ceilingDb, -0.8),
+          ceilingDb: Math.min(
+            resolved.limiter.ceilingDb,
+            AUTO_LEVEL_LIMITER_CEILING_DB,
+          ),
         },
       })
       markChanged()
@@ -459,10 +461,10 @@ export function BeatvideoMasterPanel() {
       setAutoLevelResult({
         rmsDb: level.rmsDb,
         peakDb: level.peakDb,
-        inputGainDb,
+        ...plan,
       })
       toast.success('Auto level applied', {
-        description: `Program RMS ${level.rmsDb.toFixed(1)} dBFS · input ${inputGainDb >= 0 ? '+' : ''}${inputGainDb.toFixed(1)} dB · peak limiter on`,
+        description: `Trim ${plan.inputGainDb >= 0 ? '+' : ''}${plan.inputGainDb.toFixed(1)} dB; projected program level ${plan.projectedRmsDb.toFixed(1)} dBFS.`,
       })
     } catch (error) {
       toast.error('Could not auto level the beat', {
@@ -476,7 +478,6 @@ export function BeatvideoMasterPanel() {
     currentProject?.beatvideoMusic?.mediaId,
     markChanged,
     resolved,
-    setMasterBusDb,
     setMasterFx,
   ])
 
@@ -484,13 +485,12 @@ export function BeatvideoMasterPanel() {
     const before = captureSnapshot()
     setMasterFx(undefined)
     setBusAudioEq(undefined)
-    setMasterBusDb(0)
     setAutoLevelResult(null)
     markChanged()
     useTimelineCommandStore
       .getState()
       .addUndoEntry({ type: 'RESET_MASTER_CHAIN', payload: {} }, before)
-  }, [markChanged, setBusAudioEq, setMasterBusDb, setMasterFx])
+  }, [markChanged, setBusAudioEq, setMasterFx])
 
   const slotEnabled = useCallback(
     (slot: MasterSlot) => {
@@ -536,6 +536,9 @@ export function BeatvideoMasterPanel() {
             aria-pressed={mixerFloating}
           >
             Mixer
+            <span className="ml-1 font-mono text-[10px] tabular-nums text-muted-foreground">
+              {masterBusDb > 0 ? '+' : ''}{masterBusDb.toFixed(1)} dB
+            </span>
           </Button>
           <Button
             type="button"
@@ -679,62 +682,74 @@ export function BeatvideoMasterPanel() {
           )}
         </div>
 
-        <div className="mt-3 space-y-2 border-t border-border pt-3">
-          <div className="flex items-center justify-between gap-2">
+        <div className="mt-3 border-t border-border pt-3">
+          <div className="flex items-center justify-between gap-3">
+            <div className="min-w-0">
+              <div className="text-xs font-medium text-foreground">Level</div>
+              <div className="mt-0.5 text-[10px] leading-relaxed text-muted-foreground">
+                Auto adjusts pre-FX trim. Final output stays on the Mixer bus fader.
+              </div>
+            </div>
             <Button
               type="button"
               size="sm"
               variant="outline"
-              className="h-7 px-2 text-xs"
+              className="h-7 shrink-0 px-2 text-xs"
               disabled={autoLeveling}
               onClick={() => void autoLevel()}
             >
               <Gauge className="h-3.5 w-3.5" />
-              {autoLeveling ? 'Analyzing level…' : 'Auto level'}
+              {autoLeveling ? 'Analyzing…' : 'Auto level'}
             </Button>
-            {autoLevelResult ? (
-              <span
-                className="truncate font-mono text-[11px] text-muted-foreground"
-                title="Program RMS and sample peak; not LUFS or true peak"
-              >
-                RMS {autoLevelResult.rmsDb.toFixed(1)} · peak {autoLevelResult.peakDb.toFixed(1)}
-              </span>
-            ) : null}
           </div>
-          <MasterRange
-            label="Input"
-            value={resolved.inputGainDb}
-            min={-12}
-            max={12}
-            step={0.1}
-            unit=" dB"
-            onGestureStart={beginGesture}
-            onGestureEnd={endGesture}
-            onChange={(inputGainDb) => patchMaster({ enabled: true, inputGainDb })}
-          />
-          <MasterRange
-            label="Output"
-            value={masterBusDb}
-            min={-12}
-            max={6}
-            step={0.1}
-            unit=" dB"
-            onGestureStart={() => {
-              gestureSnapshotRef.current ??= captureSnapshot()
-            }}
-            onGestureEnd={() => {
-              const before = gestureSnapshotRef.current
-              gestureSnapshotRef.current = null
-              if (!before) return
-              useTimelineCommandStore
-                .getState()
-                .addUndoEntry({ type: 'UPDATE_MASTER_OUTPUT', payload: {} }, before)
-            }}
-            onChange={(value) => {
-              setMasterBusDb(value)
-              markChanged()
-            }}
-          />
+
+          <div className="mt-2">
+            <MasterRange
+              label="Trim"
+              value={resolved.inputGainDb}
+              min={-12}
+              max={12}
+              step={0.1}
+              unit=" dB"
+              onGestureStart={beginGesture}
+              onGestureEnd={endGesture}
+              onChange={(inputGainDb) => {
+                setAutoLevelResult(null)
+                patchMaster({ enabled: true, inputGainDb })
+              }}
+            />
+          </div>
+
+          {autoLevelResult ? (
+            <div
+              className="mt-2 border-t border-border/70 pt-2 text-[11px]"
+              title="Gated program RMS and sample peak; not LUFS or true peak"
+            >
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-muted-foreground">
+                  Measured {autoLevelResult.rmsDb.toFixed(1)} dBFS
+                </span>
+                <span className="font-mono tabular-nums text-foreground">
+                  → {autoLevelResult.projectedRmsDb.toFixed(1)} dBFS
+                </span>
+              </div>
+              <div className="mt-1 flex items-center justify-between gap-3 text-[10px] text-muted-foreground">
+                <span>
+                  Target {autoLevelResult.targetRmsDb.toFixed(1)} dBFS
+                </span>
+                <span>
+                  Trim {autoLevelResult.inputGainDb >= 0 ? '+' : ''}
+                  {autoLevelResult.inputGainDb.toFixed(1)} dB
+                </span>
+              </div>
+              {autoLevelResult.limitedByPeak ? (
+                <div className="mt-1 text-[10px] leading-relaxed text-muted-foreground">
+                  Peak headroom limited the trim to avoid more than about
+                  {' '}{autoLevelResult.estimatedLimiterReductionDb.toFixed(1)} dB of peak limiting.
+                </div>
+              ) : null}
+            </div>
+          ) : null}
         </div>
       </div>
 
