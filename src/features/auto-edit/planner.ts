@@ -298,7 +298,7 @@ function buildEffectTransitions(
 
   const transitions: EditTransition[] = [];
   const shotsById = new Map(context.shots.map((shot) => [shot.id, shot]));
-  let lastFilmBurnTime: number | null = null;
+  let lastAccentTransitionTime: number | null = null;
 
   for (let index = 1; index < segments.length; index += 1) {
     const slot = slots[index];
@@ -312,8 +312,8 @@ function buildEffectTransitions(
       : 8;
 
     if (
-      lastFilmBurnTime !== null
-      && slot.start - lastFilmBurnTime < minimumSpacingSeconds - EPSILON
+      lastAccentTransitionTime !== null
+      && slot.start - lastAccentTransitionTime < minimumSpacingSeconds - EPSILON
     ) {
       continue;
     }
@@ -330,9 +330,14 @@ function buildEffectTransitions(
       continue;
     }
 
+    const kind =
+      context.options.transitionProfile === 'detroit' && transitions.length % 2 === 1
+        ? 'film-gate'
+        : 'film-burn';
+
     transitions.push({
       id: `transition-${transitions.length + 1}`,
-      kind: 'film-burn',
+      kind,
       leftSegmentId: left.id,
       rightSegmentId: right.id,
       cutTime: slot.start,
@@ -341,7 +346,7 @@ function buildEffectTransitions(
       reason: `${slot.section.kind} section accent`,
       motifId,
     });
-    lastFilmBurnTime = slot.start;
+    lastAccentTransitionTime = slot.start;
   }
 
   return transitions;
