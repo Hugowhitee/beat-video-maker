@@ -640,8 +640,9 @@ export const TransitionItem = memo(function TransitionItem({
     typeof rawAlignment === 'number' && Number.isFinite(rawAlignment)
       ? Math.max(0, Math.min(1, rawAlignment))
       : 0.5
-  const showLeftResizeHandle = alignment > 0
-  const showRightResizeHandle = alignment < 1
+  const exposeResizeHandles = isSelected || position.width >= 36
+  const showLeftResizeHandle = alignment > 0 && exposeResizeHandles
+  const showRightResizeHandle = alignment < 1 && exposeResizeHandles
   const { leftSelectWidth, rightSelectLeft, rightSelectWidth } =
     getTransitionSelectGeometry(position)
 
@@ -777,7 +778,7 @@ export const TransitionItem = memo(function TransitionItem({
 
           {showLeftResizeHandle && (
             <div
-              className="absolute left-0 top-0 bottom-0 w-2 cursor-ew-resize rounded-l pointer-events-auto"
+              className="absolute left-0 top-0 bottom-0 z-30 w-2 cursor-ew-resize rounded-l pointer-events-auto"
               data-transition-hit-zone="left-edge"
               onMouseEnter={() => {
                 setHoveredEdge('left')
@@ -795,7 +796,7 @@ export const TransitionItem = memo(function TransitionItem({
 
           {showRightResizeHandle && (
             <div
-              className="absolute right-0 top-0 bottom-0 w-2 cursor-ew-resize rounded-r pointer-events-auto"
+              className="absolute right-0 top-0 bottom-0 z-30 w-2 cursor-ew-resize rounded-r pointer-events-auto"
               data-transition-hit-zone="right-edge"
               onMouseEnter={() => {
                 setHoveredEdge('right')
