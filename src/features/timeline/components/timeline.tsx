@@ -1062,10 +1062,18 @@ export const Timeline = memo(function Timeline({ duration, beatvideoMode = 'vide
               className="flex h-full min-h-0 flex-col"
               style={
                 {
-                  '--timeline-video-pane-height': `${videoPaneHeight}px`,
-                  '--timeline-audio-pane-height': `${audioPaneHeight}px`,
-                  '--timeline-video-zone-height': `${videoZoneHeight}px`,
-                  '--timeline-audio-zone-height': `${audioZoneHeight}px`,
+                  '--timeline-video-pane-height': `${
+                    simplifiedBeatvideoTimeline ? trackRowsViewportHeight : videoPaneHeight
+                  }px`,
+                  '--timeline-audio-pane-height': `${
+                    simplifiedBeatvideoTimeline ? 0 : audioPaneHeight
+                  }px`,
+                  '--timeline-video-zone-height': `${
+                    simplifiedBeatvideoTimeline ? 0 : videoZoneHeight
+                  }px`,
+                  '--timeline-audio-zone-height': `${
+                    simplifiedBeatvideoTimeline ? 0 : audioZoneHeight
+                  }px`,
                 } as React.CSSProperties
               }
             >
