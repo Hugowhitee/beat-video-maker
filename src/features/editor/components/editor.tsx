@@ -954,8 +954,9 @@ export const LoadedEditor = memo(function LoadedEditor({
                     </div>
                     {workspace === 'master' || beatvideoMode === 'video' ? (
                       <AudioMeterPanel
-                        key={workspace === 'master' ? 'master-mixer' : 'editor-meter'}
-                        initialMode={workspace === 'master' ? 'mixer' : 'meter'}
+                        key={workspace === 'master' ? 'master-meter' : 'editor-meter'}
+                        initialMode="meter"
+                        allowDockedMixer={workspace !== 'master'}
                       />
                     ) : null}
                   </div>

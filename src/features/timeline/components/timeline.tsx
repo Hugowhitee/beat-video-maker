@@ -108,7 +108,17 @@ export const Timeline = memo(function Timeline({ duration, beatvideoMode = 'vide
   const selectTracks = useSelectionStore((s) => s.selectTracks)
   const selectedTrackIdsSet = useMemo(() => new Set(selectedTrackIds), [selectedTrackIds])
 
-  const visibleTracks = tracks
+  const masterAudioTracks = useMemo(
+    () => tracks.filter((track) => getTrackKind(track) === 'audio'),
+    [tracks],
+  )
+  // Master is an audio-finishing workspace. Keep the canonical timeline and
+  // edit state, but hide visual-only lanes when dedicated audio lanes exist so
+  // Beat / Producer tags / Watermarks stay readable and directly movable.
+  // Legacy projects without audio tracks fall back to the full stack instead of
+  // opening an apparently empty timeline.
+  const visibleTracks =
+    workspace === 'master' && masterAudioTracks.length > 0 ? masterAudioTracks : tracks
   const canDeleteEmptyTracks = useItemsStore(
     useCallback(
       (s) => {
