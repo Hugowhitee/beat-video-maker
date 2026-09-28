@@ -18,6 +18,7 @@ import { useCompositionsStore } from '../compositions-store'
 import { useCompositionNavigationStore } from '../composition-navigation-store'
 import { useEditorStore } from '@/shared/state/editor'
 import {
+  createLinkedPreCompPattern,
   createMotionClip,
   createPreComp,
   createPreCompBatch,
@@ -145,6 +146,61 @@ describe('composition-actions split wrappers', () => {
     expect(useCompositionsStore.getState().compositions).toHaveLength(2)
     expect(useCompositionsStore.getState().compositions[0]?.items).toHaveLength(2)
     expect(useCompositionsStore.getState().compositions[1]?.items).toHaveLength(2)
+    expect(useTimelineCommandStore.getState().undoStack).toHaveLength(1)
+  })
+
+  it('creates repeated Loop pattern instances that share one editable composition', () => {
+    useItemsStore
+      .getState()
+      .setTracks([makeTrack({ id: 'track-v1', name: 'V1', kind: 'video', order: 0 })])
+    useItemsStore.getState().setItems([
+      makeVideoItem({
+        id: 'loop-1-a',
+        trackId: 'track-v1',
+        embeddedAudioMuted: true,
+        from: 0,
+        durationInFrames: 30,
+        linkedGroupId: undefined,
+      }),
+      makeVideoItem({
+        id: 'loop-1-b',
+        trackId: 'track-v1',
+        embeddedAudioMuted: true,
+        from: 30,
+        durationInFrames: 30,
+        linkedGroupId: undefined,
+      }),
+      makeVideoItem({
+        id: 'loop-2-a',
+        trackId: 'track-v1',
+        embeddedAudioMuted: true,
+        from: 60,
+        durationInFrames: 30,
+        linkedGroupId: undefined,
+      }),
+      makeVideoItem({
+        id: 'loop-2-b',
+        trackId: 'track-v1',
+        embeddedAudioMuted: true,
+        from: 90,
+        durationInFrames: 30,
+        linkedGroupId: undefined,
+      }),
+    ])
+
+    const wrappers = createLinkedPreCompPattern('Loop A', [
+      ['loop-1-a', 'loop-1-b'],
+      ['loop-2-a', 'loop-2-b'],
+    ])
+
+    expect(wrappers).toHaveLength(2)
+    expect(wrappers.map((wrapper) => wrapper.label)).toEqual(['Loop A', 'Loop A'])
+    expect(wrappers[0]?.compositionId).toBeTruthy()
+    expect(wrappers[1]?.compositionId).toBe(wrappers[0]?.compositionId)
+    expect(wrappers.map((wrapper) => wrapper.from)).toEqual([0, 60])
+    expect(useItemsStore.getState().items).toHaveLength(2)
+    expect(useCompositionsStore.getState().compositions).toHaveLength(1)
+    expect(useCompositionsStore.getState().compositions[0]?.items).toHaveLength(2)
     expect(useTimelineCommandStore.getState().undoStack).toHaveLength(1)
   })
 
