@@ -38,10 +38,11 @@ describe('Beatvideo reactive graphics', () => {
     })
 
     expect(items).toHaveLength(1)
-    expect(items[0]?.transform.opacity).toBe(0)
-    expect(items[0]?.transform.width).toBe(1920)
-    expect(items[0]?.audioReactive?.bindings[0]?.driver).toBe('downbeat')
-    expect(items[0]?.audioReactive?.beats.length).toBeGreaterThan(0)
+    const item = items[0]!
+    expect(item.transform.opacity).toBe(0)
+    expect(item.transform.width).toBe(1920)
+    expect(item.audioReactive?.bindings[0]?.driver).toBe('downbeat')
+    expect(item.audioReactive?.beats.length).toBeGreaterThan(0)
   })
 
   it('creates a low-driven outline frame without baking a separate renderer', () => {
