@@ -408,6 +408,8 @@ function buildStableBeats(params: {
   rawBeats: readonly number[]
   rawStrengths: readonly number[]
   rawDownbeats: readonly number[]
+  /** Signed onset correction applied to every detector landmark. */
+  phaseShift: number
   meter: number
 }) {
   const {
@@ -417,6 +419,7 @@ function buildStableBeats(params: {
     rawBeats,
     rawStrengths,
     rawDownbeats,
+    phaseShift,
     meter,
   } = params
   const firstCycle = Math.ceil((0 - phase) / period - 1e-7)
@@ -425,7 +428,7 @@ function buildStableBeats(params: {
   const downbeatCycle =
     firstRawDownbeat === undefined
       ? null
-      : Math.round((firstRawDownbeat - phase) / period)
+      : Math.round((firstRawDownbeat + phaseShift - phase) / period)
 
   const beats: number[] = []
   const downbeats: number[] = []
@@ -436,7 +439,7 @@ function buildStableBeats(params: {
     if (time < -1e-6 || time > duration + 1e-6) continue
     const normalized = Math.max(0, Math.min(duration, time))
     beats.push(normalized)
-    strengths.push(nearestStrength(normalized, rawBeats, rawStrengths))
+    strengths.push(nearestStrength(normalized - phaseShift, rawBeats, rawStrengths))
 
     if (
       downbeatCycle !== null &&
@@ -502,6 +505,7 @@ export function stabilizeBeatGrid(
     rawBeats: result.beats,
     rawStrengths: result.beatStrengths,
     rawDownbeats: result.downbeats,
+    phaseShift: phase.phaseShift,
     meter: Math.max(1, Math.round(result.meter || 4)),
   })
   const bpm = 60 / fitted.period
