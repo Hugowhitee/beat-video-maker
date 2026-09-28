@@ -79,6 +79,37 @@ describe('stabilizeBeatGrid', () => {
     expect(result.rhythm.beats[0]).toBeCloseTo(audiblePhase, 2)
   })
 
+  it('repairs a half-beat detector phase when coherent kick onsets define the beat start', () => {
+    const period = 0.5
+    const kickPhase = 0.3
+    const detectorPhase = kickPhase + period / 2
+    const beats = Array.from({ length: 48 }, (_, index) => detectorPhase + index * period)
+    const transients = Array.from({ length: 48 }, (_, index) => [
+      {
+        time: kickPhase + index * period,
+        index: index * 2,
+        strength: 0.86,
+        low: 0.96,
+        mid: 0.14,
+        high: 0.04,
+      },
+      {
+        time: detectorPhase + index * period,
+        index: index * 2 + 1,
+        strength: 1,
+        low: 0.06,
+        mid: 0.74,
+        high: 0.58,
+      },
+    ]).flat()
+
+    const result = stabilizeBeatGrid(rhythm({ beats, bpm: 120, transients }), 25)
+
+    expect(result.fit.mode).toBe('fixed')
+    expect(result.fit.phaseShiftMs).toBeLessThan(-230)
+    expect(result.rhythm.beats[0]).toBeCloseTo(kickPhase, 2)
+  })
+
   it('does not let strong off-beat hats steal the grid from low-end beat onsets', () => {
     const period = 0.5
     const phase = 0.4
