@@ -57,7 +57,7 @@ describe('Beat This core', () => {
     expect(result.downbeats).toEqual(downbeats)
   })
 
-  it('averages Beat This frame jitter over long spans and recovers an integer DAW tempo', () => {
+  it('averages Beat This frame jitter over long spans without forcing an integer tempo', () => {
     const period = 60 / 98
     const beats = Array.from({ length: 129 }, (_, index) =>
       index * period + (index % 3 === 0 ? 0.01 : index % 3 === 1 ? -0.01 : 0),
@@ -66,7 +66,8 @@ describe('Beat This core', () => {
 
     const result = summarizeRhythm(beats, downbeats, [])
 
-    expect(result.bpm).toBe(98)
+    expect(result.bpm).toBeCloseTo(98, 0)
+    expect(result.bpm).not.toBe(98)
   })
 
   it('keeps a stable programmed tempo when one detector beat is missing', () => {
