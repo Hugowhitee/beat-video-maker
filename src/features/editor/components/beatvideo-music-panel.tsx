@@ -9,6 +9,7 @@ import {
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
+import { BeatvideoFileMetadata } from './beatvideo-file-metadata'
 import {
   analyzeMusicMedia,
   getBeatvideoGridMode,
@@ -203,6 +204,11 @@ export function BeatvideoMusicPanel() {
         (media) => media.mimeType.startsWith('audio/') && media.id !== selectedMediaId,
       ),
     [mediaItems, selectedMediaId],
+  )
+
+  const selectedMedia = useMemo(
+    () => candidates.find((media) => media.id === selectedMediaId) ?? null,
+    [candidates, selectedMediaId],
   )
 
   useEffect(() => {
@@ -1279,6 +1285,20 @@ export function BeatvideoMusicPanel() {
             </div>
           ) : null}
         </section>
+
+        {selectedMedia ? (
+          <BeatvideoFileMetadata
+            mediaId={selectedMedia.id}
+            fileName={selectedMedia.fileName}
+            mimeType={selectedMedia.mimeType}
+            projectName={currentProject?.name ?? ''}
+            beatBpm={
+              effectiveAnalysis?.bpmOverride ??
+              effectiveAnalysis?.musicMap.bpm ??
+              null
+            }
+          />
+        ) : null}
 
         {effectiveAnalysis && resolvedSourceGrid ? (
           <>
