@@ -63,115 +63,6 @@ import type {
 
 const ANCHOR_EPSILON = 1e-4
 const ANCHOR_GAP_SECONDS = 0.001
-const ANALYSIS_STRIP_BINS = 96
-
-function buildAnalysisStripBins(map: MusicMap) {
-  const bins = Array.from({ length: ANALYSIS_STRIP_BINS }, () => ({
-    low: 0,
-    mid: 0,
-    high: 0,
-  }))
-  if (map.duration <= 0) return bins
-
-  for (const transient of map.transients ?? []) {
-    const index = Math.max(
-      0,
-      Math.min(
-        ANALYSIS_STRIP_BINS - 1,
-        Math.floor((transient.time / map.duration) * ANALYSIS_STRIP_BINS),
-      ),
-    )
-    const bin = bins[index]!
-    bin.low = Math.max(bin.low, transient.low)
-    bin.mid = Math.max(bin.mid, transient.mid)
-    bin.high = Math.max(bin.high, transient.high)
-  }
-  return bins
-}
-
-function BeatAnalysisStrip({
-  map,
-  barOneTime,
-}: {
-  map: MusicMap
-  barOneTime: number | null
-}) {
-  const bins = useMemo(() => buildAnalysisStripBins(map), [map])
-  const hasEvidence = (map.transients?.length ?? 0) > 0
-  if (!hasEvidence) return null
-
-  const fit = map.gridFit
-  const markerLeft = (time: number) =>
-    `${Math.max(0, Math.min(100, (time / Math.max(map.duration, 1e-6)) * 100))}%`
-
-  return (
-    <div className="mt-2 space-y-1.5">
-      <div
-        className="relative h-12 overflow-hidden rounded-sm border border-border bg-background/70"
-        aria-label="Spectral onset evidence with beat and downbeat markers"
-      >
-        <div
-          className="grid h-full"
-          style={{
-            gridTemplateColumns: `repeat(${ANALYSIS_STRIP_BINS}, minmax(0, 1fr))`,
-          }}
-        >
-          {bins.map((bin, index) => (
-            <div key={index} className="grid min-w-0 grid-rows-3 gap-px">
-              <span
-                className="bg-fuchsia-400"
-                style={{ opacity: 0.08 + bin.high * 0.82 }}
-              />
-              <span
-                className="bg-amber-400"
-                style={{ opacity: 0.08 + bin.mid * 0.82 }}
-              />
-              <span
-                className="bg-sky-400"
-                style={{ opacity: 0.08 + bin.low * 0.82 }}
-              />
-            </div>
-          ))}
-        </div>
-
-        {map.beats.map((beat) => {
-          const isBarOne =
-            barOneTime !== null &&
-            Math.abs(beat.time - barOneTime) <=
-              Math.max(0.015, (60 / Math.max(map.bpm ?? 120, 1)) * 0.12)
-          return (
-            <span
-              key={`evidence-beat-${beat.index}-${beat.time.toFixed(4)}`}
-              className={
-                isBarOne
-                  ? 'absolute inset-y-0 w-[2px] bg-primary shadow-[0_0_0_1px_rgba(0,0,0,0.25)]'
-                  : beat.downbeat
-                    ? 'absolute inset-y-0 w-px bg-white/70'
-                    : 'absolute inset-y-0 w-px bg-white/18'
-              }
-              style={{ left: markerLeft(beat.time) }}
-            />
-          )
-        })}
-      </div>
-      <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[9px] text-muted-foreground">
-        <span><span className="text-sky-400">■</span> low</span>
-        <span><span className="text-amber-400">■</span> mid</span>
-        <span><span className="text-fuchsia-400">■</span> high</span>
-        <span><span className="text-white/70">│</span> downbeat</span>
-        <span><span className="text-primary">│</span> bar 1</span>
-        {fit ? (
-          <span className="ml-auto font-mono">
-            {fit.mode === 'fixed' ? 'Stable grid' : 'Variable map'}
-            {' · '}
-            {Math.round(fit.confidence * 100)}%
-          </span>
-        ) : null}
-      </div>
-    </div>
-  )
-}
-
 function formatClock(seconds: number | null) {
   if (seconds === null || !Number.isFinite(seconds)) return '—'
   const minutes = Math.floor(seconds / 60)
@@ -1411,12 +1302,6 @@ export function BeatvideoMusicPanel() {
                   Align whole grid to playhead
                 </Button>
               ) : null}
-              <BeatAnalysisStrip
-                map={resolvedSourceGrid}
-                barOneTime={
-                  effectiveAnalysis.barOneTime ?? effectiveAnalysis.detectedBarOneTime
-                }
-              />
               {resolvedSourceGrid.gridFit ? (
                 <div className="mt-1.5 font-mono text-[9px] leading-relaxed text-muted-foreground">
                   {resolvedSourceGrid.gridFit.mode === 'fixed'
