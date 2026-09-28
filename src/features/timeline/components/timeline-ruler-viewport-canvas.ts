@@ -36,6 +36,7 @@ export function drawTimelineRulerViewportCanvas({
   canvasHeight,
   pixelsPerSecond,
   fps,
+  hideTimecodeLabels = false,
 }: {
   canvas: HTMLCanvasElement
   scrollLeft: number
@@ -43,6 +44,7 @@ export function drawTimelineRulerViewportCanvas({
   canvasHeight: number
   pixelsPerSecond: number
   fps: number
+  hideTimecodeLabels?: boolean
 }): void {
   if (viewportWidth <= 0 || canvasHeight <= 0 || pixelsPerSecond <= 0) return
   const context = canvas.getContext('2d')
@@ -100,14 +102,16 @@ export function drawTimelineRulerViewportCanvas({
     context.stroke()
   }
 
-  context.fillStyle = 'rgba(255, 255, 255, 0.60)'
-  const styles = getComputedStyle(canvas)
-  context.font = `${styles.fontWeight} ${styles.fontSize} ${styles.fontFamily}`
-  context.textBaseline = 'top'
-  for (let index = firstIndex; index <= lastIndex; index++) {
-    const timeInSeconds = index * markerConfig.intervalInSeconds
-    const x = index * markerWidth - scrollLeft
-    if (x < -markerWidth || x > viewportWidth + 1) continue
-    context.fillText(formatTimecode(secondsToFrames(timeInSeconds, fps), fps), x + 6, 2)
+  if (!hideTimecodeLabels) {
+    context.fillStyle = 'rgba(255, 255, 255, 0.60)'
+    const styles = getComputedStyle(canvas)
+    context.font = `${styles.fontWeight} ${styles.fontSize} ${styles.fontFamily}`
+    context.textBaseline = 'top'
+    for (let index = firstIndex; index <= lastIndex; index++) {
+      const timeInSeconds = index * markerConfig.intervalInSeconds
+      const x = index * markerWidth - scrollLeft
+      if (x < -markerWidth || x > viewportWidth + 1) continue
+      context.fillText(formatTimecode(secondsToFrames(timeInSeconds, fps), fps), x + 6, 2)
+    }
   }
 }

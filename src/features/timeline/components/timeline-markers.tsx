@@ -616,6 +616,7 @@ export const TimelineMarkers = memo(function TimelineMarkers({
         canvasHeight: canvasHeightRef.current,
         pixelsPerSecond: useZoomStore.getState().pixelsPerSecond,
         fps: fpsRef.current,
+        hideTimecodeLabels,
       })
       return
     }
@@ -736,10 +737,12 @@ export const TimelineMarkers = memo(function TimelineMarkers({
     }
 
     // â”€â”€ Labels â”€â”€
-    if (labelsContainer) {
+    if (labelsContainer && !hideTimecodeLabels) {
       syncLabels(labelsContainer, labelPoolRef.current, sl, vw, qPPS, fpsRef.current)
+    } else {
+      clearLabelPool(labelPoolRef.current)
     }
-  }, [])
+  }, [hideTimecodeLabels])
   syncRulerScrollRef.current = syncRulerScroll
 
   // Redraw only the small visible tile/label pool at live zoom. Tick spacing
