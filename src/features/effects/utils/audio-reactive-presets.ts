@@ -249,8 +249,8 @@ export function buildAudioReactivePresetUpdate(params: {
       fps,
       {
         driver: audioDriver(grid, 'low', 'beat'),
-        amount: 0.018,
-        threshold: 0.58,
+        amount: 0.028,
+        threshold: 0.5,
         releaseFrames: Math.max(1, Math.round(fps * 0.1)),
       },
     )
@@ -261,9 +261,9 @@ export function buildAudioReactivePresetUpdate(params: {
       fps,
       {
         driver: audioDriver(grid, 'low', 'downbeat'),
-        amount: 0.14,
-        threshold: 0.72,
-        releaseFrames: Math.max(1, Math.round(fps * 0.09)),
+        amount: 0.3,
+        threshold: 0.62,
+        releaseFrames: Math.max(1, Math.round(fps * 0.08)),
       },
     )
   } else {
@@ -280,10 +280,10 @@ export function buildAudioReactivePresetUpdate(params: {
     const paramKey = 'amount'
     const amount =
       presetId === 'beat-flash'
-        ? 0.16
+        ? 0.2
         : presetId === 'glow-hit'
-          ? 0.4
-          : 0.006
+          ? 0.5
+          : 0.01
 
     binding = baseBinding(
       {
@@ -303,10 +303,10 @@ export function buildAudioReactivePresetUpdate(params: {
         amount,
         threshold:
           presetId === 'beat-flash'
-            ? 0.66
+            ? 0.6
             : presetId === 'glow-hit'
-              ? 0.64
-              : 0.7,
+              ? 0.58
+              : 0.62,
         releaseFrames: Math.max(
           1,
           Math.round(fps * (presetId === 'glow-hit' ? 0.16 : 0.1)),

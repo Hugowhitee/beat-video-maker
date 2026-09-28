@@ -80,7 +80,7 @@ export type AudioReactiveBinding = {
   threshold: number
   /** Multiplier applied after threshold gating. */
   sensitivity: number
-  /** Envelope attack/release stored in frames for deterministic preview/export parity. */
+  /** Optional pre-hit lead-in and post-hit release, stored in frames for deterministic parity. */
   attackFrames: number
   releaseFrames: number
   /** 1 = every eligible hit, 2 = every other hit, etc. */

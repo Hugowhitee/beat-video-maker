@@ -50,6 +50,8 @@ describe('audio reactive presets', () => {
       property: 'scale',
     })
     expect(update?.audioReactive.beats).toHaveLength(3)
+    expect(update?.audioReactive.bindings[0]?.amount).toBeCloseTo(0.028)
+    expect(update?.audioReactive.bindings[0]?.threshold).toBeCloseTo(0.5)
   })
 
   it('adds brightness once and binds Beat flash to that real effect parameter', () => {
@@ -179,7 +181,7 @@ describe('audio reactive presets', () => {
     expect(removed?.audioReactive).toBeUndefined()
   })
 
-  it('keeps shake deliberately restrained and downbeat driven', () => {
+  it('keeps shake visible but deliberately restrained and rhythm driven', () => {
     const update = buildAudioReactivePresetUpdate({
       item: imageItem(),
       grid,
@@ -189,7 +191,7 @@ describe('audio reactive presets', () => {
     const binding = update?.audioReactive.bindings[0]
     expect(binding?.target).toEqual({ kind: 'transform-shake' })
     expect(binding?.driver).toBe('downbeat')
-    expect(binding?.amount).toBeLessThanOrEqual(0.14)
-    expect(binding?.threshold).toBeGreaterThanOrEqual(0.7)
+    expect(binding?.amount).toBeCloseTo(0.3)
+    expect(binding?.threshold).toBeCloseTo(0.62)
   })
 })
