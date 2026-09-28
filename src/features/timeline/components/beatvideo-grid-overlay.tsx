@@ -4,7 +4,7 @@ import { useItemsStore } from '../stores/items-store'
 import { useTimelineSettingsStore } from '../stores/timeline-settings-store'
 import { useZoomStore } from '../stores/zoom-store'
 import { resolveBeatvideoTimelineGrid } from '../utils/beatvideo-timeline-grid'
-import { resolveBeatGridDensity } from '../utils/beatvideo-grid-density'
+import { resolveBeatGridMarkers } from '../utils/beatvideo-grid-resolution'
 
 interface BeatvideoGridOverlayProps {
   duration: number
@@ -16,27 +16,6 @@ function leftPercent(time: number, duration: number) {
   return Math.max(0, Math.min(100, (time / duration) * 100))
 }
 
-function median(values: number[]): number {
-  if (values.length === 0) return 0
-  const sorted = [...values].sort((left, right) => left - right)
-  const middle = Math.floor(sorted.length / 2)
-  if (sorted.length % 2 === 1) return sorted[middle] ?? 0
-  return ((sorted[middle - 1] ?? 0) + (sorted[middle] ?? 0)) / 2
-}
-
-function closestIndex(values: number[], target: number): number {
-  let bestIndex = -1
-  let bestDistance = Number.POSITIVE_INFINITY
-  values.forEach((value, index) => {
-    const distance = Math.abs(value - target)
-    if (distance < bestDistance) {
-      bestDistance = distance
-      bestIndex = index
-    }
-  })
-  return bestIndex
-}
-
 export const BeatvideoGridOverlay = memo(function BeatvideoGridOverlay({
   duration,
   variant,
@@ -45,6 +24,7 @@ export const BeatvideoGridOverlay = memo(function BeatvideoGridOverlay({
   const items = useItemsStore((state) => state.items)
   const fps = useTimelineSettingsStore((state) => state.fps)
   const beatGridVisible = useTimelineSettingsStore((state) => state.beatGridVisible)
+  const beatGridResolution = useTimelineSettingsStore((state) => state.beatGridResolution)
   const pixelsPerSecond = useZoomStore((state) => state.pixelsPerSecond)
 
   const timelineGrid = useMemo(
@@ -63,29 +43,14 @@ export const BeatvideoGridOverlay = memo(function BeatvideoGridOverlay({
   ) return null
 
   const { grid, barOneTimelineTime } = timelineGrid
-  const beatIntervals = grid.beats
-    .slice(1)
-    .map((beat, index) => beat.time - (grid.beats[index]?.time ?? beat.time))
-    .filter((interval) => interval > 0)
-  const beatSpacingPx = median(beatIntervals) * pixelsPerSecond
+  const { markers, labelStride } = resolveBeatGridMarkers({
+    beats: grid.beats,
+    beatsPerBar: grid.beatsPerBar,
+    barOneTime: barOneTimelineTime,
+    resolution: beatGridResolution,
+    pixelsPerSecond,
+  })
 
-  const downbeatTimes = grid.beats.filter((beat) => beat.downbeat).map((beat) => beat.time)
-  const barIntervals = downbeatTimes
-    .slice(1)
-    .map((time, index) => time - (downbeatTimes[index] ?? time))
-    .filter((interval) => interval > 0)
-  const measuredBarSpacingPx = median(barIntervals) * pixelsPerSecond
-  const barSpacingPx =
-    measuredBarSpacingPx > 0
-      ? measuredBarSpacingPx
-      : beatSpacingPx * Math.max(1, grid.beatsPerBar)
-  const {
-    showIndividualBeats,
-    barStride,
-    labelStride,
-  } = resolveBeatGridDensity(beatSpacingPx, barSpacingPx)
-  const barOneDownbeatIndex =
-    barOneTimelineTime === null ? -1 : closestIndex(downbeatTimes, barOneTimelineTime)
   return (
     <div
       aria-hidden="true"
@@ -97,29 +62,7 @@ export const BeatvideoGridOverlay = memo(function BeatvideoGridOverlay({
           : 'pointer-events-none absolute inset-0 z-[8] overflow-hidden'
       }
     >
-      {grid.beats.map((beat) => {
-        if (!beat.downbeat && !showIndividualBeats) return null
-
-        const isBarOne =
-          barOneTimelineTime !== null &&
-          Math.abs(beat.time - barOneTimelineTime) <=
-            Math.max(0.012, median(beatIntervals) * 0.12)
-
-        const downbeatIndex = beat.downbeat
-          ? downbeatTimes.findIndex((time) => Math.abs(time - beat.time) <= 1e-6)
-          : -1
-        const barNumber =
-          beat.downbeat && barOneDownbeatIndex >= 0 && downbeatIndex >= 0
-            ? downbeatIndex - barOneDownbeatIndex + 1
-            : null
-        const barDistance =
-          downbeatIndex >= 0
-            ? Math.abs(downbeatIndex - Math.max(0, barOneDownbeatIndex))
-            : 0
-        if (beat.downbeat && !isBarOne && barDistance % barStride !== 0) {
-          return null
-        }
-
+      {markers.map(({ beat, isBarOne, barNumber }) => {
         const showBarLabel =
           variant === 'ruler' &&
           beat.downbeat &&
