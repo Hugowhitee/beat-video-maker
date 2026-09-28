@@ -71,6 +71,20 @@ describe('PlaybackControls frame capture', () => {
     vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {})
   })
 
+  it('exposes viewer fullscreen as a transport action', () => {
+    const onToggleFullscreen = vi.fn()
+    render(
+      <PlaybackControls
+        totalFrames={1000}
+        fps={30}
+        onToggleFullscreen={onToggleFullscreen}
+      />,
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'Fullscreen' }))
+    expect(onToggleFullscreen).toHaveBeenCalledOnce()
+  })
+
   it('captures the current frame, downloads it, and saves it to the media library', async () => {
     const savedMedia = {
       id: 'captured-frame-1',
