@@ -854,7 +854,7 @@ export const TimelineHeader = memo(function TimelineHeader({
               <DropdownMenuTrigger asChild>
                 <Button
                   variant="ghost"
-                  className="h-7 min-w-[5.5rem] gap-1 rounded-none border-x border-border/60 px-2 font-mono text-[10px] text-foreground"
+                  className="h-7 min-w-[5.5rem] gap-1 rounded-none border-x border-border/60 px-2 font-mono text-xs text-foreground"
                   aria-label={`Grid: ${beatGridResolutionLabel}`}
                   data-tooltip="Musical grid"
                 >
@@ -882,7 +882,7 @@ export const TimelineHeader = memo(function TimelineHeader({
                     <span className="w-4 font-mono text-[10px]">
                       {option.value === beatGridResolution ? '✓' : ''}
                     </span>
-                    <span className="font-mono text-[11px]">{option.label}</span>
+                    <span className="font-mono text-xs">{option.label}</span>
                   </DropdownMenuItem>
                 ))}
               </DropdownMenuContent>
