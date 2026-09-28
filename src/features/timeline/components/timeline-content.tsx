@@ -384,6 +384,8 @@ interface TimelineContentProps {
   audioTracksScrollRef?: React.RefObject<HTMLDivElement | null>
   videoPaneHeight?: number
   audioPaneHeight?: number
+  /** Beatvideo producer workspaces use one FL-style vertical track stack instead of split A/V panes. */
+  unifiedTrackStack?: boolean
   onSectionDividerMouseDown?: (event: React.MouseEvent) => void
   onZoomHandlersReady?: (handlers: {
     handleZoomChange: (newZoom: number) => void
@@ -605,6 +607,7 @@ const TimelineTrackSectionsSurface = memo(function TimelineTrackSectionsSurface(
       anchorTrackId: string | null
       firstTrackFrame: 'with-top-divider' | 'regular'
       scrollRef?: React.RefObject<HTMLDivElement | null>
+      suppressDropZones?: boolean
     },
   ) => (
     <div
@@ -616,14 +619,14 @@ const TimelineTrackSectionsSurface = memo(function TimelineTrackSectionsSurface(
       }}
     >
       <div className="relative min-h-full">
-        {options.section === 'video' && options.anchorTrackId && (
+        {!options.suppressDropZones && options.section === 'video' && options.anchorTrackId && (
           <TimelineMediaDropZone
             height={options.zoneHeight}
             zone="video"
             anchorTrackId={options.anchorTrackId}
           />
         )}
-        {options.section === 'video' && !options.anchorTrackId && (
+        {!options.suppressDropZones && options.section === 'video' && !options.anchorTrackId && (
           <div
             aria-hidden="true"
             style={{
@@ -644,14 +647,14 @@ const TimelineTrackSectionsSurface = memo(function TimelineTrackSectionsSurface(
           )
         })}
 
-        {options.section === 'audio' && options.anchorTrackId && (
+        {!options.suppressDropZones && options.section === 'audio' && options.anchorTrackId && (
           <TimelineMediaDropZone
             height={options.zoneHeight}
             zone="audio"
             anchorTrackId={options.anchorTrackId}
           />
         )}
-        {options.section === 'audio' && !options.anchorTrackId && (
+        {!options.suppressDropZones && options.section === 'audio' && !options.anchorTrackId && (
           <div
             aria-hidden="true"
             style={{
@@ -717,6 +720,7 @@ const TimelineTrackSectionsSurface = memo(function TimelineTrackSectionsSurface(
             anchorTrackId: singleSectionAnchorTrackId,
             firstTrackFrame: 'with-top-divider',
             scrollRef: allTracksScrollRef,
+            suppressDropZones: unifiedTrackStack,
           })
         )}
       </div>
@@ -745,6 +749,7 @@ export const TimelineContent = memo(function TimelineContent({
   audioTracksScrollRef,
   videoPaneHeight = 0,
   audioPaneHeight = 0,
+  unifiedTrackStack = false,
   onSectionDividerMouseDown,
   onZoomHandlersReady,
 }: TimelineContentProps) {
@@ -767,7 +772,8 @@ export const TimelineContent = memo(function TimelineContent({
     () => tracks.filter((track) => getTrackKind(track) === 'audio'),
     [tracks],
   )
-  const hasTrackSections = videoTracks.length > 0 && audioTracks.length > 0
+  const hasTrackSections =
+    !unifiedTrackStack && videoTracks.length > 0 && audioTracks.length > 0
   const firstTrackId = tracks[0]?.id ?? null
   const lastTrackId = tracks[tracks.length - 1]?.id ?? null
   const topZoneAnchorTrackId =
@@ -2054,8 +2060,11 @@ export const TimelineContent = memo(function TimelineContent({
         return
       }
 
-      // Alt + scroll = resize track heights in the hovered zone
+      // Advanced FreeCut keeps Alt+scroll lane resizing. In Beatvideo's unified
+      // producer stack, vertical scrolling stays conventional and never changes
+      // only one media-kind behind the user's back.
       if (event.altKey) {
+        if (unifiedTrackStack) return
         const sectionEl =
           event.target instanceof Element
             ? (event.target.closest('[data-track-section-scroll]') as HTMLElement | null)
@@ -2107,14 +2116,35 @@ export const TimelineContent = memo(function TimelineContent({
     hasTrackSections,
     showZoomInteractionShield,
     startMomentumScroll,
+    unifiedTrackStack,
   ])
 
-  const singleSectionTracks = videoTracks.length > 0 ? videoTracks : audioTracks
-  const singleSectionKind = videoTracks.length > 0 ? 'video' : 'audio'
-  const singleSectionHeight = videoTracks.length > 0 ? videoPaneHeight : audioPaneHeight
-  const singleSectionZoneHeight = videoTracks.length > 0 ? videoZoneHeight : audioZoneHeight
-  const singleSectionAnchorTrackId =
-    videoTracks.length > 0 ? topZoneAnchorTrackId : bottomZoneAnchorTrackId
+  const singleSectionTracks = unifiedTrackStack
+    ? tracks
+    : videoTracks.length > 0
+      ? videoTracks
+      : audioTracks
+  const singleSectionKind =
+    unifiedTrackStack && getTrackKind(tracks[0] ?? null) === 'audio'
+      ? 'audio'
+      : videoTracks.length > 0
+        ? 'video'
+        : 'audio'
+  const singleSectionHeight = unifiedTrackStack
+    ? videoPaneHeight
+    : videoTracks.length > 0
+      ? videoPaneHeight
+      : audioPaneHeight
+  const singleSectionZoneHeight = unifiedTrackStack
+    ? 0
+    : videoTracks.length > 0
+      ? videoZoneHeight
+      : audioZoneHeight
+  const singleSectionAnchorTrackId = unifiedTrackStack
+    ? null
+    : videoTracks.length > 0
+      ? topZoneAnchorTrackId
+      : bottomZoneAnchorTrackId
   const videoSectionHasOverflow = useTrackSectionHasOverflow(
     videoTracksScrollRef,
     hasTrackSections,
