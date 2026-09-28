@@ -60,6 +60,7 @@ interface ToolbarProps {
   onOpenRenderQueue?: () => void
   /** Number of queued + rendering jobs, shown as a badge on the queue button. */
   renderQueueCount?: number
+  compact?: boolean
 }
 
 export const Toolbar = memo(function Toolbar({
@@ -72,6 +73,7 @@ export const Toolbar = memo(function Toolbar({
   onProjectSettings,
   onOpenRenderQueue,
   renderQueueCount = 0,
+  compact = false,
 }: ToolbarProps) {
   const navigate = useNavigate()
   const { t } = useTranslation()
@@ -108,6 +110,105 @@ export const Toolbar = memo(function Toolbar({
 
   const handleSave = async () => {
     await onSave?.()
+  }
+
+  if (compact) {
+    return (
+      <div
+        className="panel-header flex shrink-0 flex-col border-b border-border"
+        role="toolbar"
+        aria-label={t('toolbar.ariaLabel')}
+      >
+        <div className="flex h-11 min-w-0 items-center gap-1.5 px-2">
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-9 w-9 shrink-0"
+            onClick={handleBackClick}
+            aria-label={t('toolbar.backToProjectsAria')}
+          >
+            <ArrowLeft className="h-4 w-4" />
+          </Button>
+
+          <UnsavedChangesDialog
+            open={showUnsavedDialog}
+            onOpenChange={setShowUnsavedDialog}
+            onSave={handleSave}
+            projectName={project?.name}
+          />
+
+          <h1 className="min-w-0 flex-1 truncate px-1 text-sm font-medium">
+            {project?.name || t('common.untitledProject')}
+          </h1>
+
+          <Button
+            variant="ghost"
+            size="sm"
+            className="relative h-9 shrink-0 px-2.5"
+            onClick={handleSave}
+            aria-label={t('toolbar.saveAria')}
+          >
+            {t('toolbar.save')}
+            <SaveDirtyIndicator />
+          </Button>
+
+          <Button
+            size="sm"
+            className="h-9 shrink-0 px-2.5"
+            onClick={onExport}
+            aria-label={t('toolbar.export')}
+          >
+            {t('toolbar.export')}
+          </Button>
+
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-9 shrink-0 gap-1 px-2"
+                aria-label="More editor actions"
+              >
+                More
+                <ChevronDown className="h-3 w-3" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              {onProjectSettings ? (
+                <DropdownMenuItem onClick={onProjectSettings}>
+                  Project settings
+                </DropdownMenuItem>
+              ) : null}
+              <DropdownMenuItem onClick={() => setShowSettingsDialog(true)}>
+                Settings
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setShowShortcutsDialog(true)}>
+                Keyboard shortcuts
+              </DropdownMenuItem>
+              {onOpenRenderQueue ? (
+                <DropdownMenuItem onClick={onOpenRenderQueue}>
+                  Render queue{renderQueueCount > 0 ? ` (${renderQueueCount})` : ''}
+                </DropdownMenuItem>
+              ) : null}
+              {onExportBundle ? (
+                <DropdownMenuItem onClick={onExportBundle}>
+                  Download project ZIP
+                </DropdownMenuItem>
+              ) : null}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+
+        <div className="overflow-x-auto border-t border-border/70 px-1">
+          <div className="w-max min-w-full">
+            <WorkspaceSwitcher beatvideoMode={beatvideoMode} />
+          </div>
+        </div>
+
+        <ShortcutsDialog open={showShortcutsDialog} onOpenChange={setShowShortcutsDialog} />
+        <SettingsDialog open={showSettingsDialog} onOpenChange={setShowSettingsDialog} />
+      </div>
+    )
   }
 
   return (
