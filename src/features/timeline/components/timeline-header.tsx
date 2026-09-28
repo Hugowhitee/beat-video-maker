@@ -9,7 +9,6 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { Slider } from '@/components/ui/slider'
 import {
-  Film,
   ZoomIn,
   ZoomOut,
   Maximize2,
@@ -32,6 +31,11 @@ import {
 import { Separator } from '@/components/ui/separator'
 import { formatHotkeyBinding } from '@/config/hotkeys'
 import { useTimelineStore } from '../stores/timeline-store'
+import { useTimelineSettingsStore } from '../stores/timeline-settings-store'
+import {
+  BEAT_GRID_RESOLUTION_OPTIONS,
+  type BeatGridResolution,
+} from '../utils/beatvideo-grid-resolution'
 import { useTimelineCommandStore } from '../stores/timeline-command-store'
 import { useZoomStore } from '../stores/zoom-store'
 import { usePlaybackStore } from '@/shared/state/playback'
@@ -461,6 +465,8 @@ export const TimelineHeader = memo(function TimelineHeader({
   const hotkeys = useResolvedHotkeys()
   const snapEnabled = useTimelineStore((s) => s.snapEnabled)
   const toggleSnap = useTimelineStore((s) => s.toggleSnap)
+  const beatGridResolution = useTimelineSettingsStore((s) => s.beatGridResolution)
+  const setBeatGridResolution = useTimelineSettingsStore((s) => s.setBeatGridResolution)
   const audioSkimmingEnabled = useTimelineStore((s) => s.audioSkimmingEnabled)
   const toggleAudioSkimming = useTimelineStore((s) => s.toggleAudioSkimming)
   const inPoint = useTimelineStore((s) => s.inPoint)
@@ -488,6 +494,9 @@ export const TimelineHeader = memo(function TimelineHeader({
   const undoLabel = useTimelineCommandStore((s) => s.getUndoLabel())
   const redoLabel = useTimelineCommandStore((s) => s.getRedoLabel())
   const SlipSlideFlyoutIcon = activeTool === 'slide' ? BetweenHorizontalEnd : ArrowRightLeft
+  const beatGridResolutionLabel =
+    BEAT_GRID_RESOLUTION_OPTIONS.find((option) => option.value === beatGridResolution)?.label ??
+    'Auto'
 
   useEffect(() => {
     if (isSimplified && activeTool !== 'select' && activeTool !== 'razor') {
@@ -518,10 +527,9 @@ export const TimelineHeader = memo(function TimelineHeader({
       role="toolbar"
       aria-label={t('timeline.header.controls')}
     >
-      {/* Left: Title */}
-      <div className="flex min-w-0 items-center gap-2.5">
-        <h2 className="text-xs font-semibold tracking-wide uppercase text-muted-foreground flex items-center gap-2">
-          <Film className="w-3 h-3" />
+      {/* Left: quiet region label; the timeline itself is the hierarchy. */}
+      <div className="flex min-w-0 items-center">
+        <h2 className="text-xs font-medium text-muted-foreground">
           {t('timeline.header.title')}
         </h2>
       </div>
@@ -824,6 +832,35 @@ export const TimelineHeader = memo(function TimelineHeader({
           >
             <Magnet className="w-3.5 h-3.5" />
           </Button>
+
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="ghost"
+                className="h-7 gap-1 px-2 font-mono text-[10px] text-muted-foreground hover:text-foreground"
+                aria-label={`Grid resolution: ${beatGridResolutionLabel}`}
+                data-tooltip={`Grid resolution: ${beatGridResolutionLabel}`}
+              >
+                Grid {beatGridResolutionLabel}
+                <ChevronDown className="h-3 w-3 opacity-60" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="center" className="min-w-32">
+              {BEAT_GRID_RESOLUTION_OPTIONS.map((option) => (
+                <DropdownMenuItem
+                  key={option.value}
+                  onClick={() => setBeatGridResolution(option.value as BeatGridResolution)}
+                  className={
+                    option.value === beatGridResolution
+                      ? 'text-primary'
+                      : undefined
+                  }
+                >
+                  <span className="font-mono text-[11px]">{option.label}</span>
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
 
           {!isSimplified ? (
             <>
