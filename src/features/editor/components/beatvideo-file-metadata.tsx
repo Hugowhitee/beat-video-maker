@@ -95,7 +95,7 @@ export function BeatvideoFileMetadata({
   }, [mediaId])
 
   useEffect(() => {
-    if (!open || !supported || !mediaId || snapshot || loading) return
+    if (!open || !supported || !mediaId || snapshot) return
 
     let cancelled = false
     setLoading(true)
@@ -123,7 +123,7 @@ export function BeatvideoFileMetadata({
     return () => {
       cancelled = true
     }
-  }, [loading, mediaId, open, snapshot, supported])
+  }, [mediaId, open, snapshot, supported])
 
   const resetToSource = () => {
     if (!snapshot) return
