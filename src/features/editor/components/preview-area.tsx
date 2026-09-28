@@ -24,6 +24,7 @@ import { usePlaybackStore } from '@/shared/state/playback'
 import { ShuttleIndicator } from '@/shared/ui/shuttle-indicator'
 import type { BeatvideoMusicAnalysis } from '@/types/beatvideo'
 import type { BeatvideoProjectMode } from '@/types/project'
+import { toast } from 'sonner'
 
 interface PreviewAreaProps {
   project: {
@@ -188,6 +189,8 @@ export const PreviewArea = memo(function PreviewArea({
 }: PreviewAreaProps) {
   const { t } = useTranslation()
   const previewContainerRef = useRef<HTMLDivElement>(null)
+  const programMonitorRef = useRef<HTMLDivElement>(null)
+  const [isProgramFullscreen, setIsProgramFullscreen] = useState(false)
   const [containerSize, setContainerSize] = useState({ width: 0, height: 0 })
   const editorDensity = useSettingsStore((s) => s.editorDensity)
   const editorLayout = getEditorLayout(editorDensity)
@@ -313,6 +316,31 @@ export const PreviewArea = memo(function PreviewArea({
       }
     }
   }, [editorLayout.previewPadding])
+
+  useEffect(() => {
+    const syncFullscreenState = () => {
+      setIsProgramFullscreen(document.fullscreenElement === programMonitorRef.current)
+    }
+    document.addEventListener('fullscreenchange', syncFullscreenState)
+    syncFullscreenState()
+    return () => document.removeEventListener('fullscreenchange', syncFullscreenState)
+  }, [])
+
+  const toggleProgramFullscreen = useCallback(() => {
+    const target = programMonitorRef.current
+    if (!target) return
+
+    const action =
+      document.fullscreenElement === target
+        ? document.exitFullscreen()
+        : target.requestFullscreen()
+
+    void action.catch((error: unknown) => {
+      toast.error('Could not change viewer fullscreen', {
+        description: error instanceof Error ? error.message : String(error),
+      })
+    })
+  }, [])
 
   const liveProject = useMemo(
     () => ({ width, height, fps, backgroundColor, beatvideoMode, beatvideoMusic }),
@@ -557,10 +585,12 @@ export const PreviewArea = memo(function PreviewArea({
       )}
 
       <div
-        className={`flex flex-col min-w-0 min-h-0 ${hasSidePanels ? '' : 'flex-1'}`}
+        ref={programMonitorRef}
+        className={`flex flex-col min-w-0 min-h-0 bg-background ${hasSidePanels ? '' : 'flex-1'}`}
         style={hasSidePanels ? { width: `${programPanelPercent}%` } : undefined}
         role="region"
         aria-label="Program monitor"
+        data-program-monitor
       >
         {hasSidePanels && (
           <div
@@ -713,7 +743,12 @@ export const PreviewArea = memo(function PreviewArea({
 
                   <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                     <div className="flex items-center gap-2.5 pointer-events-auto">
-                      <PlaybackControls totalFrames={totalFrames} fps={fps} />
+                      <PlaybackControls
+                        totalFrames={totalFrames}
+                        fps={fps}
+                        isFullscreen={isProgramFullscreen}
+                        onToggleFullscreen={toggleProgramFullscreen}
+                      />
                     </div>
                   </div>
 
