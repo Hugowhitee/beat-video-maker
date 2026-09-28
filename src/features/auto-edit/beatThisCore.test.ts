@@ -68,6 +68,54 @@ describe('Beat This core', () => {
     expect(result.bpm).toBe(98)
   })
 
+  it('keeps a stable programmed tempo when one detector beat is missing', () => {
+    const period = 60 / 100
+    const fullBeats = Array.from({ length: 81 }, (_, index) => index * period)
+    const beats = fullBeats.filter((_, index) => index !== 31)
+    const downbeats = fullBeats.filter((_, index) => index % 4 === 0)
+
+    const result = summarizeRhythm(beats, downbeats, [])
+
+    expect(result.bpm).toBeCloseTo(100, 0)
+    expect(result.meter).toBe(4)
+  })
+
+  it('preserves a stable 3/4 meter instead of forcing four beats per bar', () => {
+    const period = 60 / 105
+    const beats = Array.from({ length: 37 }, (_, index) => index * period)
+    const downbeats = beats.filter((_, index) => index % 3 === 0)
+
+    const result = summarizeRhythm(beats, downbeats, [105, 105.1, 104.9])
+
+    expect(result.bpm).toBeCloseTo(105, 0)
+    expect(result.meter).toBe(3)
+  })
+
+  it('recovers a 90 BPM project grid from stable 45 BPM half-time detections', () => {
+    const rawPeriod = 60 / 45
+    const beats = Array.from({ length: 17 }, (_, index) => index * rawPeriod)
+    const downbeats = beats.filter((_, index) => index % 2 === 0)
+
+    const result = summarizeRhythm(beats, downbeats, [45, 45.1, 44.9])
+
+    expect(result.bpm).toBeCloseTo(90, 0)
+    expect(result.meter).toBe(4)
+    expect(result.beats[1]).toBeCloseTo(60 / 90, 5)
+    expect(result.downbeats[1]).toBeCloseTo((60 / 90) * 4, 5)
+  })
+
+  it('recovers a 90 BPM project grid from stable 180 BPM double-time detections', () => {
+    const rawPeriod = 60 / 180
+    const beats = Array.from({ length: 65 }, (_, index) => index * rawPeriod)
+    const downbeats = beats.filter((_, index) => index % 8 === 0)
+
+    const result = summarizeRhythm(beats, downbeats, [180, 179.9, 180.1])
+
+    expect(result.bpm).toBeCloseTo(90, 0)
+    expect(result.beats[1]).toBeCloseTo(60 / 90, 5)
+    expect(result.meter).toBe(4)
+  })
+
   it('does not force a clearly fractional programmed tempo to an integer', () => {
     const period = 60 / 97.5
     const beats = Array.from({ length: 97 }, (_, index) => index * period)

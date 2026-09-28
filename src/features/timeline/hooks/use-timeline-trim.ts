@@ -98,9 +98,10 @@ export function useTimelineTrim(
     return useTimelineStore.getState().items.find((i) => i.id === item.id) ?? item
   }, [item])
 
-  // Use snap calculator - pass item.id to exclude self from magnetic snaps
-  // Only use magnetic snap targets (item edges), not grid lines
-  const { getMagneticSnapTargets, getSnapThresholdFrames, isSnapEnabled } = useSnapCalculator(
+  // Use the same complete target set as the visible timeline: mapped musical
+  // grid first, then normal magnetic edit points. The anchor item is excluded
+  // from clip-edge targets without removing musical grid positions.
+  const { generateSnapTargets, getSnapThresholdFrames, isSnapEnabled } = useSnapCalculator(
     timelineDuration,
     item.id,
   )
@@ -143,8 +144,9 @@ export function useTimelineTrim(
     (
       targetFrame: number,
       excludeItemIds?: Set<string>,
+      bypassSnap = false,
     ): { snappedFrame: number; snapTarget: SnapTarget | null } => {
-      if (!isSnapEnabled()) {
+      if (bypassSnap || !isSnapEnabled()) {
         return { snappedFrame: targetFrame, snapTarget: null }
       }
 
@@ -263,6 +265,7 @@ export function useTimelineTrim(
       const { snappedFrame, snapTarget } = findSnapForFrame(
         targetEdgeFrame,
         snapExcludeIds.size > 0 ? snapExcludeIds : undefined,
+        e.ctrlKey || e.metaKey,
       )
 
       // If snapped, adjust deltaFrames accordingly
@@ -879,7 +882,7 @@ export function useTimelineTrim(
           ? verticallyAlignedTrimItemIds
           : [currentItem.id]
 
-      magneticSnapTargetsRef.current = getMagneticSnapTargets()
+      magneticSnapTargetsRef.current = generateSnapTargets()
       setDragState({
         isDragging: true,
         // The pointer gesture belongs to the anchor. Other selected items get
@@ -930,7 +933,7 @@ export function useTimelineTrim(
       item.durationInFrames,
       trackLocked,
       getItemFromStore,
-      getMagneticSnapTargets,
+      generateSnapTargets,
       item.id,
       setActiveSnapTarget,
       setDragState,

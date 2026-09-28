@@ -34,6 +34,7 @@ import { useTimelineStore } from '../stores/timeline-store'
 import { useTimelineSettingsStore } from '../stores/timeline-settings-store'
 import {
   BEAT_GRID_RESOLUTION_OPTIONS,
+  stepBeatGridResolution,
   type BeatGridResolution,
 } from '../utils/beatvideo-grid-resolution'
 import { useTimelineCommandStore } from '../stores/timeline-command-store'
@@ -465,6 +466,10 @@ export const TimelineHeader = memo(function TimelineHeader({
   const hotkeys = useResolvedHotkeys()
   const snapEnabled = useTimelineStore((s) => s.snapEnabled)
   const toggleSnap = useTimelineStore((s) => s.toggleSnap)
+  const beatGridVisible = useTimelineSettingsStore((s) => s.beatGridVisible)
+  const toggleBeatGridVisible = useTimelineSettingsStore((s) => s.toggleBeatGridVisible)
+  const beatGridSnapEnabled = useTimelineSettingsStore((s) => s.beatGridSnapEnabled)
+  const toggleBeatGridSnap = useTimelineSettingsStore((s) => s.toggleBeatGridSnap)
   const beatGridResolution = useTimelineSettingsStore((s) => s.beatGridResolution)
   const setBeatGridResolution = useTimelineSettingsStore((s) => s.setBeatGridResolution)
   const audioSkimmingEnabled = useTimelineStore((s) => s.audioSkimmingEnabled)
@@ -833,34 +838,67 @@ export const TimelineHeader = memo(function TimelineHeader({
             <Magnet className="w-3.5 h-3.5" />
           </Button>
 
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                variant="ghost"
-                className="h-7 gap-1 px-2 font-mono text-[10px] text-muted-foreground hover:text-foreground"
-                aria-label={`Grid resolution: ${beatGridResolutionLabel}`}
-                data-tooltip={`Grid resolution: ${beatGridResolutionLabel}`}
-              >
-                Grid {beatGridResolutionLabel}
-                <ChevronDown className="h-3 w-3 opacity-60" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="center" className="min-w-32">
-              {BEAT_GRID_RESOLUTION_OPTIONS.map((option) => (
-                <DropdownMenuItem
-                  key={option.value}
-                  onClick={() => setBeatGridResolution(option.value as BeatGridResolution)}
-                  className={
-                    option.value === beatGridResolution
-                      ? 'text-primary'
-                      : undefined
-                  }
+          <div className="flex h-7 items-center overflow-hidden rounded-md border border-border/70 bg-background/20">
+            <Button
+              variant="ghost"
+              className="h-7 w-7 rounded-none px-0 font-mono text-xs text-muted-foreground hover:text-foreground"
+              onClick={() =>
+                setBeatGridResolution(stepBeatGridResolution(beatGridResolution, 'sparser'))
+              }
+              aria-label="Fewer grid lines"
+              data-tooltip="Fewer grid lines"
+            >
+              −
+            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="ghost"
+                  className="h-7 min-w-[5.5rem] gap-1 rounded-none border-x border-border/60 px-2 font-mono text-xs text-foreground"
+                  aria-label={`Grid: ${beatGridResolutionLabel}`}
+                  data-tooltip="Musical grid"
                 >
-                  <span className="font-mono text-[11px]">{option.label}</span>
+                  {beatGridResolutionLabel}
+                  <ChevronDown className="h-3 w-3 text-muted-foreground" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="center" className="min-w-40">
+                <DropdownMenuItem onClick={toggleBeatGridVisible}>
+                  <span className="w-4 font-mono text-xs">{beatGridVisible ? '✓' : ''}</span>
+                  <span>Show grid</span>
                 </DropdownMenuItem>
-              ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
+                <DropdownMenuItem onClick={toggleBeatGridSnap}>
+                  <span className="w-4 font-mono text-xs">{beatGridSnapEnabled ? '✓' : ''}</span>
+                  <span>Snap to musical grid</span>
+                </DropdownMenuItem>
+                {BEAT_GRID_RESOLUTION_OPTIONS.map((option, index) => (
+                  <DropdownMenuItem
+                    key={option.value}
+                    onClick={() => setBeatGridResolution(option.value as BeatGridResolution)}
+                    className={`${index === 0 ? 'border-t border-border/60' : ''} ${
+                      option.value === beatGridResolution ? 'text-primary' : ''
+                    }`}
+                  >
+                    <span className="w-4 font-mono text-xs">
+                      {option.value === beatGridResolution ? '✓' : ''}
+                    </span>
+                    <span className="font-mono text-xs">{option.label}</span>
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+            <Button
+              variant="ghost"
+              className="h-7 w-7 rounded-none px-0 font-mono text-xs text-muted-foreground hover:text-foreground"
+              onClick={() =>
+                setBeatGridResolution(stepBeatGridResolution(beatGridResolution, 'denser'))
+              }
+              aria-label="More grid lines"
+              data-tooltip="More grid lines"
+            >
+              +
+            </Button>
+          </div>
 
           {!isSimplified ? (
             <>

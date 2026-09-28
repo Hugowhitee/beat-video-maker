@@ -134,7 +134,7 @@ const NULL_OBJECT: ControllerItem = {
 
 const TRANSFORM_REFERENCE = { x: 0, y: 0, width: 1920, height: 1080, rotation: 0 }
 
-function activateTab(name: 'Animate' | 'Animation' | 'Audio' | 'Effects' | 'Video') {
+function activateTab(name: 'Animate' | 'Animation' | 'Motion' | 'Audio' | 'Effects' | 'Video') {
   const tab = screen.getByRole('tab', { name })
   fireEvent.mouseDown(tab, { button: 0, ctrlKey: false })
   fireEvent.focus(tab)
@@ -339,9 +339,9 @@ describe('ClipPanel inspector tabs', () => {
     )
     expect(screen.getAllByRole('tab').map((tab) => tab.textContent)).toEqual([
       'Properties',
-      'Audio',
       'Animate',
       'Effects',
+      'Audio',
     ])
 
     activateTab('Animate')
@@ -354,7 +354,7 @@ describe('ClipPanel inspector tabs', () => {
     expect(screen.queryByText('Parenting')).not.toBeInTheDocument()
   })
 
-  it('opens the compact clip-level Animation surface for an animated clip in Edit', async () => {
+  it('opens the compact clip-level Motion surface for an animated clip in Edit', async () => {
     const animatedVideo: VideoItem = {
       ...VIDEO_ITEM,
       motionModifiers: [
@@ -373,17 +373,17 @@ describe('ClipPanel inspector tabs', () => {
 
     render(<ClipPanel />)
 
-    activateTab('Animation')
+    activateTab('Motion')
 
     expect(await screen.findByTestId('motion-library-mock')).toHaveAttribute('data-variant', 'edit')
     expect(useEditorStore.getState().clipInspectorTab).toBe('motion')
   })
 
-  it('always exposes Animation for an ordinary visual clip in Edit', () => {
+  it('always exposes Motion for an ordinary visual clip in Edit', () => {
     render(<ClipPanel />)
 
-    expect(screen.getByRole('tab', { name: 'Animation' })).toBeInTheDocument()
-    expect(screen.queryByRole('tab', { name: 'Motion' })).not.toBeInTheDocument()
+    expect(screen.getByRole('tab', { name: 'Motion' })).toBeInTheDocument()
+    expect(screen.queryByRole('tab', { name: 'Animation' })).not.toBeInTheDocument()
   })
 
   it('edits the hidden linked-audio companion through the visual clip Audio tab', () => {

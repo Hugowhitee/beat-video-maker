@@ -43,6 +43,49 @@ describe('deriveSpectralTransients', () => {
     expect(transients[1]?.low).toBe(0)
   })
 
+  it('does not invent repeated low-end hits from one sustained 808 note', () => {
+    const frames = 14
+    const melBins = 128
+    const spectrogram = new Float32Array(frames * melBins)
+
+    for (let frame = 3; frame <= 9; frame += 1) {
+      setBand(spectrogram, frame, 0, 32, 3)
+    }
+
+    const transients = deriveSpectralTransients({
+      spectrogram,
+      frames,
+      fps: 50,
+      melBins,
+    })
+
+    expect(transients).toHaveLength(1)
+    expect(transients[0]?.time).toBeCloseTo(3 / 50)
+    expect(transients[0]?.low).toBeGreaterThan(0.9)
+  })
+
+  it('keeps a layered kick and snare onset as one timing event', () => {
+    const frames = 10
+    const melBins = 128
+    const spectrogram = new Float32Array(frames * melBins)
+
+    setBand(spectrogram, 4, 0, 32, 3)
+    setBand(spectrogram, 4, 32, 80, 2.5)
+    setBand(spectrogram, 5, 0, 80, 2.5)
+
+    const transients = deriveSpectralTransients({
+      spectrogram,
+      frames,
+      fps: 50,
+      melBins,
+      minGapFrames: 3,
+    })
+
+    expect(transients).toHaveLength(1)
+    expect(transients[0]?.low).toBeGreaterThan(0.9)
+    expect(transients[0]?.mid).toBeGreaterThan(0.9)
+  })
+
   it('deduplicates adjacent multi-band peaks into one event', () => {
     const frames = 8
     const melBins = 128

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vite-plus/test'
 import type { MusicBeat } from '@/types/beatvideo'
-import { resolveBeatGridMarkers } from './beatvideo-grid-resolution'
+import { resolveBeatGridMarkers, stepBeatGridResolution } from './beatvideo-grid-resolution'
 
 function beats(count = 32): MusicBeat[] {
   return Array.from({ length: count }, (_, index) => ({
@@ -43,6 +43,35 @@ describe('Beatvideo grid resolution', () => {
     expect(twoBars.markers.map(({ beat }) => beat.index)).toEqual([4, 12, 20, 28, 36])
     expect(fourBars.markers.map(({ beat }) => beat.index)).toEqual([4, 20, 36])
     expect(twoBars.markers.find(({ isBarOne }) => isBarOne)?.barNumber).toBe(1)
+  })
+
+  it('supports sparse 8-bar and 16-bar landmarks anchored to Bar 1', () => {
+    const source = beats(132)
+    const eightBars = resolveBeatGridMarkers({
+      beats: source,
+      beatsPerBar: 4,
+      barOneTime: 0,
+      resolution: '8-bars',
+      pixelsPerSecond: 100,
+    })
+    const sixteenBars = resolveBeatGridMarkers({
+      beats: source,
+      beatsPerBar: 4,
+      barOneTime: 0,
+      resolution: '16-bars',
+      pixelsPerSecond: 100,
+    })
+
+    expect(eightBars.markers.map(({ beat }) => beat.index)).toEqual([0, 32, 64, 96, 128])
+    expect(sixteenBars.markers.map(({ beat }) => beat.index)).toEqual([0, 64, 128])
+  })
+
+  it('steps grid density like a DAW without rewriting Auto into project timing', () => {
+    expect(stepBeatGridResolution('beat', 'sparser')).toBe('bar')
+    expect(stepBeatGridResolution('4-bars', 'denser')).toBe('2-bars')
+    expect(stepBeatGridResolution('16-bars', 'sparser')).toBe('16-bars')
+    expect(stepBeatGridResolution('auto', 'denser')).toBe('beat')
+    expect(stepBeatGridResolution('auto', 'sparser')).toBe('2-bars')
   })
 
   it('thins Auto mode when zoomed out but reveals beats when close', () => {

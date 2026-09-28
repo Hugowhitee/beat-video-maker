@@ -139,7 +139,7 @@ function MasterRange({
         onChange={(event) => onChange(Number(event.target.value))}
         className="min-w-0 accent-foreground"
       />
-      <span className="text-right font-mono text-[10px] tabular-nums text-foreground">
+      <span className="text-right font-mono text-xs tabular-nums text-foreground">
         {value.toFixed(step < 0.1 ? 2 : 1)}
         {unit ?? ''}
       </span>
@@ -193,10 +193,10 @@ function TransferGraph({
         ) : null}
         <polyline points={points} fill="none" stroke="currentColor" className="text-foreground" strokeWidth="1.6" vectorEffect="non-scaling-stroke" />
       </svg>
-      <div className="absolute left-2 top-2 text-[9px] uppercase tracking-[0.14em] text-muted-foreground">
+      <div className="absolute left-2 top-2 text-[11px] uppercase tracking-[0.14em] text-muted-foreground">
         {mode === 'compressor' ? 'Transfer' : 'Peak control'}
       </div>
-      <div className="absolute bottom-2 right-2 rounded bg-background/80 px-1.5 py-0.5 font-mono text-[10px] text-foreground">
+      <div className="absolute bottom-2 right-2 rounded bg-background/80 px-1.5 py-0.5 font-mono text-xs text-foreground">
         GR {Math.abs(reductionDb).toFixed(1)} dB
       </div>
     </div>
@@ -223,7 +223,7 @@ function SaturationGraph({ driveDb, mix }: { driveDb: number; mix: number }) {
         <line x1="0" y1="50" x2="100" y2="50" stroke="currentColor" className="text-border" strokeWidth="0.45" />
         <polyline points={points} fill="none" stroke="currentColor" className="text-foreground" strokeWidth="1.6" vectorEffect="non-scaling-stroke" />
       </svg>
-      <div className="absolute left-2 top-2 text-[9px] uppercase tracking-[0.14em] text-muted-foreground">
+      <div className="absolute left-2 top-2 text-[11px] uppercase tracking-[0.14em] text-muted-foreground">
         Transfer curve
       </div>
     </div>
@@ -531,7 +531,7 @@ export function BeatvideoMasterPanel() {
             type="button"
             size="sm"
             variant={mixerFloating ? 'secondary' : 'outline'}
-            className="ml-auto h-7 px-2.5 text-[10px]"
+            className="ml-auto h-7 px-2.5 text-xs"
             onClick={toggleMixerFloating}
             aria-pressed={mixerFloating}
           >
@@ -578,7 +578,7 @@ export function BeatvideoMasterPanel() {
               onClick={() => applyPreset(preset.id)}
               aria-pressed={activeBuiltInPresetId === preset.id}
               className={cn(
-                'shrink-0 rounded-md border px-2 py-1.5 text-[10px] font-medium transition-colors',
+                'shrink-0 rounded-md border px-2 py-1.5 text-xs font-medium transition-colors',
                 activeBuiltInPresetId === preset.id
                   ? 'border-primary/70 bg-primary/15 text-foreground ring-1 ring-primary/25'
                   : 'border-border bg-secondary/30 text-muted-foreground hover:bg-secondary/70 hover:text-foreground',
@@ -592,7 +592,7 @@ export function BeatvideoMasterPanel() {
 
         {savedPresets.length > 0 ? (
           <div className="mt-2">
-            <div className="mb-1 text-[9px] font-medium uppercase tracking-[0.12em] text-muted-foreground">
+            <div className="mb-1 text-[11px] font-medium uppercase tracking-[0.12em] text-muted-foreground">
               My presets
             </div>
             <div className="flex gap-1 overflow-x-auto pb-1">
@@ -604,7 +604,7 @@ export function BeatvideoMasterPanel() {
                   <button
                     type="button"
                     onClick={() => applySavedPreset(preset)}
-                    className="px-2 py-1.5 text-[10px] font-medium text-foreground hover:bg-secondary/50"
+                    className="px-2 py-1.5 text-xs font-medium text-foreground hover:bg-secondary/50"
                     title="Load saved master preset"
                   >
                     {preset.name}
@@ -640,12 +640,12 @@ export function BeatvideoMasterPanel() {
                     setPresetName('')
                   }
                 }}
-                className="h-7 min-w-0 flex-1 rounded-md border border-input bg-secondary px-2 text-[10px] text-foreground outline-none focus:border-foreground/40"
+                className="h-7 min-w-0 flex-1 rounded-md border border-input bg-secondary px-2 text-xs text-foreground outline-none focus:border-foreground/40"
               />
               <Button
                 type="button"
                 size="sm"
-                className="h-7 px-2 text-[10px]"
+                className="h-7 px-2 text-xs"
                 disabled={presetName.trim() === ''}
                 onClick={saveCurrentPreset}
               >
@@ -670,7 +670,7 @@ export function BeatvideoMasterPanel() {
               type="button"
               size="sm"
               variant="ghost"
-              className="h-7 gap-1.5 px-2 text-[10px] text-muted-foreground"
+              className="h-7 gap-1.5 px-2 text-xs text-muted-foreground"
               onClick={() => setSavingPreset(true)}
             >
               <BookmarkPlus className="h-3.5 w-3.5" />
@@ -685,7 +685,7 @@ export function BeatvideoMasterPanel() {
               type="button"
               size="sm"
               variant="outline"
-              className="h-7 px-2 text-[10px]"
+              className="h-7 px-2 text-xs"
               disabled={autoLeveling}
               onClick={() => void autoLevel()}
             >
@@ -694,7 +694,7 @@ export function BeatvideoMasterPanel() {
             </Button>
             {autoLevelResult ? (
               <span
-                className="truncate font-mono text-[9px] text-muted-foreground"
+                className="truncate font-mono text-[11px] text-muted-foreground"
                 title="Program RMS and sample peak; not LUFS or true peak"
               >
                 RMS {autoLevelResult.rmsDb.toFixed(1)} · peak {autoLevelResult.peakDb.toFixed(1)}
@@ -738,42 +738,66 @@ export function BeatvideoMasterPanel() {
         </div>
       </div>
 
-      <div className="grid shrink-0 grid-cols-4 border-b border-border">
-        {SLOT_META.map(({ id, label, hint, icon: Icon }) => {
-          const enabled = slotEnabled(id)
-          return (
-            <div
-              key={id}
-              className={cn(
-                'min-w-0 border-r border-border last:border-r-0',
-                selectedSlot === id && 'bg-secondary/60 shadow-[inset_0_-2px_0_hsl(var(--primary))]',
-              )}
-            >
-              <button
-                type="button"
-                onClick={() => setSelectedSlot(id)}
-                className="flex w-full min-w-0 flex-col items-center gap-1 px-1 py-2 text-center"
-                title={hint}
-              >
-                <Icon className={cn('h-3.5 w-3.5', enabled ? 'text-emerald-300' : 'text-muted-foreground')} />
-                <span className="max-w-full truncate text-[9px] font-medium text-foreground">{label}</span>
-              </button>
-              <button
-                type="button"
-                onClick={() => toggleSlot(id)}
+      <div className="shrink-0 border-b border-border p-2">
+        <div className="mb-1.5 flex items-center justify-between gap-2 px-1">
+          <span className="text-xs font-medium text-foreground">Master chain</span>
+          <span className="text-[11px] text-muted-foreground">top → bottom</span>
+        </div>
+        <div className="divide-y divide-border border-y border-border">
+          {SLOT_META.map(({ id, label, hint, icon: Icon }, index) => {
+            const enabled = slotEnabled(id)
+            const selected = selectedSlot === id
+            return (
+              <div
+                key={id}
                 className={cn(
-                  'mx-auto mb-1.5 flex h-4 w-4 items-center justify-center rounded-sm border',
-                  enabled
-                    ? 'border-emerald-500/60 bg-emerald-500/15 text-emerald-300'
-                    : 'border-border text-muted-foreground',
+                  'flex min-w-0 items-stretch',
+                  selected && 'bg-secondary/55 shadow-[inset_2px_0_0_hsl(var(--primary))]',
                 )}
-                aria-label={`${enabled ? 'Bypass' : 'Enable'} ${label}`}
               >
-                <Power className="h-2.5 w-2.5" />
-              </button>
-            </div>
-          )
-        })}
+                <button
+                  type="button"
+                  onClick={() => setSelectedSlot(id)}
+                  className="flex min-w-0 flex-1 items-center gap-2 px-2 py-2 text-left"
+                  title={hint}
+                >
+                  <span className="w-5 shrink-0 font-mono text-[11px] tabular-nums text-muted-foreground">
+                    {String(index + 1).padStart(2, '0')}
+                  </span>
+                  <Icon
+                    className={cn(
+                      'h-4 w-4 shrink-0',
+                      enabled ? 'text-emerald-300' : 'text-muted-foreground',
+                    )}
+                  />
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-xs font-medium text-foreground">
+                      {label}
+                    </span>
+                    <span className="block truncate text-[11px] text-muted-foreground">
+                      {hint}
+                    </span>
+                  </span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => toggleSlot(id)}
+                  className={cn(
+                    'flex w-10 shrink-0 items-center justify-center border-l border-border',
+                    enabled
+                      ? 'text-emerald-300 hover:bg-emerald-500/10'
+                      : 'text-muted-foreground hover:bg-secondary/60 hover:text-foreground',
+                  )}
+                  aria-label={`${enabled ? 'Bypass' : 'Enable'} ${label}`}
+                  aria-pressed={enabled}
+                  title={`${enabled ? 'Bypass' : 'Enable'} ${label}`}
+                >
+                  <Power className="h-3.5 w-3.5" />
+                </button>
+              </div>
+            )
+          })}
+        </div>
       </div>
 
       <div className="min-h-0 flex-1 overflow-y-auto p-3">
@@ -811,7 +835,7 @@ export function BeatvideoMasterPanel() {
             <MasterRange label="Drive" value={resolved.saturator.driveDb} min={0} max={18} step={0.1} unit=" dB" onGestureStart={beginGesture} onGestureEnd={endGesture} onChange={(driveDb) => patchMaster({ enabled: true, saturator: { ...resolved.saturator, enabled: true, driveDb } })} />
             <MasterRange label="Mix" value={resolved.saturator.mix * 100} min={0} max={100} step={1} unit="%" onGestureStart={beginGesture} onGestureEnd={endGesture} onChange={(mix) => patchMaster({ enabled: true, saturator: { ...resolved.saturator, enabled: true, mix: mix / 100 } })} />
             <MasterRange label="Output" value={resolved.saturator.outputGainDb} min={-12} max={6} step={0.1} unit=" dB" onGestureStart={beginGesture} onGestureEnd={endGesture} onChange={(outputGainDb) => patchMaster({ enabled: true, saturator: { ...resolved.saturator, enabled: true, outputGainDb } })} />
-            <div className="flex items-center justify-between border-t border-border pt-2 text-[10px] text-muted-foreground">
+            <div className="flex items-center justify-between border-t border-border pt-2 text-xs text-muted-foreground">
               <span>Oversampling</span>
               <div className="flex gap-1">
                 {(['none', '2x', '4x'] as const).map((oversample) => (
@@ -830,8 +854,8 @@ export function BeatvideoMasterPanel() {
             <MasterRange label="Threshold" value={resolved.limiter.thresholdDb} min={-12} max={0} step={0.1} unit=" dB" onGestureStart={beginGesture} onGestureEnd={endGesture} onChange={(thresholdDb) => patchMaster({ enabled: true, limiter: { ...resolved.limiter, enabled: true, thresholdDb } })} />
             <MasterRange label="Ceiling" value={resolved.limiter.ceilingDb} min={-6} max={0} step={0.1} unit=" dB" onGestureStart={beginGesture} onGestureEnd={endGesture} onChange={(ceilingDb) => patchMaster({ enabled: true, limiter: { ...resolved.limiter, enabled: true, ceilingDb } })} />
             <MasterRange label="Release" value={resolved.limiter.releaseSec * 1000} min={20} max={500} step={5} unit=" ms" onGestureStart={beginGesture} onGestureEnd={endGesture} onChange={(ms) => patchMaster({ enabled: true, limiter: { ...resolved.limiter, enabled: true, releaseSec: ms / 1000 } })} />
-            <p className="border-l-2 border-border pl-2 text-[10px] leading-relaxed text-muted-foreground">
-              Peak limiter combines fast high-ratio compression with a final safety ceiling. It is not a stem-level remix or a look-ahead mastering suite.
+            <p className="border-l-2 border-border pl-2 text-xs leading-relaxed text-muted-foreground">
+              Last in the chain. Ceiling caps the final output peaks.
             </p>
           </div>
         ) : null}

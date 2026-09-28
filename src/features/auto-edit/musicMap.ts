@@ -186,13 +186,21 @@ export function buildMusicMapFromRhythm(
 
   const beatsPerBar = Math.max(1, Math.min(12, Math.round(result.meter || 4)))
   const downbeatTolerance = 0.5 / BEAT_THIS_FPS
+  // Beat This can occasionally return a strong beat sequence but too little
+  // downbeat evidence to draw usable bars. Keep section confidence conservative
+  // (buildSections still sees the raw downbeats), while giving the editor a
+  // deterministic bar grid anchored at the first detected beat.
+  const displayDownbeats =
+    result.downbeats.length >= 2
+      ? result.downbeats
+      : result.beats.filter((_, index) => index % beatsPerBar === 0)
 
   const beats = result.beats
     .filter((time) => Number.isFinite(time) && time >= 0 && time <= duration + EPSILON)
     .map((time, index) => ({
       time: Math.min(duration, Math.max(0, time)),
       index,
-      downbeat: result.downbeats.some(
+      downbeat: displayDownbeats.some(
         (downbeat) => Math.abs(downbeat - time) <= downbeatTolerance,
       ),
       strength: clamp01(result.beatStrengths[index] ?? 0.5),

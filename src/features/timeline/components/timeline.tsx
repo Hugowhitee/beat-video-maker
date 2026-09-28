@@ -52,6 +52,7 @@ import {
   isExternalTimelineDragEvent,
 } from '../utils/timeline-external-drag'
 import { getDefaultActiveTrackId } from '../utils/default-active-track'
+import { resolveWorkspaceVisibleTracks } from '../utils/workspace-visible-tracks'
 import { KeyframeGraphPanel } from './keyframe-graph-panel'
 import { createRafCoalescedCallback } from '../utils/raf-coalesced-callback'
 import type { BeatvideoProjectMode } from '@/types/project'
@@ -108,7 +109,10 @@ export const Timeline = memo(function Timeline({ duration, beatvideoMode = 'vide
   const selectTracks = useSelectionStore((s) => s.selectTracks)
   const selectedTrackIdsSet = useMemo(() => new Set(selectedTrackIds), [selectedTrackIds])
 
-  const visibleTracks = tracks
+  const visibleTracks = useMemo(
+    () => resolveWorkspaceVisibleTracks(tracks, workspace),
+    [tracks, workspace],
+  )
   const canDeleteEmptyTracks = useItemsStore(
     useCallback(
       (s) => {
@@ -137,7 +141,8 @@ export const Timeline = memo(function Timeline({ duration, beatvideoMode = 'vide
   )
   const keyframePanelOpen = useSelectionStore((s) => s.editKeyframePanelOpen)
   const setKeyframePanelOpen = useSelectionStore((s) => s.setEditKeyframePanelOpen)
-  const hasTrackSections = videoTracks.length > 0 && audioTracks.length > 0
+  const hasTrackSections =
+    !simplifiedBeatvideoTimeline && videoTracks.length > 0 && audioTracks.length > 0
 
   // Refs for syncing scroll between track headers and timeline content
   const trackHeadersViewportRef = useRef<HTMLDivElement>(null)
@@ -519,6 +524,11 @@ export const Timeline = memo(function Timeline({ duration, beatvideoMode = 'vide
         return
       }
 
+      if (simplifiedBeatvideoTimeline) {
+        element.scrollTop = 0
+        return
+      }
+
       element.scrollTop = Math.max(0, element.scrollHeight - element.clientHeight)
     }
 
@@ -531,6 +541,7 @@ export const Timeline = memo(function Timeline({ duration, beatvideoMode = 'vide
     videoPaneHeight,
     videoDisplayHeight,
     videoTracks.length,
+    simplifiedBeatvideoTimeline,
   ])
 
   // Update drop indicator from shared ref (only during drag)
@@ -792,10 +803,26 @@ export const Timeline = memo(function Timeline({ duration, beatvideoMode = 'vide
     dropIndicatorIndex <= visibleTracks.length
       ? dropIndicatorIndex - videoTracks.length
       : -1
-  const singleSectionKind = videoTracks.length > 0 ? 'video' : 'audio'
-  const singleSectionTracks = videoTracks.length > 0 ? videoTracks : audioTracks
-  const singleSectionHeight = videoTracks.length > 0 ? videoPaneHeight : audioPaneHeight
-  const singleSectionZoneHeight = videoTracks.length > 0 ? videoZoneHeight : audioZoneHeight
+  const singleSectionKind = simplifiedBeatvideoTimeline
+    ? 'video'
+    : videoTracks.length > 0
+      ? 'video'
+      : 'audio'
+  const singleSectionTracks = simplifiedBeatvideoTimeline
+    ? visibleTracks
+    : videoTracks.length > 0
+      ? videoTracks
+      : audioTracks
+  const singleSectionHeight = simplifiedBeatvideoTimeline
+    ? trackRowsViewportHeight
+    : videoTracks.length > 0
+      ? videoPaneHeight
+      : audioPaneHeight
+  const singleSectionZoneHeight = simplifiedBeatvideoTimeline
+    ? 0
+    : videoTracks.length > 0
+      ? videoZoneHeight
+      : audioZoneHeight
   const singleDropIndicatorIndex =
     !hasTrackSections &&
     isTrackDragging &&
@@ -813,6 +840,7 @@ export const Timeline = memo(function Timeline({ duration, beatvideoMode = 'vide
       scrollRef: React.RefObject<HTMLDivElement | null>
       dropIndicatorLocalIndex: number
       firstTrackFrame: 'with-top-divider' | 'regular'
+      suppressZones?: boolean
     },
   ) => (
     <div
@@ -824,7 +852,7 @@ export const Timeline = memo(function Timeline({ duration, beatvideoMode = 'vide
     >
       <div ref={options.scrollRef} className="h-full overflow-hidden">
         <div className="relative min-h-full">
-          {options.section === 'video' && (
+          {!options.suppressZones && options.section === 'video' && (
             <div
               aria-hidden="true"
               data-track-header-new-zone="video"
@@ -885,7 +913,7 @@ export const Timeline = memo(function Timeline({ duration, beatvideoMode = 'vide
             )
           })}
 
-          {options.section === 'audio' && (
+          {!options.suppressZones && options.section === 'audio' && (
             <div
               aria-hidden="true"
               data-track-header-new-zone="audio"
@@ -952,8 +980,8 @@ export const Timeline = memo(function Timeline({ duration, beatvideoMode = 'vide
             style={{ height: EDITOR_LAYOUT_CSS_VALUES.timelineTracksHeaderHeight }}
           >
             {simplifiedBeatvideoTimeline ? (
-              <span className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
-                Layers
+              <span className="text-xs font-medium text-muted-foreground">
+                Tracks
               </span>
             ) : (
               <>
@@ -1038,10 +1066,18 @@ export const Timeline = memo(function Timeline({ duration, beatvideoMode = 'vide
               className="flex h-full min-h-0 flex-col"
               style={
                 {
-                  '--timeline-video-pane-height': `${videoPaneHeight}px`,
-                  '--timeline-audio-pane-height': `${audioPaneHeight}px`,
-                  '--timeline-video-zone-height': `${videoZoneHeight}px`,
-                  '--timeline-audio-zone-height': `${audioZoneHeight}px`,
+                  '--timeline-video-pane-height': `${
+                    simplifiedBeatvideoTimeline ? trackRowsViewportHeight : videoPaneHeight
+                  }px`,
+                  '--timeline-audio-pane-height': `${
+                    simplifiedBeatvideoTimeline ? 0 : audioPaneHeight
+                  }px`,
+                  '--timeline-video-zone-height': `${
+                    simplifiedBeatvideoTimeline ? 0 : videoZoneHeight
+                  }px`,
+                  '--timeline-audio-zone-height': `${
+                    simplifiedBeatvideoTimeline ? 0 : audioZoneHeight
+                  }px`,
                 } as React.CSSProperties
               }
             >
@@ -1073,6 +1109,7 @@ export const Timeline = memo(function Timeline({ duration, beatvideoMode = 'vide
                   scrollRef: allTrackHeadersScrollRef,
                   dropIndicatorLocalIndex: singleDropIndicatorIndex,
                   firstTrackFrame: 'with-top-divider',
+                  suppressZones: simplifiedBeatvideoTimeline,
                 })
               )}
             </div>
@@ -1087,8 +1124,9 @@ export const Timeline = memo(function Timeline({ duration, beatvideoMode = 'vide
           allTracksScrollRef={allTrackContentScrollRef}
           videoTracksScrollRef={videoTrackContentScrollRef}
           audioTracksScrollRef={audioTrackContentScrollRef}
-          videoPaneHeight={videoPaneHeight}
-          audioPaneHeight={audioPaneHeight}
+          videoPaneHeight={simplifiedBeatvideoTimeline ? trackRowsViewportHeight : videoPaneHeight}
+          audioPaneHeight={simplifiedBeatvideoTimeline ? 0 : audioPaneHeight}
+          unifiedTrackStack={simplifiedBeatvideoTimeline}
           onSectionDividerMouseDown={hasTrackSections ? handleSectionDividerMouseDown : undefined}
           onZoomHandlersReady={setZoomHandlers}
         />

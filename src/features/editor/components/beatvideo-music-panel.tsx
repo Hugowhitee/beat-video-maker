@@ -79,6 +79,7 @@ function phaseLabel(progress: MusicAnalysisProgress | null) {
   const labels: Record<MusicAnalysisProgress['phase'], string> = {
     decode: 'Decode audio',
     prepare: 'Prepare rhythm input',
+    energy: 'Measure track energy',
     'model-download': 'Load Beat This model',
     'model-init': 'Initialize model',
     features: 'Read rhythm features',
@@ -168,6 +169,7 @@ export function BeatvideoMusicPanel() {
   const [analyzing, setAnalyzing] = useState(false)
   const [bpmDraft, setBpmDraft] = useState('')
   const abortRef = useRef<AbortController | null>(null)
+  const pendingAutoAnalyzeMediaIdRef = useRef<string | null>(null)
 
   const selectedAnalysis =
     analysis?.mediaId === selectedMediaId ? analysis : null
@@ -300,8 +302,9 @@ export function BeatvideoMusicPanel() {
         toast.error('Choose an audio file, or a video that contains audio')
         return
       }
+      pendingAutoAnalyzeMediaIdRef.current = beat.id
       setSelectedMediaId(beat.id)
-      toast.success('Beat imported')
+      toast.success('Beat imported', { description: 'Analyzing rhythm automatically…' })
     } catch (error) {
       toast.error('Could not import beat', {
         description: error instanceof Error ? error.message : String(error),
@@ -565,6 +568,21 @@ export function BeatvideoMusicPanel() {
     persistAnalysis,
     selectedMediaId,
   ])
+
+  useEffect(() => {
+    const pendingMediaId = pendingAutoAnalyzeMediaIdRef.current
+    if (
+      !pendingMediaId ||
+      analyzing ||
+      !currentProject ||
+      selectedMediaId !== pendingMediaId
+    ) {
+      return
+    }
+
+    pendingAutoAnalyzeMediaIdRef.current = null
+    void analyze()
+  }, [analyze, analyzing, currentProject, selectedMediaId])
 
   const insertTagAudio = useCallback(
     async (kind: 'producer' | 'watermark') => {
@@ -1185,12 +1203,19 @@ export function BeatvideoMusicPanel() {
             type="button"
             size="sm"
             className="w-full"
-            disabled={!selectedMediaId || analyzing}
-            onClick={() => void analyze()}
+            disabled={!selectedMediaId}
+            variant={analyzing ? 'outline' : 'default'}
+            onClick={() => {
+              if (analyzing) {
+                abortRef.current?.abort()
+                return
+              }
+              void analyze()
+            }}
           >
-            <AudioLines className="h-3.5 w-3.5" />
+            {!analyzing ? <AudioLines className="h-3.5 w-3.5" /> : null}
             {analyzing
-              ? 'Analyzing beat…'
+              ? 'Cancel analysis'
               : effectiveAnalysis
                 ? 'Analyze / replace grid'
                 : 'Analyze beat'}

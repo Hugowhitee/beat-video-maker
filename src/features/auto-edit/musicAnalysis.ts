@@ -4,6 +4,7 @@ import {
   BEAT_THIS_SAMPLE_RATE,
   type BeatThisBackend,
   type BeatThisRhythmResult,
+  type BeatThisWorkerProgressPhase,
 } from './beatThisCore'
 import { buildMusicMapFromRhythm } from './musicMap'
 import { stabilizeBeatGrid } from './beat-grid-fit'
@@ -17,11 +18,7 @@ import {
 export type MusicAnalysisPhase =
   | 'decode'
   | 'prepare'
-  | 'model-download'
-  | 'model-init'
-  | 'features'
-  | 'inference'
-  | 'finalize'
+  | BeatThisWorkerProgressPhase
 
 export type MusicAnalysisProgress = {
   phase: MusicAnalysisPhase
@@ -43,7 +40,7 @@ export type MusicAnalysisResult = {
 
 type WorkerProgressMessage = {
   type: 'progress'
-  phase: Exclude<MusicAnalysisPhase, 'decode' | 'prepare'>
+  phase: BeatThisWorkerProgressPhase
   progress: number
   detail?: string
 }
@@ -85,9 +82,10 @@ const PHASE_RANGES: Record<
 > = {
   decode: { start: 0, end: 0.14 },
   prepare: { start: 0.14, end: 0.2 },
-  'model-download': { start: 0.2, end: 0.48 },
-  'model-init': { start: 0.48, end: 0.55 },
-  features: { start: 0.55, end: 0.76 },
+  energy: { start: 0.2, end: 0.23 },
+  'model-download': { start: 0.23, end: 0.49 },
+  'model-init': { start: 0.49, end: 0.56 },
+  features: { start: 0.56, end: 0.76 },
   inference: { start: 0.76, end: 0.96 },
   finalize: { start: 0.96, end: 1 },
 }
