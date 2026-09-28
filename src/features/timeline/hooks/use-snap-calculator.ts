@@ -85,7 +85,7 @@ export function useSnapCalculator(
     [excludeItemIds, includeTransitionMidpoints],
   )
 
-  const generateSnapTargets = useCallback(() => {
+  const generateSnapTargets = useCallback((excludeItemIdsOverride?: SnapExclusion) => {
     const timelineSettings = useTimelineSettingsStore.getState()
     const { fps, beatGridSnapEnabled, beatGridResolution } = timelineSettings
     const { items } = useItemsStore.getState()
@@ -106,7 +106,7 @@ export function useSnapCalculator(
       type: 'grid',
     }))
 
-    targets.push(...getMagneticSnapTargets())
+    targets.push(...getMagneticSnapTargets(excludeItemIdsOverride))
     return targets
   }, [getMagneticSnapTargets, timelineDuration])
 
@@ -119,7 +119,11 @@ export function useSnapCalculator(
    * @param itemDurationInFrames - Duration of the item in frames
    */
   const calculateSnap = useCallback(
-    (targetStartFrame: number, itemDurationInFrames: number) => {
+    (
+      targetStartFrame: number,
+      itemDurationInFrames: number,
+      excludeItemIdsOverride?: SnapExclusion,
+    ) => {
       if (!isSnapEnabled()) {
         return {
           snappedFrame: targetStartFrame,
@@ -135,7 +139,7 @@ export function useSnapCalculator(
       // Generate snap targets on-demand and add playhead
       const currentFrame = usePlaybackStore.getState().currentFrame
       const allTargets: SnapTarget[] = [
-        ...generateSnapTargets(),
+        ...generateSnapTargets(excludeItemIdsOverride),
         { frame: currentFrame, type: 'playhead' as const },
       ]
 
@@ -193,6 +197,7 @@ export function useSnapCalculator(
 
   return {
     calculateSnap,
+    generateSnapTargets,
     getMagneticSnapTargets,
     getSnapThresholdFrames,
     isSnapEnabled,
