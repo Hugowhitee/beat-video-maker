@@ -395,6 +395,7 @@ export function BeatvideoVisualSourcePanel({
 
     const groups = new Map<number, string[]>()
     for (const segment of lastPlan.segments) {
+      if (segment.motifId !== motif.id) continue
       const itemId = lastItemIdBySegmentId[segment.id]
       if (!itemId) continue
       const repeatIndex = Math.max(
