@@ -11,6 +11,7 @@ export { resolveMediaUrl } from '@/features/media-library/utils/media-resolver'
 export {
   buildMp3MetadataTags,
   metadataCopyFileName,
+  mp3BpmFromTags,
   mp3MetadataDraftFromTags,
   readMp3Metadata,
   rewriteMp3Metadata,
