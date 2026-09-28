@@ -958,6 +958,108 @@ export function createPreCompBatch(
   )
 }
 
+/**
+ * Collapse repeated editorial ranges into one reusable sequence pattern.
+ *
+ * The first group authors the canonical composition. Every later group is
+ * replaced by another CompositionItem instance pointing at that SAME
+ * compositionId. Editing any instance therefore edits the pattern once and all
+ * repeats follow, matching a DAW pattern mental model without introducing a
+ * parallel Beatvideo clip type.
+ *
+ * Intended for visual-only generated loops. Mixed visual/audio groups keep
+ * using the normal compound-clip path.
+ */
+export function createLinkedPreCompPattern(
+  name: string,
+  groups: readonly string[][],
+): TimelineItem[] {
+  const usableGroups = groups.filter((group) => group.length > 0)
+  if (usableGroups.length === 0) return []
+
+  return execute(
+    'CREATE_LINKED_PRE_COMP_PATTERN',
+    () => {
+      const firstWrapper = performCreatePreComp(name, usableGroups[0], {
+        editorKind: 'sequence',
+        openAfterCreate: false,
+      })
+      if (
+        !firstWrapper ||
+        firstWrapper.type !== 'composition' ||
+        !firstWrapper.compositionId
+      ) {
+        return firstWrapper ? [firstWrapper] : []
+      }
+
+      const composition = useCompositionsStore
+        .getState()
+        .getComposition(firstWrapper.compositionId)
+      if (!composition) return [firstWrapper]
+
+      const wrappers: TimelineItem[] = [
+        {
+          ...firstWrapper,
+          label: name,
+        },
+      ]
+
+      for (const itemIds of usableGroups.slice(1)) {
+        const context = getCreatePreCompContext(itemIds)
+        if (!context) continue
+        if (context.selectedItems.some((item) => item.type === 'audio')) continue
+
+        const targetTrackId =
+          context.selectedItems.find((item) => item.type !== 'audio')?.trackId ?? null
+        if (!targetTrackId) continue
+
+        const { minFrom, durationInFrames } = getPreCompBounds(context.selectedItems)
+        const selectedItemIds = new Set(context.selectedIds)
+        const sourceTrackIds = [...new Set(context.selectedItems.map((item) => item.trackId))]
+        removePreCompSourceItems(context, {
+          composition,
+          minFrom,
+          durationInFrames,
+          selectedItemIds,
+          sourceTrackIds,
+        })
+
+        const wrapper: CompositionItem = {
+          id: crypto.randomUUID(),
+          type: 'composition',
+          trackId: targetTrackId,
+          from: minFrom,
+          durationInFrames,
+          label: name,
+          compositionId: composition.id,
+          compositionWidth: composition.width,
+          compositionHeight: composition.height,
+          transform: { x: 0, y: 0, rotation: 0, opacity: 1 },
+          ...buildCompoundWrapperSourceFields(composition),
+        }
+        useItemsStore.getState()._addItem(wrapper)
+        wrappers.push(wrapper)
+      }
+
+      // Keep the first wrapper's label consistent with every repeated instance.
+      const wrapperIds = new Set(wrappers.map((wrapper) => wrapper.id))
+      useItemsStore.getState().setItems(
+        useItemsStore.getState().items.map((item) =>
+          wrapperIds.has(item.id) ? { ...item, label: name } : item,
+        ),
+      )
+      useSelectionStore.getState().selectItems(wrappers.map((wrapper) => wrapper.id))
+      useTimelineSettingsStore.getState().markDirty()
+      return wrappers
+    },
+    {
+      name,
+      repeatCount: usableGroups.length,
+      itemCount: usableGroups.reduce((sum, group) => sum + group.length, 0),
+    },
+  )
+}
+
 export function createMotionClip(name?: string, itemIds?: string[]): TimelineItem | null {
   return createPreComp(name, itemIds, {
     editorKind: 'composite-2d',
