@@ -428,19 +428,36 @@ function refinePeriodWithLowEndTransients(params: {
     return null
   }
 
-  // Require multiple independent regions of the song to agree. A bass fill or
-  // one repeating phrase must not redefine the global DAW tempo.
-  const regionSize = Math.max(3, Math.floor(finalFit.observations.length / 3))
-  const regionFits = [
-    finalFit.observations.slice(0, regionSize),
-    finalFit.observations.slice(
-      Math.max(0, Math.floor((finalFit.observations.length - regionSize) / 2)),
-      Math.max(0, Math.floor((finalFit.observations.length - regionSize) / 2)) +
-        regionSize,
-    ),
-    finalFit.observations.slice(-regionSize),
-  ]
-    .map((region) => linearFit(region))
+  const detectorFirstCycle = detectorObservations[0]?.cycle ?? finalFirstCycle
+  const detectorLastCycle = detectorObservations.at(-1)?.cycle ?? finalLastCycle
+  const detectorCycleSpan = Math.max(1, detectorLastCycle - detectorFirstCycle)
+  const evidenceCoverage =
+    (finalLastCycle - finalFirstCycle) / detectorCycleSpan
+
+  // On full songs, onset tempo evidence must span the arrangement rather than
+  // coming from one long intro/fill.
+  if (detectorCycleSpan >= 32 && evidenceCoverage < 0.55) return null
+
+  // Fit actual beginning/middle/end time regions. Slicing the evidence array
+  // itself can accidentally create three "regions" from one local phrase.
+  const regionSpan = detectorCycleSpan / 3
+  const regionFits = [0, 1, 2]
+    .map((regionIndex) => {
+      const startCycle = detectorFirstCycle + regionSpan * regionIndex
+      const endCycle =
+        regionIndex === 2
+          ? detectorLastCycle + EPSILON
+          : detectorFirstCycle + regionSpan * (regionIndex + 1)
+      const region = finalFit.observations.filter(
+        (observation) =>
+          observation.cycle >= startCycle && observation.cycle < endCycle,
+      )
+      if (region.length < 3) return null
+      const first = region[0]?.cycle ?? 0
+      const last = region.at(-1)?.cycle ?? first
+      if (last - first < 4) return null
+      return linearFit(region)
+    })
     .filter((fit): fit is { phase: number; period: number } => fit !== null)
 
   if (regionFits.length < 2) return null

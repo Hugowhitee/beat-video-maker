@@ -242,6 +242,40 @@ describe('stabilizeBeatGrid', () => {
     expect(Math.abs((lateBeat ?? 0) - nearestActualBeat)).toBeLessThan(0.035)
   })
 
+  it('does not retune the whole song from low-end evidence confined to one region', () => {
+    const detectorBpm = 119.4
+    const actualBpm = 120
+    const detectorPeriod = 60 / detectorBpm
+    const actualPeriod = 60 / actualBpm
+    const phase = 0.31
+    const duration = 180
+    const beats = Array.from(
+      { length: Math.floor((duration - phase) / detectorPeriod) },
+      (_, index) => phase + index * detectorPeriod,
+    )
+    const transients = Array.from({ length: 80 }, (_, index) => ({
+      time: phase + index * actualPeriod,
+      index,
+      strength: 0.94,
+      low: 0.95,
+      mid: 0.18,
+      high: 0.04,
+    }))
+
+    const result = stabilizeBeatGrid(
+      rhythm({
+        beats,
+        bpm: detectorBpm,
+        downbeats: beats.filter((_, index) => index % 4 === 0),
+        transients,
+      }),
+      duration,
+    )
+
+    expect(result.fit.mode).toBe('fixed')
+    expect(result.rhythm.bpm).toBeCloseTo(detectorBpm, 2)
+  })
+
   it('does not retune tempo from sparse isolated low-end fills', () => {
     const bpm = 120
     const period = 60 / bpm
