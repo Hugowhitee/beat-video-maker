@@ -9,6 +9,19 @@ export { useSubtitleScanProgressStore } from '@/features/media-library/stores/su
 export { getSharedProxyKey } from '@/features/media-library/utils/proxy-key'
 export { resolveMediaUrl } from '@/features/media-library/utils/media-resolver'
 export {
+  buildMp3MetadataTags,
+  metadataCopyFileName,
+  mp3MetadataDraftFromTags,
+  readMp3Metadata,
+  rewriteMp3Metadata,
+} from '@/features/media-library/utils/audio-file-metadata'
+export type {
+  Mp3ArtworkMode,
+  Mp3MetadataBaseMode,
+  Mp3MetadataDraft,
+  Mp3MetadataSnapshot,
+} from '@/features/media-library/utils/audio-file-metadata'
+export {
   clearMediaDragData,
   getMediaDragData,
   setMediaDragData,
