@@ -3,7 +3,11 @@ import type { BeatThisRhythmResult } from './beatThisCore'
 
 const EPSILON = 1e-9
 const MIN_FIXED_BEATS = 10
-const MAX_PHASE_SHIFT_BEAT_FRACTION = 0.48
+// Allow an exact half-beat phase repair. Programmed beats can be detected on
+// the backbeat/snare while the low-end onset marks the intended beat start.
+// The scoring below only accepts this ambiguous correction when coherent
+// low-frequency transient evidence clearly beats the detector phase.
+const MAX_PHASE_SHIFT_BEAT_FRACTION = 0.5
 
 function clamp01(value: number): number {
   return Math.max(0, Math.min(1, value))
@@ -219,10 +223,14 @@ function nearestMusicalTransient(
     const distance = Math.abs(transient.time - time)
     if (distance > radius) continue
 
-    // Low-end evidence gets a modest preference because kick/onset timing is
-    // usually the most useful phase cue, but strong mid/high attacks can still
-    // align beats when the kick is absent.
-    const spectralWeight = 0.65 + transient.low * 0.35
+    // Phase should follow the front edge of the rhythm, not the loudest cymbal.
+    // Low-frequency onsets are therefore the primary cue for programmed music;
+    // mid/high attacks can still contribute when there is no convincing kick.
+    const lowDominance = Math.max(0, transient.low - Math.max(transient.mid, transient.high))
+    const spectralWeight = Math.min(
+      1,
+      0.28 + transient.low * 0.58 + transient.mid * 0.06 + lowDominance * 0.18,
+    )
     const proximity = 1 - distance / Math.max(radius, EPSILON)
     const score = transient.strength * spectralWeight * (0.45 + 0.55 * proximity)
     if (score > winnerScore) {
@@ -262,9 +270,13 @@ function phaseCandidateScore(params: {
 
     const distance = Math.abs(transient.time - predicted)
     const proximity = 1 - distance / Math.max(radius, EPSILON)
-    // Prefer kick/low-end evidence so a dense eighth-note hat pattern cannot
-    // pull an otherwise-correct quarter-note grid halfway between the beats.
-    const spectralWeight = 0.42 + transient.low * 0.48 + transient.mid * 0.1
+    // Prefer kick/low-end evidence strongly enough that a louder snare/hat does
+    // not own phase merely because it has the largest broadband transient.
+    const lowDominance = Math.max(0, transient.low - Math.max(transient.mid, transient.high))
+    const spectralWeight = Math.min(
+      1,
+      0.2 + transient.low * 0.68 + transient.mid * 0.04 + lowDominance * 0.18,
+    )
     const detectorWeight = 0.72 + observation.strength * 0.28
     score += transient.strength * spectralWeight * detectorWeight * (0.32 + 0.68 * proximity)
     support += 1
@@ -295,6 +307,11 @@ function refinePhaseWithTransients(params: {
 
   for (const transient of transients) {
     if (transient.strength < 0.32) continue
+    // Generate phase candidates from plausible low-end attacks first. This
+    // avoids letting a dense hat/snare field propose dozens of equally loud
+    // off-grid phases. If a track has no low-end evidence, the detector phase
+    // remains the safe baseline instead of inventing a kick.
+    if (transient.low < 0.2 && transient.low < transient.high * 0.65) continue
     const cycle = Math.round((transient.time - phase) / period)
     const rawShift = transient.time - (phase + cycle * period)
     const shift = wrapPhaseShift(rawShift, period)
