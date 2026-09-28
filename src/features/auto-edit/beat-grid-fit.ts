@@ -678,7 +678,7 @@ function buildStableBeats(params: {
     firstRawBeat === undefined ? phase : firstRawBeat + phaseShift
   const firstCycle = Math.max(
     Math.ceil((0 - phase) / period - 1e-7),
-    Math.ceil((correctedFirstRawBeat - phase) / period - 1e-7),
+    Math.round((correctedFirstRawBeat - phase) / period),
   )
   const lastCycle = Math.floor((duration - phase) / period + 1e-7)
   const firstRawDownbeat = rawDownbeats.find((time) => Number.isFinite(time))

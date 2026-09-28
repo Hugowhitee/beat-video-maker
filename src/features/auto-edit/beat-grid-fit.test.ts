@@ -370,6 +370,22 @@ describe('stabilizeBeatGrid', () => {
     expect(result.rhythm.beats[0]).toBeCloseTo(detectorPhase, 2)
   })
 
+  it('keeps the first fitted downbeat when detector jitter lands just after the fitted phase', () => {
+    const period = 0.5
+    const musicalPhase = 0.42
+    const beats = Array.from({ length: 48 }, (_, index) =>
+      musicalPhase + index * period + (index === 0 ? 0.012 : index % 3 === 1 ? -0.006 : 0.004),
+    )
+    const downbeats = beats.filter((_, index) => index % 4 === 0)
+
+    const result = stabilizeBeatGrid(rhythm({ beats, bpm: 120, downbeats }), 25)
+
+    expect(result.fit.mode).toBe('fixed')
+    expect(result.rhythm.beats[0]).toBeLessThan(0.5)
+    expect(result.rhythm.downbeats[0]).toBeLessThan(0.5)
+    expect(result.fit.anchorTime).toBe(result.rhythm.downbeats[0])
+  })
+
   it('preserves a musical Bar 1 after a long quiet intro instead of pulling the grid to zero', () => {
     const period = 60 / 96
     const firstBeat = 8.31
