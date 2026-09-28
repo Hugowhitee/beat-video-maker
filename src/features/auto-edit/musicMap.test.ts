@@ -49,11 +49,15 @@ describe('buildMusicMapFromRhythm', () => {
     expect(map.sections[2]?.energy).toBeGreaterThan(0.8)
   })
 
-  it('keeps section labels conservative when downbeats are unavailable', () => {
+  it('keeps section labels conservative but still provides bar lines when downbeats are unavailable', () => {
     const source = rhythm({ downbeats: [] })
     const map = buildMusicMapFromRhythm(source, 64)
 
-    expect(map.beats.some((beat) => beat.downbeat)).toBe(false)
+    expect(map.beats.filter((beat) => beat.downbeat).slice(0, 3).map((beat) => beat.time)).toEqual([
+      0,
+      2,
+      4,
+    ])
     expect(map.sections.length).toBeGreaterThan(1)
     expect(Math.max(...map.sections.map((section) => section.confidence))).toBeLessThanOrEqual(0.58)
     expect(map.sections.every((section) => section.kind !== 'chorus' && section.kind !== 'verse')).toBe(true)

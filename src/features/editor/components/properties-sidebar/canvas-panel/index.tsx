@@ -27,6 +27,10 @@ import { CompositionControlsAuthoringSection } from './composition-controls-auth
  * Uses gizmo store for live canvas preview during drag.
  * Click outside to close.
  */
+function normalizeEvenDimension(value: number, min: number, max: number): number {
+  return Math.max(min, Math.min(max, Math.round(value / 2) * 2))
+}
+
 const ColorPicker = memo(function ColorPicker({
   initialColor,
   onColorChange,
@@ -136,9 +140,24 @@ export const CanvasPanel = memo(function CanvasPanel() {
   const projectBackgroundColor = currentProject?.metadata.backgroundColor ?? '#000000'
   const width = isLayerComposition ? activeComposition.width : projectWidth
   const height = isLayerComposition ? activeComposition.height : projectHeight
+  const [aspectLocked, setAspectLocked] = useState(false)
+  const aspectRatioRef = useRef(width / Math.max(1, height))
   const storedBackgroundColor = isLayerComposition
     ? (activeComposition.backgroundColor ?? '#000000')
     : projectBackgroundColor
+
+  useEffect(() => {
+    if (!aspectLocked && height > 0) {
+      aspectRatioRef.current = width / height
+    }
+  }, [aspectLocked, height, width])
+
+  const handleAspectLockToggle = useCallback(() => {
+    if (!aspectLocked && height > 0) {
+      aspectRatioRef.current = width / height
+    }
+    setAspectLocked((current) => !current)
+  }, [aspectLocked, height, width])
 
   const applyProjectMetadataChange = useCallback(
     async (
@@ -168,35 +187,72 @@ export const CanvasPanel = memo(function CanvasPanel() {
 
   const handleWidthChange = useCallback(
     (newWidth: number) => {
-      const normalizedWidth = Math.round(newWidth / 2) * 2
+      const normalizedWidth = normalizeEvenDimension(newWidth, 320, 7680)
+      const linkedHeight = aspectLocked
+        ? normalizeEvenDimension(
+            normalizedWidth / Math.max(1e-6, aspectRatioRef.current),
+            240,
+            4320,
+          )
+        : null
       if (isLayerComposition && activeCompositionId) {
-        setCompositionCanvasSettings(activeCompositionId, { width: normalizedWidth })
+        setCompositionCanvasSettings(
+          activeCompositionId,
+          linkedHeight === null
+            ? { width: normalizedWidth }
+            : { width: normalizedWidth, height: linkedHeight },
+        )
         return
       }
       void applyProjectMetadataChange(
-        { width: normalizedWidth },
-        { type: 'UPDATE_PROJECT_METADATA', payload: { fields: ['width'] } },
+        linkedHeight === null
+          ? { width: normalizedWidth }
+          : { width: normalizedWidth, height: linkedHeight },
+        {
+          type: 'UPDATE_PROJECT_METADATA',
+          payload: { fields: linkedHeight === null ? ['width'] : ['width', 'height'] },
+        },
       )
     },
-    [activeCompositionId, applyProjectMetadataChange, isLayerComposition],
+    [activeCompositionId, applyProjectMetadataChange, aspectLocked, isLayerComposition],
   )
 
   const handleHeightChange = useCallback(
     (newHeight: number) => {
-      const normalizedHeight = Math.round(newHeight / 2) * 2
+      const normalizedHeight = normalizeEvenDimension(newHeight, 240, 4320)
+      const linkedWidth = aspectLocked
+        ? normalizeEvenDimension(
+            normalizedHeight * Math.max(1e-6, aspectRatioRef.current),
+            320,
+            7680,
+          )
+        : null
       if (isLayerComposition && activeCompositionId) {
-        setCompositionCanvasSettings(activeCompositionId, { height: normalizedHeight })
+        setCompositionCanvasSettings(
+          activeCompositionId,
+          linkedWidth === null
+            ? { height: normalizedHeight }
+            : { width: linkedWidth, height: normalizedHeight },
+        )
         return
       }
       void applyProjectMetadataChange(
-        { height: normalizedHeight },
-        { type: 'UPDATE_PROJECT_METADATA', payload: { fields: ['height'] } },
+        linkedWidth === null
+          ? { height: normalizedHeight }
+          : { width: linkedWidth, height: normalizedHeight },
+        {
+          type: 'UPDATE_PROJECT_METADATA',
+          payload: { fields: linkedWidth === null ? ['height'] : ['width', 'height'] },
+        },
       )
     },
-    [activeCompositionId, applyProjectMetadataChange, isLayerComposition],
+    [activeCompositionId, applyProjectMetadataChange, aspectLocked, isLayerComposition],
   )
 
   const handleSwapDimensions = useCallback(() => {
+    if (aspectLocked && width > 0) {
+      aspectRatioRef.current = height / width
+    }
     if (isLayerComposition && activeCompositionId) {
       setCompositionCanvasSettings(activeCompositionId, { width: height, height: width })
       return
@@ -208,18 +264,23 @@ export const CanvasPanel = memo(function CanvasPanel() {
         payload: { fields: ['width', 'height'], operation: 'swap' },
       },
     )
-  }, [activeCompositionId, applyProjectMetadataChange, height, isLayerComposition, width])
+  }, [activeCompositionId, applyProjectMetadataChange, aspectLocked, height, isLayerComposition, width])
 
   const handleResetDimensions = useCallback(() => {
+    const resetWidth = isLayerComposition ? projectWidth : 1920
+    const resetHeight = isLayerComposition ? projectHeight : 1080
+    if (aspectLocked && resetHeight > 0) {
+      aspectRatioRef.current = resetWidth / resetHeight
+    }
     if (isLayerComposition && activeCompositionId) {
       setCompositionCanvasSettings(activeCompositionId, {
-        width: projectWidth,
-        height: projectHeight,
+        width: resetWidth,
+        height: resetHeight,
       })
       return
     }
     void applyProjectMetadataChange(
-      { width: 1920, height: 1080 },
+      { width: resetWidth, height: resetHeight },
       {
         type: 'UPDATE_PROJECT_METADATA',
         payload: { fields: ['width', 'height'], operation: 'reset' },
@@ -228,6 +289,7 @@ export const CanvasPanel = memo(function CanvasPanel() {
   }, [
     activeCompositionId,
     applyProjectMetadataChange,
+    aspectLocked,
     isLayerComposition,
     projectHeight,
     projectWidth,
@@ -312,10 +374,10 @@ export const CanvasPanel = memo(function CanvasPanel() {
         <LinkedDimensions
           width={width}
           height={height}
-          aspectLocked={false}
+          aspectLocked={aspectLocked}
           onWidthChange={handleWidthChange}
           onHeightChange={handleHeightChange}
-          onAspectLockToggle={() => {}}
+          onAspectLockToggle={handleAspectLockToggle}
           minWidth={320}
           minHeight={240}
           maxWidth={7680}

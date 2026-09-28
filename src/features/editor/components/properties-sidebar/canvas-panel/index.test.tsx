@@ -70,6 +70,26 @@ describe('CanvasPanel in a Motion composition', () => {
     expect(screen.queryByRole('button', { name: 'Markers' })).not.toBeInTheDocument()
   })
 
+  it('keeps width and height linked when the aspect lock is enabled', () => {
+    render(<CanvasPanel />)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Lock aspect ratio' }))
+    expect(screen.getByRole('button', { name: 'Unlock aspect ratio' })).toBeInTheDocument()
+
+    const widthInput = screen.getByDisplayValue('1080')
+    fireEvent.change(widthInput, { target: { value: '900' } })
+    fireEvent.blur(widthInput)
+
+    expect(useCompositionsStore.getState().getComposition('motion-card')).toMatchObject({
+      width: 900,
+      height: 1600,
+    })
+    expect(useProjectStore.getState().currentProject?.metadata).toMatchObject({
+      width: 1280,
+      height: 720,
+    })
+  })
+
   it('edits the composition without mutating root project metadata', () => {
     render(<CanvasPanel />)
 

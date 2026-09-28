@@ -1,4 +1,4 @@
-import { useCallback, useRef, useEffect } from 'react'
+import { useCallback } from 'react'
 import { Button } from '@/components/ui/button'
 import { Link2, Link2Off } from 'lucide-react'
 import { NumberInput } from './number-input'
@@ -28,8 +28,9 @@ interface LinkedDimensionsProps {
 }
 
 /**
- * Width/Height inputs with aspect ratio lock toggle.
- * When locked, changing one dimension proportionally changes the other.
+ * Width/Height inputs with an aspect-ratio lock toggle.
+ * The parent owns the ratio and proportional updates; this component only
+ * presents the two fields consistently and exposes the lock interaction.
  */
 export function LinkedDimensions({
   width,
@@ -49,17 +50,6 @@ export function LinkedDimensions({
   className,
 }: LinkedDimensionsProps) {
   const { t } = useTranslation()
-  // Store aspect ratio when lock is engaged
-  const aspectRatioRef = useRef<number>(1)
-
-  // Update aspect ratio when either dimension changes while unlocked
-  // or when lock is first engaged
-  useEffect(() => {
-    if (width !== 'mixed' && height !== 'mixed' && height > 0) {
-      aspectRatioRef.current = width / height
-    }
-  }, [width, height])
-
   // Commit handlers call both onChange callbacks
   const handleWidthChange = useCallback(
     (newWidth: number) => {
@@ -113,6 +103,11 @@ export function LinkedDimensions({
         onClick={onAspectLockToggle}
         disabled={disabled}
         title={
+          aspectLocked
+            ? t('editor.layoutSection.unlockAspect')
+            : t('editor.layoutSection.lockAspect')
+        }
+        aria-label={
           aspectLocked
             ? t('editor.layoutSection.unlockAspect')
             : t('editor.layoutSection.lockAspect')
