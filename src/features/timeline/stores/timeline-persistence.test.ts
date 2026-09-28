@@ -357,14 +357,18 @@ describe('timeline project hydration', () => {
     })
 
     const timeline = buildTimelineFromStores()
-    expect(timeline.items[0]?.audioReactive?.bindings[0]).toMatchObject({
-      driver: 'low',
-      amount: 0.15,
-      target: {
+    expect(timeline.items[0]).toMatchObject({
+      audioReactive: {
+        bindings: [{
+          driver: 'low',
+          amount: 0.15,
+          target: {
         kind: 'effect-param',
         effectId: 'brightness-1',
         gpuEffectType: 'gpu-brightness',
-        paramKey: 'brightness',
+            paramKey: 'brightness',
+          },
+        }],
       },
     })
     expect(timeline.transitions?.[0]).toMatchObject({
@@ -387,10 +391,10 @@ describe('timeline project hydration', () => {
     })
 
     expect(useItemsStore.getState().itemById[left.id]?.audioReactive).toEqual(
-      timeline.items[0]?.audioReactive,
+      left.audioReactive,
     )
     expect(useItemsStore.getState().itemById[left.id]?.effects).toEqual(
-      timeline.items[0]?.effects,
+      left.effects,
     )
     expect(useTransitionsStore.getState().transitions[0]).toMatchObject({
       id: 'reactive-transition',
