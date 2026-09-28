@@ -242,6 +242,189 @@ function nearestMusicalTransient(
   return winner
 }
 
+function isLowEndTempoTransient(transient: MusicTransient): boolean {
+  return (
+    transient.strength >= 0.34 &&
+    transient.low >= 0.32 &&
+    transient.low >= transient.mid * 0.5 &&
+    transient.low >= transient.high * 0.7
+  )
+}
+
+function collectLowEndTempoObservations(params: {
+  phase: number
+  period: number
+  detectorObservations: readonly Observation[]
+  transients: readonly MusicTransient[]
+  radius: number
+}): Observation[] {
+  const { phase, period, detectorObservations, transients, radius } = params
+  const usedTransientIndices = new Set<number>()
+  const observations: Observation[] = []
+
+  for (const detectorObservation of detectorObservations) {
+    const predicted = phase + detectorObservation.cycle * period
+    const start = lowerBoundTransient(transients, predicted - radius)
+    let winnerIndex = -1
+    let winnerScore = -1
+
+    for (let index = start; index < transients.length; index += 1) {
+      const transient = transients[index]!
+      if (transient.time > predicted + radius) break
+      if (usedTransientIndices.has(index) || !isLowEndTempoTransient(transient)) continue
+
+      const distance = Math.abs(transient.time - predicted)
+      const proximity = 1 - distance / Math.max(radius, EPSILON)
+      const lowDominance = Math.max(
+        0,
+        transient.low - Math.max(transient.mid, transient.high),
+      )
+      const score =
+        transient.strength *
+        (0.72 + transient.low * 0.18 + lowDominance * 0.1) *
+        (0.35 + 0.65 * proximity)
+
+      if (score > winnerScore) {
+        winnerIndex = index
+        winnerScore = score
+      }
+    }
+
+    if (winnerIndex < 0) continue
+    const transient = transients[winnerIndex]!
+    usedTransientIndices.add(winnerIndex)
+    observations.push({
+      cycle: detectorObservation.cycle,
+      time: transient.time,
+      strength: transient.strength,
+    })
+  }
+
+  return observations
+}
+
+function robustObservationFit(
+  input: readonly Observation[],
+  minimumCount: number,
+): {
+  phase: number
+  period: number
+  observations: Observation[]
+  medianError: number
+  p90Error: number
+} | null {
+  if (input.length < minimumCount) return null
+
+  let observations = [...input]
+  let fit = linearFit(observations)
+  if (!fit) return null
+
+  for (let pass = 0; pass < 2; pass += 1) {
+    const errors = observations.map((observation) =>
+      Math.abs(observation.time - (fit!.phase + observation.cycle * fit!.period)),
+    )
+    const med = median(errors)
+    const threshold = Math.max(0.025, Math.min(0.085, med * 3.5))
+    const filtered = observations.filter(
+      (observation) =>
+        Math.abs(observation.time - (fit!.phase + observation.cycle * fit!.period)) <=
+        threshold,
+    )
+    if (filtered.length < minimumCount || filtered.length === observations.length) break
+    observations = filtered
+    fit = linearFit(observations)
+    if (!fit) return null
+  }
+
+  const errors = observations.map((observation) =>
+    Math.abs(observation.time - (fit!.phase + observation.cycle * fit!.period)),
+  )
+  return {
+    ...fit,
+    observations,
+    medianError: median(errors),
+    p90Error: percentile(errors, 0.9),
+  }
+}
+
+function refinePeriodWithLowEndTransients(params: {
+  phase: number
+  period: number
+  detectorObservations: readonly Observation[]
+  transients: readonly MusicTransient[]
+}): { period: number; supportRatio: number; consensusSpread: number } | null {
+  const { phase, period, detectorObservations, transients } = params
+  if (detectorObservations.length < 16 || transients.length === 0) return null
+
+  // First pass is intentionally wide enough to observe a slowly accumulating
+  // detector-vs-audio drift. Once a candidate slope is known, rematch with a
+  // tighter radius across the full song. This corrects tempo, not just phase.
+  const wideRadius = Math.min(0.22, period * 0.34)
+  const firstObservations = collectLowEndTempoObservations({
+    phase,
+    period,
+    detectorObservations,
+    transients,
+    radius: wideRadius,
+  })
+  const firstFit = robustObservationFit(firstObservations, 8)
+  if (!firstFit) return null
+
+  const firstCycle = firstFit.observations[0]?.cycle ?? 0
+  const lastCycle = firstFit.observations.at(-1)?.cycle ?? firstCycle
+  if (lastCycle - firstCycle < 12) return null
+
+  const deviation = Math.abs(firstFit.period - period) / Math.max(EPSILON, period)
+  if (deviation > 0.02) return null
+
+  const tightRadius = Math.min(0.12, firstFit.period * 0.2)
+  const rematched = collectLowEndTempoObservations({
+    phase: firstFit.phase,
+    period: firstFit.period,
+    detectorObservations,
+    transients,
+    radius: tightRadius,
+  })
+  const finalFit = robustObservationFit(rematched, 8) ?? firstFit
+  const finalFirstCycle = finalFit.observations[0]?.cycle ?? 0
+  const finalLastCycle = finalFit.observations.at(-1)?.cycle ?? finalFirstCycle
+  if (finalLastCycle - finalFirstCycle < 12) return null
+
+  const supportRatio =
+    finalFit.observations.length / Math.max(1, detectorObservations.length)
+  if (supportRatio < 0.16 || finalFit.medianError > 0.035 || finalFit.p90Error > 0.075) {
+    return null
+  }
+
+  // Require multiple independent regions of the song to agree. A bass fill or
+  // one repeating phrase must not redefine the global DAW tempo.
+  const regionSize = Math.max(3, Math.floor(finalFit.observations.length / 3))
+  const regionFits = [
+    finalFit.observations.slice(0, regionSize),
+    finalFit.observations.slice(
+      Math.max(0, Math.floor((finalFit.observations.length - regionSize) / 2)),
+      Math.max(0, Math.floor((finalFit.observations.length - regionSize) / 2)) +
+        regionSize,
+    ),
+    finalFit.observations.slice(-regionSize),
+  ]
+    .map((region) => linearFit(region))
+    .filter((fit): fit is { phase: number; period: number } => fit !== null)
+
+  if (regionFits.length < 2) return null
+  const regionPeriods = regionFits.map((fit) => fit.period)
+  const consensusSpread =
+    (Math.max(...regionPeriods) - Math.min(...regionPeriods)) /
+    Math.max(EPSILON, finalFit.period)
+  if (consensusSpread > 0.008) return null
+
+  return {
+    period: finalFit.period,
+    supportRatio,
+    consensusSpread,
+  }
+}
+
 function wrapPhaseShift(shift: number, period: number): number {
   if (!Number.isFinite(shift) || !Number.isFinite(period) || period <= 0) return 0
   let wrapped = shift % period
@@ -508,23 +691,44 @@ export function stabilizeBeatGrid(
     }
   }
 
-  const phase = refinePhaseWithTransients({
+  const initialPhase = refinePhaseWithTransients({
     phase: fitted.phase,
     period: fitted.period,
     observations: fitted.observations,
     transients: result.transients ?? [],
   })
-  const stable = buildStableBeats({
-    phase: phase.phase,
+  const tempoEvidence = refinePeriodWithLowEndTransients({
+    phase: initialPhase.phase,
     period: fitted.period,
+    detectorObservations: fitted.observations,
+    transients: result.transients ?? [],
+  })
+  const stablePeriod = tempoEvidence?.period ?? fitted.period
+
+  // Re-evaluate phase on the refined tempo. If the detector was only a few
+  // tenths of a BPM off, this second pass removes the cumulative drift while
+  // preserving the already-proven kick/downbeat phase decision.
+  const finalPhase = tempoEvidence
+    ? refinePhaseWithTransients({
+        phase: initialPhase.phase,
+        period: stablePeriod,
+        observations: fitted.observations,
+        transients: result.transients ?? [],
+      })
+    : initialPhase
+  const totalPhaseShift = wrapPhaseShift(finalPhase.phase - fitted.phase, stablePeriod)
+
+  const stable = buildStableBeats({
+    phase: finalPhase.phase,
+    period: stablePeriod,
     duration,
     rawBeats: result.beats,
     rawStrengths: result.beatStrengths,
     rawDownbeats: result.downbeats,
-    phaseShift: phase.phaseShift,
+    phaseShift: totalPhaseShift,
     meter: Math.max(1, Math.round(result.meter || 4)),
   })
-  const bpm = 60 / fitted.period
+  const bpm = 60 / stablePeriod
   const anchorTime = stable.downbeats[0] ?? stable.beats[0] ?? null
 
   return {
@@ -541,8 +745,11 @@ export function stabilizeBeatGrid(
       bpm,
       anchorTime,
       medianErrorMs: Math.round(fitted.medianError * 1000),
-      phaseShiftMs: Math.round(phase.phaseShift * 1000),
-      onsetSupport: phase.supportRatio,
+      phaseShiftMs: Math.round(totalPhaseShift * 1000),
+      onsetSupport: Math.max(
+        finalPhase.supportRatio,
+        tempoEvidence?.supportRatio ?? 0,
+      ),
     },
   }
 }

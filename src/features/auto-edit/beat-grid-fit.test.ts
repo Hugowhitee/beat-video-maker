@@ -172,6 +172,86 @@ describe('stabilizeBeatGrid', () => {
     expect(result.rhythm.beats[0]).toBeCloseTo(phase, 2)
   })
 
+  it('uses recurring low-end onset measurements to correct cumulative BPM drift', () => {
+    const detectorBpm = 119.4
+    const actualBpm = 120
+    const detectorPeriod = 60 / detectorBpm
+    const actualPeriod = 60 / actualBpm
+    const phase = 0.31
+    const duration = 180
+    const count = Math.floor((duration - phase) / detectorPeriod)
+    const beats = Array.from({ length: count }, (_, index) => phase + index * detectorPeriod)
+    const transients = Array.from(
+      { length: Math.floor((duration - phase) / actualPeriod) },
+      (_, index) => ({
+        time: phase + index * actualPeriod,
+        index,
+        strength: 0.94,
+        low: 0.95,
+        mid: 0.18,
+        high: 0.04,
+      }),
+    )
+
+    const result = stabilizeBeatGrid(
+      rhythm({
+        beats,
+        bpm: detectorBpm,
+        downbeats: beats.filter((_, index) => index % 4 === 0),
+        transients,
+      }),
+      duration,
+    )
+
+    expect(result.fit.mode).toBe('fixed')
+    expect(result.rhythm.bpm).toBeCloseTo(actualBpm, 1)
+    expect(result.rhythm.beats[0]).toBeCloseTo(phase, 2)
+    const lateBeat = result.rhythm.beats.findLast((time) => time < 170)
+    expect(lateBeat).toBeDefined()
+    const nearestActualCycle = Math.round(((lateBeat ?? phase) - phase) / actualPeriod)
+    const nearestActualBeat = phase + nearestActualCycle * actualPeriod
+    expect(Math.abs((lateBeat ?? 0) - nearestActualBeat)).toBeLessThan(0.035)
+  })
+
+  it('does not retune tempo from sparse isolated low-end fills', () => {
+    const bpm = 120
+    const period = 60 / bpm
+    const phase = 0.31
+    const beats = Array.from({ length: 240 }, (_, index) => phase + index * period)
+    const transients = [
+      {
+        time: phase + 0.08,
+        index: 0,
+        strength: 1,
+        low: 1,
+        mid: 0.1,
+        high: 0.02,
+      },
+      {
+        time: phase + period * 80 - 0.06,
+        index: 1,
+        strength: 0.95,
+        low: 0.9,
+        mid: 0.1,
+        high: 0.02,
+      },
+      {
+        time: phase + period * 160 + 0.07,
+        index: 2,
+        strength: 0.95,
+        low: 0.9,
+        mid: 0.1,
+        high: 0.02,
+      },
+    ]
+
+    const result = stabilizeBeatGrid(rhythm({ beats, bpm, transients }), 125)
+
+    expect(result.fit.mode).toBe('fixed')
+    expect(result.rhythm.bpm).toBeCloseTo(120, 3)
+    expect(result.rhythm.beats[0]).toBeCloseTo(phase, 2)
+  })
+
   it('can recover kick phase when low-end onsets are missing on alternating beats', () => {
     const period = 0.5
     const kickPhase = 0.28
