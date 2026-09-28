@@ -2125,11 +2125,7 @@ export const TimelineContent = memo(function TimelineContent({
       ? videoTracks
       : audioTracks
   const singleSectionKind =
-    unifiedTrackStack && tracks[0] && getTrackKind(tracks[0]) === 'audio'
-      ? 'audio'
-      : videoTracks.length > 0
-        ? 'video'
-        : 'audio'
+    unifiedTrackStack ? 'video' : videoTracks.length > 0 ? 'video' : 'audio'
   const singleSectionHeight = unifiedTrackStack
     ? videoPaneHeight
     : videoTracks.length > 0
