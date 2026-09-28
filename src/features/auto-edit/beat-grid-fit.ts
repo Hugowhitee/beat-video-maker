@@ -286,50 +286,65 @@ function isLowEndTempoTransient(transient: MusicTransient): boolean {
 function collectLowEndTempoObservations(params: {
   phase: number
   period: number
-  detectorObservations: readonly Observation[]
   transients: readonly MusicTransient[]
-  radius: number
 }): Observation[] {
-  const { phase, period, detectorObservations, transients, radius } = params
-  const usedTransientIndices = new Set<number>()
-  const observations: Observation[] = []
+  const { phase, period, transients } = params
+  if (!Number.isFinite(period) || period <= 0) return []
 
-  for (const detectorObservation of detectorObservations) {
-    const predicted = phase + detectorObservation.cycle * period
-    const start = lowerBoundTransient(transients, predicted - radius)
-    let winnerIndex = -1
-    let winnerScore = -1
+  const candidates = transients
+    .filter(isLowEndTempoTransient)
+    .slice()
+    .sort((left, right) => left.time - right.time)
+  const first = candidates[0]
+  if (!first) return []
 
-    for (let index = start; index < transients.length; index += 1) {
-      const transient = transients[index]!
-      if (transient.time > predicted + radius) break
-      if (usedTransientIndices.has(index) || !isLowEndTempoTransient(transient)) continue
+  const observations: Observation[] = [{
+    cycle: Math.round((first.time - phase) / period),
+    time: first.time,
+    strength: first.strength,
+  }]
+  let previous = observations[0]!
 
-      const distance = Math.abs(transient.time - predicted)
-      const proximity = 1 - distance / Math.max(radius, EPSILON)
-      const lowDominance = Math.max(
-        0,
-        transient.low - Math.max(transient.mid, transient.high),
-      )
-      const score =
-        transient.strength *
-        (0.72 + transient.low * 0.18 + lowDominance * 0.1) *
-        (0.35 + 0.65 * proximity)
+  for (let index = 1; index < candidates.length; index += 1) {
+    const transient = candidates[index]!
+    const gap = transient.time - previous.time
+    if (!Number.isFinite(gap) || gap <= 0) continue
 
-      if (score > winnerScore) {
-        winnerIndex = index
-        winnerScore = score
+    const rawSteps = gap / period
+
+    // Multiple low-end attacks can occur inside one beat (808 articulation,
+    // pickup, kick layer). Keep one representative for the current musical
+    // cycle instead of letting the extra onset advance the tempo count.
+    if (rawSteps < 0.55) {
+      const predicted = phase + previous.cycle * period
+      const previousDistance = Math.abs(previous.time - predicted)
+      const candidateDistance = Math.abs(transient.time - predicted)
+      if (
+        candidateDistance + 1e-6 < previousDistance ||
+        (Math.abs(candidateDistance - previousDistance) <= 1e-6 &&
+          transient.strength > previous.strength)
+      ) {
+        previous.time = transient.time
+        previous.strength = transient.strength
       }
+      continue
     }
 
-    if (winnerIndex < 0) continue
-    const transient = transients[winnerIndex]!
-    usedTransientIndices.add(winnerIndex)
-    observations.push({
-      cycle: detectorObservation.cycle,
+    // Infer skipped kick positions from the local gap. Because this decision is
+    // local, a detector seed that is a few tenths of a BPM wrong cannot build
+    // up enough absolute phase error to relabel later kicks by a whole beat.
+    const steps = Math.max(1, Math.round(rawSteps))
+    const normalizedGap = gap / steps
+    const localDeviation = Math.abs(normalizedGap - period) / period
+    if (localDeviation > 0.22) continue
+
+    const observation: Observation = {
+      cycle: previous.cycle + steps,
       time: transient.time,
       strength: transient.strength,
-    })
+    }
+    observations.push(observation)
+    previous = observation
   }
 
   return observations
@@ -388,58 +403,44 @@ function refinePeriodWithLowEndTransients(params: {
   const { phase, period, detectorObservations, transients } = params
   if (detectorObservations.length < 16 || transients.length === 0) return null
 
-  // First pass is intentionally wide enough to observe a slowly accumulating
-  // detector-vs-audio drift. Once a candidate slope is known, rematch with a
-  // tighter radius across the full song. This corrects tempo, not just phase.
-  const wideRadius = Math.min(0.22, period * 0.34)
-  const firstObservations = collectLowEndTempoObservations({
+  // This is deliberately independent from detector positions after the initial
+  // seed period. Matching every onset back to an already-drifting grid causes a
+  // late-song kick to alias onto the neighbouring detector beat—the exact
+  // failure this second measurement is meant to catch.
+  const onsetObservations = collectLowEndTempoObservations({
     phase,
     period,
-    detectorObservations,
     transients,
-    radius: wideRadius,
   })
-  const firstFit = robustObservationFit(firstObservations, 8)
-  if (!firstFit) return null
+  const onsetFit = robustObservationFit(onsetObservations, 8)
+  if (!onsetFit) return null
 
-  const firstCycle = firstFit.observations[0]?.cycle ?? 0
-  const lastCycle = firstFit.observations.at(-1)?.cycle ?? firstCycle
+  const firstCycle = onsetFit.observations[0]?.cycle ?? 0
+  const lastCycle = onsetFit.observations.at(-1)?.cycle ?? firstCycle
   if (lastCycle - firstCycle < 12) return null
 
-  const deviation = Math.abs(firstFit.period - period) / Math.max(EPSILON, period)
+  const deviation = Math.abs(onsetFit.period - period) / Math.max(EPSILON, period)
   if (deviation > 0.02) return null
 
-  const tightRadius = Math.min(0.12, firstFit.period * 0.2)
-  const rematched = collectLowEndTempoObservations({
-    phase: firstFit.phase,
-    period: firstFit.period,
-    detectorObservations,
-    transients,
-    radius: tightRadius,
-  })
-  const finalFit = robustObservationFit(rematched, 8) ?? firstFit
-  const finalFirstCycle = finalFit.observations[0]?.cycle ?? 0
-  const finalLastCycle = finalFit.observations.at(-1)?.cycle ?? finalFirstCycle
-  if (finalLastCycle - finalFirstCycle < 12) return null
-
   const supportRatio =
-    finalFit.observations.length / Math.max(1, detectorObservations.length)
-  if (supportRatio < 0.16 || finalFit.medianError > 0.035 || finalFit.p90Error > 0.075) {
+    onsetFit.observations.length / Math.max(1, detectorObservations.length)
+  if (supportRatio < 0.16 || onsetFit.medianError > 0.035 || onsetFit.p90Error > 0.075) {
     return null
   }
 
-  const detectorFirstCycle = detectorObservations[0]?.cycle ?? finalFirstCycle
-  const detectorLastCycle = detectorObservations.at(-1)?.cycle ?? finalLastCycle
+  const detectorFirstCycle = detectorObservations[0]?.cycle ?? firstCycle
+  const detectorLastCycle = detectorObservations.at(-1)?.cycle ?? lastCycle
   const detectorCycleSpan = Math.max(1, detectorLastCycle - detectorFirstCycle)
-  const evidenceCoverage =
-    (finalLastCycle - finalFirstCycle) / detectorCycleSpan
+  const evidenceCoverage = (lastCycle - firstCycle) / detectorCycleSpan
 
-  // On full songs, onset tempo evidence must span the arrangement rather than
-  // coming from one long intro/fill.
+  // A bass-heavy intro or one repeating fill may be internally periodic but
+  // still cannot own the whole-song BPM. Require evidence to cover a material
+  // part of the detector's complete song span.
   if (detectorCycleSpan >= 32 && evidenceCoverage < 0.55) return null
 
-  // Fit actual beginning/middle/end time regions. Slicing the evidence array
-  // itself can accidentally create three "regions" from one local phrase.
+  // Independently fit beginning / middle / end regions. Two agreeing regions
+  // are enough because real hip-hop arrangements can intentionally drop kicks
+  // for a full section; one local region is never enough to retune the song.
   const regionSpan = detectorCycleSpan / 3
   const regionFits = [0, 1, 2]
     .map((regionIndex) => {
@@ -448,7 +449,7 @@ function refinePeriodWithLowEndTransients(params: {
         regionIndex === 2
           ? detectorLastCycle + EPSILON
           : detectorFirstCycle + regionSpan * (regionIndex + 1)
-      const region = finalFit.observations.filter(
+      const region = onsetFit.observations.filter(
         (observation) =>
           observation.cycle >= startCycle && observation.cycle < endCycle,
       )
@@ -464,11 +465,11 @@ function refinePeriodWithLowEndTransients(params: {
   const regionPeriods = regionFits.map((fit) => fit.period)
   const consensusSpread =
     (Math.max(...regionPeriods) - Math.min(...regionPeriods)) /
-    Math.max(EPSILON, finalFit.period)
+    Math.max(EPSILON, onsetFit.period)
   if (consensusSpread > 0.008) return null
 
   return {
-    period: finalFit.period,
+    period: onsetFit.period,
     supportRatio,
     consensusSpread,
   }
@@ -477,8 +478,10 @@ function refinePeriodWithLowEndTransients(params: {
 function wrapPhaseShift(shift: number, period: number): number {
   if (!Number.isFinite(shift) || !Number.isFinite(period) || period <= 0) return 0
   let wrapped = shift % period
-  if (wrapped > period / 2) wrapped -= period
-  if (wrapped < -period / 2) wrapped += period
+  const halfPeriod = period / 2
+  const tieTolerance = Math.max(EPSILON, period * 1e-7)
+  if (wrapped > halfPeriod + tieTolerance) wrapped -= period
+  if (wrapped < -halfPeriod - tieTolerance) wrapped += period
   return wrapped
 }
 
@@ -670,7 +673,13 @@ function buildStableBeats(params: {
     phaseShift,
     meter,
   } = params
-  const firstCycle = Math.ceil((0 - phase) / period - 1e-7)
+  const firstRawBeat = rawBeats.find((time) => Number.isFinite(time))
+  const correctedFirstRawBeat =
+    firstRawBeat === undefined ? phase : firstRawBeat + phaseShift
+  const firstCycle = Math.max(
+    Math.ceil((0 - phase) / period - 1e-7),
+    Math.ceil((correctedFirstRawBeat - phase) / period - 1e-7),
+  )
   const lastCycle = Math.floor((duration - phase) / period + 1e-7)
   const firstRawDownbeat = rawDownbeats.find((time) => Number.isFinite(time))
   const downbeatCycle =

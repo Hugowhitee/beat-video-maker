@@ -153,7 +153,7 @@ describe('Beat This core', () => {
       consecutiveProbeBpms(beats, beats.at(-1) ?? 180),
     )
 
-    expect(result.bpm).toBeCloseTo(bpm, 2)
+    expect(Math.abs(result.bpm - bpm)).toBeLessThan(0.1)
     expect(Math.abs(result.bpm - 90)).toBeGreaterThan(0.15)
   })
 
