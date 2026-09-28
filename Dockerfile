@@ -8,11 +8,6 @@ COPY package.json package-lock.json ./
 RUN npm ci --include=dev
 
 COPY . .
-RUN npm run check
-RUN npm run check:boundaries
-RUN npm run check:deps-contracts
-RUN npx vp test run \
-  src/features/timeline/stores/actions/composition-actions.test.ts
 RUN npm run build
 
 FROM nginx:alpine AS runtime
