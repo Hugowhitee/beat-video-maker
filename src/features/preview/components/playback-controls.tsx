@@ -13,6 +13,8 @@ import {
   Zap,
   Camera,
   Loader2,
+  Maximize2,
+  Minimize2,
 } from 'lucide-react'
 import { usePlaybackStore } from '@/shared/state/playback'
 import { usePreviewBridgeStore } from '@/shared/state/preview-bridge'
@@ -28,6 +30,8 @@ import { MonitorVolumeControl } from './monitor-volume-control'
 interface PlaybackControlsProps {
   totalFrames: number
   fps: number
+  isFullscreen?: boolean
+  onToggleFullscreen?: () => void
 }
 
 async function canvasToBlob(
@@ -98,7 +102,12 @@ const btnSize = {
   height: EDITOR_LAYOUT_CSS_VALUES.toolbarButtonSize,
 } as const
 
-export function PlaybackControls({ totalFrames, fps }: PlaybackControlsProps) {
+export function PlaybackControls({
+  totalFrames,
+  fps,
+  isFullscreen = false,
+  onToggleFullscreen,
+}: PlaybackControlsProps) {
   const { t } = useTranslation()
   const [isSavingFrame, setIsSavingFrame] = useState(false)
 
@@ -282,6 +291,29 @@ export function PlaybackControls({ totalFrames, fps }: PlaybackControlsProps) {
         </Button>
 
         <MonitorVolumeControl buttonStyle={btnSize} />
+
+        {onToggleFullscreen ? (
+          <Button
+            variant="ghost"
+            size="icon"
+            className="flex-shrink-0"
+            style={btnSize}
+            onClick={onToggleFullscreen}
+            data-tooltip={
+              isFullscreen ? t('preview.player.exitFullscreen') : t('preview.player.fullscreen')
+            }
+            aria-label={
+              isFullscreen ? t('preview.player.exitFullscreen') : t('preview.player.fullscreen')
+            }
+            aria-pressed={isFullscreen}
+          >
+            {isFullscreen ? (
+              <Minimize2 className="h-3.5 w-3.5" />
+            ) : (
+              <Maximize2 className="h-3.5 w-3.5" />
+            )}
+          </Button>
+        ) : null}
       </div>
 
       {/* Save frame — hidden at narrow widths */}
