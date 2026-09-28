@@ -3,6 +3,7 @@ import type { MetadataTags } from 'mediabunny'
 import {
   buildMp3MetadataTags,
   metadataCopyFileName,
+  mp3BpmFromTags,
   mp3MetadataDraftFromTags,
 } from './audio-file-metadata'
 
@@ -44,11 +45,17 @@ describe('MP3 metadata helpers', () => {
 
     expect(result.title).toBe('New beat')
     expect(result.artist).toBe('Producer')
-    expect(result.beatsPerMinute).toBe(92)
+    expect(result.raw).toEqual({ TBPM: '92' })
     expect(result.date?.toISOString().slice(0, 10)).toBe('2026-09-28')
     expect(result.images).toEqual([cover])
-    expect(result.raw).toBeUndefined()
     expect(result.lyrics).toBeUndefined()
+  })
+
+  it('reads the standard raw TBPM frame used by Mediabunny 1.50', () => {
+    const source: MetadataTags = { raw: { TBPM: '89.5' } }
+
+    expect(mp3BpmFromTags(source)).toBe(89.5)
+    expect(mp3MetadataDraftFromTags(source).beatsPerMinute).toBe('89.5')
   })
 
   it('preserves unknown raw fields while avoiding duplicate normalized ID3 fields', () => {
