@@ -444,7 +444,22 @@ function estimateMeter(beats: number[], downbeats: number[]): number {
     if (inBar > 0) counts.push(inBar)
   }
 
-  return counts.length > 0 ? roundHalfToEven(median(counts)) : DEFAULT_METER
+  if (counts.length === 0) return DEFAULT_METER
+
+  const candidate = roundHalfToEven(median(counts))
+  if (candidate === DEFAULT_METER) return DEFAULT_METER
+  if (candidate < 2 || candidate > 7) return DEFAULT_METER
+
+  // Downbeat logits are much less reliable than beat timing on short loops.
+  // Do not let five or six speculative accents turn a normal hip-hop loop into
+  // a 3/4 or 5/4 project grid. Non-4/4 requires recurring evidence across at
+  // least six complete bars and strong agreement between those bar spans.
+  const matchingBars = counts.filter((count) => count === candidate).length
+  const agreement = matchingBars / counts.length
+  const hasEnoughStructure =
+    counts.length >= 6 && beats.length >= candidate * 6 + 1
+
+  return hasEnoughStructure && agreement >= 0.8 ? candidate : DEFAULT_METER
 }
 
 export function summarizeRhythm(

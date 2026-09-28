@@ -254,6 +254,19 @@ export interface ProgramLevelAnalysis {
   analyzedBlocks: number
 }
 
+export const AUTO_LEVEL_TARGET_RMS_DB = -11
+export const AUTO_LEVEL_LIMITER_CEILING_DB = -0.8
+export const AUTO_LEVEL_MAX_LIMITER_REDUCTION_DB = 3
+
+export interface AutoLevelPlan {
+  inputGainDb: number
+  targetRmsDb: number
+  projectedRmsDb: number
+  projectedPeakDb: number
+  estimatedLimiterReductionDb: number
+  limitedByPeak: boolean
+}
+
 function amplitudeToDb(value: number): number {
   return value > 1e-9 ? 20 * Math.log10(value) : -120
 }
@@ -313,12 +326,53 @@ export function analyzeProgramLevel(
   }
 }
 
+export function resolveAutoLevelPlan(
+  analysis: ProgramLevelAnalysis,
+  targetRmsDb = AUTO_LEVEL_TARGET_RMS_DB,
+  limiterCeilingDb = AUTO_LEVEL_LIMITER_CEILING_DB,
+  maxLimiterReductionDb = AUTO_LEVEL_MAX_LIMITER_REDUCTION_DB,
+): AutoLevelPlan {
+  if (
+    !Number.isFinite(analysis.rmsDb) ||
+    analysis.rmsDb <= -100 ||
+    !Number.isFinite(analysis.peakDb)
+  ) {
+    return {
+      inputGainDb: 0,
+      targetRmsDb,
+      projectedRmsDb: analysis.rmsDb,
+      projectedPeakDb: analysis.peakDb,
+      estimatedLimiterReductionDb: 0,
+      limitedByPeak: false,
+    }
+  }
+
+  const loudnessGainDb = clamp(targetRmsDb - analysis.rmsDb, -12, 12)
+  // Auto level should not achieve a nominal RMS target by silently asking the
+  // limiter to flatten huge transients. Permit a small, explicit amount of peak
+  // control and reduce the trim when more would be required.
+  const peakLimitedMaxGainDb =
+    limiterCeilingDb + Math.max(0, maxLimiterReductionDb) - analysis.peakDb
+  const inputGainDb = clamp(Math.min(loudnessGainDb, peakLimitedMaxGainDb), -12, 12)
+  const projectedRmsDb = analysis.rmsDb + inputGainDb
+  const projectedPeakDb = analysis.peakDb + inputGainDb
+  const estimatedLimiterReductionDb = Math.max(0, projectedPeakDb - limiterCeilingDb)
+
+  return {
+    inputGainDb,
+    targetRmsDb,
+    projectedRmsDb,
+    projectedPeakDb,
+    estimatedLimiterReductionDb,
+    limitedByPeak: inputGainDb < loudnessGainDb - 0.001,
+  }
+}
+
 export function resolveAutoLevelInputGainDb(
   analysis: ProgramLevelAnalysis,
-  targetRmsDb = -11,
+  targetRmsDb = AUTO_LEVEL_TARGET_RMS_DB,
 ): number {
-  if (!Number.isFinite(analysis.rmsDb) || analysis.rmsDb <= -100) return 0
-  return clamp(targetRmsDb - analysis.rmsDb, -12, 12)
+  return resolveAutoLevelPlan(analysis, targetRmsDb).inputGainDb
 }
 
 export function createSaturationCurve(

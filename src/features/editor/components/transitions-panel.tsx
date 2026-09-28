@@ -161,6 +161,7 @@ export const TransitionsPanel = memo(function TransitionsPanel() {
   const fps = useTimelineStore((s) => s.fps)
   // Get selection
   const selectedItemIds = useSelectionStore((s) => s.selectedItemIds)
+  const selectTransition = useSelectionStore((s) => s.selectTransition)
   const selectionCount = selectedItemIds.length
   const selectedId = selectionCount === 1 ? selectedItemIds[0] : null
 
@@ -236,8 +237,9 @@ export const TransitionsPanel = memo(function TransitionsPanel() {
 
       if (hasExisting && existingTransitionId) {
         updateTransition(existingTransitionId, { presentation, direction })
+        selectTransition(existingTransitionId)
       } else {
-        addTransition(
+        const added = addTransition(
           leftClipId,
           rightClipId,
           'crossfade',
@@ -245,9 +247,19 @@ export const TransitionsPanel = memo(function TransitionsPanel() {
           presentation,
           direction,
         )
+        if (added) {
+          const created = useTimelineStore
+            .getState()
+            .transitions.find(
+              (transition) =>
+                transition.leftClipId === leftClipId &&
+                transition.rightClipId === rightClipId,
+            )
+          if (created) selectTransition(created.id)
+        }
       }
     },
-    [addTransition, updateTransition],
+    [addTransition, selectTransition, updateTransition],
   )
 
   const hasValidClickTarget = !!adjacentInfo && (adjacentInfo.hasExisting || adjacentInfo.canApply)
@@ -260,7 +272,7 @@ export const TransitionsPanel = memo(function TransitionsPanel() {
           <Info className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0 mt-0.5" />
           <div className="text-muted-foreground leading-relaxed">
             {hasValidClickTarget ? (
-              <span className="text-primary">{t('editor.transitions.hintClickToApply')}</span>
+              <span className="text-primary">Click a transition to apply it, or drag it directly onto the cut.</span>
             ) : adjacentInfo?.reason ? (
               <span>
                 {t('editor.transitions.hintUnavailable', { reason: adjacentInfo.reason })}

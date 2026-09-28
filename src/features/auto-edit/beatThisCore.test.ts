@@ -80,7 +80,18 @@ describe('Beat This core', () => {
     expect(result.meter).toBe(4)
   })
 
-  it('preserves a stable 3/4 meter instead of forcing four beats per bar', () => {
+  it('rejects a short false 3/4 downbeat pattern and keeps a safe 4/4 grid', () => {
+    const period = 60 / 95
+    const beats = Array.from({ length: 16 }, (_, index) => index * period)
+    const downbeats = beats.filter((_, index) => index % 3 === 0)
+
+    const result = summarizeRhythm(beats, downbeats, [95, 95.1, 94.9])
+
+    expect(result.bpm).toBeCloseTo(95, 0)
+    expect(result.meter).toBe(4)
+  })
+
+  it('preserves a stable 3/4 meter when it repeats long enough to be credible', () => {
     const period = 60 / 105
     const beats = Array.from({ length: 37 }, (_, index) => index * period)
     const downbeats = beats.filter((_, index) => index % 3 === 0)

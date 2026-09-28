@@ -139,7 +139,7 @@ test('automatic cadence breathes in calm sections and tightens for a drop', () =
 
   const plan = createEditPlan(music, clipMap(), {
     mode: 'auto',
-    transitionProfile: 'mixed',
+    transitionProfile: 'accent',
     seed: 4,
   });
 
@@ -159,7 +159,7 @@ test('automatic cadence breathes in calm sections and tightens for a drop', () =
   )).toBeTruthy();
 });
 
-test('mixed transition profile still uses mostly clean cuts and reserves film burn for accents', () => {
+test('accent transition profile still uses mostly clean cuts and reserves effects for strong accents', () => {
   const music = musicMap([
     {
       id: 'intro',
@@ -189,7 +189,7 @@ test('mixed transition profile still uses mostly clean cuts and reserves film bu
 
   const plan = createEditPlan(music, clipMap(), {
     mode: 'auto',
-    transitionProfile: 'mixed',
+    transitionProfile: 'accent',
     seed: 2,
   });
 
@@ -204,7 +204,7 @@ test('mixed transition profile still uses mostly clean cuts and reserves film bu
   expect(burns[0]?.alignment).toBe(0.5);
 });
 
-test('Detroit transition profile stays sparse and varies the accent treatment', () => {
+test('accent transition profile stays sparse and varies the treatment', () => {
   const music = musicMap([
     {
       id: 'intro',
@@ -242,7 +242,7 @@ test('Detroit transition profile stays sparse and varies the accent treatment', 
 
   const plan = createEditPlan(music, clipMap(), {
     mode: 'auto',
-    transitionProfile: 'detroit',
+    transitionProfile: 'accent',
     seed: 2,
   })
 
@@ -501,7 +501,7 @@ test('intro and outro assets stay out of automatic footage selection', () => {
 
   const plan = createEditPlan(music, clips, {
     mode: 'auto',
-    transitionProfile: 'mixed',
+    transitionProfile: 'accent',
     seed: 6,
   });
 
@@ -552,7 +552,7 @@ test('effect transitions are omitted when adjacent source shots have no hidden h
 
   const plan = createEditPlan(music, clips, {
     mode: 'auto',
-    transitionProfile: 'mixed',
+    transitionProfile: 'accent',
     seed: 1,
   });
 

@@ -34,7 +34,6 @@ import { useTimelineStore } from '../stores/timeline-store'
 import { useTimelineSettingsStore } from '../stores/timeline-settings-store'
 import {
   BEAT_GRID_RESOLUTION_OPTIONS,
-  stepBeatGridResolution,
   type BeatGridResolution,
 } from '../utils/beatvideo-grid-resolution'
 import { useTimelineCommandStore } from '../stores/timeline-command-store'
@@ -502,6 +501,22 @@ export const TimelineHeader = memo(function TimelineHeader({
   const beatGridResolutionLabel =
     BEAT_GRID_RESOLUTION_OPTIONS.find((option) => option.value === beatGridResolution)?.label ??
     'Auto'
+  const musicalSnapEnabled = snapEnabled && beatGridSnapEnabled
+
+  const toggleMusicalSnap = useCallback(() => {
+    if (musicalSnapEnabled) {
+      if (beatGridSnapEnabled) toggleBeatGridSnap()
+      return
+    }
+    if (!snapEnabled) toggleSnap()
+    if (!beatGridSnapEnabled) toggleBeatGridSnap()
+  }, [
+    beatGridSnapEnabled,
+    musicalSnapEnabled,
+    snapEnabled,
+    toggleBeatGridSnap,
+    toggleSnap,
+  ])
 
   useEffect(() => {
     if (isSimplified && activeTool !== 'select' && activeTool !== 'razor') {
@@ -819,86 +834,77 @@ export const TimelineHeader = memo(function TimelineHeader({
             <Separator orientation="vertical" className="h-5 mx-1.5" />
           )}
 
-          {/* Snap Toggle */}
-          <Button
-            variant="ghost"
-            size="icon"
-            style={btnSize}
-            className={snapEnabled ? 'bg-primary text-primary-foreground hover:bg-primary/90' : ''}
-            onClick={toggleSnap}
-            aria-label={
-              snapEnabled
-                ? t('timeline.header.disableSnapping')
-                : t('timeline.header.enableSnapping')
-            }
-            data-tooltip={
-              snapEnabled ? t('timeline.header.snapEnabled') : t('timeline.header.snapDisabled')
-            }
-          >
-            <Magnet className="w-3.5 h-3.5" />
-          </Button>
-
-          <div className="flex h-7 items-center overflow-hidden rounded-md border border-border/70 bg-background/20">
-            <Button
-              variant="ghost"
-              className="h-7 w-7 rounded-none px-0 font-mono text-xs text-muted-foreground hover:text-foreground"
-              onClick={() =>
-                setBeatGridResolution(stepBeatGridResolution(beatGridResolution, 'sparser'))
-              }
-              aria-label="Fewer grid lines"
-              data-tooltip="Fewer grid lines"
-            >
-              −
-            </Button>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  variant="ghost"
-                  className="h-7 min-w-[5.5rem] gap-1 rounded-none border-x border-border/60 px-2 font-mono text-xs text-foreground"
-                  aria-label={`Grid: ${beatGridResolutionLabel}`}
-                  data-tooltip="Musical grid"
-                >
-                  {beatGridResolutionLabel}
-                  <ChevronDown className="h-3 w-3 text-muted-foreground" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="center" className="min-w-40">
-                <DropdownMenuItem onClick={toggleBeatGridVisible}>
-                  <span className="w-4 font-mono text-xs">{beatGridVisible ? '✓' : ''}</span>
-                  <span>Show grid</span>
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={toggleBeatGridSnap}>
-                  <span className="w-4 font-mono text-xs">{beatGridSnapEnabled ? '✓' : ''}</span>
-                  <span>Snap to musical grid</span>
-                </DropdownMenuItem>
-                {BEAT_GRID_RESOLUTION_OPTIONS.map((option, index) => (
-                  <DropdownMenuItem
-                    key={option.value}
-                    onClick={() => setBeatGridResolution(option.value as BeatGridResolution)}
-                    className={`${index === 0 ? 'border-t border-border/60' : ''} ${
-                      option.value === beatGridResolution ? 'text-primary' : ''
-                    }`}
+          {isSimplified ? (
+            <>
+              <Button
+                variant="ghost"
+                size="icon"
+                style={btnSize}
+                className={
+                  musicalSnapEnabled
+                    ? 'bg-primary text-primary-foreground hover:bg-primary/90'
+                    : ''
+                }
+                onClick={toggleMusicalSnap}
+                aria-label={musicalSnapEnabled ? 'Disable beat snap' : 'Enable beat snap'}
+                aria-pressed={musicalSnapEnabled}
+                data-tooltip={musicalSnapEnabled ? 'Beat snap on' : 'Beat snap off'}
+              >
+                <Magnet className="h-3.5 w-3.5" />
+              </Button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    className="h-7 gap-1 px-2 font-mono text-xs text-foreground"
+                    aria-label={`Grid: ${beatGridResolutionLabel}`}
+                    data-tooltip="Musical grid"
                   >
-                    <span className="w-4 font-mono text-xs">
-                      {option.value === beatGridResolution ? '✓' : ''}
-                    </span>
-                    <span className="font-mono text-xs">{option.label}</span>
+                    Grid {beatGridResolutionLabel}
+                    <ChevronDown className="h-3 w-3 text-muted-foreground" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="center" className="min-w-40">
+                  <DropdownMenuItem onClick={toggleBeatGridVisible}>
+                    <span className="w-4 font-mono text-xs">{beatGridVisible ? '✓' : ''}</span>
+                    <span>Show grid</span>
                   </DropdownMenuItem>
-                ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
+                  {BEAT_GRID_RESOLUTION_OPTIONS.map((option, index) => (
+                    <DropdownMenuItem
+                      key={option.value}
+                      onClick={() => setBeatGridResolution(option.value as BeatGridResolution)}
+                      className={`${index === 0 ? 'border-t border-border/60' : ''} ${
+                        option.value === beatGridResolution ? 'text-primary' : ''
+                      }`}
+                    >
+                      <span className="w-4 font-mono text-xs">
+                        {option.value === beatGridResolution ? '✓' : ''}
+                      </span>
+                      <span className="font-mono text-xs">{option.label}</span>
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </>
+          ) : (
             <Button
               variant="ghost"
-              className="h-7 w-7 rounded-none px-0 font-mono text-xs text-muted-foreground hover:text-foreground"
-              onClick={() =>
-                setBeatGridResolution(stepBeatGridResolution(beatGridResolution, 'denser'))
+              size="icon"
+              style={btnSize}
+              className={snapEnabled ? 'bg-primary text-primary-foreground hover:bg-primary/90' : ''}
+              onClick={toggleSnap}
+              aria-label={
+                snapEnabled
+                  ? t('timeline.header.disableSnapping')
+                  : t('timeline.header.enableSnapping')
               }
-              aria-label="More grid lines"
-              data-tooltip="More grid lines"
+              data-tooltip={
+                snapEnabled ? t('timeline.header.snapEnabled') : t('timeline.header.snapDisabled')
+              }
             >
-              +
+              <Magnet className="w-3.5 h-3.5" />
             </Button>
-          </div>
+          )}
 
           {!isSimplified ? (
             <>

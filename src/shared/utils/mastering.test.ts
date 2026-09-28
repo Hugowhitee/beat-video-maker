@@ -1,7 +1,14 @@
 // @vitest-environment node
 
 import { describe, expect, it } from 'vite-plus/test'
-import { analyzeProgramLevel, createSaturationMixCurve, getMasteringPreset, resolveAutoLevelInputGainDb } from './mastering'
+import {
+  AUTO_LEVEL_LIMITER_CEILING_DB,
+  analyzeProgramLevel,
+  createSaturationMixCurve,
+  getMasteringPreset,
+  resolveAutoLevelInputGainDb,
+  resolveAutoLevelPlan,
+} from './mastering'
 
 function sampleCurve(curve: Float32Array, x: number): number {
   const normalized = Math.max(0, Math.min(1, (x + 1) / 2))
@@ -64,5 +71,24 @@ describe('program level analysis', () => {
     expect(resolveAutoLevelInputGainDb({ rmsDb: -17, peakDb: -4, analyzedBlocks: 10 })).toBe(6)
     expect(resolveAutoLevelInputGainDb({ rmsDb: -40, peakDb: -20, analyzedBlocks: 10 })).toBe(12)
     expect(resolveAutoLevelInputGainDb({ rmsDb: -120, peakDb: -120, analyzedBlocks: 0 })).toBe(0)
+  })
+
+  it('hits the target when peak headroom is sufficient', () => {
+    const plan = resolveAutoLevelPlan({ rmsDb: -17, peakDb: -4, analyzedBlocks: 10 })
+
+    expect(plan.inputGainDb).toBe(6)
+    expect(plan.projectedRmsDb).toBe(-11)
+    expect(plan.limitedByPeak).toBe(false)
+    expect(plan.estimatedLimiterReductionDb).toBeCloseTo(2.8, 5)
+  })
+
+  it('backs off instead of asking the limiter for excessive reduction', () => {
+    const plan = resolveAutoLevelPlan({ rmsDb: -20, peakDb: -2, analyzedBlocks: 10 })
+
+    expect(plan.limitedByPeak).toBe(true)
+    expect(plan.projectedRmsDb).toBeLessThan(plan.targetRmsDb)
+    expect(plan.estimatedLimiterReductionDb).toBeLessThanOrEqual(3)
+    expect(plan.projectedPeakDb - plan.estimatedLimiterReductionDb)
+      .toBeCloseTo(AUTO_LEVEL_LIMITER_CEILING_DB, 5)
   })
 })

@@ -140,7 +140,7 @@ describe('buildEditPlanTimelineDraft', () => {
     ])
   })
 
-  it('maps Detroit film-gate accents onto the Film Gate Slip renderer', () => {
+  it('maps film-gate accents onto the Film Gate Slip renderer', () => {
     const plan = makePlan()
     plan.transitions[0] = {
       ...plan.transitions[0]!,

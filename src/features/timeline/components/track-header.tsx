@@ -95,6 +95,12 @@ export const TrackHeader = memo(function TrackHeader({
   // Use track drag hook (visuals handled centrally by timeline.tsx via DOM)
   const { handleDragStart } = useTrackDrag(track)
   const itemCountLabel = t('timeline.trackHeader.clipCount', { count: itemCount })
+  const producerTrackLabel =
+    /^V\d+$/i.test(track.name)
+      ? `Video ${track.name.slice(1)}`
+      : /^A\d+$/i.test(track.name)
+        ? `Audio ${track.name.slice(1)}`
+        : track.name
 
   return (
     <ContextMenu>
@@ -132,10 +138,7 @@ export const TrackHeader = memo(function TrackHeader({
                   />
                 ) : null}
                 <span className="min-w-0 flex-1 truncate font-mono text-xs font-semibold">
-                  {track.name}
-                </span>
-                <span className="shrink-0 text-[10px] text-muted-foreground">
-                  {itemCountLabel}
+                  {producerTrackLabel}
                 </span>
                 {track.solo ? (
                   <span className="shrink-0 text-[9px] font-semibold text-primary">S</span>

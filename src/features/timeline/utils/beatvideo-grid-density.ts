@@ -17,7 +17,7 @@ export function resolveBeatGridDensity(
 
   return {
     showIndividualBeats:
-      safeBeatSpacing >= 13 && safeBarSpacing >= 40 && barStride === 1,
+      safeBeatSpacing >= 9 && safeBarSpacing >= 28 && barStride === 1,
     barStride,
     labelStride: Math.max(barStride, labelStride),
   }

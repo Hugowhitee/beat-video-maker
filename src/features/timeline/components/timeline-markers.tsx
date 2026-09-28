@@ -39,6 +39,7 @@ import { drawTimelineRulerViewportCanvas } from './timeline-ruler-viewport-canva
 interface TimelineMarkersProps {
   duration: number // Total timeline duration in seconds
   width?: number // Explicit width in pixels (optional)
+  hideTimecodeLabels?: boolean
 }
 
 interface MarkerInterval {
@@ -386,6 +387,7 @@ function clearLabelPool(pool: Map<number, HTMLSpanElement>) {
 export const TimelineMarkers = memo(function TimelineMarkers({
   duration,
   width,
+  hideTimecodeLabels = false,
 }: TimelineMarkersProps) {
   perfMarkRender('TimelineMarkers')
   const editorDensity = useSettingsStore((s) => s.editorDensity)
@@ -614,6 +616,7 @@ export const TimelineMarkers = memo(function TimelineMarkers({
         canvasHeight: canvasHeightRef.current,
         pixelsPerSecond: useZoomStore.getState().pixelsPerSecond,
         fps: fpsRef.current,
+        hideTimecodeLabels,
       })
       return
     }
@@ -734,10 +737,12 @@ export const TimelineMarkers = memo(function TimelineMarkers({
     }
 
     // â”€â”€ Labels â”€â”€
-    if (labelsContainer) {
+    if (labelsContainer && !hideTimecodeLabels) {
       syncLabels(labelsContainer, labelPoolRef.current, sl, vw, qPPS, fpsRef.current)
+    } else {
+      clearLabelPool(labelPoolRef.current)
     }
-  }, [])
+  }, [hideTimecodeLabels])
   syncRulerScrollRef.current = syncRulerScroll
 
   // Redraw only the small visible tile/label pool at live zoom. Tick spacing
