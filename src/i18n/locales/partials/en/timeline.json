@@ -88,7 +88,8 @@
       "unreverse": "Unreverse",
       "updatingCaptions": "Updating Captions",
       "copyGrade": "Copy grade",
-      "pasteGrade": "Paste grade"
+      "pasteGrade": "Paste grade",
+      "makeUnique": "Make Unique"
     },
     "fadeHandles": {
       "adjustAudioFadeIn": "Adjust audio fade in",
