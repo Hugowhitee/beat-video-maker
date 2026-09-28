@@ -448,6 +448,7 @@ export function BeatvideoVisualSourcePanel({
     ) => {
       if (!canDropArrangementShot(draggingShotId, segment)) {
         event.dataTransfer.dropEffect = 'none'
+        setDragOverSlotKey(null)
         return
       }
       event.preventDefault()
@@ -795,6 +796,21 @@ export function BeatvideoVisualSourcePanel({
                             </option>
                           ))}
                         </select>
+                        {shot ? (
+                          <button
+                            type="button"
+                            onClick={() => toggleAvoidShot(shot.id)}
+                            className={`mt-1.5 text-[8px] ${
+                              excludedShotIds.includes(shot.id)
+                                ? 'text-amber-200'
+                                : 'text-muted-foreground hover:text-foreground'
+                            }`}
+                          >
+                            {excludedShotIds.includes(shot.id)
+                              ? 'Avoid on rebuild · on'
+                              : 'Avoid on rebuild'}
+                          </button>
+                        ) : null}
                       </div>
                     )
                   },
@@ -840,48 +856,9 @@ export function BeatvideoVisualSourcePanel({
                 </div>
               </details>
 
-              <div className="mt-2 flex items-center justify-between gap-2">
-                <span className="text-[8px] leading-relaxed text-muted-foreground">
-                  Drag a detected shot onto a slot. Timing stays locked to the corrected grid.
-                </span>
-                {editableArrangementSlots[0]?.shot ? (
-                  <button
-                    type="button"
-                    onClick={() =>
-                      toggleAvoidShot(editableArrangementSlots[0]!.shot!.id)
-                    }
-                    className="shrink-0 text-[8px] text-muted-foreground hover:text-foreground"
-                  >
-                    Manage avoids in slots
-                  </button>
-                ) : null}
-              </div>
-
-              <div className="mt-1.5 space-y-1">
-                {editableArrangementSlots.map(({ key, shot }) =>
-                  shot ? (
-                    <div
-                      key={`avoid-${key}`}
-                      className="flex items-center justify-between gap-2 text-[8px] text-muted-foreground"
-                    >
-                      <span className="min-w-0 truncate">
-                        {shot.sourceName} · {shot.start.toFixed(1)}–{shot.end.toFixed(1)}s
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => toggleAvoidShot(shot.id)}
-                        className={`shrink-0 border px-1.5 py-0.5 ${
-                          excludedShotIds.includes(shot.id)
-                            ? 'border-amber-400/60 bg-amber-400/10 text-amber-200'
-                            : 'border-border hover:text-foreground'
-                        }`}
-                      >
-                        {excludedShotIds.includes(shot.id) ? 'Avoiding' : 'Avoid'}
-                      </button>
-                    </div>
-                  ) : null,
-                )}
-              </div>
+              <p className="mt-2 text-[8px] leading-relaxed text-muted-foreground">
+                Drag a detected shot onto a slot. Timing stays locked to the corrected grid.
+              </p>
             </details>
           ) : null}
 
