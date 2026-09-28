@@ -327,6 +327,14 @@ function reconcileProgrammedTempo(bpm: number): number {
 
 function mapProbeBpm(bpm: number): number {
   if (bpm >= MIN_PREFERRED_BPM && bpm <= MAX_PREFERRED_BPM) return bpm
+
+  // Beat trackers can lock to either tempo octave. Recover both directions so
+  // 45 BPM half-time evidence and 180 BPM double-time evidence can converge on
+  // the same musically useful 90 BPM project grid without user intervention.
+  if (bpm < MIN_PREFERRED_BPM) {
+    const doubled = bpm * 2
+    if (doubled >= MIN_PREFERRED_BPM && doubled <= MAX_PREFERRED_BPM) return doubled
+  }
   if (bpm > MAX_PREFERRED_BPM) {
     const half = bpm / 2
     if (half >= MIN_PREFERRED_BPM && half <= MAX_PREFERRED_BPM) return half
@@ -375,6 +383,22 @@ function consensusBpm(bpms: number[]): number {
   }
 
   return median(sorted.slice(bestStart, bestStart + bestSize))
+}
+
+function fillEveryOtherBeat(beats: number[]): number[] {
+  if (beats.length < MIN_BEATS) return beats
+  const filled: number[] = []
+
+  for (let index = 0; index < beats.length - 1; index += 1) {
+    const current = beats[index]
+    const next = beats[index + 1]
+    if (current === undefined || next === undefined || next <= current) continue
+    filled.push(current, current + (next - current) / 2)
+  }
+
+  const last = beats.at(-1)
+  if (last !== undefined) filled.push(last)
+  return filled.length >= beats.length ? filled : beats
 }
 
 function everyOtherBeat(beats: number[], origin: number): number[] {
@@ -430,7 +454,24 @@ export function summarizeRhythm(
   )
   const rawBpm = estimateBpm(beats)
 
-  if (bpm <= 0 || rawBpm <= 0 || rawBpm / bpm < 1.5) {
+  if (bpm <= 0 || rawBpm <= 0) {
+    return { bpm, beats, downbeats, meter: estimateMeter(beats, downbeats) }
+  }
+
+  // Half-time detector output needs the missing intermediate beat positions
+  // materialized before meter/downbeat inference, otherwise a stable 4/4 song
+  // can be mislabeled as 2/4 even though the recovered BPM is correct.
+  if (bpm / rawBpm >= 1.5) {
+    const filledBeats = fillEveryOtherBeat(beats)
+    return {
+      bpm,
+      beats: filledBeats,
+      downbeats,
+      meter: estimateMeter(filledBeats, downbeats),
+    }
+  }
+
+  if (rawBpm / bpm < 1.5) {
     return { bpm, beats, downbeats, meter: estimateMeter(beats, downbeats) }
   }
 

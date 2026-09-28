@@ -1221,7 +1221,7 @@ export const AudioMeterPanel = memo(function AudioMeterPanel({
                     />
                   </div>
                 </div>
-                <div className="mt-1 flex gap-[3px] text-[8px] font-mono text-muted-foreground justify-center">
+                <div className="mt-1 flex gap-[3px] text-[10px] font-mono text-muted-foreground justify-center">
                   <span className="w-[14px] text-center">L</span>
                   <span className="w-[14px] text-center">R</span>
                 </div>
@@ -1229,7 +1229,7 @@ export const AudioMeterPanel = memo(function AudioMeterPanel({
             </div>
 
             {/* Peak dB readout */}
-            <div className="mt-3 text-center text-[10px] font-mono text-muted-foreground">
+            <div className="mt-3 text-center text-xs font-mono text-muted-foreground">
               {statusLabel}
             </div>
           </div>

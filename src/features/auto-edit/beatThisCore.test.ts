@@ -68,6 +68,31 @@ describe('Beat This core', () => {
     expect(result.bpm).toBe(98)
   })
 
+  it('recovers a 90 BPM project grid from stable 45 BPM half-time detections', () => {
+    const rawPeriod = 60 / 45
+    const beats = Array.from({ length: 17 }, (_, index) => index * rawPeriod)
+    const downbeats = beats.filter((_, index) => index % 2 === 0)
+
+    const result = summarizeRhythm(beats, downbeats, [45, 45.1, 44.9])
+
+    expect(result.bpm).toBeCloseTo(90, 0)
+    expect(result.meter).toBe(4)
+    expect(result.beats[1]).toBeCloseTo(60 / 90, 5)
+    expect(result.downbeats[1]).toBeCloseTo((60 / 90) * 4, 5)
+  })
+
+  it('recovers a 90 BPM project grid from stable 180 BPM double-time detections', () => {
+    const rawPeriod = 60 / 180
+    const beats = Array.from({ length: 65 }, (_, index) => index * rawPeriod)
+    const downbeats = beats.filter((_, index) => index % 8 === 0)
+
+    const result = summarizeRhythm(beats, downbeats, [180, 179.9, 180.1])
+
+    expect(result.bpm).toBeCloseTo(90, 0)
+    expect(result.beats[1]).toBeCloseTo(60 / 90, 5)
+    expect(result.meter).toBe(4)
+  })
+
   it('does not force a clearly fractional programmed tempo to an integer', () => {
     const period = 60 / 97.5
     const beats = Array.from({ length: 97 }, (_, index) => index * period)

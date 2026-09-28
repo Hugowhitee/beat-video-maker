@@ -112,6 +112,36 @@ describe('stabilizeBeatGrid', () => {
     expect(result.fit.anchorTime).toBeCloseTo(kickPhase, 2)
   })
 
+  it('does not let a loud broadband snare field invent a half-beat kick phase', () => {
+    const period = 0.5
+    const phase = 0.3
+    const beats = Array.from({ length: 48 }, (_, index) => phase + index * period)
+    const transients = beats.flatMap((time, index) => [
+      {
+        time,
+        index: index * 2,
+        strength: 0.42,
+        low: 0.08,
+        mid: 0.42,
+        high: 0.2,
+      },
+      {
+        time: time + period / 2,
+        index: index * 2 + 1,
+        strength: 1,
+        low: 0.24,
+        mid: 1,
+        high: 0.25,
+      },
+    ])
+
+    const result = stabilizeBeatGrid(rhythm({ beats, bpm: 120, transients }), 25)
+
+    expect(result.fit.mode).toBe('fixed')
+    expect(Math.abs(result.fit.phaseShiftMs)).toBeLessThan(40)
+    expect(result.rhythm.beats[0]).toBeCloseTo(phase, 2)
+  })
+
   it('does not let strong off-beat hats steal the grid from low-end beat onsets', () => {
     const period = 0.5
     const phase = 0.4

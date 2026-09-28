@@ -257,10 +257,11 @@ function phaseCandidateScore(params: {
   observations: readonly Observation[]
   transients: readonly MusicTransient[]
   radius: number
-}): { score: number; supportRatio: number; offsets: number[] } {
+}): { score: number; supportRatio: number; lowSupportRatio: number; offsets: number[] } {
   const { phase, shift, period, observations, transients, radius } = params
   let score = 0
   let support = 0
+  let lowSupport = 0
   const offsets: number[] = []
 
   for (const observation of observations) {
@@ -280,12 +281,20 @@ function phaseCandidateScore(params: {
     const detectorWeight = 0.72 + observation.strength * 0.28
     score += transient.strength * spectralWeight * detectorWeight * (0.32 + 0.68 * proximity)
     support += 1
+    if (
+      transient.low >= 0.35 &&
+      transient.low >= transient.mid * 0.5 &&
+      transient.low >= transient.high * 0.7
+    ) {
+      lowSupport += 1
+    }
     offsets.push(transient.time - predicted)
   }
 
   return {
     score: score / Math.max(1, observations.length),
     supportRatio: support / Math.max(1, observations.length),
+    lowSupportRatio: lowSupport / Math.max(1, observations.length),
     offsets,
   }
 }
@@ -367,6 +376,13 @@ function refinePhaseWithTransients(params: {
       ? Math.max(0.025, baseline.score * 0.1)
       : 0.008
   if (winner.score < baseline.score + requiredGain) {
+    return { phase, phaseShift: 0, supportRatio: baseline.supportRatio }
+  }
+
+  // Large corrections are ambiguous by definition. Require recurring low-band
+  // onset evidence, not just broadband/snare support, before moving the whole
+  // musical grid far away from the detector phase.
+  if (Math.abs(winner.shift) > 0.1 && winner.lowSupportRatio < 0.25) {
     return { phase, phaseShift: 0, supportRatio: baseline.supportRatio }
   }
 
