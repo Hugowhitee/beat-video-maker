@@ -360,8 +360,10 @@ const PHOTO_QUICK_EFFECT_IDS = [
 
 export const MediaSidebar = memo(function MediaSidebar({
   beatvideoMode = 'video',
+  mobile = false,
 }: {
   beatvideoMode?: BeatvideoProjectMode
+  mobile?: boolean
 }) {
   const { t } = useTranslation()
   const editorDensity = useSettingsStore((s) => s.editorDensity)
@@ -1066,10 +1068,10 @@ export const MediaSidebar = memo(function MediaSidebar({
   }, [])
 
   return (
-    <div className="flex h-full flex-shrink-0">
+    <div className={cn('flex h-full min-w-0', mobile ? 'w-full flex-1' : 'flex-shrink-0')}>
       {/* The generic FreeCut icon rail remains available outside the focused
           Beatvideo producer flow. Producer workspaces use labeled tabs instead. */}
-      {!producerShell ? (
+      {!mobile && !producerShell ? (
       <div
         className="panel-header border-r border-border flex flex-col items-center flex-shrink-0"
         style={{ width: EDITOR_LAYOUT_CSS_VALUES.sidebarRailWidth }}
@@ -1144,16 +1146,19 @@ export const MediaSidebar = memo(function MediaSidebar({
           a touch faster than open (exit < entrance). During a resize-drag we snap
           (duration 0) so width tracks the pointer instead of easing behind it. */}
       <motion.div
-        className="panel-bg border-r border-border overflow-hidden relative"
+        className={cn(
+          'panel-bg overflow-hidden relative',
+          mobile ? 'w-full flex-1 border-r-0' : 'border-r border-border',
+        )}
         initial={false}
-        animate={{ width: producerShell || leftSidebarOpen ? sidebarWidth : 0 }}
+        animate={{ width: mobile ? '100%' : producerShell || leftSidebarOpen ? sidebarWidth : 0 }}
         transition={
-          isResizingRef.current || prefersReducedMotion
+          mobile || isResizingRef.current || prefersReducedMotion
             ? { duration: 0 }
             : { type: 'tween', duration: leftSidebarOpen ? 0.26 : 0.2, ease: [0.32, 0.72, 0, 1] }
         }
         onAnimationComplete={() => {
-          if (!producerShell && !leftSidebarOpen) setContentInert(true)
+          if (!mobile && !producerShell && !leftSidebarOpen) setContentInert(true)
         }}
       >
         {/* Promote the content to its own GPU layer so the panel's width/clip
@@ -1162,8 +1167,11 @@ export const MediaSidebar = memo(function MediaSidebar({
             establishes is harmless. */}
         <div
           className="h-full min-h-0 flex flex-col"
-          style={{ width: sidebarWidth, transform: 'translateZ(0)' }}
-          inert={producerShell ? false : contentInert}
+          style={{
+            width: mobile ? '100%' : sidebarWidth,
+            transform: 'translateZ(0)',
+          }}
+          inert={mobile || producerShell ? false : contentInert}
         >
           <>
             {/* Panel Header — sits with the tab content */}
@@ -1213,6 +1221,7 @@ export const MediaSidebar = memo(function MediaSidebar({
                     </DropdownMenuContent>
                   </DropdownMenu>
                 ) : null}
+                {!mobile ? (
                 <Button
                 variant="ghost"
                 size="icon"
@@ -1240,6 +1249,7 @@ export const MediaSidebar = memo(function MediaSidebar({
                   <ChevronDown className="w-3 h-3" />
                 )}
               </Button>
+              ) : null}
               </div>
             </div>
 
