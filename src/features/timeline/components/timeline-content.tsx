@@ -532,6 +532,7 @@ interface TimelineTrackSectionsSurfaceProps {
   topZoneAnchorTrackId: string | null
   bottomZoneAnchorTrackId: string | null
   singleSectionAnchorTrackId: string | null
+  unifiedTrackStack: boolean
   onSectionDividerMouseDown?: (event: React.MouseEvent) => void
   allTracksScrollRef?: React.RefObject<HTMLDivElement | null>
   videoTracksScrollRef?: React.RefObject<HTMLDivElement | null>
@@ -559,6 +560,7 @@ const TimelineTrackSectionsSurface = memo(function TimelineTrackSectionsSurface(
   topZoneAnchorTrackId,
   bottomZoneAnchorTrackId,
   singleSectionAnchorTrackId,
+  unifiedTrackStack,
   onSectionDividerMouseDown,
   allTracksScrollRef,
   videoTracksScrollRef,
@@ -2261,6 +2263,7 @@ export const TimelineContent = memo(function TimelineContent({
             topZoneAnchorTrackId={topZoneAnchorTrackId}
             bottomZoneAnchorTrackId={bottomZoneAnchorTrackId}
             singleSectionAnchorTrackId={singleSectionAnchorTrackId}
+            unifiedTrackStack={unifiedTrackStack}
             onSectionDividerMouseDown={onSectionDividerMouseDown}
             allTracksScrollRef={allTracksScrollRef}
             videoTracksScrollRef={videoTracksScrollRef}
