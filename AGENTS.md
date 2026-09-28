@@ -44,6 +44,10 @@ Beatvideo-specific code should stay a small, recognizable product overlay. Port 
 - **Cover layouts:** create normal independent text layers atomically. Never flatten title/subtitle/branding into one rendered asset or add a second cover-only canvas. Reuse the canonical text Inspector, text-motion engine, effects and project persistence.
 - **Photo:** hero still + beat. The normal product route is Beat → Visual → Color → Master. Visual owns source placement plus visible Text/Graphics creation and selected-object effects/motion; Color owns focused grading. Do not hide primary producer tools behind a generic icon-rail collapse state. Hide video-only editing tools unless deliberately exposed as Advanced.
 - **Video:** footage + beat. Visual owns footage import, scene preparation, configurable Auto Arrange/repeating motifs/manual placement plus text/effects/motion. Auto Arrange may use section energy to choose cadence, but every internal generated cut must land on the same corrected mapped beat grid used by the timeline/snap system. Keep generated slots editable/rebuildable and use canonical compound clips when repeated motifs are grouped. Keep cuts, transitions, shot/scene analysis and manual editing available; Beatvideo Guided/Auto planning is added on top.
+- **Studio shell:** Program fullscreen targets only the Program monitor; monitor mute/volume are listening controls and never alter render gain. Master should expose the existing canonical mixer as a floating/resizable utility window instead of adding another audio workspace.
+- **Video patterns:** Repeat motif materializes as one reusable Loop A sequence with multiple CompositionItem references to the same compositionId. Editing the shared sequence updates repeats. Reliable intro/outro edge sections stay outside Loop A; do not group non-motif segments into it.
+- **Grid resolution:** one local Auto/Beat/1-bar/2-bar/4-bar preference controls both visible musical markers and musical snap targets. Never thin the stored MusicMap to implement view density.
+- **Transitions:** Clean means cuts; Detroit accents are sparse real transition objects using existing renderers (e.g. Light Leak Burn / Film Gate Slip) only where source handles are valid. Keep them visible/selectable on the normal timeline.
 - **Grid correction:** precision alignment must focus/zoom the canonical FreeCut timeline waveform around Bar 1 or a selected beat and edit the same source-domain Beatvideo correction state. Do not add a second waveform/timeline just for correction. Whole-grid shift, verified Bar 1 and local drift anchors remain distinct actions.
 - Never build separate Photo and Video render/export engines.
 - Existing upstream/legacy projects without a Beatvideo mode resolve to `Video`. New Beatvideo projects default to `Photo`.
@@ -57,6 +61,7 @@ The point of the FreeCut migration is to stop re-inventing mature editor UX.
 - A visible feature must be useful, correctly placed, and production-quality. If it has no meaningful workflow value yet, keep it out of the normal UI.
 - Preserve progressive disclosure. Normal Photo work must not feel like a generic NLE.
 - Validate UI changes in the actual editor, not only through component code review.
+- Avoid AI-dashboard composition in the editor shell: no routine card-in-card nesting, decorative glows, micro-eyebrow/status-chip clutter or helper copy that merely restates visible controls. Prefer flat regions, thin dividers, aligned fields and direct manipulation.
 
 ## Verification
 
