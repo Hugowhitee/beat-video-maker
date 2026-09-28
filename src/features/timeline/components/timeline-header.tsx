@@ -864,11 +864,11 @@ export const TimelineHeader = memo(function TimelineHeader({
               </DropdownMenuTrigger>
               <DropdownMenuContent align="center" className="min-w-40">
                 <DropdownMenuItem onClick={toggleBeatGridVisible}>
-                  <span className="w-4 font-mono text-[10px]">{beatGridVisible ? '✓' : ''}</span>
+                  <span className="w-4 font-mono text-xs">{beatGridVisible ? '✓' : ''}</span>
                   <span>Show grid</span>
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={toggleBeatGridSnap}>
-                  <span className="w-4 font-mono text-[10px]">{beatGridSnapEnabled ? '✓' : ''}</span>
+                  <span className="w-4 font-mono text-xs">{beatGridSnapEnabled ? '✓' : ''}</span>
                   <span>Snap to musical grid</span>
                 </DropdownMenuItem>
                 {BEAT_GRID_RESOLUTION_OPTIONS.map((option, index) => (
@@ -879,7 +879,7 @@ export const TimelineHeader = memo(function TimelineHeader({
                       option.value === beatGridResolution ? 'text-primary' : ''
                     }`}
                   >
-                    <span className="w-4 font-mono text-[10px]">
+                    <span className="w-4 font-mono text-xs">
                       {option.value === beatGridResolution ? '✓' : ''}
                     </span>
                     <span className="font-mono text-xs">{option.label}</span>
