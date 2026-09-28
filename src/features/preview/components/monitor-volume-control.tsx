@@ -1,26 +1,21 @@
 /**
- * MonitorVolumeControl
+ * Preview-only monitor gain.
  *
- * Per-device monitor-gain slider that sits next to the playback transport
- * controls. Drives `usePlaybackStore.volume` / `.muted` — which are
- * persisted per-origin in localStorage and applied only to preview, NOT
- * to exports. The project-scoped master bus fader lives in the audio
- * mixer panel.
- *
- * Click the icon button to toggle the slider popover. Mute toggles via
- * the mute button inside the popover.
+ * The main speaker button is a direct temporary mute, matching studio transport
+ * behavior. The adjacent disclosure button opens the level control. Neither
+ * action changes project/export gain.
  */
 
 import { useMemo, type CSSProperties } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Volume1, Volume2, VolumeX } from 'lucide-react'
+import { ChevronUp, Volume1, Volume2, VolumeX } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Slider } from '@/components/ui/slider'
 import { usePlaybackStore } from '@/shared/state/playback'
 
 interface MonitorVolumeControlProps {
-  /** Style forwarded to the trigger button so it matches sibling controls. */
+  /** Style forwarded to the mute button so it matches sibling transport controls. */
   buttonStyle?: CSSProperties
 }
 
@@ -40,58 +35,53 @@ export function MonitorVolumeControl({ buttonStyle }: MonitorVolumeControlProps)
   const percent = Math.round(volume * 100)
 
   return (
-    <Popover>
-      <PopoverTrigger asChild>
-        <Button
-          variant="ghost"
-          size="icon"
-          className="flex-shrink-0"
-          style={buttonStyle}
-          data-tooltip={
-            muted ? t('preview.monitor.muted') : t('preview.monitor.percent', { percent })
-          }
-          aria-label={t('preview.monitor.volume')}
-        >
-          <Icon className="w-3.5 h-3.5" />
-        </Button>
-      </PopoverTrigger>
-      <PopoverContent className="w-56 p-3 space-y-3" align="center" side="top" sideOffset={6}>
-        <div className="flex items-center justify-between">
-          <span className="text-xs font-medium">{t('preview.monitor.title')}</span>
-          <span className="text-[10px] text-muted-foreground uppercase tracking-wider">
-            {t('preview.monitor.thisDeviceOnly')}
-          </span>
-        </div>
-        <div className="flex items-center gap-2">
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-7 w-7 shrink-0"
-            onClick={toggleMute}
-            aria-label={muted ? t('preview.monitor.unmute') : t('preview.monitor.mute')}
+    <div className="flex items-center">
+      <Button
+        variant="ghost"
+        size="icon"
+        className={muted ? 'flex-shrink-0 text-primary' : 'flex-shrink-0'}
+        style={buttonStyle}
+        onClick={toggleMute}
+        data-tooltip={muted ? t('preview.monitor.unmute') : t('preview.monitor.mute')}
+        aria-label={muted ? t('preview.monitor.unmute') : t('preview.monitor.mute')}
+        aria-pressed={muted}
+      >
+        <Icon className="h-3.5 w-3.5" />
+      </Button>
+
+      <Popover>
+        <PopoverTrigger asChild>
+          <button
+            type="button"
+            className="-ml-1 flex h-6 w-3.5 items-center justify-center text-muted-foreground transition-colors hover:text-foreground"
+            aria-label={t('preview.monitor.volume')}
+            data-tooltip={muted ? t('preview.monitor.muted') : `${percent}%`}
           >
-            {muted ? <VolumeX className="w-3.5 h-3.5" /> : <Volume2 className="w-3.5 h-3.5" />}
-          </Button>
-          <Slider
-            value={[muted ? 0 : volume]}
-            min={0}
-            max={1}
-            step={0.01}
-            onValueChange={([v]) => {
-              if (v === undefined) return
-              if (muted && v > 0) toggleMute()
-              setVolume(v)
-            }}
-            className="flex-1"
-          />
-          <span className="text-xs text-muted-foreground tabular-nums w-9 text-right">
-            {muted ? t('preview.monitor.muteShort') : `${percent}%`}
-          </span>
-        </div>
-        <p className="text-[10px] text-muted-foreground leading-snug">
-          {t('preview.monitor.previewOnlyNote')}
-        </p>
-      </PopoverContent>
-    </Popover>
+            <ChevronUp className="h-2.5 w-2.5" />
+          </button>
+        </PopoverTrigger>
+        <PopoverContent className="w-52 p-2.5" align="center" side="top" sideOffset={6}>
+          <div className="flex items-center gap-2">
+            <Icon className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+            <Slider
+              value={[muted ? 0 : volume]}
+              min={0}
+              max={1}
+              step={0.01}
+              onValueChange={([value]) => {
+                if (value === undefined) return
+                if (muted && value > 0) toggleMute()
+                setVolume(value)
+              }}
+              className="flex-1"
+              aria-label={t('preview.monitor.volume')}
+            />
+            <span className="w-9 text-right font-mono text-[10px] tabular-nums text-muted-foreground">
+              {muted ? 'MUTE' : `${percent}%`}
+            </span>
+          </div>
+        </PopoverContent>
+      </Popover>
+    </div>
   )
 }
