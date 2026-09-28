@@ -212,6 +212,144 @@ export function getCompoundClipDeletionImpact(
   }
 }
 
+function getCompositionVisualReferenceCount(compositionId: string): number {
+  if (!compositionId) return 0
+
+  const currentSnapshot = getCurrentTimelineSnapshot()
+  const countIn = (items: readonly TimelineItem[]) =>
+    items.filter(
+      (item) => item.type === 'composition' && item.compositionId === compositionId,
+    ).length
+
+  return (
+    countIn(getRootTimelineSnapshot(currentSnapshot).items) +
+    getEffectiveCompositions(currentSnapshot).reduce(
+      (count, composition) => count + countIn(composition.items),
+      0,
+    )
+  )
+}
+
+function getVisualCompositionItemForInstance(
+  items: TimelineItem[],
+  itemId: string,
+): CompositionItem | null {
+  const item = items.find((candidate) => candidate.id === itemId)
+  if (!item) return null
+  if (item.type === 'composition') return item
+  if (!isCompositionAudioItem(item)) return null
+  return getLinkedCompositionVisualCompanion(items, item)
+}
+
+function nextUniqueCompositionName(sourceName: string): string {
+  const names = new Set(useCompositionsStore.getState().compositions.map((entry) => entry.name))
+  const loopMatch = /^Loop ([A-Z])$/.exec(sourceName)
+
+  if (loopMatch) {
+    const startCode = loopMatch[1]!.charCodeAt(0)
+    for (let offset = 1; offset < 26; offset += 1) {
+      const code = 65 + ((startCode - 65 + offset) % 26)
+      const candidate = `Loop ${String.fromCharCode(code)}`
+      if (!names.has(candidate)) return candidate
+    }
+  }
+
+  const base = `${sourceName} copy`
+  if (!names.has(base)) return base
+
+  let suffix = 2
+  while (names.has(`${base} ${suffix}`)) suffix += 1
+  return `${base} ${suffix}`
+}
+
+/**
+ * Whether the selected compound wrapper points at a sequence that has another
+ * visual instance elsewhere in the project. Linked audio companions do not
+ * count as another instance.
+ */
+export function canMakeCompositionInstanceUnique(itemId: string): boolean {
+  const items = useItemsStore.getState().items
+  const visualItem = getVisualCompositionItemForInstance(items, itemId)
+  if (!visualItem?.compositionId) return false
+  return getCompositionVisualReferenceCount(visualItem.compositionId) > 1
+}
+
+export interface UniqueCompositionInstanceResult {
+  compositionId: string
+  name: string
+  itemId: string
+}
+
+/**
+ * Fork one shared compound/pattern instance.
+ *
+ * Internal ids are deliberately preserved inside the deep clone: timeline ids
+ * are scoped to a composition context, while preserving them keeps transitions,
+ * keyframes, parenting and property links intact without rebuilding the graph.
+ * Nested composition references remain shared until explicitly forked.
+ */
+export function makeCompositionInstanceUnique(
+  itemId: string,
+): UniqueCompositionInstanceResult | null {
+  const items = useItemsStore.getState().items
+  const visualItem = getVisualCompositionItemForInstance(items, itemId)
+  if (!visualItem?.compositionId) return null
+  if (getCompositionVisualReferenceCount(visualItem.compositionId) <= 1) return null
+
+  const sourceComposition = useCompositionsStore
+    .getState()
+    .getComposition(visualItem.compositionId)
+  if (!sourceComposition) return null
+
+  const nextId = crypto.randomUUID()
+  const nextName = nextUniqueCompositionName(sourceComposition.name)
+
+  return execute(
+    'MAKE_COMPOSITION_INSTANCE_UNIQUE',
+    () => {
+      const clonedComposition: SubComposition = {
+        ...structuredClone(sourceComposition),
+        id: nextId,
+        name: nextName,
+      }
+      useCompositionsStore.getState().addComposition(clonedComposition)
+
+      const liveItems = useItemsStore.getState().items
+      const liveVisualItem = getVisualCompositionItemForInstance(liveItems, itemId)
+      if (!liveVisualItem) return null
+
+      const audioCompanion = getLinkedCompositionAudioCompanion(liveItems, liveVisualItem)
+      useItemsStore.getState()._updateItem(liveVisualItem.id, {
+        compositionId: nextId,
+        label: nextName,
+      })
+      if (audioCompanion) {
+        useItemsStore.getState()._updateItem(audioCompanion.id, {
+          compositionId: nextId,
+          label: nextName,
+        })
+      }
+
+      useSelectionStore.getState().selectItems(
+        audioCompanion ? [liveVisualItem.id, audioCompanion.id] : [liveVisualItem.id],
+      )
+      useTimelineSettingsStore.getState().markDirty()
+
+      return {
+        compositionId: nextId,
+        name: nextName,
+        itemId: liveVisualItem.id,
+      }
+    },
+    {
+      itemId: visualItem.id,
+      sourceCompositionId: sourceComposition.id,
+      compositionId: nextId,
+      name: nextName,
+    },
+  )
+}
+
 export function renameCompoundClip(compositionId: string, nextName: string): boolean {
   const trimmedName = nextName.trim()
   if (!compositionId || !trimmedName) return false
