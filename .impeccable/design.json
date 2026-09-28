@@ -180,10 +180,10 @@
   ],
   "narrative": {
     "northStar": "The Quiet Instrument",
-    "overview": "FreeCut is a precision tool that recedes. The visual system behaves like a well-machined instrument in a darkened room: graphite panels, restrained chrome, no decoration that doesn't earn its pixels. The footage in the preview is the brightest, most saturated thing on the screen; everything else stays out of its way. Depth is carried by tonal layering, not drop shadows: panels sit at different lightness steps so the eye reads hierarchy from value alone. A single warm orange is the one signal color (playback, active state, focus, the playhead), and its rarity is what makes it legible. It rejects the consumer-editor look, the flashy SaaS dashboard, and cramped legacy-NLE chrome; density is high but always clean.",
+    "overview": "FreeCut is a precision tool that recedes. The visual system behaves like a well-machined instrument in a darkened room: graphite panels, restrained chrome, no decoration that doesn't earn its pixels. The footage in the preview is the brightest, most saturated thing on the screen; everything else stays out of its way. Depth is carried by tonal layering, not drop shadows: panels sit at different lightness steps so the eye reads hierarchy from value alone. A single low-chroma Studio Steel is the shell signal for active, selected, focus and snap state, and its rarity is what makes it legible. It rejects the consumer-editor look, the flashy SaaS dashboard, and cramped legacy-NLE chrome; density is high but always clean.",
     "keyCharacteristics": [
       "Dark-only, neutral graphite ramp; value carries hierarchy",
-      "One warm-studio signal color, used sparingly for active/playback/focus",
+      "One cool Studio Steel signal, used sparingly for active/focus/snap state",
       "Tonal layering, not shadows, for depth",
       "IBM Plex Sans for UI, IBM Plex Mono for all technical/numeric data",
       "Density without noise: dense panels that stay legible at a glance"
@@ -191,7 +191,7 @@
     "rules": [
       {
         "name": "The One Signal Rule",
-        "body": "Orange means active. Reserve oklch(0.76 0.075 225) for playback, the playhead, focus, and active/selected state. It should occupy a small fraction of any screen; the moment it decorates a static element it stops reading as a signal.",
+        "body": "Studio Steel means active/focused/selected or snapped. Reserve oklch(0.76 0.075 225) for shell state, and keep it rare enough to remain a signal rather than decoration.",
         "section": "colors"
       },
       {
@@ -221,7 +221,7 @@
       }
     ],
     "dos": [
-      "Do keep orange (oklch(0.76 0.075 225)) for active/playback/focus only; treat it as a signal, not a brand splash.",
+      "Do keep Studio Steel (oklch(0.76 0.075 225)) for active/focus/snap state only; treat it as a signal, not a brand splash.",
       "Do separate surfaces by stepping the neutral ramp's lightness before reaching for a border or shadow.",
       "Do set every timecode, frame count, FPS, and dimension in IBM Plex Mono.",
       "Do verify body and placeholder text clears 4.5:1 on its panel; muted-foreground (oklch(0.6 0 0)) is borderline — bump toward ink where it fails.",

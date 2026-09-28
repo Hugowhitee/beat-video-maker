@@ -18,6 +18,7 @@ import { useCompositionsStore } from '../compositions-store'
 import { useCompositionNavigationStore } from '../composition-navigation-store'
 import { useEditorStore } from '@/shared/state/editor'
 import {
+  canMakeCompositionInstanceUnique,
   createLinkedPreCompPattern,
   createMotionClip,
   createPreComp,
@@ -25,6 +26,7 @@ import {
   deleteCompoundClips,
   dissolvePreComp,
   getCompoundClipDeletionImpact,
+  makeCompositionInstanceUnique,
   renameCompoundClip,
 } from './composition-actions'
 import { splitItem } from './item-actions'
@@ -202,6 +204,138 @@ describe('composition-actions split wrappers', () => {
     expect(useCompositionsStore.getState().compositions).toHaveLength(1)
     expect(useCompositionsStore.getState().compositions[0]?.items).toHaveLength(2)
     expect(useTimelineCommandStore.getState().undoStack).toHaveLength(1)
+  })
+
+  it('forks one shared Loop A instance into an independent Loop B and supports undo/redo', () => {
+    useItemsStore
+      .getState()
+      .setTracks([makeTrack({ id: 'track-v1', name: 'V1', kind: 'video', order: 0 })])
+    useItemsStore.getState().setItems([
+      makeVideoItem({
+        id: 'loop-1-a',
+        trackId: 'track-v1',
+        embeddedAudioMuted: true,
+        from: 0,
+        durationInFrames: 30,
+        linkedGroupId: undefined,
+      }),
+      makeVideoItem({
+        id: 'loop-1-b',
+        trackId: 'track-v1',
+        embeddedAudioMuted: true,
+        from: 30,
+        durationInFrames: 30,
+        linkedGroupId: undefined,
+      }),
+      makeVideoItem({
+        id: 'loop-2-a',
+        trackId: 'track-v1',
+        embeddedAudioMuted: true,
+        from: 60,
+        durationInFrames: 30,
+        linkedGroupId: undefined,
+      }),
+      makeVideoItem({
+        id: 'loop-2-b',
+        trackId: 'track-v1',
+        embeddedAudioMuted: true,
+        from: 90,
+        durationInFrames: 30,
+        linkedGroupId: undefined,
+      }),
+    ])
+
+    const wrappers = createLinkedPreCompPattern('Loop A', [
+      ['loop-1-a', 'loop-1-b'],
+      ['loop-2-a', 'loop-2-b'],
+    ])
+    const originalCompositionId = wrappers[0]?.compositionId
+    const targetWrapperId = wrappers[1]!.id
+
+    expect(canMakeCompositionInstanceUnique(targetWrapperId)).toBe(true)
+
+    const result = makeCompositionInstanceUnique(targetWrapperId)
+    expect(result?.name).toBe('Loop B')
+    expect(result?.compositionId).not.toBe(originalCompositionId)
+
+    const afterFork = useItemsStore.getState().items.filter((item) => item.type === 'composition')
+    expect(afterFork.map((item) => item.label)).toEqual(['Loop A', 'Loop B'])
+    expect(afterFork[0]?.compositionId).toBe(originalCompositionId)
+    expect(afterFork[1]?.compositionId).toBe(result?.compositionId)
+    expect(useCompositionsStore.getState().compositions).toHaveLength(2)
+
+    const original = useCompositionsStore.getState().getComposition(originalCompositionId!)
+    const forked = useCompositionsStore.getState().getComposition(result!.compositionId)
+    expect(forked?.items).toEqual(original?.items)
+    expect(forked?.items).not.toBe(original?.items)
+    expect(forked?.items[0]).not.toBe(original?.items[0])
+    expect(canMakeCompositionInstanceUnique(targetWrapperId)).toBe(false)
+
+    useTimelineCommandStore.getState().undo()
+    const afterUndo = useItemsStore.getState().items.filter((item) => item.type === 'composition')
+    expect(afterUndo.map((item) => item.label)).toEqual(['Loop A', 'Loop A'])
+    expect(afterUndo[1]?.compositionId).toBe(originalCompositionId)
+    expect(useCompositionsStore.getState().compositions).toHaveLength(1)
+
+    useTimelineCommandStore.getState().redo()
+    const afterRedo = useItemsStore.getState().items.filter((item) => item.type === 'composition')
+    expect(afterRedo.map((item) => item.label)).toEqual(['Loop A', 'Loop B'])
+    expect(afterRedo[1]?.compositionId).toBe(result?.compositionId)
+    expect(useCompositionsStore.getState().compositions).toHaveLength(2)
+  })
+
+  it('does not treat one linked audio companion as a second composition instance', () => {
+    setDefaultRootTimelineTracks()
+    useItemsStore.getState().setItems([makeVideoItem(), makeAudioItem()])
+    useSelectionStore.getState().selectItems(['video-1'])
+
+    const wrapper = createPreComp('Compound 1')
+    expect(wrapper?.type).toBe('composition')
+    expect(useItemsStore.getState().items).toHaveLength(2)
+    expect(canMakeCompositionInstanceUnique(wrapper!.id)).toBe(false)
+  })
+
+  it('forks a linked visual/audio wrapper pair together when another visual instance shares it', () => {
+    setDefaultRootTimelineTracks()
+    useItemsStore.getState().setItems([makeVideoItem(), makeAudioItem()])
+    useSelectionStore.getState().selectItems(['video-1'])
+
+    const first = createPreComp('Compound 1')
+    expect(first?.type).toBe('composition')
+
+    const sourceItems = useItemsStore.getState().items
+    const audioWrapper = sourceItems.find(
+      (item) => item.type === 'audio' && !!item.compositionId,
+    )
+    expect(audioWrapper).toBeDefined()
+
+    const duplicates = useItemsStore.getState()._duplicateItems(
+      [first!.id, audioWrapper!.id],
+      [
+        { from: 90, trackId: first!.trackId },
+        { from: 90, trackId: audioWrapper!.trackId },
+      ],
+    )
+    const duplicateVisual = duplicates.find((item) => item.type === 'composition')
+    const duplicateAudio = duplicates.find(
+      (item) => item.type === 'audio' && !!item.compositionId,
+    )
+    expect(duplicateVisual).toBeDefined()
+    expect(duplicateAudio).toBeDefined()
+    expect(canMakeCompositionInstanceUnique(duplicateVisual!.id)).toBe(true)
+
+    const result = makeCompositionInstanceUnique(duplicateVisual!.id)
+    expect(result).not.toBeNull()
+
+    const liveVisual = useItemsStore.getState().itemById[duplicateVisual!.id]
+    const liveAudio = useItemsStore.getState().itemById[duplicateAudio!.id]
+    expect(liveVisual?.compositionId).toBe(result?.compositionId)
+    expect(liveAudio?.compositionId).toBe(result?.compositionId)
+    expect(liveVisual?.label).toBe('Compound 1 copy')
+    expect(liveAudio?.label).toBe('Compound 1 copy')
+    expect(useItemsStore.getState().itemById[first!.id]?.compositionId).not.toBe(
+      result?.compositionId,
+    )
   })
 
   it('promotes a clip and its animation into a Motion composition', () => {

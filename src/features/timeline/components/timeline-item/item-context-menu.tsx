@@ -80,8 +80,10 @@ type CaptionActionsProps = ItemContextMenuSectionProps & {
 type CompositionActionsProps = ItemContextMenuSectionProps & {
   isCompositionItem?: boolean
   canCreatePreComp?: boolean
+  canMakeUnique?: boolean
   onEnterComposition?: () => void
   onDissolveComposition?: () => void
+  onMakeUnique?: () => void
   onCreatePreComp?: () => void
 }
 
@@ -655,12 +657,14 @@ function CompositionActions({
   t,
   isCompositionItem,
   canCreatePreComp,
+  canMakeUnique,
   onEnterComposition,
   onDissolveComposition,
+  onMakeUnique,
   onCreatePreComp,
 }: CompositionActionsProps) {
   const hasCompositionActions =
-    (isCompositionItem && (onEnterComposition || onDissolveComposition)) ||
+    (isCompositionItem && (onEnterComposition || onDissolveComposition || onMakeUnique)) ||
     (canCreatePreComp && onCreatePreComp)
 
   if (!hasCompositionActions) return null
@@ -670,6 +674,11 @@ function CompositionActions({
       {isCompositionItem && onEnterComposition && (
         <ContextMenuItem onClick={onEnterComposition}>
           {t('timeline.contextMenu.openCompoundClip')}
+        </ContextMenuItem>
+      )}
+      {isCompositionItem && canMakeUnique && onMakeUnique && (
+        <ContextMenuItem onClick={onMakeUnique}>
+          {t('timeline.contextMenu.makeUnique')}
         </ContextMenuItem>
       )}
       {isCompositionItem && onDissolveComposition && (
