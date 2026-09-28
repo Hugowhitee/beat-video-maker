@@ -976,8 +976,8 @@ export const Timeline = memo(function Timeline({ duration, beatvideoMode = 'vide
             style={{ height: EDITOR_LAYOUT_CSS_VALUES.timelineTracksHeaderHeight }}
           >
             {simplifiedBeatvideoTimeline ? (
-              <span className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
-                Layers
+              <span className="text-xs font-medium text-muted-foreground">
+                Tracks
               </span>
             ) : (
               <>
