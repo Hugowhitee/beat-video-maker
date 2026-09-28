@@ -145,9 +145,9 @@ export function BeatvideoFileMetadata({
     setBaseMode('clean')
     setDraft({
       title: projectName.trim() || fileStem(fileName),
-      artist: snapshot.tags.artist ?? '',
+      artist: '',
       album: '',
-      genre: snapshot.tags.genre ?? '',
+      genre: '',
       date: localDateValue(),
       beatsPerMinute: formatBpm(beatBpm ?? snapshot.tags.beatsPerMinute ?? null),
       comment: '',
