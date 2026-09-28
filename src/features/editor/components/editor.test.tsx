@@ -87,7 +87,9 @@ vi.mock('./properties-sidebar', () => ({
 }))
 
 vi.mock('./preview-area', () => ({
-  PreviewArea: () => <div data-testid="preview-area" />,
+  PreviewArea: ({ compact }: { compact?: boolean }) => (
+    <div data-testid="preview-area" data-compact={compact ? 'true' : 'false'} />
+  ),
 }))
 
 vi.mock('./color-grading-dock', () => ({
@@ -219,6 +221,11 @@ vi.mock('@/features/editor/deps/settings', () => ({
 }))
 
 vi.mock('@/features/editor/deps/preview', () => ({
+  PlaybackControls: ({ totalFrames }: { totalFrames: number }) => (
+    <div data-testid="mobile-playback-controls" data-total-frames={totalFrames} />
+  ),
+  useItemsStore: (selector: (state: { maxItemEndFrame: number }) => unknown) =>
+    selector({ maxItemEndFrame: 900 }),
   useMaskEditorStore: (selector: (state: { isEditing: boolean }) => unknown) =>
     selector({ isEditing: false }),
 }))
@@ -510,7 +517,8 @@ describe('LoadedEditor migration metadata refresh', () => {
       expect(screen.getByTestId('toolbar')).toHaveAttribute('data-compact', 'true'),
     )
 
-    expect(screen.getByTestId('preview-area')).toBeInTheDocument()
+    expect(screen.getByTestId('preview-area')).toHaveAttribute('data-compact', 'true')
+    expect(screen.queryByTestId('mobile-playback-controls')).not.toBeInTheDocument()
     expect(screen.queryByTestId('media-sidebar')).not.toBeInTheDocument()
     expect(screen.queryByTestId('properties-sidebar')).not.toBeInTheDocument()
     expect(screen.queryByTestId('timeline')).not.toBeInTheDocument()
@@ -518,6 +526,10 @@ describe('LoadedEditor migration metadata refresh', () => {
     const dock = screen.getByRole('navigation', { name: 'Editor surfaces' })
     fireEvent.click(screen.getByRole('button', { name: 'Tools' }))
     expect(screen.getByTestId('media-sidebar')).toHaveAttribute('data-mobile', 'true')
+    expect(screen.getByTestId('mobile-playback-controls')).toHaveAttribute(
+      'data-total-frames',
+      '900',
+    )
     expect(screen.queryByTestId('preview-area')).not.toBeInTheDocument()
 
     fireEvent.click(screen.getByRole('button', { name: 'Inspector' }))
@@ -525,6 +537,7 @@ describe('LoadedEditor migration metadata refresh', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Timeline' }))
     expect(await screen.findByTestId('timeline')).toBeInTheDocument()
+    expect(screen.getByTestId('mobile-playback-controls')).toBeInTheDocument()
     expect(dock).toBeInTheDocument()
   })
 

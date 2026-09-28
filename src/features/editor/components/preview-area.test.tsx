@@ -239,6 +239,20 @@ describe('PreviewArea mask editor toolbar', () => {
     expect(screen.queryByTestId('color-video-preview')).not.toBeInTheDocument()
   })
 
+  it('uses one non-overlapping transport row and scroll-safe alignment on compact preview', () => {
+    render(
+      <PreviewArea
+        project={{ width: 1920, height: 1080, fps: 30 }}
+        compact
+      />,
+    )
+
+    expect(screen.getByTestId('alignment-toolbar')).toBeInTheDocument()
+    expect(screen.getByTestId('playback-controls')).toBeInTheDocument()
+    expect(screen.queryByTestId('timecode-display')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('preview-zoom-controls')).not.toBeInTheDocument()
+  })
+
   it('uses provided composition metadata and authored duration when requested', () => {
     useProjectStore.setState({
       currentProject: {

@@ -176,7 +176,7 @@ export const Timeline = memo(function Timeline({ duration, beatvideoMode = 'vide
 
   const trackSizePreset = useEditorStore((s) => s.trackSizePreset)
   const timelineSidebarWidth = simplifiedBeatvideoTimeline
-    ? `${PRODUCER_TIMELINE_SIDEBAR_WIDTH}px`
+    ? `clamp(108px, 28vw, ${PRODUCER_TIMELINE_SIDEBAR_WIDTH}px)`
     : EDITOR_LAYOUT_CSS_VALUES.timelineSidebarWidth
   const setTimelineTracks = useTimelineStore((s) => s.setTracks)
 

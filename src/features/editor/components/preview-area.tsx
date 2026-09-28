@@ -35,6 +35,7 @@ interface PreviewAreaProps {
   }
   durationInFrames?: number
   preferProjectStoreMetadata?: boolean
+  compact?: boolean
 }
 
 type PreviewChrome = 'edit' | 'color'
@@ -186,6 +187,7 @@ export const PreviewArea = memo(function PreviewArea({
   project,
   durationInFrames,
   preferProjectStoreMetadata = true,
+  compact = false,
 }: PreviewAreaProps) {
   const { t } = useTranslation()
   const previewContainerRef = useRef<HTMLDivElement>(null)
@@ -724,38 +726,58 @@ export const PreviewArea = memo(function PreviewArea({
             <InteractionLockRegion locked={false} overlayClassName="rounded-none">
               <div className="flex flex-col flex-shrink-0">
                 {previewChrome === 'edit' && (
-                  <div className="border-t border-border panel-header flex h-7 items-center justify-center overflow-hidden px-3">
-                    <div className="flex items-center gap-0">
+                  <div
+                    className={
+                      compact
+                        ? 'border-t border-border panel-header flex h-7 items-center justify-start overflow-x-auto px-1'
+                        : 'border-t border-border panel-header flex h-7 items-center justify-center overflow-hidden px-3'
+                    }
+                  >
+                    <div className="flex w-max items-center gap-0">
                       <AlignmentToolbar projectSize={{ width, height }} />
                     </div>
                   </div>
                 )}
 
                 {/* Playback controls row */}
-                <div
-                  className="@container border-t border-border panel-header relative flex items-center px-3 overflow-hidden"
-                  style={{ height: EDITOR_LAYOUT_CSS_VALUES.previewControlsHeight }}
-                >
-                  <div className="flex flex-shrink-0 items-center gap-2">
-                    <TimecodeDisplay fps={fps} totalFrames={totalFrames} />
-                    <ProgramShuttleIndicator />
+                {compact ? (
+                  <div
+                    className="@container flex items-center justify-center overflow-x-auto border-t border-border panel-header px-1"
+                    style={{ height: EDITOR_LAYOUT_CSS_VALUES.previewControlsHeight }}
+                  >
+                    <PlaybackControls
+                      totalFrames={totalFrames}
+                      fps={fps}
+                      isFullscreen={isProgramFullscreen}
+                      onToggleFullscreen={toggleProgramFullscreen}
+                    />
                   </div>
+                ) : (
+                  <div
+                    className="@container border-t border-border panel-header relative flex items-center px-3 overflow-hidden"
+                    style={{ height: EDITOR_LAYOUT_CSS_VALUES.previewControlsHeight }}
+                  >
+                    <div className="flex flex-shrink-0 items-center gap-2">
+                      <TimecodeDisplay fps={fps} totalFrames={totalFrames} />
+                      <ProgramShuttleIndicator />
+                    </div>
 
-                  <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                    <div className="flex items-center gap-2.5 pointer-events-auto">
-                      <PlaybackControls
-                        totalFrames={totalFrames}
-                        fps={fps}
-                        isFullscreen={isProgramFullscreen}
-                        onToggleFullscreen={toggleProgramFullscreen}
-                      />
+                    <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                      <div className="flex items-center gap-2.5 pointer-events-auto">
+                        <PlaybackControls
+                          totalFrames={totalFrames}
+                          fps={fps}
+                          isFullscreen={isProgramFullscreen}
+                          onToggleFullscreen={toggleProgramFullscreen}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="ml-auto flex-shrink-0">
+                      <PreviewZoomControls />
                     </div>
                   </div>
-
-                  <div className="ml-auto flex-shrink-0">
-                    <PreviewZoomControls />
-                  </div>
-                </div>
+                )}
               </div>
             </InteractionLockRegion>
           )}
