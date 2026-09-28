@@ -204,6 +204,55 @@ test('mixed transition profile still uses mostly clean cuts and reserves film bu
   expect(burns[0]?.alignment).toBe(0.5);
 });
 
+test('Detroit transition profile stays sparse and varies the accent treatment', () => {
+  const music = musicMap([
+    {
+      id: 'intro',
+      start: 0,
+      end: 8,
+      kind: 'intro',
+      energy: 0.2,
+      confidence: 0.95,
+    },
+    {
+      id: 'drop-a',
+      start: 8,
+      end: 16,
+      kind: 'drop',
+      energy: 0.95,
+      confidence: 0.98,
+    },
+    {
+      id: 'verse',
+      start: 16,
+      end: 24,
+      kind: 'verse',
+      energy: 0.42,
+      confidence: 0.92,
+    },
+    {
+      id: 'drop-b',
+      start: 24,
+      end: 32,
+      kind: 'drop',
+      energy: 0.93,
+      confidence: 0.98,
+    },
+  ])
+
+  const plan = createEditPlan(music, clipMap(), {
+    mode: 'auto',
+    transitionProfile: 'detroit',
+    seed: 2,
+  })
+
+  expect(plan.transitions.length).toBeGreaterThanOrEqual(2)
+  expect(plan.transitions[0]?.kind).toBe('film-burn')
+  expect(plan.transitions[1]?.kind).toBe('film-gate')
+  expect(plan.transitions.every((transition) => transition.duration <= 0.42)).toBe(true)
+  expect(plan.segments.length - 1).toBeGreaterThan(plan.transitions.length * 3)
+})
+
 test('loop mode creates one editable motif and repeats the exact cut/source pattern', () => {
   const music = musicMap([
     {
@@ -241,6 +290,107 @@ test('loop mode creates one editable motif and repeats the exact cut/source patt
     (transitionId) => plan.transitions.some((transition) => transition.id === transitionId),
   )).toBeTruthy();
 });
+
+test('loop mode keeps reliable intro and outro outside the repeated body motif', () => {
+  const music = musicMap([
+    {
+      id: 'intro',
+      start: 0,
+      end: 4,
+      kind: 'intro',
+      energy: 0.2,
+      confidence: 0.92,
+    },
+    {
+      id: 'body',
+      start: 4,
+      end: 24,
+      kind: 'verse',
+      energy: 0.55,
+      confidence: 0.9,
+    },
+    {
+      id: 'outro',
+      start: 24,
+      end: 32,
+      kind: 'outro',
+      energy: 0.18,
+      confidence: 0.93,
+    },
+  ], 32)
+
+  const plan = createEditPlan(music, clipMap(), {
+    mode: 'loop',
+    loopBars: 4,
+    transitionProfile: 'clean',
+    seed: 8,
+  })
+
+  expect(plan.motifs).toHaveLength(1)
+  expect(plan.motifs[0]?.start).toBeCloseTo(4, 5)
+  expect(plan.motifs[0]?.duration).toBeCloseTo(8, 5)
+
+  const intro = plan.segments.filter((segment) => segment.timelineStart < 4)
+  const body = plan.segments.filter(
+    (segment) => segment.timelineStart >= 4 && segment.timelineStart < 24,
+  )
+  const outro = plan.segments.filter((segment) => segment.timelineStart >= 24)
+
+  expect(intro.length).toBeGreaterThan(0)
+  expect(outro.length).toBeGreaterThan(0)
+  expect(intro.every((segment) => segment.motifId === undefined)).toBe(true)
+  expect(outro.every((segment) => segment.motifId === undefined)).toBe(true)
+  expect(body.every((segment) => segment.motifId === 'motif-1')).toBe(true)
+  expect(plan.warnings).toContain('Reliable intro kept outside Loop A.')
+  expect(plan.warnings).toContain('Reliable outro kept outside Loop A.')
+
+  const firstBodyLoop = body.filter((segment) => segment.timelineStart < 12)
+  const secondBodyLoop = body.filter(
+    (segment) => segment.timelineStart >= 12 && segment.timelineStart < 20,
+  )
+  expect(secondBodyLoop.map((segment) => segment.shotId))
+    .toEqual(firstBodyLoop.map((segment) => segment.shotId))
+})
+
+test('loop mode ignores low-confidence edge labels instead of inventing structure', () => {
+  const music = musicMap([
+    {
+      id: 'intro',
+      start: 0,
+      end: 4,
+      kind: 'intro',
+      energy: 0.2,
+      confidence: 0.3,
+    },
+    {
+      id: 'body',
+      start: 4,
+      end: 28,
+      kind: 'verse',
+      energy: 0.55,
+      confidence: 0.9,
+    },
+    {
+      id: 'outro',
+      start: 28,
+      end: 32,
+      kind: 'outro',
+      energy: 0.18,
+      confidence: 0.4,
+    },
+  ], 32)
+
+  const plan = createEditPlan(music, clipMap(), {
+    mode: 'loop',
+    loopBars: 4,
+    transitionProfile: 'clean',
+    seed: 8,
+  })
+
+  expect(plan.motifs[0]?.start).toBe(0)
+  expect(plan.segments.every((segment) => segment.motifId === 'motif-1')).toBe(true)
+  expect(plan.warnings).toEqual([])
+})
 
 test('planned source ranges stay inside detected shots and avoid immediate reuse when alternatives fit', () => {
   const music = musicMap([

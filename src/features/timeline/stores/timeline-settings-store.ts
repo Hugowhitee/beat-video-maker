@@ -1,7 +1,9 @@
 import { create } from 'zustand'
+import type { BeatGridResolution } from '../utils/beatvideo-grid-resolution'
 
 const BEAT_GRID_VISIBLE_KEY = 'beatvideo:beatGridVisible'
 const BEAT_GRID_SNAP_KEY = 'beatvideo:beatGridSnapEnabled'
+const BEAT_GRID_RESOLUTION_KEY = 'beatvideo:beatGridResolution'
 
 function loadBooleanPreference(key: string, fallback: boolean): boolean {
   try {
@@ -20,6 +22,32 @@ function saveBooleanPreference(key: string, value: boolean): void {
   }
 }
 
+function loadBeatGridResolution(): BeatGridResolution {
+  try {
+    const stored = localStorage.getItem(BEAT_GRID_RESOLUTION_KEY)
+    if (
+      stored === 'auto' ||
+      stored === 'beat' ||
+      stored === 'bar' ||
+      stored === '2-bars' ||
+      stored === '4-bars'
+    ) {
+      return stored
+    }
+  } catch {
+    /* noop */
+  }
+  return 'auto'
+}
+
+function saveBeatGridResolution(value: BeatGridResolution): void {
+  try {
+    localStorage.setItem(BEAT_GRID_RESOLUTION_KEY, value)
+  } catch {
+    /* noop */
+  }
+}
+
 /**
  * Timeline settings state - FPS, scroll position, snap, dirty tracking.
  * These are UI/editor settings, not timeline content.
@@ -33,6 +61,8 @@ interface TimelineSettingsState {
   beatGridVisible: boolean
   /** Prefer the musical beat grid over the generic seconds grid when snapping. */
   beatGridSnapEnabled: boolean
+  /** Shared Beatvideo line/snap resolution; local editor preference, not project timing. */
+  beatGridResolution: BeatGridResolution
   audioSkimmingEnabled: boolean
   isDirty: boolean
   /** True while loadTimeline() is in progress - used to coordinate initial player sync */
@@ -48,6 +78,7 @@ interface TimelineSettingsActions {
   toggleBeatGridVisible: () => void
   setBeatGridSnapEnabled: (enabled: boolean) => void
   toggleBeatGridSnap: () => void
+  setBeatGridResolution: (resolution: BeatGridResolution) => void
   setAudioSkimmingEnabled: (enabled: boolean) => void
   toggleAudioSkimming: () => void
   setIsDirty: (dirty: boolean) => void
@@ -64,6 +95,7 @@ export const useTimelineSettingsStore = create<TimelineSettingsState & TimelineS
     snapEnabled: true,
     beatGridVisible: loadBooleanPreference(BEAT_GRID_VISIBLE_KEY, true),
     beatGridSnapEnabled: loadBooleanPreference(BEAT_GRID_SNAP_KEY, true),
+    beatGridResolution: loadBeatGridResolution(),
     audioSkimmingEnabled: true,
     isDirty: false,
     isTimelineLoading: true, // Start true - set false after loadTimeline completes
@@ -93,6 +125,10 @@ export const useTimelineSettingsStore = create<TimelineSettingsState & TimelineS
         saveBooleanPreference(BEAT_GRID_SNAP_KEY, next)
         return { beatGridSnapEnabled: next }
       }),
+    setBeatGridResolution: (resolution) => {
+      saveBeatGridResolution(resolution)
+      set({ beatGridResolution: resolution })
+    },
     setAudioSkimmingEnabled: (enabled) => set({ audioSkimmingEnabled: enabled }),
     toggleAudioSkimming: () =>
       set((state) => ({ audioSkimmingEnabled: !state.audioSkimmingEnabled })),

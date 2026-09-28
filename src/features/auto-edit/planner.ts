@@ -11,6 +11,8 @@ import type {
 } from './types';
 
 const EPSILON = 1e-6;
+const EDGE_SECTION_CONFIDENCE = 0.65;
+const EDGE_SECTION_TOLERANCE_SECONDS = 0.25;
 
 type TimelineSlot = {
   start: number;
@@ -298,7 +300,7 @@ function buildEffectTransitions(
 
   const transitions: EditTransition[] = [];
   const shotsById = new Map(context.shots.map((shot) => [shot.id, shot]));
-  let lastFilmBurnTime: number | null = null;
+  let lastAccentTransitionTime: number | null = null;
 
   for (let index = 1; index < segments.length; index += 1) {
     const slot = slots[index];
@@ -312,8 +314,8 @@ function buildEffectTransitions(
       : 8;
 
     if (
-      lastFilmBurnTime !== null
-      && slot.start - lastFilmBurnTime < minimumSpacingSeconds - EPSILON
+      lastAccentTransitionTime !== null
+      && slot.start - lastAccentTransitionTime < minimumSpacingSeconds - EPSILON
     ) {
       continue;
     }
@@ -330,9 +332,14 @@ function buildEffectTransitions(
       continue;
     }
 
+    const kind =
+      context.options.transitionProfile === 'detroit' && transitions.length % 2 === 1
+        ? 'film-gate'
+        : 'film-burn';
+
     transitions.push({
       id: `transition-${transitions.length + 1}`,
-      kind: 'film-burn',
+      kind,
       leftSegmentId: left.id,
       rightSegmentId: right.id,
       cutTime: slot.start,
@@ -341,7 +348,7 @@ function buildEffectTransitions(
       reason: `${slot.section.kind} section accent`,
       motifId,
     });
-    lastFilmBurnTime = slot.start;
+    lastAccentTransitionTime = slot.start;
   }
 
   return transitions;
@@ -351,6 +358,7 @@ function slotsToSegments(
   context: PlannerContext,
   slots: TimelineSlot[],
   motifId?: string,
+  idPrefix = 'segment',
 ) {
   const segments: EditSegment[] = [];
   const recentShotIds: string[] = [];
@@ -371,7 +379,7 @@ function slotsToSegments(
       segmentIndex,
     );
     const segment: EditSegment = {
-      id: `segment-${segmentIndex + 1}`,
+      id: `${idPrefix}-${segmentIndex + 1}`,
       timelineStart: slot.start,
       timelineEnd: slot.end,
       sourceId: shot.sourceId,
@@ -391,58 +399,165 @@ function slotsToSegments(
   return segments;
 }
 
-function loopEndTime(music: MusicMap, loopBars: number) {
+function beatTimeAtOrAfter(music: MusicMap, time: number) {
+  const index = nextBeatIndexAtOrAfter(music, time);
+  return music.beats[index]?.time ?? null;
+}
+
+function beatTimeAtOrBefore(music: MusicMap, time: number) {
+  for (let index = music.beats.length - 1; index >= 0; index -= 1) {
+    const candidate = music.beats[index]?.time;
+    if (candidate !== undefined && candidate <= time + EPSILON) return candidate;
+  }
+  return null;
+}
+
+function resolveLoopBodyRange(music: MusicMap) {
+  const intro = [...music.sections]
+    .filter(
+      (section) =>
+        section.kind === 'intro' &&
+        section.confidence >= EDGE_SECTION_CONFIDENCE &&
+        section.start <= EDGE_SECTION_TOLERANCE_SECONDS,
+    )
+    .sort((left, right) => left.start - right.start)[0] ?? null;
+
+  const outro = [...music.sections]
+    .filter(
+      (section) =>
+        section.kind === 'outro' &&
+        section.confidence >= EDGE_SECTION_CONFIDENCE &&
+        section.end >= music.duration - EDGE_SECTION_TOLERANCE_SECONDS,
+    )
+    .sort((left, right) => right.start - left.start)[0] ?? null;
+
+  const introBoundary = intro ? beatTimeAtOrAfter(music, intro.end) : null;
+  const outroBoundary = outro ? beatTimeAtOrBefore(music, outro.start) : null;
+  const bodyStart = Math.max(0, introBoundary ?? 0);
+  const bodyEnd = Math.min(music.duration, outroBoundary ?? music.duration);
+
+  // Edge labels are descriptive evidence. If they consume the useful body or
+  // cannot be projected onto a positive beat-locked range, fall back to the
+  // established full-song motif behavior instead of fabricating structure.
+  if (bodyEnd <= bodyStart + EPSILON) {
+    return {
+      bodyStart: 0,
+      bodyEnd: music.duration,
+      hasIntro: false,
+      hasOutro: false,
+    };
+  }
+
+  return {
+    bodyStart,
+    bodyEnd,
+    hasIntro: intro !== null && bodyStart > EPSILON,
+    hasOutro: outro !== null && bodyEnd < music.duration - EPSILON,
+  };
+}
+
+function loopEndTime(
+  music: MusicMap,
+  loopBars: number,
+  rangeStart = 0,
+  rangeEnd = music.duration,
+) {
   const beatsToLoop = Math.max(1, Math.round(loopBars * music.beatsPerBar));
-  const firstBeatIndex = nextBeatIndexAtOrAfter(music, 0);
+  const firstBeatIndex = nextBeatIndexAtOrAfter(music, rangeStart);
   const targetBeat = music.beats[firstBeatIndex + beatsToLoop];
-  if (targetBeat && targetBeat.time > EPSILON) {
-    return Math.min(targetBeat.time, music.duration);
+  if (targetBeat && targetBeat.time > rangeStart + EPSILON) {
+    return Math.min(targetBeat.time, rangeEnd);
   }
 
   if (music.bpm && music.bpm > 0) {
     return Math.min(
-      music.duration,
-      loopBars * music.beatsPerBar * (60 / music.bpm),
+      rangeEnd,
+      rangeStart + loopBars * music.beatsPerBar * (60 / music.bpm),
     );
   }
 
-  return Math.min(music.duration, Math.max(1, music.duration));
+  return Math.min(rangeEnd, Math.max(rangeStart + 1, rangeEnd));
+}
+
+function appendTransitions(
+  target: EditTransition[],
+  additions: EditTransition[],
+) {
+  const appended = additions.map((transition, index) => ({
+    ...transition,
+    id: `transition-${target.length + index + 1}`,
+  }));
+  target.push(...appended);
+  return appended;
 }
 
 function buildLoopPlan(context: PlannerContext): EditPlan {
-  const loopDuration = loopEndTime(context.music, context.options.loopBars);
+  const { bodyStart, bodyEnd, hasIntro, hasOutro } = resolveLoopBodyRange(context.music);
+  const motifEnd = loopEndTime(
+    context.music,
+    context.options.loopBars,
+    bodyStart,
+    bodyEnd,
+  );
+  const motifDuration = motifEnd - bodyStart;
+
+  if (motifDuration <= EPSILON) {
+    return buildLinearPlan(context);
+  }
+
   const motifId = 'motif-1';
-  const motifSlots = buildTimelineSlots(context, 0, loopDuration);
-  const motifSegments = slotsToSegments(context, motifSlots, motifId);
+  const segments: EditSegment[] = [];
+  const transitions: EditTransition[] = [];
+
+  if (hasIntro) {
+    const introSlots = buildTimelineSlots(context, 0, bodyStart);
+    const introSegments = slotsToSegments(
+      context,
+      introSlots,
+      undefined,
+      'intro-segment',
+    );
+    segments.push(...introSegments);
+    appendTransitions(
+      transitions,
+      buildEffectTransitions(context, introSlots, introSegments),
+    );
+  }
+
+  const motifSlots = buildTimelineSlots(context, bodyStart, motifEnd);
+  const motifSegments = slotsToSegments(
+    context,
+    motifSlots,
+    motifId,
+    'motif-segment',
+  );
   const motifTransitions = buildEffectTransitions(
     context,
     motifSlots,
     motifSegments,
     motifId,
   );
-
-  const segments: EditSegment[] = [];
-  const transitions: EditTransition[] = [];
-  const motifTransitionIds: string[] = [];
   const motifSegmentIndex = new Map(
     motifSegments.map((segment, index) => [segment.id, index]),
   );
+  const motifTransitionIds: string[] = [];
+  const motifSegmentIds: string[] = [];
 
-  let repeatStart = 0;
+  let repeatStart = bodyStart;
   let repeatIndex = 0;
-  while (repeatStart < context.music.duration - EPSILON) {
+  while (repeatStart < bodyEnd - EPSILON) {
     const repeatedSegments: EditSegment[] = [];
 
     for (const motifSegment of motifSegments) {
-      const relativeStart = motifSegment.timelineStart;
-      const relativeEnd = motifSegment.timelineEnd;
+      const relativeStart = motifSegment.timelineStart - bodyStart;
+      const relativeEnd = motifSegment.timelineEnd - bodyStart;
       const timelineStart = repeatStart + relativeStart;
-      if (timelineStart >= context.music.duration - EPSILON) break;
+      if (timelineStart >= bodyEnd - EPSILON) break;
 
       const fullDuration = relativeEnd - relativeStart;
       const duration = Math.min(
         fullDuration,
-        context.music.duration - timelineStart,
+        bodyEnd - timelineStart,
       );
 
       const repeated: EditSegment = {
@@ -458,6 +573,7 @@ function buildLoopPlan(context: PlannerContext): EditPlan {
       };
       segments.push(repeated);
       repeatedSegments.push(repeated);
+      if (repeatIndex === 0) motifSegmentIds.push(repeated.id);
     }
 
     for (const motifTransition of motifTransitions) {
@@ -474,24 +590,44 @@ function buildLoopPlan(context: PlannerContext): EditPlan {
         id: `transition-${transitions.length + 1}`,
         leftSegmentId: left.id,
         rightSegmentId: right.id,
-        cutTime: repeatStart + motifTransition.cutTime,
+        cutTime: repeatStart + (motifTransition.cutTime - bodyStart),
       };
       transitions.push(repeatedTransition);
       if (repeatIndex === 0) motifTransitionIds.push(repeatedTransition.id);
     }
 
     repeatIndex += 1;
-    repeatStart += loopDuration;
+    repeatStart += motifDuration;
+  }
+
+  if (hasOutro) {
+    const outroSlots = buildTimelineSlots(context, bodyEnd, context.music.duration);
+    const outroSegments = slotsToSegments(
+      context,
+      outroSlots,
+      undefined,
+      'outro-segment',
+    );
+    segments.push(...outroSegments);
+    appendTransitions(
+      transitions,
+      buildEffectTransitions(context, outroSlots, outroSegments),
+    );
   }
 
   const motif: EditMotif = {
     id: motifId,
-    start: 0,
-    duration: loopDuration,
+    start: bodyStart,
+    duration: motifDuration,
     bars: context.options.loopBars,
-    segmentIds: motifSegments.map((segment) => segment.id),
+    segmentIds: motifSegmentIds,
     transitionIds: motifTransitionIds,
   };
+
+  const warnings = [
+    ...(hasIntro ? ['Reliable intro kept outside Loop A.'] : []),
+    ...(hasOutro ? ['Reliable outro kept outside Loop A.'] : []),
+  ];
 
   return {
     mode: 'loop',
@@ -499,7 +635,7 @@ function buildLoopPlan(context: PlannerContext): EditPlan {
     segments,
     transitions,
     motifs: [motif],
-    warnings: [],
+    warnings,
   };
 }
 

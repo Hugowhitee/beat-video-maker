@@ -2,22 +2,22 @@
 name: FreeCut
 description: A browser-based, local-first, multi-track video editor for pro editors.
 colors:
-  background: "oklch(0.15 0 0)"
-  foreground: "oklch(0.95 0 0)"
-  surface: "oklch(0.18 0 0)"
-  panel-header: "oklch(0.14 0 0)"
-  popover: "oklch(0.16 0 0)"
-  timeline-bg: "oklch(0.12 0 0)"
-  primary: "oklch(0.68 0.19 45)"
-  primary-foreground: "oklch(0.12 0 0)"
-  secondary: "oklch(0.22 0 0)"
-  muted: "oklch(0.2 0 0)"
-  muted-foreground: "oklch(0.6 0 0)"
-  accent: "oklch(0.24 0 0)"
+  background: "oklch(0.225 0.008 78)"
+  foreground: "oklch(0.94 0.004 78)"
+  surface: "oklch(0.265 0.008 78)"
+  panel-header: "oklch(0.23 0.008 78)"
+  popover: "oklch(0.255 0.008 78)"
+  timeline-bg: "oklch(0.19 0.007 78)"
+  primary: "oklch(0.76 0.075 225)"
+  primary-foreground: "oklch(0.18 0.012 225)"
+  secondary: "oklch(0.31 0.008 78)"
+  muted: "oklch(0.285 0.007 78)"
+  muted-foreground: "oklch(0.68 0.006 78)"
+  accent: "oklch(0.34 0.009 78)"
   destructive: "oklch(0.58 0.22 25)"
-  border: "oklch(0.25 0 0)"
-  input: "oklch(0.24 0 0)"
-  ring: "oklch(0.68 0.19 45)"
+  border: "oklch(0.365 0.008 78)"
+  input: "oklch(0.35 0.008 78)"
+  ring: "oklch(0.76 0.075 225)"
   clip-video: "oklch(0.3991 0.0401 250)"
   clip-audio: "oklch(0.22 0.02 302)"
   clip-image: "oklch(0.62 0.17 250)"
@@ -75,7 +75,7 @@ components:
     padding: "8px 16px"
     height: "36px"
   button-primary-hover:
-    backgroundColor: "oklch(0.68 0.19 45 / 0.9)"
+    backgroundColor: "oklch(0.76 0.075 225 / 0.9)"
     textColor: "{colors.primary-foreground}"
   button-secondary:
     backgroundColor: "{colors.secondary}"
@@ -112,10 +112,10 @@ components:
 # Design System: FreeCut
 
 > **Beatvideo downstream theme override.** Beatvideo keeps FreeCut's precision and
-> component grammar, but intentionally uses a warmer, slightly lighter graphite
-> shell with flatter hardware-like controls. The exact runtime tokens in
-> `src/index.css` are authoritative for Beatvideo. Do not revert the downstream
-> app to the upstream near-black palette during future UI work.
+> component grammar, but uses a warmer, slightly lighter graphite shell with
+> flatter studio-hardware controls and one low-chroma cool-steel state signal.
+> The exact runtime tokens in `src/index.css` are authoritative. Do not restore
+> the old orange shell or the upstream near-black palette during future UI work.
 
 ## 1. Overview
 
@@ -134,8 +134,9 @@ on purpose: long sessions, color-critical grading, and scopes all need a
 near-black surround. Depth is carried by tonal layering, not by drop shadows.
 Panels sit at slightly different lightness steps (the timeline floor is darkest,
 panels a notch up, popovers between) so the eye reads hierarchy from value alone.
-A single warm orange (`oklch(0.68 0.19 45)`) is the one signal color: playback,
-active state, focus, the playhead. Its rarity is what makes it legible.
+A low-chroma cool steel (`oklch(0.76 0.075 225)`) is the one shell signal:
+selection, active state, focus, snap and precise location. Its rarity is what
+makes it legible; footage and authored cover colors remain independent content.
 
 This system explicitly rejects the consumer-editor look (CapCut/iMovie playful
 rounded candy, emoji, gamified flourishes), the flashy SaaS dashboard
@@ -145,20 +146,22 @@ high but always clean and scannable.
 
 **Key Characteristics:**
 - Warm-dark graphite ramp; Beatvideo is intentionally lighter than upstream FreeCut while remaining suitable for long editing sessions
-- One warm-orange signal color, used sparingly for active/playback/focus
+- One cool-steel studio signal, used sparingly for active/focus/snap state
 - Tonal layering, not shadows, for depth
 - IBM Plex Sans for UI, IBM Plex Mono for all technical/numeric data
 - Density without noise: dense panels that stay legible at a glance
 
 ## 2. Colors
 
-A near-monochrome graphite ramp from `oklch(0.12)` to `oklch(0.95)`, lit by a
-single warm-orange signal and a small set of meaning-bearing clip/marker hues.
+A warm graphite ramp with one low-chroma cool studio signal and a small set of
+meaning-bearing clip/marker hues. Runtime tokens in `src/index.css` win over
+illustrative values in this document.
 
 ### Primary
-- **Signal Orange** (`oklch(0.68 0.19 45)`): The one accent. Playback state, the
-  playhead, active controls, focus rings, the shape-clip color. Never decorative;
-  it always means "this is live / active / where you are."
+- **Studio Steel** (`oklch(0.76 0.075 225)`): The shell signal for selected,
+  active, focus and snap state. Never decorative and never used just to make a
+  panel feel more branded. Creative media, cover typography and timeline item
+  hues may use their own meaning-bearing colors.
 
 ### Secondary
 - **Raised Graphite** (`oklch(0.22 0 0)`): Secondary surfaces and secondary
@@ -188,10 +191,9 @@ edit landmark and must keep its meaning.
 - **Muted Ink** (`oklch(0.6 0 0)`): Secondary/disabled text and placeholders.
 
 ### Named Rules
-**The One Signal Rule.** Orange means active. Reserve `oklch(0.68 0.19 45)` for
-playback, the playhead, focus, and active/selected state. It should occupy a small
-fraction of any screen; the moment it decorates a static element it stops reading
-as a signal.
+**The One Signal Rule.** Studio Steel means active/focused/selected or snapped.
+It should occupy a small fraction of the shell. Static headings, helper boxes and
+decorative cards stay neutral.
 
 **The Value-Hierarchy Rule.** Depth comes from lightness steps in the neutral
 ramp (floor `0.12` → header `0.14` → popover `0.16` → panel `0.18`), not from
@@ -242,15 +244,14 @@ optional accent glow, never as a default card lift.
 ### Shadow Vocabulary (sparing)
 - **Floating layer** (`box-shadow: 0 4px 24px oklch(0 0 0 / 0.5)`): Popovers,
   dropdowns, dialogs lifting off the panel plane.
-- **Signal glow** (`box-shadow: 0 0 12px oklch(0.68 0.19 45 / 0.3)`, utility
-  `.glow-primary`): Reserved for active/playing elements; a soft orange halo, not
-  a neutral lift.
+- **Signal glow:** avoid it in normal editor chrome. A focused floating layer may
+  use a restrained neutral shadow; selection and active state prefer a line,
+  underline or value shift over glow.
 
 ### Named Rules
 **The Flat-By-Default Rule.** Panels and cards are flat at rest. If a surface needs
-to feel raised, raise its lightness one step before adding a shadow. Shadows are
-for things that genuinely float (menus, modals) and for the orange signal glow on
-active elements, nothing else.
+to feel raised, raise its lightness one step before adding a shadow. Shadows are for things that genuinely float (menus, dialogs, utility windows),
+not for routine selected states.
 
 ## 5. Components
 
@@ -264,7 +265,7 @@ never sharp.
   `32px`, large `40px`. Icon buttons are square (`36×36`).
 - **Primary:** Signal Orange fill (`{colors.primary}`) with near-black text
   (`{colors.primary-foreground}`), `8px 16px` padding, a faint default shadow.
-- **Hover / Focus:** Primary drops to 90% opacity on hover (`oklch(0.68 0.19 45 / 0.9)`);
+- **Hover / Focus:** Primary drops to 90% opacity on hover (`oklch(0.76 0.075 225 / 0.9)`);
   focus shows a 1px orange ring (`{colors.ring}`). Transitions are color-only,
   ~150ms.
 - **Secondary:** Raised Graphite fill (`{colors.secondary}`), ink text, hover to 80%.
@@ -275,14 +276,15 @@ never sharp.
 - **Destructive:** Error Red fill (`{colors.destructive}`) for delete/irreversible.
 - **Link:** Orange text, underline on hover.
 
-### Cards / Containers
-- **Corner Style:** `8px` (`{rounded.lg}`) for cards, `6px` for inner controls.
-- **Background:** Panel Surface (`oklch(0.18 0 0)`); headers drop to Panel Header
-  (`oklch(0.14 0 0)`).
-- **Shadow Strategy:** Flat (see Elevation). Distinguish by value, not shadow.
-- **Border:** Optional 1px Border (`oklch(0.25 0 0)`) when two same-value surfaces
-  meet. Never a colored side-stripe.
-- **Internal Padding:** `12–16px` (`{spacing.md}`–`{spacing.lg}`).
+### Regions / Containers
+- A panel is not automatically a card. Prefer open regions separated by spacing,
+  one-pixel dividers and tonal steps.
+- Do not place rounded cards inside rounded cards merely to group controls.
+- Reserve bordered/rounded containers for objects that are actually discrete:
+  draggable clips, popovers, dialogs, presets or detachable utility windows.
+- Keep nested control groups flatter than the surrounding panel. A heading plus
+  aligned fields is usually enough.
+- Never add a colored side stripe just to manufacture hierarchy.
 
 ### Inputs / Fields
 - **Style:** Transparent fill, 1px input border (`{colors.input}`), `6px` radius,
@@ -294,24 +296,28 @@ never sharp.
 - **Disabled:** 50% opacity, `not-allowed` cursor.
 
 ### Navigation / Panels
-- Panels use header bars at Panel Header value with a Title-weight label, body
-  content on Panel Surface. Active tab/panel is marked with the orange signal
-  (underline or text), hover with a Hover Graphite tint. Keyboard focus is always
-  visible via the orange ring.
+- Primary workflow navigation uses flat text tabs with a thin Studio Steel
+  underline rather than filled pills.
+- Producer tool tabs reuse the same grammar. Do not invent a second row of
+  rounded chips for the same hierarchy.
+- Detached utility tools such as Mixer may float and resize; they still edit the
+  same underlying project state.
+- Keyboard focus is always visible through the canonical ring.
 
 ### Signature: Timeline Clips
 The timeline is the signature surface. Clips sit on the Timeline Floor
 (`oklch(0.12 0 0)`) and are colored by type via the meaning-bearing hues, each with
 a matching subtle top-to-bottom gradient (`.bg-video-gradient`, `.bg-audio-gradient`,
-etc.). The playhead is the Signal Orange line. Selection and snap use orange
-inset/box shadows. Scrollbars are slim and graphite. This surface is allowed more
+etc.). The playhead is the Signal Orange line. Selection and snap use the shared Studio Steel signal. Scrollbars are slim and graphite. This surface is allowed more
 density and more color than the rest of the app because the color is data.
 
 ## 6. Do's and Don'ts
 
 ### Do:
-- **Do** keep orange (`oklch(0.68 0.19 45)`) for active/playback/focus only; treat
+- **Do** keep Studio Steel (`oklch(0.76 0.075 225)`) for shell state only; treat
   it as a signal, not a brand splash.
+- **Do** prefer direct manipulation and contextual utility windows over permanent
+  rows of icon-only controls.
 - **Do** separate surfaces by stepping the neutral ramp's lightness before reaching
   for a border or shadow.
 - **Do** set every timecode, frame count, FPS, and dimension in IBM Plex Mono.
@@ -338,3 +344,8 @@ density and more color than the rest of the app because the color is data.
   readable text to ~2.5–3.5:1. De-emphasize with size/weight, not sub-AA alpha. (Opacity
   is fine on genuinely decorative markers or disabled controls, which AA exempts.)
 - **Don't** jump to a white consumer-editor theme; Beatvideo's intended direction is a lighter warm-dark studio shell with restrained contrast.
+- **Don't** recreate the AI-dashboard pattern: no card-in-card reflex, decorative
+  glows, micro-uppercase eyebrow labels, status chips for ordinary state, or
+  helper paragraphs that merely narrate what the visible controls already do.
+- **Don't** change shell state color inside authored media: cover/image/text colors
+  are content and remain independent from the Studio Steel UI signal.

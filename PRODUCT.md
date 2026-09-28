@@ -49,10 +49,10 @@ Video mode exposes footage editing without changing engines:
 - text/shapes/effects;
 - motion/keyframes and color;
 - **Auto Arrange footage** for multi-source music-video editing: existing FreeCut scene detection supplies shot boundaries, while the verified corrected beat grid determines every generated internal cut position;
-- Auto Arrange exposes meaningful producer controls—pace, clean/accent transitions and an optional repeating bar motif—without exposing planner internals;
-- section/energy analysis may change cadence and source choice, but a raw section timestamp must never pull a generated cut away from the corrected musical grid;
+- Auto Arrange exposes meaningful producer controls—pace, **Clean cuts / Detroit accents** and an optional repeating bar motif—without exposing planner internals. Detroit accents are sparse real FreeCut transitions at strong musical section changes, currently alternating Light Leak Burn and Film Gate Slip when source handles permit them;
+- section/energy analysis may change cadence and source choice, but a raw section timestamp must never pull a generated cut away from the corrected musical grid. In Loop mode, a high-confidence intro touching the song start and/or high-confidence outro touching the song end stays outside Loop A at beat-locked boundaries; low-confidence labels never invent structure;
 - generated **Used shots** remain editable: the user can replace a generated slot or mark a detected source shot to avoid on the next rebuild; repeated motif slots propagate source replacement across their linked repeats;
-- repeating motifs may be grouped into real FreeCut compound **Loop blocks** so the main track stays readable while the individual cuts remain editable inside each block;
+- repeating motifs use one reusable FreeCut **Loop A** sequence with multiple timeline instances. Double-clicking any Loop A instance opens the shared internal cuts; editing that sequence once updates every linked repeat. A future explicit **Make Unique** action may fork one instance for deliberate variation, but repeats must not silently diverge;
 - **Fill with one clip** remains a simpler fallback for one repeated source;
 - rebuilding a generated arrangement replaces the previous generated clips atomically instead of stacking another edit on top;
 - all generated routes materialize normal editable FreeCut timeline clips with source trims and muted footage audio.
@@ -75,7 +75,8 @@ The canonical rule is:
 - beats and bars remain fixed to their waveform while the playhead moves; viewport waveform canvases must redraw when their absolute timeline window moves so horizontal scrolling can never make waveform pixels drift under a fixed grid;
 - grid density is zoom-aware: close zoom may show individual beats, medium zoom prioritizes bars, and wide zoom steps through 2/4/8/16-bar phrase landmarks instead of drawing a fence of lines;
 - **Beat grid** visibility and **Beat snap** are separate user controls;
-- when Beat snap is enabled and a musical grid exists, move/trim/razor edits snap to those exact mapped beat positions; generic seconds-based snapping is only the fallback before a beat grid exists or musical snapping is explicitly disabled;
+- **Grid resolution** is one local editor preference shared by display and musical snapping: Auto / Beat / 1 bar / 2 bars / 4 bars. Auto thins the grid with zoom; manual bar resolutions are anchored to verified Bar 1. Changing this preference never rewrites the underlying MusicMap;
+- when Beat snap is enabled and a musical grid exists, move/trim/razor edits snap to the exact mapped positions currently selected by Grid resolution; generic seconds-based snapping is only the fallback before a beat grid exists or musical snapping is explicitly disabled;
 - low/mid/high transient-energy evidence drives reactive effects and is visualized in a compact DJ-style analysis strip in Beat; that strip overlays the actual beat/downbeat/Bar-1 positions so the user can inspect spectral evidence against the grid without pretending low/mid/high are a kick/snare/hat classifier; do not scatter decorative color dots over the ruler;
 - bar 1 is visually unambiguous, is never assumed to be 0:00, and detected bar 1 is distinguished from a user-verified bar 1;
 - DJ-style corrections (phase nudge and correction anchors) are explicit, reversible source-domain project state;
@@ -170,6 +171,18 @@ Automation must remain inspectable and correctable. It produces normal FreeCut p
 ## Design
 
 The interface is precise, calm and dense enough to scan quickly. The preview and content carry attention; chrome recedes.
+
+### Studio interaction grammar
+
+Photo and Video are two workflows over the same studio shell, not two separate editors.
+
+- **Program monitor:** fullscreen enlarges only the real Program surface. Speaker mute is a one-click temporary monitor mute; monitor volume never changes project/export gain.
+- **Mixer:** Master exposes the existing project mixer as a floating/resizable utility window, closer to a DAW mixer than a new top-level workspace. It edits the same Beat / Producer tags / Watermarks / timeline track state as the docked mixer.
+- **Timeline:** the timeline is the shared direct-manipulation surface for Photo layers and Video edits. Video adds scene-aware arrangement, Loop A and transitions; Photo leans on layers/text/graphics and the Inspector.
+- **Transitions:** generated and manual transitions remain normal selectable FreeCut transition bridges between clips and show their real treatment name when space permits.
+- **Pattern editing:** Loop A is a reusable sequence, not a rendered block. Opening it reveals ordinary clips that may be dragged, replaced, trimmed or lengthened with normal timeline tools.
+- **Shell hierarchy:** use flat text tabs, separators, aligned controls and contextual utility windows before creating rounded cards. Studio Steel is shell state only; creative colors inside media are independent.
+
 
 Avoid:
 

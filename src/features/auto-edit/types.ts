@@ -1,7 +1,7 @@
 export type EditMode = 'loop' | 'guided' | 'auto';
-export type TransitionProfile = 'clean' | 'mixed';
+export type TransitionProfile = 'clean' | 'mixed' | 'detroit';
 export type EditPace = 'relaxed' | 'balanced' | 'energetic';
-export type EditTransitionKind = 'film-burn';
+export type EditTransitionKind = 'film-burn' | 'film-gate';
 
 export type {
   MusicBeat,

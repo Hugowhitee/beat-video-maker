@@ -140,6 +140,24 @@ describe('buildEditPlanTimelineDraft', () => {
     ])
   })
 
+  it('maps Detroit film-gate accents onto the Film Gate Slip renderer', () => {
+    const plan = makePlan()
+    plan.transitions[0] = {
+      ...plan.transitions[0]!,
+      kind: 'film-gate',
+    }
+
+    const draft = buildEditPlanTimelineDraft(plan, [makeSource()], {
+      projectFps: 30,
+      canvasWidth: 1920,
+      canvasHeight: 1080,
+      existingTracks: [makeTrack()],
+      existingItems: [],
+    })
+
+    expect(draft.transitions[0]?.presentation).toBe('filmGateSlip')
+  })
+
   it('creates a fresh FreeCut video track instead of overwriting occupied manual work', () => {
     const occupiedItem = {
       id: 'manual-clip',

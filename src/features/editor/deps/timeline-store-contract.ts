@@ -63,6 +63,7 @@ export {
   getPresetCompatibility,
 } from '@/features/timeline/deps/keyframe-editors'
 export {
+  createLinkedPreCompPattern,
   createMotionClip,
   createPreCompBatch,
   openComposition,

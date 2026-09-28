@@ -123,7 +123,7 @@ function animateChannel(
 const EMPTY_PER_TRACK_LEVELS = new Map<string, AudioMeterEstimate>()
 
 const FLOATING_MIXER_STORAGE_KEY = 'editor:floatingMixerBounds'
-const FLOATING_MIXER_DEFAULT_BOUNDS = { x: -1, y: -1, width: 420, height: 500 }
+const FLOATING_MIXER_DEFAULT_BOUNDS = { x: -1, y: -1, width: 620, height: 500 }
 const DETACHED_EQ_STORAGE_KEY = 'editor:detachedEqPos'
 const DETACHED_EQ_DEFAULT_BOUNDS = {
   width: 780,
@@ -1017,7 +1017,7 @@ export const AudioMeterPanel = memo(function AudioMeterPanel({
     <FloatingPanel
       title={t('editor.audioMeters.mixer')}
       defaultBounds={FLOATING_MIXER_DEFAULT_BOUNDS}
-      minWidth={200}
+      minWidth={320}
       minHeight={280}
       storageKey={FLOATING_MIXER_STORAGE_KEY}
       onClose={() => setMixerFloating(false)}

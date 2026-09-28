@@ -1370,7 +1370,10 @@ export const TimelineContent = memo(function TimelineContent({
     const timelineSettings = useTimelineSettingsStore.getState()
     if (analysis && timelineSettings.beatGridSnapEnabled) {
       const fps = timelineSettings.fps
-      for (const frame of resolveBeatvideoTimelineSnapFrames(analysis, items, fps)) {
+      for (const frame of resolveBeatvideoTimelineSnapFrames(analysis, items, fps, {
+        resolution: timelineSettings.beatGridResolution,
+        pixelsPerSecond: useZoomStore.getState().pixelsPerSecond,
+      })) {
         targets.push({ frame, type: 'grid' })
       }
     }

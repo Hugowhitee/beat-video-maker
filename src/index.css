@@ -39,9 +39,10 @@ body.canvas-translate-cursor-not-allowed * {
     --popover: oklch(0.255 0.008 78);
     --popover-foreground: oklch(0.92 0.004 78);
 
-    /* Primary - Orange accent (playback, active states) */
-    --primary: oklch(0.72 0.16 50); /* warm signal orange */
-    --primary-foreground: oklch(0.16 0.006 78);
+    /* Primary - cool studio signal. Low chroma keeps active state legible without
+       turning the editor into a saturated SaaS dashboard. */
+    --primary: oklch(0.76 0.075 225);
+    --primary-foreground: oklch(0.18 0.012 225);
 
     /* Secondary - Subtle panel variation */
     --secondary: oklch(0.31 0.008 78);
@@ -62,7 +63,7 @@ body.canvas-translate-cursor-not-allowed * {
     /* Borders - Subtle separators */
     --border: oklch(0.365 0.008 78);
     --input: oklch(0.35 0.008 78);
-    --ring: oklch(0.72 0.16 50);
+    --ring: oklch(0.76 0.075 225);
 
     /* Panel system - Layered depth */
     --panel-bg: oklch(0.265 0.008 78);
@@ -72,12 +73,12 @@ body.canvas-translate-cursor-not-allowed * {
     /* Sidebar */
     --sidebar: oklch(0.265 0.008 78);
     --sidebar-foreground: oklch(0.92 0.004 78);
-    --sidebar-primary: oklch(0.72 0.16 50);
-    --sidebar-primary-foreground: oklch(0.16 0.006 78);
+    --sidebar-primary: oklch(0.76 0.075 225);
+    --sidebar-primary-foreground: oklch(0.18 0.012 225);
     --sidebar-accent: oklch(0.31 0.008 78);
     --sidebar-accent-foreground: oklch(0.92 0.004 78);
     --sidebar-border: oklch(0.365 0.008 78);
-    --sidebar-ring: oklch(0.72 0.16 50);
+    --sidebar-ring: oklch(0.76 0.075 225);
 
     --radius: 0.4rem;
   }

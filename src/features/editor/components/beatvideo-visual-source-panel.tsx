@@ -19,7 +19,7 @@ import { resolveBeatvideoTimelineGrid } from '@/features/editor/deps/beatvideo-m
 import { useMediaLibraryStore } from '@/features/editor/deps/media-library'
 import { useProjectStore } from '@/features/editor/deps/projects'
 import {
-  createPreCompBatch,
+  createLinkedPreCompPattern,
   useItemsStore,
   useTimelineSettingsStore,
   useTimelineStore,
@@ -395,6 +395,7 @@ export function BeatvideoVisualSourcePanel({
 
     const groups = new Map<number, string[]>()
     for (const segment of lastPlan.segments) {
+      if (segment.motifId !== motif.id) continue
       const itemId = lastItemIdBySegmentId[segment.id]
       if (!itemId) continue
       const repeatIndex = Math.max(
@@ -406,13 +407,11 @@ export function BeatvideoVisualSourcePanel({
       groups.set(repeatIndex, ids)
     }
 
-    const wrappers = createPreCompBatch(
+    const wrappers = createLinkedPreCompPattern(
+      'Loop A',
       [...groups.entries()]
         .sort(([left], [right]) => left - right)
-        .map(([index, itemIds]) => ({
-          name: `Loop ${index + 1}`,
-          itemIds,
-        })),
+        .map(([, itemIds]) => itemIds),
     )
     if (wrappers.length === 0) return
 
@@ -420,9 +419,9 @@ export function BeatvideoVisualSourcePanel({
     setLoopBlocksGrouped(true)
     useSelectionStore.getState().selectItems(wrappers.map((wrapper) => wrapper.id))
     toast.success(
-      `${wrappers.length} loop block${wrappers.length === 1 ? '' : 's'} grouped`,
+      `Loop A linked across ${wrappers.length} repeat${wrappers.length === 1 ? '' : 's'}`,
       {
-        description: 'Open a Loop block to edit its individual cuts.',
+        description: 'Double-click any Loop A block to edit the shared cuts.',
       },
     )
   }, [lastItemIdBySegmentId, lastPlan, loopBlocksGrouped])
@@ -519,21 +518,20 @@ export function BeatvideoVisualSourcePanel({
 
       {videoCandidates.length > 0 ? (
         <>
-          <div className="rounded-md border border-border bg-background/35 p-2.5">
-            <div className="mb-2 flex items-center gap-1.5">
-              <Sparkles className="h-3.5 w-3.5 text-primary" />
-              <span className="text-[11px] font-semibold text-foreground">Arrangement</span>
+          <div className="border-t border-border pt-3">
+            <div className="mb-2 text-[11px] font-semibold text-foreground">
+              Arrangement
             </div>
 
-            <div className="grid grid-cols-2 gap-1">
+            <div className="grid h-8 grid-cols-2 border-b border-border">
               <button
                 type="button"
                 aria-pressed={arrangeMode === 'auto'}
                 onClick={() => setArrangeMode('auto')}
-                className={`h-8 rounded border text-[10px] font-medium transition-colors ${
+                className={`relative h-8 text-[10px] font-medium transition-colors ${
                   arrangeMode === 'auto'
-                    ? 'border-primary bg-primary/10 text-foreground'
-                    : 'border-border text-muted-foreground hover:text-foreground'
+                    ? 'text-foreground after:absolute after:inset-x-3 after:bottom-[-1px] after:h-[2px] after:bg-primary'
+                    : 'text-muted-foreground hover:bg-secondary/30 hover:text-foreground'
                 }`}
               >
                 Auto cut
@@ -542,10 +540,10 @@ export function BeatvideoVisualSourcePanel({
                 type="button"
                 aria-pressed={arrangeMode === 'loop'}
                 onClick={() => setArrangeMode('loop')}
-                className={`h-8 rounded border text-[10px] font-medium transition-colors ${
+                className={`relative h-8 text-[10px] font-medium transition-colors ${
                   arrangeMode === 'loop'
-                    ? 'border-primary bg-primary/10 text-foreground'
-                    : 'border-border text-muted-foreground hover:text-foreground'
+                    ? 'text-foreground after:absolute after:inset-x-3 after:bottom-[-1px] after:h-[2px] after:bg-primary'
+                    : 'text-muted-foreground hover:bg-secondary/30 hover:text-foreground'
                 }`}
               >
                 Repeat motif
@@ -576,7 +574,7 @@ export function BeatvideoVisualSourcePanel({
                   className="h-8 w-full rounded-md border border-input bg-secondary px-2 text-xs text-foreground"
                 >
                   <option value="clean">Clean cuts</option>
-                  <option value="mixed">Accent burns</option>
+                  <option value="detroit">Detroit accents</option>
                 </select>
               </label>
 
@@ -614,20 +612,19 @@ export function BeatvideoVisualSourcePanel({
                   : 'Build arrangement'}
             </Button>
 
-            <p className="mt-1.5 text-[9px] leading-relaxed text-muted-foreground">
-              Internal cuts use the same corrected beat points you see on the timeline.
-              Section analysis can change pacing, never move a cut off the grid.
-            </p>
+            <div className="mt-2 font-mono text-[8px] text-muted-foreground">
+              Corrected grid · editable cuts · footage audio muted
+            </div>
           </div>
 
           {editableArrangementSlots.length > 0 ? (
-            <details className="rounded-md border border-border bg-background/25 p-2">
+            <details className="border-t border-border pt-2">
               <summary className="cursor-pointer list-none text-[10px] font-medium text-foreground marker:hidden [&::-webkit-details-marker]:hidden">
                 Used shots · {editableArrangementSlots.length}
               </summary>
               <div className="mt-2 space-y-2">
                 {editableArrangementSlots.map(({ key, segment, shot, alternatives, linkedRepeats }) => (
-                  <div key={key} className="rounded border border-border/70 p-2">
+                  <div key={key} className="border-b border-border/60 py-2 last:border-b-0">
                     <div className="flex items-center justify-between gap-2">
                       <div className="min-w-0">
                         <div className="truncate text-[9px] font-medium text-foreground">
@@ -644,7 +641,7 @@ export function BeatvideoVisualSourcePanel({
                         <button
                           type="button"
                           onClick={() => toggleAvoidShot(shot.id)}
-                          className={`rounded border px-1.5 py-1 text-[8px] ${
+                          className={`border px-1.5 py-1 text-[8px] ${
                             excludedShotIds.includes(shot.id)
                               ? 'border-amber-400/60 bg-amber-400/10 text-amber-200'
                               : 'border-border text-muted-foreground hover:text-foreground'
@@ -687,14 +684,15 @@ export function BeatvideoVisualSourcePanel({
               onClick={groupLoopRepeats}
             >
               <Repeat2 className="h-3.5 w-3.5" />
-              Group repeats into Loop blocks
+              Link repeats as Loop A
             </Button>
           ) : null}
 
           {loopBlocksGrouped ? (
-            <div className="rounded-md border border-primary/30 bg-primary/5 px-2 py-1.5 text-[9px] leading-relaxed text-muted-foreground">
-              Repeats are now real compound clips. Open a Loop block to edit its cuts.
-              Undo once to return to the editable generated arrangement before rebuilding.
+            <div className="border-l border-primary/50 pl-2 text-[9px] leading-relaxed text-muted-foreground">
+              Every block is an instance of Loop A. Double-click any block to edit the
+              underlying cuts once; all repeats update together. Undo once to return to
+              the generated cuts before linking.
             </div>
           ) : null}
 

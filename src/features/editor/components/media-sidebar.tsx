@@ -1244,7 +1244,7 @@ export const MediaSidebar = memo(function MediaSidebar({
             </div>
 
             {producerShell && categories.length > 1 ? (
-              <div className="flex shrink-0 gap-1 overflow-x-auto border-b border-border bg-secondary/10 px-2 py-1.5">
+              <div className="flex h-8 shrink-0 gap-0 overflow-x-auto border-b border-border px-2">
                 {categories.map(({ id, label }) => (
                   <button
                     key={id}
@@ -1255,10 +1255,10 @@ export const MediaSidebar = memo(function MediaSidebar({
                       if (id === 'effects') triggerPreviews()
                     }}
                     className={cn(
-                      'h-7 shrink-0 rounded px-2.5 text-[10px] font-medium transition-colors',
+                      'relative h-8 shrink-0 px-2.5 text-[10px] font-medium transition-colors',
                       activeTab === id
-                        ? 'bg-primary text-primary-foreground'
-                        : 'text-muted-foreground hover:bg-secondary/70 hover:text-foreground',
+                        ? 'text-foreground after:absolute after:inset-x-2 after:bottom-[-1px] after:h-[2px] after:bg-primary'
+                        : 'text-muted-foreground hover:bg-secondary/40 hover:text-foreground',
                     )}
                   >
                     {label}

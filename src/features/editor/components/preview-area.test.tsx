@@ -29,8 +29,20 @@ vi.mock('@/features/editor/deps/preview', async () => {
     ),
     ColorVideoPreview: () => <div data-testid="color-video-preview" />,
     AlignmentToolbar: () => <div data-testid="alignment-toolbar" />,
-    PlaybackControls: ({ totalFrames }: { totalFrames: number }) => (
-      <div data-testid="playback-controls" data-total-frames={totalFrames} />
+    PlaybackControls: ({
+      totalFrames,
+      onToggleFullscreen,
+    }: {
+      totalFrames: number
+      onToggleFullscreen?: () => void
+    }) => (
+      <div data-testid="playback-controls" data-total-frames={totalFrames}>
+        {onToggleFullscreen ? (
+          <button type="button" onClick={onToggleFullscreen}>
+            toggle-fullscreen
+          </button>
+        ) : null}
+      </div>
     ),
     TimecodeDisplay: ({ totalFrames }: { totalFrames: number }) => (
       <div data-testid="timecode-display" data-total-frames={totalFrames} />
@@ -199,6 +211,24 @@ describe('PreviewArea mask editor toolbar', () => {
     expect(await screen.findByTestId('inline-source-preview')).toBeInTheDocument()
     expect(screen.getByTestId('video-preview')).toBeInTheDocument()
     expect(screen.getByTestId('playback-controls')).toBeInTheDocument()
+  })
+
+  it('fullscreen targets only the Program monitor surface', () => {
+    const requestFullscreen = vi.fn().mockResolvedValue(undefined)
+    Object.defineProperty(HTMLElement.prototype, 'requestFullscreen', {
+      configurable: true,
+      value: requestFullscreen,
+    })
+
+    render(<PreviewArea project={{ width: 1920, height: 1080, fps: 30 }} />)
+
+    fireEvent.click(screen.getByRole('button', { name: 'toggle-fullscreen' }))
+    expect(requestFullscreen).toHaveBeenCalledOnce()
+    expect(
+      (requestFullscreen.mock.instances[0] as HTMLElement | undefined)?.getAttribute(
+        'data-program-monitor',
+      ),
+    ).not.toBeNull()
   })
 
   it('uses full edit preview chrome outside color workspace', () => {
