@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button'
 import {
   buildMp3MetadataTags,
   metadataCopyFileName,
+  mp3BpmFromTags,
   mp3MetadataDraftFromTags,
   readMp3Metadata,
   resolveMediaUrl,
@@ -149,7 +150,7 @@ export function BeatvideoFileMetadata({
       album: '',
       genre: '',
       date: localDateValue(),
-      beatsPerMinute: formatBpm(beatBpm ?? snapshot.tags.beatsPerMinute ?? null),
+      beatsPerMinute: formatBpm(beatBpm ?? mp3BpmFromTags(snapshot.tags)),
       comment: '',
     })
     setArtworkMode(snapshot.artworkCount > 0 ? 'keep' : 'remove')
