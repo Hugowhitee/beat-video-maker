@@ -95,6 +95,32 @@ describe('Beatvideo timeline musical grid', () => {
     ).toEqual([105, 120, 135])
   })
 
+  it('filters snap points to the selected visible bar resolution', () => {
+    const dense = analysis()
+    dense.musicMap.duration = 12
+    dense.musicMap.beats = Array.from({ length: 24 }, (_, index) => ({
+      time: index * 0.5,
+      index,
+      downbeat: index % 4 === 0,
+      strength: index % 4 === 0 ? 1 : 0.5,
+    }))
+    dense.detectedBarOneTime = 2
+    dense.barOneTime = 2
+
+    const placement = audio({
+      durationInFrames: 360,
+      sourceEnd: 360,
+      sourceDuration: 360,
+    })
+
+    const frames = resolveBeatvideoTimelineSnapFrames(dense, [placement], 30, {
+      resolution: '2-bars',
+      pixelsPerSecond: 100,
+    })
+
+    expect(frames).toEqual([60, 180, 300])
+  })
+
   it('uses source trim bounds so the visible grid stays locked to the waveform', () => {
     const result = resolveBeatvideoTimelineGrid(
       analysis(),
