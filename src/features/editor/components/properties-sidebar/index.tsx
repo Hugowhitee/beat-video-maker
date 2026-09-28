@@ -124,7 +124,11 @@ function getClipHeader(items: HeaderItem[]) {
  * Shows TransitionPanel when a transition is selected, MarkerPanel when a marker
  * is selected, ClipPanel when clips are selected, CanvasPanel otherwise.
  */
-export const PropertiesSidebar = memo(function PropertiesSidebar() {
+export const PropertiesSidebar = memo(function PropertiesSidebar({
+  mobile = false,
+}: {
+  mobile?: boolean
+}) {
   const { t } = useTranslation()
   const editorDensity = useSettingsStore((s) => s.editorDensity)
   const editorLayout = getEditorLayout(editorDensity)
@@ -255,28 +259,35 @@ export const PropertiesSidebar = memo(function PropertiesSidebar() {
           (exit < entrance). During a resize-drag we snap (duration 0) so width
           tracks the pointer instead of easing behind it. */}
       <motion.div
-        className="panel-bg border-l border-border shrink-0 relative h-full overflow-hidden"
+        className={
+          mobile
+            ? 'panel-bg relative h-full w-full min-w-0 flex-1 overflow-hidden'
+            : 'panel-bg border-l border-border shrink-0 relative h-full overflow-hidden'
+        }
         initial={false}
-        animate={{ width: rightSidebarOpen ? rightSidebarWidth : 0 }}
+        animate={{ width: mobile ? '100%' : rightSidebarOpen ? rightSidebarWidth : 0 }}
         transition={
-          isResizingRef.current || prefersReducedMotion
+          mobile || isResizingRef.current || prefersReducedMotion
             ? { duration: 0 }
             : { type: 'tween', duration: rightSidebarOpen ? 0.26 : 0.2, ease: [0.32, 0.72, 0, 1] }
         }
         onAnimationComplete={() => {
-          if (!rightSidebarOpen) setContentVisible(false)
+          if (!mobile && !rightSidebarOpen) setContentVisible(false)
         }}
       >
         {/* Use Activity for React 19 performance optimization */}
-        <Activity mode={contentVisible ? 'visible' : 'hidden'}>
-          <div className="h-full flex flex-col" style={{ width: rightSidebarWidth }}>
+        <Activity mode={mobile || contentVisible ? 'visible' : 'hidden'}>
+          <div
+            className="h-full min-w-0 flex flex-col"
+            style={{ width: mobile ? '100%' : rightSidebarWidth }}
+          >
             {/* Sidebar Header */}
             <div
               className="flex items-center justify-between px-3 border-b border-border flex-shrink-0"
               style={{ height: EDITOR_LAYOUT_CSS_VALUES.sidebarHeaderHeight }}
             >
               <div className="min-w-0 flex items-center gap-1">
-                {!producerWorkspace ? (
+                {!mobile && !producerWorkspace ? (
                   <Button
                     variant="ghost"
                     size="icon"
@@ -323,7 +334,7 @@ export const PropertiesSidebar = memo(function PropertiesSidebar() {
                   )}
                 </h2>
               </div>
-              {!producerWorkspace ? (
+              {!mobile && !producerWorkspace ? (
                 <Button
                   variant="ghost"
                   size="icon"
@@ -385,7 +396,7 @@ export const PropertiesSidebar = memo(function PropertiesSidebar() {
           </div>
         </Activity>
         {/* Resize Handle */}
-        {rightSidebarOpen && (
+        {!mobile && rightSidebarOpen && (
           <div
             onMouseDown={handleResizeStart}
             className="absolute top-0 left-0 w-1 h-full cursor-col-resize hover:bg-primary/50 active:bg-primary/50 transition-colors z-10"
@@ -397,7 +408,7 @@ export const PropertiesSidebar = memo(function PropertiesSidebar() {
           size, chevron, and top alignment so the arrow stays in the same place
           and size when toggling (mirrors the always-present arrow on the left
           sidebar rail). Edge-attached rounded tab keeps it discoverable. */}
-      {!rightSidebarOpen && !producerWorkspace && (
+      {!mobile && !rightSidebarOpen && !producerWorkspace && (
         <button
           onClick={toggleRightSidebar}
           className="absolute right-0 top-2 z-10 flex items-center justify-center rounded-l-md border border-r-0 border-border bg-secondary/50 hover:bg-secondary transition-colors"

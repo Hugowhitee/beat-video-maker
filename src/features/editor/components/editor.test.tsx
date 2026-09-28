@@ -1,5 +1,5 @@
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vite-plus/test'
-import { cleanup, render, screen, waitFor } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import type { ReactNode } from 'react'
 
 const mocks = vi.hoisted(() => ({
@@ -69,15 +69,21 @@ vi.mock('@/app/error-boundary', () => ({
 }))
 
 vi.mock('./toolbar', () => ({
-  Toolbar: () => <div data-testid="toolbar" />,
+  Toolbar: ({ compact }: { compact?: boolean }) => (
+    <div data-testid="toolbar" data-compact={compact ? 'true' : 'false'} />
+  ),
 }))
 
 vi.mock('./media-sidebar', () => ({
-  MediaSidebar: () => <div data-testid="media-sidebar" />,
+  MediaSidebar: ({ mobile }: { mobile?: boolean }) => (
+    <div data-testid="media-sidebar" data-mobile={mobile ? 'true' : 'false'} />
+  ),
 }))
 
 vi.mock('./properties-sidebar', () => ({
-  PropertiesSidebar: () => <div data-testid="properties-sidebar" />,
+  PropertiesSidebar: ({ mobile }: { mobile?: boolean }) => (
+    <div data-testid="properties-sidebar" data-mobile={mobile ? 'true' : 'false'} />
+  ),
 }))
 
 vi.mock('./preview-area', () => ({
@@ -106,7 +112,9 @@ vi.mock('./interaction-lock-region', () => ({
 }))
 
 vi.mock('./audio-meter-panel', () => ({
-  AudioMeterPanel: () => <div data-testid="audio-meter-panel" />,
+  AudioMeterPanel: ({ mobile }: { mobile?: boolean }) => (
+    <div data-testid="audio-meter-panel" data-mobile={mobile ? 'true' : 'false'} />
+  ),
 }))
 
 vi.mock('@/features/editor/deps/timeline-ui', () => ({
@@ -310,6 +318,20 @@ describe('LoadedEditor migration metadata refresh', () => {
 
   beforeEach(() => {
     vi.clearAllMocks()
+    Object.defineProperty(window, 'matchMedia', {
+      configurable: true,
+      writable: true,
+      value: vi.fn(() => ({
+        matches: false,
+        media: '',
+        onchange: null,
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+        addListener: vi.fn(),
+        removeListener: vi.fn(),
+        dispatchEvent: vi.fn(),
+      })),
+    })
     mocks.editorState.workspace = 'edit'
     mocks.editorState.propertiesFullColumn = false
     mocks.editorState.mediaFullColumn = false
@@ -448,6 +470,62 @@ describe('LoadedEditor migration metadata refresh', () => {
     expect(screen.getByTestId('color-timeline-navigator')).toBeInTheDocument()
     expect(screen.queryByTestId('timeline')).not.toBeInTheDocument()
     expect(screen.queryByTestId('properties-sidebar')).not.toBeInTheDocument()
+  })
+
+  it('uses one reachable editor surface at a time on phone-sized viewports', async () => {
+    Object.defineProperty(window, 'matchMedia', {
+      configurable: true,
+      writable: true,
+      value: vi.fn(() => ({
+        matches: true,
+        media: '(max-width: 767px)',
+        onchange: null,
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+        addListener: vi.fn(),
+        removeListener: vi.fn(),
+        dispatchEvent: vi.fn(),
+      })),
+    })
+
+    render(
+      <LoadedEditor
+        projectId="project-mobile"
+        project={{
+          id: 'project-mobile',
+          name: 'Phone check',
+          width: 1920,
+          height: 1080,
+          fps: 30,
+        }}
+        migration={{
+          storedSchemaVersion: 14,
+          currentSchemaVersion: 14,
+          requiresUpgrade: false,
+        }}
+      />,
+    )
+
+    await waitFor(() =>
+      expect(screen.getByTestId('toolbar')).toHaveAttribute('data-compact', 'true'),
+    )
+
+    expect(screen.getByTestId('preview-area')).toBeInTheDocument()
+    expect(screen.queryByTestId('media-sidebar')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('properties-sidebar')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('timeline')).not.toBeInTheDocument()
+
+    const dock = screen.getByRole('navigation', { name: 'Editor surfaces' })
+    fireEvent.click(screen.getByRole('button', { name: 'Tools' }))
+    expect(screen.getByTestId('media-sidebar')).toHaveAttribute('data-mobile', 'true')
+    expect(screen.queryByTestId('preview-area')).not.toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: 'Inspector' }))
+    expect(screen.getByTestId('properties-sidebar')).toHaveAttribute('data-mobile', 'true')
+
+    fireEvent.click(screen.getByRole('button', { name: 'Timeline' }))
+    expect(await screen.findByTestId('timeline')).toBeInTheDocument()
+    expect(dock).toBeInTheDocument()
   })
 
   it('mounts Motion in the shared editor shell and swaps only the classic Timeline', async () => {
