@@ -1,4 +1,11 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type DragEvent,
+} from 'react'
 import { Film, ImagePlus, Repeat2, Sparkles } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
@@ -27,6 +34,12 @@ import {
 import { useSelectionStore } from '@/shared/state/selection'
 import type { BeatvideoProjectMode } from '@/types/project'
 import type { MusicMap } from '@/types/beatvideo'
+import {
+  ARRANGEMENT_SHOT_DRAG_MIME,
+  decodeArrangementShotDragPayload,
+  encodeArrangementShotDragPayload,
+  shotFitsArrangementSlot,
+} from './arrangement-shot-drag'
 
 interface BeatvideoVisualSourcePanelProps {
   beatvideoMode: BeatvideoProjectMode
@@ -63,6 +76,8 @@ export function BeatvideoVisualSourcePanel({
     useState<TransitionProfile>('clean')
   const [loopBars, setLoopBars] = useState(4)
   const [excludedShotIds, setExcludedShotIds] = useState<string[]>([])
+  const [draggingShotId, setDraggingShotId] = useState<string | null>(null)
+  const [dragOverSlotKey, setDragOverSlotKey] = useState<string | null>(null)
 
   const [lastClipMap, setLastClipMap] = useState<ClipMap | null>(null)
   const [lastPlan, setLastPlan] = useState<EditPlan | null>(null)
@@ -96,6 +111,17 @@ export function BeatvideoVisualSourcePanel({
             { ...shot, sourceName: source.name },
           ] as const),
         ),
+      ),
+    [lastClipMap],
+  )
+
+  const shotTray = useMemo(
+    () =>
+      (lastClipMap?.sources ?? []).flatMap((source) =>
+        source.shots.map((shot) => ({
+          ...shot,
+          sourceName: source.name,
+        })),
       ),
     [lastClipMap],
   )
@@ -380,6 +406,90 @@ export function BeatvideoVisualSourcePanel({
     [applyArrangement, lastClipMap, lastPlan, loopBlocksGrouped],
   )
 
+  const beginArrangementShotDrag = useCallback(
+    (event: DragEvent<HTMLElement>, shotId: string) => {
+      setDraggingShotId(shotId)
+      event.dataTransfer.effectAllowed = 'copy'
+      event.dataTransfer.setData(
+        ARRANGEMENT_SHOT_DRAG_MIME,
+        encodeArrangementShotDragPayload(shotId),
+      )
+      // Keep a plain-text fallback so the native drag remains valid in browsers
+      // that suppress custom MIME reads until drop.
+      event.dataTransfer.setData('text/plain', shotId)
+    },
+    [],
+  )
+
+  const endArrangementShotDrag = useCallback(() => {
+    setDraggingShotId(null)
+    setDragOverSlotKey(null)
+  }, [])
+
+  const canDropArrangementShot = useCallback(
+    (shotId: string | null, segment: EditPlan['segments'][number]) => {
+      if (!shotId) return false
+      const shot = shotById.get(shotId)
+      if (!shot) return false
+      return shotFitsArrangementSlot({
+        shotStart: shot.start,
+        shotEnd: shot.end,
+        slotDuration: segmentDuration(segment),
+      })
+    },
+    [shotById],
+  )
+
+  const handleArrangementSlotDragOver = useCallback(
+    (
+      event: DragEvent<HTMLDivElement>,
+      slotKey: string,
+      segment: EditPlan['segments'][number],
+    ) => {
+      if (!canDropArrangementShot(draggingShotId, segment)) {
+        event.dataTransfer.dropEffect = 'none'
+        return
+      }
+      event.preventDefault()
+      event.dataTransfer.dropEffect = 'copy'
+      setDragOverSlotKey(slotKey)
+    },
+    [canDropArrangementShot, draggingShotId],
+  )
+
+  const handleArrangementSlotDrop = useCallback(
+    (
+      event: DragEvent<HTMLDivElement>,
+      segment: EditPlan['segments'][number],
+    ) => {
+      event.preventDefault()
+      const payload = decodeArrangementShotDragPayload(
+        event.dataTransfer.getData(ARRANGEMENT_SHOT_DRAG_MIME),
+      )
+      const shotId = payload?.shotId ?? draggingShotId
+      setDraggingShotId(null)
+      setDragOverSlotKey(null)
+
+      if (!shotId) return
+      const shot = shotById.get(shotId)
+      if (!shot) return
+
+      if (
+        !shotFitsArrangementSlot({
+          shotStart: shot.start,
+          shotEnd: shot.end,
+          slotDuration: segmentDuration(segment),
+        })
+      ) {
+        toast.warning('Shot is too short for this slot')
+        return
+      }
+      if (shotId === segment.shotId) return
+      void replaceArrangementShot(segment.id, shotId)
+    },
+    [draggingShotId, replaceArrangementShot, shotById],
+  )
+
   const toggleAvoidShot = useCallback((shotId: string) => {
     setExcludedShotIds((current) =>
       current.includes(shotId)
@@ -618,59 +728,159 @@ export function BeatvideoVisualSourcePanel({
           </div>
 
           {editableArrangementSlots.length > 0 ? (
-            <details className="border-t border-border pt-2">
+            <details className="border-t border-border pt-2" open>
               <summary className="cursor-pointer list-none text-[10px] font-medium text-foreground marker:hidden [&::-webkit-details-marker]:hidden">
-                Used shots · {editableArrangementSlots.length}
+                Arrangement grid · {editableArrangementSlots.length} slots
               </summary>
-              <div className="mt-2 space-y-2">
-                {editableArrangementSlots.map(({ key, segment, shot, alternatives, linkedRepeats }) => (
-                  <div key={key} className="border-b border-border/60 py-2 last:border-b-0">
-                    <div className="flex items-center justify-between gap-2">
-                      <div className="min-w-0">
-                        <div className="truncate text-[9px] font-medium text-foreground">
+              <div className="mt-2 grid grid-cols-2 gap-1.5">
+                {editableArrangementSlots.map(
+                  ({ key, segment, shot, alternatives, linkedRepeats }, index) => {
+                    const duration = segmentDuration(segment)
+                    const isDragTarget = dragOverSlotKey === key
+                    const currentShotIsManual = segment.manualOverride === true
+
+                    return (
+                      <div
+                        key={key}
+                        onDragOver={(event) =>
+                          handleArrangementSlotDragOver(event, key, segment)
+                        }
+                        onDragLeave={(event) => {
+                          const nextTarget = event.relatedTarget
+                          if (
+                            !nextTarget ||
+                            !(nextTarget instanceof Node) ||
+                            !event.currentTarget.contains(nextTarget)
+                          ) {
+                            setDragOverSlotKey((current) =>
+                              current === key ? null : current,
+                            )
+                          }
+                        }}
+                        onDrop={(event) => handleArrangementSlotDrop(event, segment)}
+                        className={`min-w-0 rounded-sm border px-2 py-2 transition-colors ${
+                          isDragTarget
+                            ? 'border-primary bg-primary/10'
+                            : currentShotIsManual
+                              ? 'border-primary/45 bg-primary/5'
+                              : 'border-border bg-muted/20'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between gap-2 font-mono text-[8px] text-muted-foreground">
+                          <span>#{index + 1}</span>
+                          <span>
+                            {duration.toFixed(2)}s
+                            {linkedRepeats > 1 ? ` · ×${linkedRepeats}` : ''}
+                          </span>
+                        </div>
+                        <div className="mt-1 truncate text-[9px] font-medium text-foreground">
                           {shot?.sourceName ?? 'Footage'}
                         </div>
-                        <div className="font-mono text-[8px] text-muted-foreground">
-                          {shot
-                            ? `${shot.start.toFixed(2)}–${shot.end.toFixed(2)}s`
-                            : segment.shotId}
-                          {linkedRepeats > 1 ? ` · ×${linkedRepeats} repeats` : ''}
+                        <div className="mt-0.5 truncate font-mono text-[8px] text-muted-foreground">
+                          {segment.timelineStart.toFixed(2)}–{segment.timelineEnd.toFixed(2)}s
+                          {currentShotIsManual ? ' · manual' : ''}
                         </div>
-                      </div>
-                      {shot ? (
-                        <button
-                          type="button"
-                          onClick={() => toggleAvoidShot(shot.id)}
-                          className={`border px-1.5 py-1 text-[8px] ${
-                            excludedShotIds.includes(shot.id)
-                              ? 'border-amber-400/60 bg-amber-400/10 text-amber-200'
-                              : 'border-border text-muted-foreground hover:text-foreground'
-                          }`}
+                        <select
+                          value={segment.shotId}
+                          onChange={(event) =>
+                            void replaceArrangementShot(segment.id, event.target.value)
+                          }
+                          className="mt-1.5 h-7 w-full rounded-sm border border-input bg-secondary px-1.5 text-[8px] text-foreground"
+                          aria-label={`Replace arrangement slot ${index + 1}`}
                         >
-                          {excludedShotIds.includes(shot.id) ? 'Avoiding' : 'Avoid'}
-                        </button>
-                      ) : null}
-                    </div>
-                    <select
-                      value={segment.shotId}
-                      onChange={(event) =>
-                        void replaceArrangementShot(segment.id, event.target.value)
-                      }
-                      className="mt-1.5 h-7 w-full rounded border border-input bg-secondary px-2 text-[9px] text-foreground"
-                      aria-label="Replace arrangement shot"
+                          {alternatives.map((candidate) => (
+                            <option key={candidate.id} value={candidate.id}>
+                              {candidate.sourceName} · {candidate.start.toFixed(1)}–
+                              {candidate.end.toFixed(1)}s
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    )
+                  },
+                )}
+              </div>
+
+              <details className="mt-2 border-t border-border/70 pt-2">
+                <summary className="cursor-pointer list-none text-[9px] font-medium text-muted-foreground marker:hidden [&::-webkit-details-marker]:hidden">
+                  Shot tray · {shotTray.length}
+                </summary>
+                <div className="mt-1.5 max-h-40 space-y-1 overflow-y-auto pr-1">
+                  {shotTray.map((shot) => {
+                    const isAvoided = excludedShotIds.includes(shot.id)
+                    const isDragging = draggingShotId === shot.id
+                    return (
+                      <div
+                        key={shot.id}
+                        draggable
+                        role="button"
+                        tabIndex={0}
+                        aria-label={`Drag ${shot.sourceName} ${shot.start.toFixed(1)} to ${shot.end.toFixed(1)} seconds onto an arrangement slot`}
+                        title="Drag onto an arrangement slot"
+                        onDragStart={(event) =>
+                          beginArrangementShotDrag(event, shot.id)
+                        }
+                        onDragEnd={endArrangementShotDrag}
+                        className={`flex cursor-grab items-center justify-between gap-2 rounded-sm border px-2 py-1.5 text-[8px] active:cursor-grabbing ${
+                          isDragging
+                            ? 'border-primary bg-primary/10 text-foreground'
+                            : isAvoided
+                              ? 'border-border/60 text-muted-foreground/60'
+                              : 'border-border text-muted-foreground hover:border-primary/35 hover:text-foreground'
+                        }`}
+                      >
+                        <span className="min-w-0 truncate">{shot.sourceName}</span>
+                        <span className="shrink-0 font-mono">
+                          {shot.start.toFixed(1)}–{shot.end.toFixed(1)}s
+                          {isAvoided ? ' · avoid' : ''}
+                        </span>
+                      </div>
+                    )
+                  })}
+                </div>
+              </details>
+
+              <div className="mt-2 flex items-center justify-between gap-2">
+                <span className="text-[8px] leading-relaxed text-muted-foreground">
+                  Drag a detected shot onto a slot. Timing stays locked to the corrected grid.
+                </span>
+                {editableArrangementSlots[0]?.shot ? (
+                  <button
+                    type="button"
+                    onClick={() =>
+                      toggleAvoidShot(editableArrangementSlots[0]!.shot!.id)
+                    }
+                    className="shrink-0 text-[8px] text-muted-foreground hover:text-foreground"
+                  >
+                    Manage avoids in slots
+                  </button>
+                ) : null}
+              </div>
+
+              <div className="mt-1.5 space-y-1">
+                {editableArrangementSlots.map(({ key, shot }) =>
+                  shot ? (
+                    <div
+                      key={`avoid-${key}`}
+                      className="flex items-center justify-between gap-2 text-[8px] text-muted-foreground"
                     >
-                      {alternatives.map((candidate) => (
-                        <option key={candidate.id} value={candidate.id}>
-                          {candidate.sourceName} · {candidate.start.toFixed(1)}–{candidate.end.toFixed(1)}s
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                ))}
-                <p className="text-[8px] leading-relaxed text-muted-foreground">
-                  In Repeat motif mode, replacing one slot updates that slot in every repeat.
-                  Avoided shots are skipped the next time you rebuild.
-                </p>
+                      <span className="min-w-0 truncate">
+                        {shot.sourceName} · {shot.start.toFixed(1)}–{shot.end.toFixed(1)}s
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => toggleAvoidShot(shot.id)}
+                        className={`shrink-0 border px-1.5 py-0.5 ${
+                          excludedShotIds.includes(shot.id)
+                            ? 'border-amber-400/60 bg-amber-400/10 text-amber-200'
+                            : 'border-border hover:text-foreground'
+                        }`}
+                      >
+                        {excludedShotIds.includes(shot.id) ? 'Avoiding' : 'Avoid'}
+                      </button>
+                    </div>
+                  ) : null,
+                )}
               </div>
             </details>
           ) : null}
@@ -733,7 +943,7 @@ export function BeatvideoVisualSourcePanel({
         <div className="font-mono text-[9px] text-muted-foreground">{progressLabel}</div>
       ) : null}
       <p className="text-[9px] leading-relaxed text-muted-foreground">
-        For a manual edit, drag any VIDEO card below straight onto the timeline.
+        Drag a full VIDEO card to the timeline for free placement outside the generated arrangement.
       </p>
     </section>
   )
