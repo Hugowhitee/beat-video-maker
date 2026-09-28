@@ -332,8 +332,11 @@ function buildEffectTransitions(
       continue;
     }
 
+    // Accent mode stays sparse and alternates two real transition renderers.
+    // The style is intentionally generic: these are universal edit accents,
+    // not a genre-specific "Detroit" mode.
     const kind =
-      context.options.transitionProfile === 'detroit' && transitions.length % 2 === 1
+      transitions.length % 2 === 1
         ? 'film-gate'
         : 'film-burn';
 

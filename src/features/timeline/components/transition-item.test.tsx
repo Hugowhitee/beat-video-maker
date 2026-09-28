@@ -191,6 +191,17 @@ describe('TransitionItem preview bridge motion', () => {
     expect(rightEdge).toBeLessThanOrEqual(Math.round(previewedRightClipEnd))
   })
 
+  it('selects a compact transition by clicking the bridge itself', () => {
+    setTransitionClips({ right: { from: 160 } })
+    useZoomStore.getState().setZoomLevelSynchronized(0.1)
+
+    render(<TransitionItem transition={{ ...transition, durationInFrames: 4 }} />)
+
+    fireEvent.click(screen.getByTitle('Fade (0.1s)'))
+
+    expect(useSelectionStore.getState().selectedTransitionId).toBe('tr-1')
+  })
+
   it('selects the transition when an edge handle is clicked', () => {
     setTransitionClips()
 
@@ -216,7 +227,7 @@ describe('TransitionItem preview bridge motion', () => {
     )
 
     const overlay = screen.getByTitle('Fade (0.1s)')
-    expect(overlay.style.width).toBe('10px')
+    expect(overlay.style.width).toBe('20px')
 
     const dropZone = container.querySelector('[data-transition-hit-zone="bridge-drop"]')
     expect(dropZone).not.toBeNull()

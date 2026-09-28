@@ -6,6 +6,7 @@ import {
   useState,
   type DragEvent,
 } from 'react'
+import { useEditorStore } from '@/shared/state/editor'
 import { Film, ImagePlus, Repeat2, Sparkles } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
@@ -684,8 +685,8 @@ export function BeatvideoVisualSourcePanel({
                   }
                   className="h-8 w-full rounded-md border border-input bg-secondary px-2 text-xs text-foreground"
                 >
-                  <option value="clean">Clean cuts</option>
-                  <option value="detroit">Detroit accents</option>
+                  <option value="clean">Cuts only</option>
+                  <option value="accent">Accent transitions</option>
                 </select>
               </label>
 
@@ -707,6 +708,14 @@ export function BeatvideoVisualSourcePanel({
                 <div />
               )}
             </div>
+
+            <button
+              type="button"
+              onClick={() => useEditorStore.getState().setActiveTab('transitions')}
+              className="mt-2 text-left text-[10px] text-muted-foreground hover:text-foreground"
+            >
+              Add or edit transitions manually…
+            </button>
 
             <Button
               type="button"

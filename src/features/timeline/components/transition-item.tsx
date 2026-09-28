@@ -93,7 +93,7 @@ function getTransitionPixelPosition(
   const cutFrame = Math.abs(leftEnd - rightClip.from) <= 1 ? rightClip.from : leftEnd
   const cutPx = Math.round(frameToPixelsAtScale(cutFrame, fps, pixelsPerSecond))
 
-  const minWidth = 10
+  const minWidth = 20
   const maxVisualWidth = Math.max(naturalWidth, rightClipEnd - leftClipStart)
   const effectiveWidth = Math.min(Math.max(naturalWidth, minWidth), maxVisualWidth)
   const centeredLeft =
@@ -652,7 +652,7 @@ export const TransitionItem = memo(function TransitionItem({
           ref={containerRef}
           data-transition-id={transition.id}
           className={cn(
-            'absolute inset-y-0 overflow-visible rounded-sm pointer-events-none',
+            'absolute inset-y-0 overflow-visible rounded-sm pointer-events-auto',
             isSelected && 'ring-2 ring-inset ring-primary',
             dragPreviewMatches && 'ring-2 ring-inset ring-primary/60',
             isResizing && 'ring-2 ring-inset ring-purple-400',
@@ -672,18 +672,40 @@ export const TransitionItem = memo(function TransitionItem({
             } as React.CSSProperties
           }
           title={`${presentationLabel} (${durationSec}s)`}
+          onMouseEnter={() => setIsBridgeHovered(true)}
+          onMouseLeave={() => {
+            setIsBridgeHovered(false)
+            if (!isResizing) setHoveredEdge(null)
+          }}
+          onMouseDown={handleMouseDown}
+          onClick={handleClick}
+          onDragOver={handleDragOver}
+          onDragLeave={handleDragLeave}
+          onDrop={handleDrop}
         >
           <div
             className={cn(
               'pointer-events-none relative h-full w-full rounded-sm border transition-colors',
               showActiveBridge
-                ? 'border-primary/90 bg-primary/10 shadow-[0_0_0_1px_color-mix(in_oklab,var(--primary)_18%,transparent)]'
-                : 'border-foreground/45 bg-background/5',
+                ? 'border-primary bg-primary/15 shadow-[0_0_0_1px_color-mix(in_oklab,var(--primary)_22%,transparent)]'
+                : 'border-foreground/60 bg-background/20 hover:border-foreground/80',
             )}
           >
             <div className="absolute inset-x-0 top-0 h-px bg-foreground/45" />
             <div className="absolute inset-x-0 bottom-0 h-px bg-background/20" />
-            {position.width >= 54 ? (
+            <div
+              className="absolute inset-y-0 w-px bg-foreground/80"
+              style={{ left: `${position.cutOffset}px` }}
+            />
+            <div
+              className="absolute top-1/2 h-px w-4 -translate-x-1/2 -translate-y-1/2 rotate-45 bg-foreground/65"
+              style={{ left: `${position.cutOffset}px` }}
+            />
+            <div
+              className="absolute top-1/2 h-px w-4 -translate-x-1/2 -translate-y-1/2 -rotate-45 bg-foreground/65"
+              style={{ left: `${position.cutOffset}px` }}
+            />
+            {position.width >= 72 ? (
               <div className="absolute inset-0 flex items-center justify-center px-1">
                 <span className="max-w-full truncate bg-background/75 px-1 font-mono text-[8px] font-medium text-foreground/90">
                   {presentationLabel}
