@@ -40,6 +40,8 @@ Overlay means real timeline/compositor layers built from FreeCut primitives: tex
 
 Audio reactivity is a capability of effect parameters, not a small preset category. Quick reactive looks are shortcuts only and belong in the same Inspector as applied effects. Any GPU-effect numeric parameter marked safe/animatable by the effect definition should expose a compact React control next to the real parameter; advanced driver/timing controls stay progressively disclosed. Audio-hit/low/mid/high drivers use analyzed transient evidence, while Beat/Downbeat drivers use the corrected musical grid. Non-numeric choices, quality-only controls and parameters that cannot be modulated deterministically do not expose React. Do not duplicate a second generic “Audio Reactive” panel underneath specialized effect editors.
 
+Reactive graphics follow the same rule: they are normal editable timeline/compositor layers with canonical `audioReactive` bindings, not a parallel visualizer engine. Visual → Graphics may offer compact quick starts such as **Beat flash**, **Pulse frame** and **3-band bars**. The 3-band bars are transient-driven low/mid/high pulse graphics; they are intentionally not presented as a continuous FFT spectrum. Future continuous waveform/spectrum/circular renderers must reuse the same project timing/audio evidence and remain ordinary editable visual layers.
+
 ## Video mode
 
 Video mode exposes footage editing without changing engines:
