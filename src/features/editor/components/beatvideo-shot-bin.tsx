@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useState, type DragEvent } from 'react'
-import { Folder, FolderOpen } from 'lucide-react'
 import {
   resolveMediaUrl,
   useMediaLibraryStore,
@@ -114,127 +113,119 @@ export function BeatvideoShotBin({
 }) {
   const sourceIds = useMemo(() => clipMap.sources.map((source) => source.id), [clipMap])
   const mediaById = useMediaLibraryStore((state) => state.mediaById)
-  const [openSourceId, setOpenSourceId] = useState<string | null>(
+  const [activeSourceId, setActiveSourceId] = useState<string | null>(
     clipMap.sources[0]?.id ?? null,
   )
 
   useEffect(() => {
-    if (openSourceId && sourceIds.includes(openSourceId)) return
-    setOpenSourceId(sourceIds[0] ?? null)
-  }, [openSourceId, sourceIds])
+    if (activeSourceId && sourceIds.includes(activeSourceId)) return
+    setActiveSourceId(sourceIds[0] ?? null)
+  }, [activeSourceId, sourceIds])
 
+  const activeSource =
+    clipMap.sources.find((source) => source.id === activeSourceId) ??
+    clipMap.sources[0] ??
+    null
   const shotCount = clipMap.sources.reduce((total, source) => total + source.shots.length, 0)
 
   return (
-    <div className="border-t border-border/80 pt-2" data-beatvideo-shot-bin>
+    <div data-beatvideo-shot-bin>
       <div className="mb-1.5 flex items-center justify-between gap-2">
-        <span className="text-[10px] font-medium text-foreground">Detected shots</span>
-        <span className="font-mono text-[9px] text-muted-foreground">{shotCount}</span>
+        <span className="text-[10px] font-medium text-foreground">Shots</span>
+        <span className="font-mono text-[9px] text-muted-foreground">
+          {shotCount} detected
+        </span>
       </div>
 
-      <div className="divide-y divide-border/70 border-y border-border/70">
-        {clipMap.sources.map((source) => {
-          const open = openSourceId === source.id
-          const sourceDuration = mediaById[source.id]?.duration ?? source.duration
-          const firstShot = source.shots[0]
+      {clipMap.sources.length > 1 ? (
+        <div className="mb-1.5 flex gap-1 overflow-x-auto border-b border-border/70">
+          {clipMap.sources.map((source) => (
+            <button
+              key={source.id}
+              type="button"
+              aria-pressed={source.id === activeSource?.id}
+              onClick={() => setActiveSourceId(source.id)}
+              className={
+                source.id === activeSource?.id
+                  ? 'shrink-0 border-b-2 border-primary px-1.5 py-1 text-[9px] font-medium text-foreground'
+                  : 'shrink-0 border-b-2 border-transparent px-1.5 py-1 text-[9px] text-muted-foreground hover:text-foreground'
+              }
+            >
+              {source.name} · {source.shots.length}
+            </button>
+          ))}
+        </div>
+      ) : activeSource ? (
+        <div className="mb-1.5 truncate text-[9px] text-muted-foreground">
+          {activeSource.name}
+        </div>
+      ) : null}
 
-          return (
-            <div key={source.id}>
-              <button
-                type="button"
-                onClick={() => setOpenSourceId(open ? null : source.id)}
-                aria-expanded={open}
-                className="flex h-11 w-full items-center gap-2 px-1 text-left hover:bg-secondary/25"
+      {activeSource ? (
+        <div className="flex gap-1.5 overflow-x-auto pb-1">
+          {activeSource.shots.map((shot, index) => {
+            const avoided = excludedShotIds.includes(shot.id)
+            const dragging = draggingShotId === shot.id
+            const sourceDuration =
+              mediaById[activeSource.id]?.duration ?? activeSource.duration
+
+            return (
+              <div
+                key={shot.id}
+                draggable
+                tabIndex={0}
+                aria-label={`Shot ${index + 1} from ${activeSource.name}. Drag onto a sequence slot.`}
+                title="Drag onto a sequence slot"
+                onDragStart={(event) => onDragStart(event, shot.id)}
+                onDragEnd={onDragEnd}
+                onKeyDown={(event) => {
+                  if (event.key !== 'Enter' && event.key !== ' ') return
+                  event.preventDefault()
+                  onToggleAvoid(shot.id)
+                }}
+                className={`group relative w-28 shrink-0 cursor-grab border bg-background outline-none active:cursor-grabbing focus-visible:border-primary ${
+                  dragging
+                    ? 'border-primary'
+                    : avoided
+                      ? 'border-border/50 opacity-50'
+                      : 'border-border/80 hover:border-primary/45'
+                }`}
               >
-                {firstShot ? (
-                  <BeatvideoShotFrame
-                    shot={firstShot}
-                    sourceDuration={sourceDuration}
-                    className="h-8 w-12 shrink-0"
-                  />
-                ) : (
-                  <div className="h-8 w-12 shrink-0 bg-muted/40" />
-                )}
-                <span className="min-w-0 flex-1">
-                  <span className="block truncate text-[10px] font-medium text-foreground">
-                    {source.name}
+                <BeatvideoShotFrame
+                  shot={shot}
+                  sourceDuration={sourceDuration}
+                  className="aspect-video w-full"
+                />
+                <div className="flex items-center justify-between gap-1 border-t border-border/60 px-1 py-1">
+                  <span className="font-mono text-[8px] text-foreground/80">
+                    {String(index + 1).padStart(2, '0')}
                   </span>
-                  <span className="block font-mono text-[8px] text-muted-foreground">
-                    {source.shots.length} shot{source.shots.length === 1 ? '' : 's'}
+                  <span className="font-mono text-[8px] text-muted-foreground">
+                    {(shot.end - shot.start).toFixed(1)}s
                   </span>
-                </span>
-                {open ? (
-                  <FolderOpen className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-                ) : (
-                  <Folder className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
-                )}
-              </button>
-
-              {open ? (
-                <div className="flex gap-1 overflow-x-auto border-t border-border/60 bg-background/30 p-1.5">
-                  {source.shots.map((shot, index) => {
-                    const avoided = excludedShotIds.includes(shot.id)
-                    const dragging = draggingShotId === shot.id
-                    return (
-                      <div
-                        key={shot.id}
-                        draggable
-                        role="button"
-                        tabIndex={0}
-                        aria-label={`Drag shot ${index + 1} from ${source.name} onto an arrangement slot`}
-                        title="Drag onto an arrangement slot"
-                        onDragStart={(event) => onDragStart(event, shot.id)}
-                        onDragEnd={onDragEnd}
-                        onDoubleClick={() => onToggleAvoid(shot.id)}
-                        className={`group relative w-24 shrink-0 cursor-grab border bg-background active:cursor-grabbing ${
-                          dragging
-                            ? 'border-primary'
-                            : avoided
-                              ? 'border-border/50 opacity-45'
-                              : 'border-border/80 hover:border-primary/45'
-                        }`}
-                      >
-                        <BeatvideoShotFrame
-                          shot={shot}
-                          sourceDuration={sourceDuration}
-                          className="aspect-video w-full"
-                        />
-                        <div className="flex items-center justify-between gap-1 px-1 py-1">
-                          <span className="font-mono text-[8px] text-foreground/75">
-                            #{index + 1}
-                          </span>
-                          <span className="font-mono text-[8px] text-muted-foreground">
-                            {(shot.end - shot.start).toFixed(1)}s
-                          </span>
-                        </div>
-                        <button
-                          type="button"
-                          onClick={(event) => {
-                            event.stopPropagation()
-                            onToggleAvoid(shot.id)
-                          }}
-                          className={`absolute right-1 top-1 border px-1 py-0.5 font-mono text-[7px] leading-none opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100 ${
-                            avoided
-                              ? 'border-amber-400/50 bg-background/90 text-amber-300 opacity-100'
-                              : 'border-border/70 bg-background/90 text-muted-foreground'
-                          }`}
-                          aria-label={avoided ? 'Allow shot on rebuild' : 'Avoid shot on rebuild'}
-                        >
-                          {avoided ? 'Avoided' : 'Avoid'}
-                        </button>
-                      </div>
-                    )
-                  })}
+                  <button
+                    type="button"
+                    onClick={(event) => {
+                      event.stopPropagation()
+                      onToggleAvoid(shot.id)
+                    }}
+                    className={
+                      avoided
+                        ? 'text-[8px] font-medium text-amber-300 hover:text-amber-200'
+                        : 'text-[8px] text-muted-foreground hover:text-foreground'
+                    }
+                    aria-label={avoided ? 'Use shot on rebuild' : 'Skip shot on rebuild'}
+                  >
+                    {avoided ? 'Use' : 'Skip'}
+                  </button>
                 </div>
-              ) : null}
-            </div>
-          )
-        })}
-      </div>
-
-      <p className="mt-1.5 text-[8px] leading-relaxed text-muted-foreground">
-        Drag a shot onto a slot. The cut stays on the corrected music grid.
-      </p>
+              </div>
+            )
+          })}
+        </div>
+      ) : (
+        <div className="py-2 text-[9px] text-muted-foreground">No shots detected.</div>
+      )}
     </div>
   )
 }
