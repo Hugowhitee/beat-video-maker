@@ -735,8 +735,11 @@ export function BeatvideoVisualSourcePanel({
       {videoCandidates.length > 0 ? (
         <>
           <div className="border-t border-border pt-3">
-            <div className="mb-2 text-[11px] font-semibold text-foreground">
-              Arrangement
+            <div className="mb-2 flex items-center justify-between gap-2">
+              <span className="text-[11px] font-medium text-foreground">Place on beat</span>
+              <span className="font-mono text-[9px] text-muted-foreground">
+                {timelineGrid ? 'Grid ready' : 'Needs beat grid'}
+              </span>
             </div>
 
             <div className="grid h-8 grid-cols-2 border-b border-border">
@@ -818,35 +821,33 @@ export function BeatvideoVisualSourcePanel({
               onClick={() => useEditorStore.getState().setActiveTab('transitions')}
               className="mt-2 text-left text-[10px] text-muted-foreground hover:text-foreground"
             >
-              Add or edit transitions manually…
+              Edit transitions manually
             </button>
 
             <Button
               type="button"
               size="sm"
-              className="mt-2 w-full justify-start"
+              className="mt-2 w-full justify-center"
               disabled={!timelineGrid || preparingFootage || autoArranging || loopBlocksGrouped}
               onClick={() => void autoArrangeFootage()}
             >
               <Sparkles className="h-3.5 w-3.5" />
               {autoArranging
-                ? 'Building arrangement…'
+                ? 'Building…'
                 : lastPlan
-                  ? 'Rebuild arrangement'
-                  : 'Build arrangement'}
+                  ? 'Rebuild sequence'
+                  : 'Build sequence'}
             </Button>
 
-            <div className="mt-2 font-mono text-[8px] text-muted-foreground">
-              Corrected grid · editable cuts · footage audio muted
+            <div className="mt-2 text-[8px] leading-relaxed text-muted-foreground">
+              Generated cuts land on the corrected music grid. Footage audio stays muted.
             </div>
           </div>
 
           {editableArrangementSlots.length > 0 && lastClipMap ? (
             <div className="border-t border-border pt-2">
               <div className="mb-1.5 flex items-center justify-between gap-2">
-                <span className="text-[10px] font-medium text-foreground">
-                  {lastPlan?.mode === 'loop' ? 'Loop arrangement' : 'Arrangement'}
-                </span>
+                <span className="text-[10px] font-medium text-foreground">Sequence</span>
                 <span className="font-mono text-[9px] text-muted-foreground">
                   {editableArrangementSlots.length} slots
                 </span>
@@ -857,7 +858,7 @@ export function BeatvideoVisualSourcePanel({
                 data-beatvideo-arrangement-strip
               >
                 {editableArrangementSlots.map(
-                  ({ key, segment, shot, alternatives, linkedRepeats }, index) => {
+                  ({ key, segment, shot, linkedRepeats }, index) => {
                     const duration = segmentDuration(segment)
                     const isDragTarget = dragOverSlotKey === key
                     const currentShotIsManual = segment.manualOverride === true
@@ -868,6 +869,15 @@ export function BeatvideoVisualSourcePanel({
                     return (
                       <div
                         key={key}
+                        role="button"
+                        tabIndex={0}
+                        onClick={() => focusArrangementSegment(segment)}
+                        onKeyDown={(event) => {
+                          if (event.key === 'Enter' || event.key === ' ') {
+                            event.preventDefault()
+                            focusArrangementSegment(segment)
+                          }
+                        }}
                         onDragOver={(event) =>
                           handleArrangementSlotDragOver(event, key, segment)
                         }
@@ -884,7 +894,7 @@ export function BeatvideoVisualSourcePanel({
                           }
                         }}
                         onDrop={(event) => handleArrangementSlotDrop(event, segment)}
-                        className={`w-28 shrink-0 border bg-background transition-colors ${
+                        className={`w-32 shrink-0 cursor-pointer border bg-background outline-none transition-colors focus-visible:border-primary ${
                           isDragTarget
                             ? 'border-primary ring-1 ring-primary/40'
                             : currentShotIsManual
@@ -911,26 +921,9 @@ export function BeatvideoVisualSourcePanel({
                           </span>
                         </div>
 
-                        <div className="min-w-0 border-t border-border/70 px-1 py-1">
-                          <div className="truncate text-[8px] text-foreground/80">
-                            {shot?.sourceName ?? 'Footage'}
-                            {currentShotIsManual ? ' · manual' : ''}
-                          </div>
-                          <select
-                            value={segment.shotId}
-                            onChange={(event) =>
-                              void replaceArrangementShot(segment.id, event.target.value)
-                            }
-                            className="mt-1 h-6 w-full border-0 border-t border-border/60 bg-transparent px-0 text-[8px] text-muted-foreground outline-none focus:text-foreground"
-                            aria-label={`Replace arrangement slot ${index + 1}`}
-                          >
-                            {alternatives.map((candidate) => (
-                              <option key={candidate.id} value={candidate.id}>
-                                {candidate.sourceName} · {candidate.start.toFixed(1)}–
-                                {candidate.end.toFixed(1)}s
-                              </option>
-                            ))}
-                          </select>
+                        <div className="truncate border-t border-border/70 px-1.5 py-1 text-[8px] text-foreground/80">
+                          {shot?.sourceName ?? 'Footage'}
+                          {currentShotIsManual ? ' · replaced' : ''}
                         </div>
                       </div>
                     )
@@ -938,14 +931,6 @@ export function BeatvideoVisualSourcePanel({
                 )}
               </div>
 
-              <BeatvideoShotBin
-                clipMap={lastClipMap}
-                excludedShotIds={excludedShotIds}
-                draggingShotId={draggingShotId}
-                onToggleAvoid={toggleAvoidShot}
-                onDragStart={beginArrangementShotDrag}
-                onDragEnd={endArrangementShotDrag}
-              />
             </div>
           ) : null}
 
@@ -1007,7 +992,7 @@ export function BeatvideoVisualSourcePanel({
         <div className="font-mono text-[9px] text-muted-foreground">{progressLabel}</div>
       ) : null}
       <p className="text-[9px] leading-relaxed text-muted-foreground">
-        Drag a full VIDEO card to the timeline for free placement outside the generated arrangement.
+        Manual placement: drag any full video from the Media library below directly onto the Media lane in the timeline.
       </p>
     </section>
   )
