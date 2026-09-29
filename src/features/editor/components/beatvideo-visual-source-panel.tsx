@@ -127,7 +127,6 @@ export function BeatvideoVisualSourcePanel({
       if (seen.has(key)) return []
       seen.add(key)
       const shot = shotById.get(segment.shotId)
-      const duration = segmentDuration(segment)
       return [
         {
           key,
@@ -143,7 +142,7 @@ export function BeatvideoVisualSourcePanel({
         },
       ]
     })
-  }, [excludedShotIds, lastClipMap, lastPlan, loopBlocksGrouped, shotById])
+  }, [lastClipMap, lastPlan, loopBlocksGrouped, shotById])
 
   useEffect(() => {
     if (!videoCandidates.some((media) => media.id === selectedLoopMediaId)) {
