@@ -545,7 +545,20 @@ export const Timeline = memo(function Timeline({
 
   // Set the default edit target on mount.
   const tracksLength = tracks.length
-  const defaultActiveTrackId = useMemo(() => getDefaultActiveTrackId(tracks), [tracks])
+  const defaultActiveTrackId = useMemo(
+    () =>
+      simplifiedBeatvideoTimeline
+        ? (producerTrackLayout?.primaryMediaTrackId ??
+          producerTrackLayout?.beatTrackId ??
+          getDefaultActiveTrackId(tracks))
+        : getDefaultActiveTrackId(tracks),
+    [
+      producerTrackLayout?.beatTrackId,
+      producerTrackLayout?.primaryMediaTrackId,
+      simplifiedBeatvideoTimeline,
+      tracks,
+    ],
+  )
   useEffect(() => {
     if (tracksLength > 0 && !activeTrackId && defaultActiveTrackId) {
       setActiveTrack(defaultActiveTrackId)
