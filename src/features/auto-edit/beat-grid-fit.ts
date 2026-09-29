@@ -283,6 +283,16 @@ function isLowEndTempoTransient(transient: MusicTransient): boolean {
   )
 }
 
+function isRhythmicTempoTransient(transient: MusicTransient): boolean {
+  // Tempo is periodicity, not instrument identity. A recurring clap/snare/hat
+  // can therefore corroborate BPM when kicks are sparse. This broader evidence
+  // is never used by the phase fitter below, which remains low-end weighted.
+  return (
+    transient.strength >= 0.36 &&
+    Math.max(transient.low, transient.mid, transient.high) >= 0.34
+  )
+}
+
 function collectLowEndTempoObservations(params: {
   phase: number
   period: number
@@ -369,10 +379,14 @@ function estimateSparsePeriodEvidence(
       const gap = (times[right] ?? 0) - (times[left] ?? 0)
       if (!Number.isFinite(gap) || gap <= 0) continue
 
-      const steps = Math.round(gap / seedPeriod)
-      if (steps < 2 || steps > 16) continue
+      // Syncopated low-end patterns commonly repeat at x.5-beat spans.
+      // Quantize pair distance in half-beats, then recover the full beat period.
+      // Short adjacent attacks stay excluded so local articulation cannot own BPM.
+      const halfSteps = Math.round((gap / seedPeriod) * 2)
+      if (halfSteps < 3 || halfSteps > 32) continue
 
-      const candidate = gap / steps
+      const beatSpan = halfSteps / 2
+      const candidate = gap / beatSpan
       const deviation = Math.abs(candidate - seedPeriod) / seedPeriod
       if (deviation <= 0.025) periods.push(candidate)
     }
@@ -392,6 +406,82 @@ function estimateSparsePeriodEvidence(
   if (!Number.isFinite(period) || period <= 0 || spread > 0.015) return null
 
   return { period, spread, sampleCount: kept.length }
+}
+
+type DistributedPeriodEvidence = SparsePeriodEvidence & {
+  regionCount: number
+}
+
+function estimateDistributedPeriodEvidence(params: {
+  transients: readonly MusicTransient[]
+  seedPeriod: number
+  firstDetectorTime: number
+  lastDetectorTime: number
+  minimumRegions: number
+}): DistributedPeriodEvidence | null {
+  const {
+    transients,
+    seedPeriod,
+    firstDetectorTime,
+    lastDetectorTime,
+    minimumRegions,
+  } = params
+  if (transients.length < 6) return null
+
+  const detectorSpan = lastDetectorTime - firstDetectorTime
+  if (detectorSpan <= seedPeriod * 12) return null
+
+  const firstOnset = transients[0]?.time ?? firstDetectorTime
+  const lastOnset = transients.at(-1)?.time ?? firstOnset
+  const evidenceCoverage = (lastOnset - firstOnset) / Math.max(EPSILON, detectorSpan)
+  if (evidenceCoverage < 0.5) return null
+
+  const globalEvidence = estimateSparsePeriodEvidence(
+    transients.map((transient) => transient.time),
+    seedPeriod,
+  )
+  if (!globalEvidence) return null
+
+  // Overlapping early/middle/late measurements prevent one local fill or one
+  // unusually busy phrase from retuning the entire song.
+  const regionWidth = detectorSpan * 0.44
+  const regionStarts = [
+    firstDetectorTime,
+    firstDetectorTime + detectorSpan * 0.28,
+    Math.max(firstDetectorTime, lastDetectorTime - regionWidth),
+  ]
+  const regionEvidence = regionStarts
+    .map((start) => {
+      const end = start + regionWidth
+      return estimateSparsePeriodEvidence(
+        transients
+          .filter((transient) => transient.time >= start && transient.time <= end)
+          .map((transient) => transient.time),
+        seedPeriod,
+      )
+    })
+    .filter((evidence): evidence is SparsePeriodEvidence => evidence !== null)
+
+  if (regionEvidence.length < minimumRegions) return null
+
+  const periods = [globalEvidence.period, ...regionEvidence.map((evidence) => evidence.period)]
+  const period = median(periods)
+  const spread =
+    (Math.max(...periods) - Math.min(...periods)) / Math.max(EPSILON, period)
+  const allowedSpread = minimumRegions >= 3 ? 0.0055 : 0.0075
+  if (spread > allowedSpread) return null
+
+  const deviation = Math.abs(period - seedPeriod) / Math.max(EPSILON, seedPeriod)
+  if (deviation > 0.025) return null
+
+  return {
+    period,
+    spread,
+    sampleCount:
+      globalEvidence.sampleCount +
+      regionEvidence.reduce((sum, evidence) => sum + evidence.sampleCount, 0),
+    regionCount: regionEvidence.length,
+  }
 }
 
 function lowEndPeriodScore(params: {
@@ -479,83 +569,73 @@ function refinePeriodWithLowEndTransients(params: {
   const { phase, period, detectorObservations, transients } = params
   if (detectorObservations.length < 16 || transients.length === 0) return null
 
+  const firstDetectorTime = detectorObservations[0]?.time ?? 0
+  const lastDetectorTime = detectorObservations.at(-1)?.time ?? firstDetectorTime
+
   const lowEndTransients = transients
     .filter(isLowEndTempoTransient)
     .slice()
     .sort((left, right) => left.time - right.time)
-  if (lowEndTransients.length < 6) return null
+  const rhythmicTransients = transients
+    .filter(isRhythmicTempoTransient)
+    .slice()
+    .sort((left, right) => left.time - right.time)
 
-  const firstDetectorTime = detectorObservations[0]?.time ?? 0
-  const lastDetectorTime = detectorObservations.at(-1)?.time ?? firstDetectorTime
-  const detectorSpan = lastDetectorTime - firstDetectorTime
-  if (detectorSpan <= period * 12) return null
-
-  const firstOnset = lowEndTransients[0]?.time ?? firstDetectorTime
-  const lastOnset = lowEndTransients.at(-1)?.time ?? firstOnset
-  const evidenceCoverage = (lastOnset - firstOnset) / Math.max(EPSILON, detectorSpan)
-  if (evidenceCoverage < 0.55) return null
-
-  // Measurement 1: use long low-end onset spans. Pairwise spans average the
-  // tracker's frame jitter and keep working when several beats intentionally
-  // have no kick, so sparse arrangements can still measure whole-song tempo.
-  const globalEvidence = estimateSparsePeriodEvidence(
-    lowEndTransients.map((transient) => transient.time),
-    period,
-  )
-  if (!globalEvidence) return null
-
-  // Measurements 2-4: beginning / middle / end. No single fill or bass-heavy
-  // phrase is allowed to own the song tempo.
-  const regionWidth = detectorSpan * 0.46
-  const regionStarts = [
+  // Independent measurements 1–4: low-end global + distributed song regions.
+  const lowConsensus = estimateDistributedPeriodEvidence({
+    transients: lowEndTransients,
+    seedPeriod: period,
     firstDetectorTime,
-    firstDetectorTime + detectorSpan * 0.27,
-    Math.max(firstDetectorTime, lastDetectorTime - regionWidth),
-  ]
-  const regionEvidence = regionStarts
-    .map((start) => {
-      const end = start + regionWidth
-      const times = lowEndTransients
-        .filter((transient) => transient.time >= start && transient.time <= end)
-        .map((transient) => transient.time)
-      return estimateSparsePeriodEvidence(times, period)
-    })
-    .filter((evidence): evidence is SparsePeriodEvidence => evidence !== null)
+    lastDetectorTime,
+    minimumRegions: 2,
+  })
 
-  if (regionEvidence.length < 2) return null
+  // Independent measurements 5–8: all rhythmic attacks. This is intentionally
+  // stricter (all three regions + tighter spread) because clap/snare/hat timing
+  // is excellent BPM evidence but ambiguous phase evidence.
+  const rhythmicConsensus = estimateDistributedPeriodEvidence({
+    transients: rhythmicTransients,
+    seedPeriod: period,
+    firstDetectorTime,
+    lastDetectorTime,
+    minimumRegions: 3,
+  })
 
-  // Measurement 5: keep the existing sequential onset fit as a cross-check,
-  // but do not let a greedy kick-cycle assignment own tempo by itself.
+  if (!lowConsensus && !rhythmicConsensus) return null
+  if (
+    lowConsensus &&
+    rhythmicConsensus &&
+    Math.abs(lowConsensus.period - rhythmicConsensus.period) /
+      Math.max(EPSILON, lowConsensus.period) >
+      0.008
+  ) {
+    return null
+  }
+
+  const consensusPeriod =
+    lowConsensus && rhythmicConsensus
+      ? median([lowConsensus.period, rhythmicConsensus.period])
+      : (lowConsensus?.period ?? rhythmicConsensus!.period)
+  const consensusSpread = Math.max(
+    lowConsensus?.spread ?? 0,
+    rhythmicConsensus?.spread ?? 0,
+  )
+
+  // Measurement 9: the sequential kick-cycle fit remains a cross-check only.
+  // It cannot own tempo because its cycle labels can alias after long drift.
   const onsetObservations = collectLowEndTempoObservations({
     phase,
     period,
     transients: lowEndTransients,
   })
   const onsetFit = robustObservationFit(onsetObservations, 6)
-
-  const independentPeriods = [
-    globalEvidence.period,
-    ...regionEvidence.map((evidence) => evidence.period),
-  ]
-  const consensusPeriod = median(independentPeriods)
-  const consensusSpread =
-    (Math.max(...independentPeriods) - Math.min(...independentPeriods)) /
-    Math.max(EPSILON, consensusPeriod)
-  if (consensusSpread > 0.0075) return null
-
-  const deviation = Math.abs(consensusPeriod - period) / Math.max(EPSILON, period)
-  if (deviation > 0.02) return null
-
   if (
     onsetFit &&
-    Math.abs(onsetFit.period - consensusPeriod) / Math.max(EPSILON, consensusPeriod) > 0.012
+    Math.abs(onsetFit.period - consensusPeriod) / Math.max(EPSILON, consensusPeriod) > 0.014
   ) {
     return null
   }
 
-  // Final acceptance is independent from the pairwise estimator: measure how
-  // many real low-end onsets the candidate lattice explains across the complete
-  // detector cycle span. A retune must improve late-song audio alignment.
   const baseline = lowEndPeriodScore({
     phase,
     period,
@@ -568,21 +648,40 @@ function refinePeriodWithLowEndTransients(params: {
     observations: detectorObservations,
     lowEndTransients,
   })
-  const requiredGain = Math.max(0.006, baseline.score * 0.06)
-  const improvesAlignment =
+  const requiredGain = Math.max(0.004, baseline.score * 0.05)
+  const improvesLowEndAlignment =
     candidate.score >= baseline.score + requiredGain ||
-    (candidate.supportRatio >= baseline.supportRatio + 0.06 &&
+    (candidate.supportRatio >= baseline.supportRatio + 0.04 &&
       candidate.score >= baseline.score - 0.002)
 
-  if (candidate.supportRatio < 0.1 || !improvesAlignment) return null
+  // When low-end evidence itself formed a consensus, the new lattice must
+  // explain those onsets better. With sparse kicks, the broad-rhythm fallback
+  // may rescue BPM only under strong three-region consensus.
+  if (lowConsensus) {
+    if (candidate.supportRatio < 0.08 || !improvesLowEndAlignment) return null
+  } else if (
+    !rhythmicConsensus ||
+    rhythmicConsensus.sampleCount < 24 ||
+    rhythmicConsensus.regionCount < 3 ||
+    rhythmicConsensus.spread > 0.0055
+  ) {
+    return null
+  }
+
+  const rhythmicSupport =
+    rhythmicTransients.length / Math.max(1, detectorObservations.length)
 
   return {
     period: consensusPeriod,
-    supportRatio: Math.max(
-      candidate.supportRatio,
-      onsetFit
-        ? onsetFit.observations.length / Math.max(1, detectorObservations.length)
-        : 0,
+    supportRatio: Math.min(
+      1,
+      Math.max(
+        candidate.supportRatio,
+        rhythmicSupport,
+        onsetFit
+          ? onsetFit.observations.length / Math.max(1, detectorObservations.length)
+          : 0,
+      ),
     ),
     consensusSpread,
   }

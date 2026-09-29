@@ -5,6 +5,7 @@ import { useTimelineSettingsStore } from '../stores/timeline-settings-store'
 import { useZoomStore } from '../stores/zoom-store'
 import { resolveBeatvideoTimelineGrid } from '../utils/beatvideo-timeline-grid'
 import { resolveBeatGridMarkers } from '../utils/beatvideo-grid-resolution'
+import type { MusicSection } from '@/types/beatvideo'
 
 interface BeatvideoGridOverlayProps {
   duration: number
@@ -14,6 +15,24 @@ interface BeatvideoGridOverlayProps {
 function leftPercent(time: number, duration: number) {
   if (duration <= 0) return 0
   return Math.max(0, Math.min(100, (time / duration) * 100))
+}
+
+function sectionColor(section: MusicSection, index: number, variant: 'ruler' | 'tracks') {
+  const hue =
+    section.kind === 'intro' ? 225 :
+    section.kind === 'build' ? 70 :
+    section.kind === 'drop' ? 150 :
+    section.kind === 'break' ? 290 :
+    section.kind === 'outro' ? 25 :
+    [225, 285, 170, 55][index % 4] ?? 225
+  const chroma = section.kind === 'unknown' ? 0.045 : 0.07
+  const alpha = variant === 'ruler' ? 0.24 : 0.055
+  return `oklch(0.7 ${chroma} ${hue} / ${alpha})`
+}
+
+function sectionLabel(section: MusicSection, index: number) {
+  if (section.kind === 'unknown') return `Section ${index + 1}`
+  return section.kind[0]!.toUpperCase() + section.kind.slice(1)
 }
 
 export const BeatvideoGridOverlay = memo(function BeatvideoGridOverlay({
@@ -62,7 +81,35 @@ export const BeatvideoGridOverlay = memo(function BeatvideoGridOverlay({
           : 'pointer-events-none absolute inset-0 z-[8] overflow-hidden'
       }
     >
-      {markers.map(({ beat, isBarOne, barNumber }) => {
+      {grid.sections.map((section, index) => {
+        const left = leftPercent(section.start, duration)
+        const width = Math.max(0, leftPercent(section.end, duration) - left)
+        const showLabel =
+          variant === 'ruler' &&
+          (section.end - section.start) * pixelsPerSecond >= 72
+        return (
+          <div
+            key={section.id}
+            className={
+              variant === 'ruler'
+                ? 'absolute bottom-0 h-[6px] border-l border-primary/20'
+                : 'absolute inset-y-0 border-l border-primary/10'
+            }
+            style={{
+              left: `${left}%`,
+              width: `${width}%`,
+              backgroundColor: sectionColor(section, index, variant),
+            }}
+          >
+            {showLabel ? (
+              <span className="absolute bottom-[7px] left-1 whitespace-nowrap bg-background/80 px-1 font-mono text-[9px] leading-none text-foreground/70">
+                {sectionLabel(section, index)}
+              </span>
+            ) : null}
+          </div>
+        )
+      })}
+            {markers.map(({ beat, isBarOne, barNumber }) => {
         const showBarLabel =
           variant === 'ruler' &&
           beat.downbeat &&

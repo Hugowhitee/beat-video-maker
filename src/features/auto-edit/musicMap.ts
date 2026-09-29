@@ -2,7 +2,6 @@ import type { MusicMap, MusicSection, MusicSectionKind } from './types'
 import type { BeatThisRhythmResult } from './beatThisCore'
 import { BEAT_THIS_FPS } from './beatThisCore'
 
-const DEFAULT_PHRASE_BARS = 8
 const EPSILON = 1e-6
 
 function clamp01(value: number) {
@@ -54,28 +53,6 @@ function deriveBarAnchors(
   return { anchors, confidence: anchors.length >= 2 ? 0.58 : 0.35 }
 }
 
-function phraseBoundaries(
-  barAnchors: number[],
-  duration: number,
-  phraseBars = DEFAULT_PHRASE_BARS,
-) {
-  const boundaries = [0]
-
-  for (let index = phraseBars; index < barAnchors.length; index += phraseBars) {
-    const time = barAnchors[index]
-    if (
-      time !== undefined
-      && time > (boundaries.at(-1) ?? 0) + 0.2
-      && time < duration - 0.2
-    ) {
-      boundaries.push(time)
-    }
-  }
-
-  if (duration > (boundaries.at(-1) ?? 0) + EPSILON) boundaries.push(duration)
-  return boundaries
-}
-
 function median(values: number[]) {
   if (values.length === 0) return 0
   const sorted = [...values].sort((left, right) => left - right)
@@ -84,47 +61,144 @@ function median(values: number[]) {
   return ((sorted[middle - 1] ?? 0) + (sorted[middle] ?? 0)) / 2
 }
 
-function classifySection(
-  index: number,
-  energies: number[],
-): MusicSectionKind {
+function average(values: readonly number[]) {
+  if (values.length === 0) return 0
+  return values.reduce((sum, value) => sum + value, 0) / values.length
+}
+
+type BarFeature = {
+  start: number
+  end: number
+  energy: number
+  transientDensity: number
+  low: number
+  mid: number
+  high: number
+}
+
+function buildBarFeatures(
+  result: BeatThisRhythmResult,
+  barAnchors: readonly number[],
+  duration: number,
+): BarFeature[] {
+  const starts = barAnchors
+    .filter((time) => Number.isFinite(time) && time >= 0 && time < duration)
+    .slice()
+    .sort((left, right) => left - right)
+
+  if ((starts[0] ?? 0) > 0.05) starts.unshift(0)
+  if (starts.length === 0) starts.push(0)
+
+  return starts
+    .map((start, index) => {
+      const end = Math.min(duration, starts[index + 1] ?? duration)
+      const transients = (result.transients ?? []).filter(
+        (transient) => transient.time >= start && transient.time < end,
+      )
+      const weight = Math.max(
+        EPSILON,
+        transients.reduce((sum, transient) => sum + transient.strength, 0),
+      )
+      const band = (key: 'low' | 'mid' | 'high') =>
+        transients.reduce(
+          (sum, transient) => sum + transient[key] * transient.strength,
+          0,
+        ) / weight
+
+      return {
+        start,
+        end,
+        energy: averageEnergy(result.energy, result.energyHopSeconds, start, end),
+        transientDensity: clamp01(transients.length / 10),
+        low: band('low'),
+        mid: band('mid'),
+        high: band('high'),
+      }
+    })
+    .filter((bar) => bar.end > bar.start + EPSILON)
+}
+
+function featureWindow(features: readonly BarFeature[], start: number, end: number) {
+  const window = features.slice(Math.max(0, start), Math.min(features.length, end))
+  return {
+    energy: average(window.map((feature) => feature.energy)),
+    transientDensity: average(window.map((feature) => feature.transientDensity)),
+    low: average(window.map((feature) => feature.low)),
+    mid: average(window.map((feature) => feature.mid)),
+    high: average(window.map((feature) => feature.high)),
+  }
+}
+
+function sectionChangeScore(features: readonly BarFeature[], boundaryIndex: number): number {
+  const left = featureWindow(features, boundaryIndex - 2, boundaryIndex)
+  const right = featureWindow(features, boundaryIndex, boundaryIndex + 2)
+  const energyAbs = Math.abs(left.energy - right.energy)
+  const energyRelative =
+    energyAbs / Math.max(0.18, (left.energy + right.energy) / 2)
+  const spectralDelta =
+    (Math.abs(left.low - right.low) +
+      Math.abs(left.mid - right.mid) +
+      Math.abs(left.high - right.high)) /
+    3
+
+  return clamp01(
+    energyAbs * 0.32 +
+      Math.min(1, energyRelative) * 0.36 +
+      spectralDelta * 0.22 +
+      Math.abs(left.transientDensity - right.transientDensity) * 0.1,
+  )
+}
+
+function deriveSectionBoundaries(
+  features: readonly BarFeature[],
+  duration: number,
+): { boundaries: number[]; scoreByTime: Map<number, number> } {
+  if (features.length < 4) return { boundaries: [0, duration], scoreByTime: new Map() }
+
+  const scored = features.slice(1, -1).map((feature, relativeIndex) => ({
+    time: feature.start,
+    barIndex: relativeIndex + 1,
+    score: sectionChangeScore(features, relativeIndex + 1),
+  }))
+  const scores = scored.map((candidate) => candidate.score)
+  const typical = median(scores)
+  const threshold = Math.max(0.115, typical + 0.045)
+
+  // Pick strongest changes first so one real transition does not become several
+  // neighbouring boundaries because the 2-bar windows overlap.
+  const selected: typeof scored = []
+  for (const candidate of [...scored].sort((a, b) => b.score - a.score)) {
+    if (candidate.score < threshold) continue
+    if (candidate.barIndex < 3 || features.length - candidate.barIndex < 3) continue
+    if (selected.some((other) => Math.abs(other.barIndex - candidate.barIndex) < 3)) continue
+    selected.push(candidate)
+  }
+  selected.sort((a, b) => a.time - b.time)
+
+  const boundaries = [0, ...selected.map((candidate) => candidate.time), duration]
+  const scoreByTime = new Map(selected.map((candidate) => [candidate.time, candidate.score]))
+  return { boundaries, scoreByTime }
+}
+
+function classifySection(index: number, energies: number[]): MusicSectionKind {
   const current = energies[index] ?? 0
   const previous = energies[index - 1]
   const next = energies[index + 1]
   const typical = median(energies)
 
   if (index === 0) {
-    if (energies.length > 1 && current <= Math.max(0.5, typical * 0.82)) {
-      return 'intro'
-    }
-    return 'unknown'
+    return energies.length > 1 && current <= Math.max(0.5, typical * 0.82)
+      ? 'intro'
+      : 'unknown'
   }
-
   if (index === energies.length - 1) {
-    if (previous !== undefined && current <= previous - 0.12) return 'outro'
-    return 'unknown'
+    return previous !== undefined && current <= previous - 0.1 ? 'outro' : 'unknown'
   }
-
-  if (
-    previous !== undefined
-    && current - previous >= 0.16
-    && current >= Math.max(0.58, typical)
-  ) {
-    return 'drop'
-  }
-
-  if (next !== undefined && next - current >= 0.14) {
-    return 'build'
-  }
-
-  if (
-    previous !== undefined
-    && current <= typical * 0.72
-    && previous - current >= 0.1
-  ) {
+  if (previous !== undefined && current - previous >= 0.14 && current >= typical) return 'drop'
+  if (next !== undefined && next - current >= 0.12) return 'build'
+  if (previous !== undefined && current <= typical * 0.74 && previous - current >= 0.09) {
     return 'break'
   }
-
   return 'unknown'
 }
 
@@ -139,31 +213,25 @@ function buildSections(
     beatsPerBar,
     duration,
   )
-  const boundaries = phraseBoundaries(anchors, duration)
+  const features = buildBarFeatures(result, anchors, duration)
+  const { boundaries, scoreByTime } = deriveSectionBoundaries(features, duration)
 
-  if (boundaries.length < 2) {
-    return [
-      {
-        id: 'section-1',
-        start: 0,
-        end: duration,
-        kind: 'unknown',
-        energy: averageEnergy(result.energy, result.energyHopSeconds, 0, duration),
-        confidence: 0.3,
-      },
-    ]
-  }
-
-  const energies = boundaries.slice(0, -1).map((start, index) => {
-    const end = boundaries[index + 1] ?? duration
-    return averageEnergy(result.energy, result.energyHopSeconds, start, end)
-  })
+  const energies = boundaries.slice(0, -1).map((start, index) =>
+    averageEnergy(
+      result.energy,
+      result.energyHopSeconds,
+      start,
+      boundaries[index + 1] ?? duration,
+    ),
+  )
 
   return energies.map((energy, index) => {
     const start = boundaries[index] ?? 0
     const end = boundaries[index + 1] ?? duration
     const kind = classifySection(index, energies)
-    const kindEvidence = kind === 'unknown' ? 0.72 : 1
+    const boundaryEvidence =
+      index === 0 ? 0.72 : Math.min(1, 0.55 + (scoreByTime.get(start) ?? 0) * 2)
+    const labelEvidence = kind === 'unknown' ? 0.82 : 1
 
     return {
       id: `section-${index + 1}`,
@@ -171,7 +239,7 @@ function buildSections(
       end,
       kind,
       energy,
-      confidence: clamp01(anchorConfidence * kindEvidence),
+      confidence: clamp01(anchorConfidence * boundaryEvidence * labelEvidence),
     }
   })
 }
