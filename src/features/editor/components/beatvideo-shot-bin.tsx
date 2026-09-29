@@ -126,17 +126,8 @@ export function BeatvideoShotBin({
     clipMap.sources.find((source) => source.id === activeSourceId) ??
     clipMap.sources[0] ??
     null
-  const shotCount = clipMap.sources.reduce((total, source) => total + source.shots.length, 0)
-
   return (
     <div data-beatvideo-shot-bin>
-      <div className="mb-1.5 flex items-center justify-between gap-2">
-        <span className="text-[10px] font-medium text-foreground">Shots</span>
-        <span className="font-mono text-[9px] text-muted-foreground">
-          {shotCount} detected
-        </span>
-      </div>
-
       {clipMap.sources.length > 1 ? (
         <div className="mb-1.5 flex gap-1 overflow-x-auto border-b border-border/70">
           {clipMap.sources.map((source) => (
@@ -157,7 +148,7 @@ export function BeatvideoShotBin({
         </div>
       ) : activeSource ? (
         <div className="mb-1.5 truncate text-[9px] text-muted-foreground">
-          {activeSource.name}
+          {activeSource.name} · {activeSource.shots.length} shot{activeSource.shots.length === 1 ? '' : 's'}
         </div>
       ) : null}
 
