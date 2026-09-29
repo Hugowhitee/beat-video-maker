@@ -131,7 +131,7 @@ describe('TimelineMarkers ruler scrub cancellation', () => {
     })
 
     await waitFor(() => expect(usePlaybackStore.getState().currentFrame).toBe(27))
-    expect(ruler).toHaveStyle({ touchAction: 'none' })
+    expect(ruler.style.touchAction).toBe('none')
   })
 
   it('keeps a stationary same-frame click on the committed frame pixel', () => {
