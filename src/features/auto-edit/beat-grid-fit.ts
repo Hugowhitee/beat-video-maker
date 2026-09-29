@@ -833,6 +833,17 @@ function refinePhaseWithTransients(params: {
     return { phase, phaseShift: 0, supportRatio: baseline.supportRatio }
   }
 
+  // An exact/near half-beat flip is the most dangerous ambiguity in
+  // syncopated hip-hop: a correct detector phase can have real kicks every
+  // few beats while denser 808 articulations live on the half-beat. If the
+  // original phase already has recurring low-end support, keep it. A true
+  // half-beat detector error (e.g. detector follows the snare) still repairs
+  // because its baseline has essentially no low-end support.
+  const nearHalfBeat = Math.abs(winner.shift) >= period * 0.42
+  if (nearHalfBeat && baseline.lowSupportRatio >= 0.16) {
+    return { phase, phaseShift: 0, supportRatio: baseline.supportRatio }
+  }
+
   const residual = median(winner.offsets)
   const refinedShift = Math.max(
     -maxShift,
@@ -961,31 +972,27 @@ export function stabilizeBeatGrid(
     }
   }
 
-  const initialPhase = refinePhaseWithTransients({
-    phase: fitted.phase,
-    period: fitted.period,
-    observations: fitted.observations,
-    transients: result.transients ?? [],
-  })
+  // Measure tempo before phase. Period evidence uses long spans and distributed
+  // song regions, so a slightly wrong BPM must be corrected before transient
+  // phase scoring; otherwise late-song drift can make a syncopated half-beat
+  // pattern look like the dominant phase.
   const tempoEvidence = refinePeriodWithLowEndTransients({
-    phase: initialPhase.phase,
+    phase: fitted.phase,
     period: fitted.period,
     detectorObservations: fitted.observations,
     transients: result.transients ?? [],
   })
   const stablePeriod = tempoEvidence?.period ?? fitted.period
 
-  // Re-evaluate phase on the refined tempo. If the detector was only a few
-  // tenths of a BPM off, this second pass removes the cumulative drift while
-  // preserving the already-proven kick/downbeat phase decision.
-  const finalPhase = tempoEvidence
-    ? refinePhaseWithTransients({
-        phase: initialPhase.phase,
-        period: stablePeriod,
-        observations: fitted.observations,
-        transients: result.transients ?? [],
-      })
-    : initialPhase
+  // Phase is evaluated once on the best available period. This keeps tempo and
+  // phase as separate decisions: distributed rhythmic evidence may repair BPM,
+  // while low-end onset evidence decides whether Bar 1 should move.
+  const finalPhase = refinePhaseWithTransients({
+    phase: fitted.phase,
+    period: stablePeriod,
+    observations: fitted.observations,
+    transients: result.transients ?? [],
+  })
   const totalPhaseShift = wrapPhaseShift(finalPhase.phase - fitted.phase, stablePeriod)
 
   const stable = buildStableBeats({
