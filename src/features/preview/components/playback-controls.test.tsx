@@ -91,10 +91,10 @@ describe('PlaybackControls frame capture', () => {
     const play = screen.getByRole('button', { name: 'Play' })
     expect(play).toHaveStyle({ width: '40px', height: '40px' })
     expect(play.closest('[data-compact="true"]')).not.toBeNull()
-    expect(screen.getByRole('button', { name: 'Go to start' })).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: 'Go to end' })).toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: 'Previous frame' })).not.toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: 'Next frame' })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /go to start/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /go to end/i })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /previous frame/i })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /next frame/i })).not.toBeInTheDocument()
   })
 
   it('captures the current frame, downloads it, and saves it to the media library', async () => {
