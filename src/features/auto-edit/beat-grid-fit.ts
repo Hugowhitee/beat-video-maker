@@ -1018,7 +1018,15 @@ export function stabilizeBeatGrid(
     observations: fitted.observations,
     transients: result.transients ?? [],
   })
-  const totalPhaseShift = wrapPhaseShift(finalPhase.phase - fitted.phase, stablePeriod)
+
+  // The fitted intercept is only defined modulo one beat. On an exact
+  // half-beat ambiguity it can sit one cycle earlier than the first detector
+  // landmark, so compare the audible phase to the first real detector beat.
+  const firstDetectorBeat = result.beats.find((time) => Number.isFinite(time))
+  const totalPhaseShift = wrapPhaseShift(
+    finalPhase.phase - (firstDetectorBeat ?? fitted.phase),
+    stablePeriod,
+  )
 
   const stable = buildStableBeats({
     phase: finalPhase.phase,
