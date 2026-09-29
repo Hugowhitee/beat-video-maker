@@ -42,6 +42,9 @@ describe('Beatvideo analysis revision', () => {
     expect(
       shouldRefreshBeatvideoAnalysis(analysis({ analysisRevision: 4 })),
     ).toBe(true)
+    expect(
+      shouldRefreshBeatvideoAnalysis(analysis({ analysisRevision: 5 })),
+    ).toBe(true)
   })
 
   it('does not keep refreshing the current detector revision', () => {

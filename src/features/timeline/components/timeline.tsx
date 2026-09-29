@@ -20,7 +20,18 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
 } from '@/components/ui/dropdown-menu'
-import { Plus, Minus, Rows4, Rows3, Rows2, Check, Video, AudioLines } from 'lucide-react'
+import {
+  Plus,
+  Minus,
+  Rows4,
+  Rows3,
+  Rows2,
+  Check,
+  Video,
+  AudioLines,
+  ChevronDown,
+  ChevronRight,
+} from 'lucide-react'
 import { CompositionBreadcrumbs } from './composition-breadcrumbs'
 import { SequenceTabs } from './sequence-tabs'
 import { useCompositionNavigationStore } from '../stores/composition-navigation-store'
@@ -53,7 +64,7 @@ import {
 } from '../utils/timeline-external-drag'
 import { getDefaultActiveTrackId } from '../utils/default-active-track'
 import {
-  resolveCompactProducerTracks,
+  resolveProducerTrackLayout,
   resolveWorkspaceVisibleTracks,
 } from '../utils/workspace-visible-tracks'
 import { KeyframeGraphPanel } from './keyframe-graph-panel'
@@ -119,12 +130,66 @@ export const Timeline = memo(function Timeline({
   const selectedTrackIdsSet = useMemo(() => new Set(selectedTrackIds), [selectedTrackIds])
 
   const itemsByTrackId = useItemsStore((s) => s.itemsByTrackId)
+  const [producerExtrasExpanded, setProducerExtrasExpanded] = useState(false)
+  const workspaceTracks = useMemo(
+    () => resolveWorkspaceVisibleTracks(tracks, workspace),
+    [tracks, workspace],
+  )
+  const producerTrackLayout = useMemo(
+    () =>
+      simplifiedBeatvideoTimeline
+        ? resolveProducerTrackLayout(workspaceTracks, itemsByTrackId, true)
+        : null,
+    [itemsByTrackId, simplifiedBeatvideoTimeline, workspaceTracks],
+  )
+  const producerExtraTrackIds = useMemo(
+    () => new Set(producerTrackLayout?.extraTracks.map((track) => track.id) ?? []),
+    [producerTrackLayout],
+  )
+  const showProducerExtras =
+    producerExtrasExpanded ||
+    (activeTrackId !== null && producerExtraTrackIds.has(activeTrackId))
   const visibleTracks = useMemo(() => {
-    const workspaceTracks = resolveWorkspaceVisibleTracks(tracks, workspace)
-    return compact && simplifiedBeatvideoTimeline
-      ? resolveCompactProducerTracks(workspaceTracks, itemsByTrackId)
-      : workspaceTracks
-  }, [compact, itemsByTrackId, simplifiedBeatvideoTimeline, tracks, workspace])
+    if (!simplifiedBeatvideoTimeline) return workspaceTracks
+    return resolveProducerTrackLayout(
+      workspaceTracks,
+      itemsByTrackId,
+      showProducerExtras,
+    ).visibleTracks
+  }, [
+    itemsByTrackId,
+    showProducerExtras,
+    simplifiedBeatvideoTimeline,
+    workspaceTracks,
+  ])
+  const producerTrackDisplayNameById = useMemo(() => {
+    const labels = new Map<string, string>()
+    if (!simplifiedBeatvideoTimeline) return labels
+
+    const primaryMediaId = producerTrackLayout?.primaryMediaTrackId
+    if (primaryMediaId) labels.set(primaryMediaId, 'Media')
+    let overlayIndex = 0
+    let auxAudioIndex = 0
+    for (const track of visibleTracks) {
+      if (track.id === primaryMediaId || track.name === 'Beat') continue
+      if (track.name === 'Producer tags') {
+        labels.set(track.id, 'Producer tags')
+        continue
+      }
+      if (track.name === 'Watermarks') {
+        labels.set(track.id, 'Watermarks')
+        continue
+      }
+      if (getTrackKind(track) === 'video') {
+        overlayIndex += 1
+        labels.set(track.id, `Overlay ${overlayIndex}`)
+      } else {
+        auxAudioIndex += 1
+        labels.set(track.id, `Audio ${auxAudioIndex}`)
+      }
+    }
+    return labels
+  }, [producerTrackLayout?.primaryMediaTrackId, simplifiedBeatvideoTimeline, visibleTracks])
   const canDeleteEmptyTracks = useItemsStore(
     useCallback(
       (s) => {
@@ -480,7 +545,20 @@ export const Timeline = memo(function Timeline({
 
   // Set the default edit target on mount.
   const tracksLength = tracks.length
-  const defaultActiveTrackId = useMemo(() => getDefaultActiveTrackId(tracks), [tracks])
+  const defaultActiveTrackId = useMemo(
+    () =>
+      simplifiedBeatvideoTimeline
+        ? (producerTrackLayout?.primaryMediaTrackId ??
+          producerTrackLayout?.beatTrackId ??
+          getDefaultActiveTrackId(tracks))
+        : getDefaultActiveTrackId(tracks),
+    [
+      producerTrackLayout?.beatTrackId,
+      producerTrackLayout?.primaryMediaTrackId,
+      simplifiedBeatvideoTimeline,
+      tracks,
+    ],
+  )
   useEffect(() => {
     if (tracksLength > 0 && !activeTrackId && defaultActiveTrackId) {
       setActiveTrack(defaultActiveTrackId)
@@ -899,6 +977,7 @@ export const Timeline = memo(function Timeline({
                   canDeleteTrack={tracks.length > 1}
                   canDeleteEmptyTracks={canDeleteEmptyTracks}
                   simplified={simplifiedBeatvideoTimeline}
+                  displayName={producerTrackDisplayNameById.get(track.id)}
                   onToggleLock={() => toggleTrackLock(track.id)}
                   onToggleSyncLock={() => toggleTrackSyncLock(track.id)}
                   onToggleDisabled={() => toggleTrackDisabled(track.id)}
@@ -998,9 +1077,40 @@ export const Timeline = memo(function Timeline({
             style={{ height: EDITOR_LAYOUT_CSS_VALUES.timelineTracksHeaderHeight }}
           >
             {simplifiedBeatvideoTimeline ? (
-              <span className="text-xs font-medium text-muted-foreground">
-                Tracks
-              </span>
+              <div className="flex min-w-0 flex-1 items-center justify-between gap-2">
+                <span className="text-xs font-medium text-muted-foreground">
+                  Tracks
+                </span>
+                {(producerTrackLayout?.extraTracks.length ?? 0) > 0 ? (
+                  <button
+                    type="button"
+                    className="flex h-7 items-center gap-1 px-1 text-[10px] font-medium text-muted-foreground hover:text-foreground"
+                    aria-expanded={showProducerExtras}
+                    onClick={() => {
+                      const nextExpanded = !showProducerExtras
+                      setProducerExtrasExpanded(nextExpanded)
+                      if (
+                        !nextExpanded &&
+                        activeTrackId &&
+                        producerExtraTrackIds.has(activeTrackId)
+                      ) {
+                        setActiveTrack(
+                          producerTrackLayout?.primaryMediaTrackId ??
+                            producerTrackLayout?.beatTrackId ??
+                            null,
+                        )
+                      }
+                    }}
+                  >
+                    {showProducerExtras ? (
+                      <ChevronDown className="h-3 w-3" aria-hidden="true" />
+                    ) : (
+                      <ChevronRight className="h-3 w-3" aria-hidden="true" />
+                    )}
+                    Extras {producerTrackLayout?.extraTracks.length ?? 0}
+                  </button>
+                ) : null}
+              </div>
             ) : (
               <>
                 <DropdownMenu>

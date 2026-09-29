@@ -539,7 +539,10 @@ describe('LoadedEditor migration metadata refresh', () => {
     expect(screen.queryByTestId('properties-sidebar')).not.toBeInTheDocument()
 
     const dock = screen.getByRole('navigation', { name: 'Editor surfaces' })
-    fireEvent.click(screen.getByRole('button', { name: 'Tools' }))
+    expect(screen.queryByRole('button', { name: 'Timeline' })).not.toBeInTheDocument()
+    expect(dock.querySelectorAll('button')).toHaveLength(3)
+
+    fireEvent.click(screen.getByRole('button', { name: 'Media' }))
     expect(screen.getByTestId('media-sidebar')).toHaveAttribute('data-mobile', 'true')
     expect(screen.getByTestId('mobile-playback-controls')).toHaveAttribute(
       'data-total-frames',
@@ -549,15 +552,19 @@ describe('LoadedEditor migration metadata refresh', () => {
       'data-compact',
       'true',
     )
-    expect(screen.queryByTestId('preview-area')).not.toBeInTheDocument()
-    expect(screen.queryByTestId('timeline')).not.toBeInTheDocument()
+    // The canonical Program/audio runtime stays mounted behind the active tool
+    // so transport remains real instead of becoming a detached state button.
+    expect(screen.getByTestId('preview-area')).toHaveAttribute('data-compact', 'true')
+    expect(screen.getByTestId('timeline')).toHaveAttribute('data-compact', 'true')
 
     fireEvent.click(screen.getByRole('button', { name: 'Inspector' }))
     expect(screen.getByTestId('properties-sidebar')).toHaveAttribute('data-mobile', 'true')
+    expect(screen.getByTestId('preview-area')).toBeInTheDocument()
 
-    fireEvent.click(screen.getByRole('button', { name: 'Timeline' }))
-    expect(await screen.findByTestId('timeline')).toHaveAttribute('data-compact', 'true')
-    expect(screen.getByTestId('mobile-playback-controls')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Preview' }))
+    expect(screen.getByTestId('preview-area')).toHaveAttribute('data-compact', 'true')
+    expect(screen.getByTestId('timeline')).toHaveAttribute('data-compact', 'true')
+    expect(screen.queryByTestId('mobile-playback-controls')).not.toBeInTheDocument()
     expect(dock).toBeInTheDocument()
   })
 

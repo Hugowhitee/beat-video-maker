@@ -64,9 +64,8 @@ import {
 
 const ANCHOR_EPSILON = 1e-4
 const ANCHOR_GAP_SECONDS = 0.001
-function sourceSupportsBeatAnalysis(mimeType: string, audioCodec?: string) {
-  if (mimeType.startsWith('audio/')) return true
-  return mimeType.startsWith('video/') && Boolean(audioCodec)
+function sourceSupportsBeatAnalysis(mimeType: string) {
+  return mimeType.startsWith('audio/')
 }
 
 function phaseLabel(progress: MusicAnalysisProgress | null) {
@@ -140,7 +139,7 @@ export function BeatvideoMusicPanel() {
   const candidates = useMemo(
     () =>
       mediaItems.filter((media) =>
-        sourceSupportsBeatAnalysis(media.mimeType, media.audioCodec),
+        sourceSupportsBeatAnalysis(media.mimeType),
       ),
     [mediaItems],
   )
@@ -303,10 +302,10 @@ export function BeatvideoMusicPanel() {
       const imported = await useMediaLibraryStore.getState().importMedia()
       if (imported.length === 0) return
       const beat = imported.find((media) =>
-        sourceSupportsBeatAnalysis(media.mimeType, media.audioCodec),
+        sourceSupportsBeatAnalysis(media.mimeType),
       )
       if (!beat) {
-        toast.error('Choose an audio file, or a video that contains audio')
+        toast.error('Choose an audio file for the project beat')
         return
       }
       pendingAutoAnalyzeMediaIdRef.current = beat.id
@@ -362,7 +361,7 @@ export function BeatvideoMusicPanel() {
       const media = useMediaLibraryStore
         .getState()
         .mediaItems.find((candidate) => candidate.id === mediaId)
-      if (!media || !sourceSupportsBeatAnalysis(media.mimeType, media.audioCodec)) {
+      if (!media || !sourceSupportsBeatAnalysis(media.mimeType)) {
         throw new Error('Select a valid beat source first')
       }
 
@@ -375,7 +374,7 @@ export function BeatvideoMusicPanel() {
         : []
       const matchingBeatTrackItem = beatTrackItems.find(
         (item) =>
-          (item.type === 'audio' || item.type === 'video') &&
+          item.type === 'audio' &&
           item.mediaId === media.id,
       )
 
@@ -390,15 +389,10 @@ export function BeatvideoMusicPanel() {
         const existingPlacement = timeline.items
           .filter(
             (item) =>
-              (item.type === 'audio' || item.type === 'video') &&
+              item.type === 'audio' &&
               item.mediaId === media.id,
           )
-          .sort((left, right) => {
-            const leftAudio = left.type === 'audio'
-            const rightAudio = right.type === 'audio'
-            if (leftAudio !== rightAudio) return leftAudio ? -1 : 1
-            return right.durationInFrames - left.durationInFrames
-          })[0]
+          .sort((left, right) => right.durationInFrames - left.durationInFrames)[0]
         if (existingPlacement) return existingPlacement
       }
 

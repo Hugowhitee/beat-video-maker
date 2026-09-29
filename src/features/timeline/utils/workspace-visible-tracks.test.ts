@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vite-plus/test'
 import type { TimelineTrack } from '@/types/timeline'
 import {
   resolveCompactProducerTracks,
+  resolveProducerTrackLayout,
   resolveWorkspaceVisibleTracks,
 } from './workspace-visible-tracks'
 
@@ -42,33 +43,66 @@ describe('resolveWorkspaceVisibleTracks', () => {
     expect(resolveWorkspaceVisibleTracks(tracks, 'edit')).toEqual(tracks)
     expect(resolveWorkspaceVisibleTracks(tracks, 'beat')).toEqual(tracks)
   })
+})
 
-  it('hides only empty generic lanes once compact producer content exists', () => {
-    const video = { ...track('video', 'video'), name: 'V1' }
-    const genericAudio = { ...track('audio', 'audio'), name: 'A1' }
-    const beat = { ...track('beat', 'audio'), name: 'Beat' }
-    const tags = { ...track('tags', 'audio'), name: 'Producer tags' }
+describe('resolveProducerTrackLayout', () => {
+  it('keeps Media first and Beat directly beneath it while blank generic lanes stay hidden', () => {
+    const video = { ...track('video', 'video'), name: 'V1', order: 0 }
+    const genericAudio = { ...track('audio', 'audio'), name: 'A1', order: 1 }
+    const beat = { ...track('beat', 'audio'), name: 'Beat', order: 5 }
+    const tags = { ...track('tags', 'audio'), name: 'Producer tags', order: 6 }
 
-    expect(
-      resolveCompactProducerTracks([video, genericAudio, beat, tags], { beat: [{}] }).map(
-        (entry) => entry.id,
-      ),
-    ).toEqual(['beat', 'tags'])
+    const collapsed = resolveProducerTrackLayout(
+      [genericAudio, beat, tags, video],
+      { video: [{}], beat: [{}], tags: [{}] },
+      false,
+    )
+    expect(collapsed.visibleTracks.map((entry) => entry.id)).toEqual(['video', 'beat'])
+    expect(collapsed.extraTracks.map((entry) => entry.id)).toEqual(['tags'])
 
-    expect(
-      resolveCompactProducerTracks(
-        [video, genericAudio, beat, tags],
-        { video: [{}], beat: [{}] },
-      ).map((entry) => entry.id),
-    ).toEqual(['video', 'beat', 'tags'])
+    const expanded = resolveProducerTrackLayout(
+      [genericAudio, beat, tags, video],
+      { video: [{}], beat: [{}], tags: [{}] },
+      true,
+    )
+    expect(expanded.visibleTracks.map((entry) => entry.id)).toEqual([
+      'video',
+      'beat',
+      'tags',
+    ])
   })
 
-  it('keeps default drop lanes when compact timeline content is empty', () => {
+  it('groups real overlays and auxiliary audio as extras instead of permanent empty lanes', () => {
+    const media = { ...track('media', 'video'), name: 'V1', order: 0 }
+    const overlay = { ...track('overlay', 'video'), name: 'V2', order: 1 }
+    const blankAudio = { ...track('blank-audio', 'audio'), name: 'A1', order: 2 }
+    const beat = { ...track('beat', 'audio'), name: 'Beat', order: 3 }
+    const auxAudio = { ...track('aux', 'audio'), name: 'A2', order: 4 }
+
+    const layout = resolveProducerTrackLayout(
+      [media, overlay, blankAudio, beat, auxAudio],
+      { media: [{}], overlay: [{}], beat: [{}], aux: [{}] },
+      true,
+    )
+
+    expect(layout.visibleTracks.map((entry) => entry.id)).toEqual([
+      'media',
+      'beat',
+      'overlay',
+      'aux',
+    ])
+    expect(layout.extraTracks.map((entry) => entry.id)).toEqual(['overlay', 'aux'])
+  })
+
+  it('keeps only the primary Media drop lane when a new producer project is empty', () => {
     const tracks = [
       { ...track('video', 'video'), name: 'V1' },
       { ...track('audio', 'audio'), name: 'A1' },
     ]
 
-    expect(resolveCompactProducerTracks(tracks, {})).toEqual(tracks)
+    expect(
+      resolveProducerTrackLayout(tracks, {}, false).visibleTracks.map((entry) => entry.id),
+    ).toEqual(['video'])
+    expect(resolveCompactProducerTracks(tracks, {}).map((entry) => entry.id)).toEqual(['video'])
   })
 })

@@ -364,6 +364,41 @@ const PHOTO_QUICK_EFFECT_IDS = [
   'gpu-gaussian-blur',
 ] as const
 
+const MASTER_SIDEBAR_STORAGE_KEY = 'editor:masterSidebarWidth'
+const MASTER_SIDEBAR_DEFAULT_WIDTH = 480
+const MASTER_SIDEBAR_MIN_WIDTH = 400
+const MASTER_SIDEBAR_MAX_WIDTH = 680
+
+function clampMasterSidebarWidth(width: number): number {
+  const viewportMax =
+    typeof window === 'undefined'
+      ? MASTER_SIDEBAR_MAX_WIDTH
+      : Math.max(MASTER_SIDEBAR_MIN_WIDTH, Math.floor(window.innerWidth * 0.48))
+  return Math.min(
+    MASTER_SIDEBAR_MAX_WIDTH,
+    viewportMax,
+    Math.max(MASTER_SIDEBAR_MIN_WIDTH, width),
+  )
+}
+
+function loadMasterSidebarWidth(): number {
+  try {
+    const stored = Number(window.localStorage.getItem(MASTER_SIDEBAR_STORAGE_KEY))
+    if (Number.isFinite(stored) && stored > 0) return clampMasterSidebarWidth(stored)
+  } catch {
+    /* Keep the mastering surface usable when storage is unavailable. */
+  }
+  return clampMasterSidebarWidth(MASTER_SIDEBAR_DEFAULT_WIDTH)
+}
+
+function persistMasterSidebarWidth(width: number): void {
+  try {
+    window.localStorage.setItem(MASTER_SIDEBAR_STORAGE_KEY, String(width))
+  } catch {
+    /* Width persistence is a convenience, never a blocker. */
+  }
+}
+
 export const MediaSidebar = memo(function MediaSidebar({
   beatvideoMode = 'video',
   mobile = false,
@@ -385,6 +420,9 @@ export const MediaSidebar = memo(function MediaSidebar({
   const sidebarWidth = useEditorStore((s) => s.sidebarWidth)
   const setSidebarWidth = useEditorStore((s) => s.setSidebarWidth)
   const prefersReducedMotion = useReducedMotion()
+  const [masterSidebarWidth, setMasterSidebarWidth] = useState(loadMasterSidebarWidth)
+  const effectiveSidebarWidth =
+    workspace === 'master' ? masterSidebarWidth : sidebarWidth
 
   const [beatTabActivated, setBeatTabActivated] = useState(activeTab === 'beat')
   const [aiTabActivated, setAiTabActivated] = useState(activeTab === 'ai')
@@ -438,17 +476,23 @@ export const MediaSidebar = memo(function MediaSidebar({
       e.preventDefault()
       isResizingRef.current = true
       startXRef.current = e.clientX
-      startWidthRef.current = sidebarWidth
+      startWidthRef.current = effectiveSidebarWidth
       document.body.style.cursor = 'col-resize'
       document.body.style.userSelect = 'none'
     },
-    [sidebarWidth],
+    [effectiveSidebarWidth],
   )
 
   useEffect(() => {
     const handleMouseMove = (e: MouseEvent) => {
       if (!isResizingRef.current) return
       const delta = e.clientX - startXRef.current
+      if (workspace === 'master') {
+        const nextWidth = clampMasterSidebarWidth(startWidthRef.current + delta)
+        setMasterSidebarWidth(nextWidth)
+        persistMasterSidebarWidth(nextWidth)
+        return
+      }
       const newWidth = clampLeftEditorSidebarWidth(startWidthRef.current + delta, editorLayout)
       setSidebarWidth(newWidth)
     }
@@ -469,7 +513,7 @@ export const MediaSidebar = memo(function MediaSidebar({
       document.body.style.cursor = ''
       document.body.style.userSelect = ''
     }
-  }, [editorLayout, setSidebarWidth])
+  }, [editorLayout, setSidebarWidth, workspace])
 
   // NOTE: Don't subscribe to tracks, items, currentProject here!
   // These change frequently and would cause re-renders cascading to MediaLibrary/MediaCards
@@ -1237,7 +1281,14 @@ export const MediaSidebar = memo(function MediaSidebar({
           mobile ? 'w-full flex-1 border-r-0' : 'border-r border-border',
         )}
         initial={false}
-        animate={{ width: mobile ? '100%' : producerShell || leftSidebarOpen ? sidebarWidth : 0 }}
+        animate={{
+          width:
+            mobile
+              ? '100%'
+              : producerShell || leftSidebarOpen
+                ? effectiveSidebarWidth
+                : 0,
+        }}
         transition={
           mobile || isResizingRef.current || prefersReducedMotion
             ? { duration: 0 }
@@ -1254,7 +1305,7 @@ export const MediaSidebar = memo(function MediaSidebar({
         <div
           className="h-full min-h-0 flex flex-col"
           style={{
-            width: mobile ? '100%' : sidebarWidth,
+            width: mobile ? '100%' : effectiveSidebarWidth,
             transform: 'translateZ(0)',
           }}
           inert={mobile || producerShell ? false : contentInert}

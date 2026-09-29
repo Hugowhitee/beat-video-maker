@@ -685,9 +685,9 @@ export function BeatvideoMasterPanel() {
         <div className="mt-3 border-t border-border pt-3">
           <div className="flex items-center justify-between gap-3">
             <div className="min-w-0">
-              <div className="text-xs font-medium text-foreground">Level</div>
+              <div className="text-xs font-medium text-foreground">Input level</div>
               <div className="mt-0.5 text-[10px] leading-relaxed text-muted-foreground">
-                Auto adjusts pre-FX trim. Final output stays on the Mixer bus fader.
+                Auto Level measures the beat and moves Input trim before the master chain. It never moves the Mixer output fader.
               </div>
             </div>
             <Button
@@ -705,7 +705,7 @@ export function BeatvideoMasterPanel() {
 
           <div className="mt-2">
             <MasterRange
-              label="Trim"
+              label="Input trim"
               value={resolved.inputGainDb}
               min={-12}
               max={12}
@@ -722,30 +722,47 @@ export function BeatvideoMasterPanel() {
 
           {autoLevelResult ? (
             <div
-              className="mt-2 border-t border-border/70 pt-2 text-[11px]"
+              className="mt-2 divide-y divide-border/70 border-y border-border/70 text-[11px]"
               title="Gated program RMS and sample peak; not LUFS or true peak"
+              data-auto-level-result
             >
-              <div className="flex items-center justify-between gap-3">
-                <span className="text-muted-foreground">
-                  Measured {autoLevelResult.rmsDb.toFixed(1)} dBFS
-                </span>
-                <span className="font-mono tabular-nums text-foreground">
-                  → {autoLevelResult.projectedRmsDb.toFixed(1)} dBFS
+              <div className="grid grid-cols-[88px_1fr] gap-3 py-1.5">
+                <span className="text-muted-foreground">Measured input</span>
+                <span className="text-right font-mono tabular-nums text-foreground">
+                  {autoLevelResult.rmsDb.toFixed(1)} dBFS avg · {autoLevelResult.peakDb.toFixed(1)} dBFS peak
                 </span>
               </div>
-              <div className="mt-1 flex items-center justify-between gap-3 text-[10px] text-muted-foreground">
-                <span>
-                  Target {autoLevelResult.targetRmsDb.toFixed(1)} dBFS
-                </span>
-                <span>
-                  Trim {autoLevelResult.inputGainDb >= 0 ? '+' : ''}
+              <div className="grid grid-cols-[88px_1fr] gap-3 py-1.5">
+                <span className="text-muted-foreground">Input trim</span>
+                <span className="text-right font-mono tabular-nums text-foreground">
+                  {autoLevelResult.inputGainDb >= 0 ? '+' : ''}
                   {autoLevelResult.inputGainDb.toFixed(1)} dB
                 </span>
               </div>
+              <div className="grid grid-cols-[88px_1fr] gap-3 py-1.5">
+                <span className="text-muted-foreground">Into chain</span>
+                <span className="text-right font-mono tabular-nums text-foreground">
+                  {autoLevelResult.projectedRmsDb.toFixed(1)} dBFS avg · {autoLevelResult.projectedPeakDb.toFixed(1)} dBFS peak
+                </span>
+              </div>
+              <div className="grid grid-cols-[88px_1fr] gap-3 py-1.5 text-[10px]">
+                <span className="text-muted-foreground">Peak control</span>
+                <span className="text-right text-muted-foreground">
+                  Limiter ceiling {AUTO_LEVEL_LIMITER_CEILING_DB.toFixed(1)} dBFS
+                  {autoLevelResult.estimatedLimiterReductionDb > 0.05
+                    ? ` · ~${autoLevelResult.estimatedLimiterReductionDb.toFixed(1)} dB reduction`
+                    : ' · no reduction expected'}
+                </span>
+              </div>
+              <div className="grid grid-cols-[88px_1fr] gap-3 py-1.5 text-[10px]">
+                <span className="text-muted-foreground">Mixer output</span>
+                <span className="text-right text-muted-foreground">
+                  {masterBusDb > 0 ? '+' : ''}{masterBusDb.toFixed(1)} dB · unchanged
+                </span>
+              </div>
               {autoLevelResult.limitedByPeak ? (
-                <div className="mt-1 text-[10px] leading-relaxed text-muted-foreground">
-                  Peak headroom limited the trim to avoid more than about
-                  {' '}{autoLevelResult.estimatedLimiterReductionDb.toFixed(1)} dB of peak limiting.
+                <div className="py-1.5 text-[10px] leading-relaxed text-muted-foreground">
+                  Target {autoLevelResult.targetRmsDb.toFixed(1)} dBFS was reduced to preserve transient headroom instead of flattening the beat.
                 </div>
               ) : null}
             </div>

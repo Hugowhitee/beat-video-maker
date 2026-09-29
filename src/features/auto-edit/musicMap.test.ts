@@ -31,22 +31,30 @@ function rhythm(overrides: Partial<BeatThisRhythmResult> = {}): BeatThisRhythmRe
 }
 
 describe('buildMusicMapFromRhythm', () => {
-  it('preserves true beat/downbeat evidence and builds eight-bar phrases', () => {
+  it('preserves beat/downbeat evidence and creates sections from musical changes', () => {
     const map = buildMusicMapFromRhythm(rhythm(), 64)
 
     expect(map.bpm).toBe(120)
     expect(map.beatsPerBar).toBe(4)
     expect(map.beats[0]).toMatchObject({ time: 0, downbeat: true, strength: 0.95 })
     expect(map.beats[1]).toMatchObject({ time: 0.5, downbeat: false })
-    expect(map.sections.map((section) => [section.start, section.end])).toEqual([
-      [0, 16],
-      [16, 32],
-      [32, 48],
-      [48, 64],
-    ])
-    expect(map.sections[0]?.kind).toBe('intro')
-    expect(map.sections[2]?.kind).toBe('drop')
-    expect(map.sections[2]?.energy).toBeGreaterThan(0.8)
+    expect(map.sections.some((section) => Math.abs(section.start - 32) < 0.1)).toBe(true)
+    expect(map.sections.find((section) => Math.abs(section.start - 32) < 0.1)?.kind).toBe('drop')
+  })
+
+  it('detects a strong change away from the old fixed eight-bar boundary', () => {
+    const source = rhythm()
+    const energy = new Float32Array(64 * 4)
+    for (let index = 0; index < energy.length; index += 1) {
+      const time = index * 0.25
+      energy[index] = time < 12 ? 0.2 : time < 38 ? 0.78 : 0.28
+    }
+
+    const map = buildMusicMapFromRhythm({ ...source, energy }, 64)
+
+    expect(map.sections.some((section) => Math.abs(section.start - 12) < 0.1)).toBe(true)
+    expect(map.sections.some((section) => Math.abs(section.start - 38) < 0.1)).toBe(true)
+    expect(map.sections.every((section) => section.kind !== 'chorus' && section.kind !== 'verse')).toBe(true)
   })
 
   it('keeps section labels conservative but still provides bar lines when downbeats are unavailable', () => {

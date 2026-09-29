@@ -103,21 +103,33 @@ function getMobileEditorSurfaces(
       { id: 'tools', label: 'Master' },
       { id: 'preview', label: 'Preview' },
       { id: 'mixer', label: 'Mixer' },
-      { id: 'timeline', label: 'Timeline' },
     ]
   }
   if (workspace === 'color') {
     return [
       { id: 'color', label: 'Color' },
       { id: 'preview', label: 'Preview' },
+    ]
+  }
+  if (workspace === 'motion') {
+    return [
+      { id: 'tools', label: 'Tools' },
+      { id: 'preview', label: 'Preview' },
+      { id: 'inspector', label: 'Inspector' },
       { id: 'timeline', label: 'Timeline' },
     ]
   }
+  if (workspace === 'beat') {
+    return [
+      { id: 'tools', label: 'Beat' },
+      { id: 'preview', label: 'Preview' },
+      { id: 'inspector', label: 'Inspector' },
+    ]
+  }
   return [
-    { id: 'tools', label: 'Tools' },
+    { id: 'tools', label: 'Media' },
     { id: 'preview', label: 'Preview' },
     { id: 'inspector', label: 'Inspector' },
-    { id: 'timeline', label: 'Timeline' },
   ]
 }
 
@@ -781,18 +793,18 @@ export const LoadedEditor = memo(function LoadedEditor({
 
       {compactViewport ? (
         <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
-          <div className="min-h-0 flex-1 overflow-hidden">
-            {mobileSurface === 'tools' ? (
-              <InteractionLockRegion locked={isMaskEditingActive} className="h-full">
+          <div className="relative min-h-0 flex-1 overflow-hidden">
+            {!isMotionWorkspace ? (
+              <div
+                className={
+                  mobileSurface === 'preview'
+                    ? 'relative h-full min-h-0'
+                    : 'pointer-events-none invisible absolute inset-0'
+                }
+                aria-hidden={mobileSurface === 'preview' ? undefined : true}
+                data-mobile-preview-runtime
+              >
                 <ErrorBoundary level="feature">
-                  <MediaSidebar beatvideoMode={beatvideoMode} mobile />
-                </ErrorBoundary>
-              </InteractionLockRegion>
-            ) : mobileSurface === 'preview' ? (
-              <ErrorBoundary level="feature">
-                {isMotionWorkspace ? (
-                  <MotionPreviewArea project={project} />
-                ) : (
                   <div className="flex h-full min-h-0 flex-col overflow-hidden">
                     <div className="min-h-0 flex-1">
                       <PreviewArea project={project} compact />
@@ -810,30 +822,30 @@ export const LoadedEditor = memo(function LoadedEditor({
                       </Suspense>
                     </InteractionLockRegion>
                   </div>
-                )}
+                </ErrorBoundary>
+              </div>
+            ) : mobileSurface === 'preview' ? (
+              <ErrorBoundary level="feature">
+                <MotionPreviewArea project={project} />
               </ErrorBoundary>
+            ) : null}
+
+            {mobileSurface === 'tools' ? (
+              <InteractionLockRegion locked={isMaskEditingActive} className="h-full">
+                <ErrorBoundary level="feature">
+                  <MediaSidebar beatvideoMode={beatvideoMode} mobile />
+                </ErrorBoundary>
+              </InteractionLockRegion>
             ) : mobileSurface === 'inspector' ? (
               <InteractionLockRegion locked={isMaskEditingActive} className="h-full">
                 <ErrorBoundary level="feature">
                   <PropertiesSidebar mobile />
                 </ErrorBoundary>
               </InteractionLockRegion>
-            ) : mobileSurface === 'timeline' ? (
+            ) : mobileSurface === 'timeline' && isMotionWorkspace ? (
               <InteractionLockRegion locked={isMaskEditingActive} className="h-full">
                 <ErrorBoundary level="feature">
-                  <div className="h-full min-w-0 overflow-hidden">
-                    {isMotionWorkspace ? (
-                      <MotionTimelineDock project={project} />
-                    ) : (
-                      <Suspense fallback={null}>
-                        <LazyTimeline
-                          duration={timelineDuration}
-                          beatvideoMode={beatvideoMode}
-                          compact
-                        />
-                      </Suspense>
-                    )}
-                  </div>
+                  <MotionTimelineDock project={project} />
                 </ErrorBoundary>
               </InteractionLockRegion>
             ) : mobileSurface === 'mixer' ? (
@@ -842,7 +854,7 @@ export const LoadedEditor = memo(function LoadedEditor({
                   <AudioMeterPanel initialMode="mixer" mobile />
                 </div>
               </ErrorBoundary>
-            ) : (
+            ) : mobileSurface === 'color' ? (
               <ErrorBoundary level="feature">
                 <div className="h-full min-w-0 overflow-y-auto">
                   <Suspense fallback={null}>
@@ -850,7 +862,7 @@ export const LoadedEditor = memo(function LoadedEditor({
                   </Suspense>
                 </div>
               </ErrorBoundary>
-            )}
+            ) : null}
           </div>
 
           {mobileSurface !== 'preview' ? (
@@ -968,7 +980,9 @@ export const LoadedEditor = memo(function LoadedEditor({
 
             <ResizableHandle
               withHandle
-              className={isMaskEditingActive ? 'pointer-events-none opacity-60' : undefined}
+              className={`data-[panel-group-direction=vertical]:h-3 data-[panel-group-direction=vertical]:bg-transparent data-[panel-group-direction=vertical]:before:pointer-events-none data-[panel-group-direction=vertical]:before:absolute data-[panel-group-direction=vertical]:before:inset-x-0 data-[panel-group-direction=vertical]:before:top-1/2 data-[panel-group-direction=vertical]:before:h-px data-[panel-group-direction=vertical]:before:-translate-y-1/2 data-[panel-group-direction=vertical]:before:bg-border ${
+                isMaskEditingActive ? 'pointer-events-none opacity-60' : ''
+              }`}
             />
 
             {/* Bottom - Timeline */}

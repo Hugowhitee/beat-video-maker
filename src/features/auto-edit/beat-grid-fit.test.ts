@@ -284,6 +284,75 @@ describe('stabilizeBeatGrid', () => {
     expect(Math.abs((lateBeat ?? 0) - (phase + cycle * actualPeriod))).toBeLessThan(0.04)
   })
 
+  it('uses syncopated half-beat low-end spans to remove cumulative BPM drift', () => {
+    const detectorBpm = 119.1
+    const actualBpm = 120
+    const detectorPeriod = 60 / detectorBpm
+    const actualPeriod = 60 / actualBpm
+    const phase = 0.29
+    const duration = 150
+    const beats = Array.from(
+      { length: Math.floor((duration - phase) / detectorPeriod) },
+      (_, index) => phase + index * detectorPeriod,
+    )
+    const pattern = [0, 1.5, 2.5, 4]
+    const transients = Array.from({ length: 38 }, (_, phrase) =>
+      pattern.map((beatOffset, slot) => ({
+        time: phase + (phrase * 4 + beatOffset) * actualPeriod,
+        index: phrase * pattern.length + slot,
+        strength: 0.92,
+        low: 0.94,
+        mid: 0.18,
+        high: 0.05,
+      })),
+    ).flat().filter((transient) => transient.time < duration)
+
+    const result = stabilizeBeatGrid(
+      rhythm({ beats, bpm: detectorBpm, transients }),
+      duration,
+    )
+
+    expect(result.fit.mode).toBe('fixed')
+    expect(result.rhythm.bpm).toBeCloseTo(actualBpm, 1)
+    expect(Math.abs(result.fit.phaseShiftMs)).toBeLessThan(80)
+    const lateBeat = result.rhythm.beats.findLast((time) => time < 140)
+    const cycle = Math.round(((lateBeat ?? phase) - phase) / actualPeriod)
+    expect(Math.abs((lateBeat ?? 0) - (phase + cycle * actualPeriod))).toBeLessThan(0.04)
+  })
+
+  it('uses recurring mid/high rhythmic attacks for BPM without moving kick phase', () => {
+    const detectorBpm = 118.9
+    const actualBpm = 120
+    const detectorPeriod = 60 / detectorBpm
+    const actualPeriod = 60 / actualBpm
+    const phase = 0.33
+    const duration = 120
+    const beats = Array.from(
+      { length: Math.floor((duration - phase) / detectorPeriod) },
+      (_, index) => phase + index * detectorPeriod,
+    )
+    const transients = Array.from(
+      { length: Math.floor((duration - phase) / (actualPeriod / 2)) },
+      (_, index) => ({
+        time: phase + index * (actualPeriod / 2),
+        index,
+        strength: index % 2 === 0 ? 0.78 : 0.92,
+        low: 0.06,
+        mid: index % 2 === 0 ? 0.82 : 0.36,
+        high: index % 2 === 0 ? 0.18 : 0.94,
+      }),
+    )
+
+    const result = stabilizeBeatGrid(
+      rhythm({ beats, bpm: detectorBpm, transients }),
+      duration,
+    )
+
+    expect(result.fit.mode).toBe('fixed')
+    expect(result.rhythm.bpm).toBeCloseTo(actualBpm, 1)
+    expect(Math.abs(result.fit.phaseShiftMs)).toBeLessThan(80)
+  })
+
   it('does not retune the whole song from low-end evidence confined to one region', () => {
     const detectorBpm = 119.4
     const actualBpm = 120
