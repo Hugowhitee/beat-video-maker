@@ -192,6 +192,9 @@ function classifySection(index: number, energies: number[]): MusicSectionKind {
       : 'unknown'
   }
   if (index === energies.length - 1) {
+    if (previous !== undefined && current - previous >= 0.14 && current >= typical) {
+      return 'drop'
+    }
     return previous !== undefined && current <= previous - 0.1 ? 'outro' : 'unknown'
   }
   if (previous !== undefined && current - previous >= 0.14 && current >= typical) return 'drop'
