@@ -87,6 +87,53 @@ describe('TimelineMarkers ruler scrub cancellation', () => {
     await waitFor(() => expect(document.body.style.cursor).toBe(''))
   })
 
+  it('scrubs the ruler with touch pointer events', async () => {
+    const { container } = render(
+      <div className="timeline-container">
+        <TimelineMarkers duration={10} width={1000} />
+      </div>,
+    )
+    const scrollContainer = container.querySelector('.timeline-container') as HTMLDivElement
+    Object.defineProperties(scrollContainer, {
+      clientWidth: { configurable: true, value: 300 },
+      scrollWidth: { configurable: true, value: 1000 },
+      scrollLeft: { configurable: true, value: 0, writable: true },
+    })
+    scrollContainer.getBoundingClientRect = () => ({
+      x: 0,
+      y: 0,
+      left: 0,
+      top: 0,
+      right: 300,
+      bottom: 200,
+      width: 300,
+      height: 200,
+      toJSON: () => ({}),
+    })
+    const ruler = container.querySelector('[style*="cursor: ew-resize"]') as HTMLDivElement
+    ruler.getBoundingClientRect = scrollContainer.getBoundingClientRect
+
+    fireEvent.pointerDown(ruler, {
+      pointerId: 17,
+      pointerType: 'touch',
+      button: 0,
+      clientX: 30,
+    })
+    fireEvent.pointerMove(document, {
+      pointerId: 17,
+      pointerType: 'touch',
+      clientX: 90,
+    })
+    fireEvent.pointerUp(document, {
+      pointerId: 17,
+      pointerType: 'touch',
+      clientX: 90,
+    })
+
+    await waitFor(() => expect(usePlaybackStore.getState().currentFrame).toBe(27))
+    expect(ruler).toHaveStyle({ touchAction: 'none' })
+  })
+
   it('keeps a stationary same-frame click on the committed frame pixel', () => {
     const { container } = render(
       <div className="timeline-container">

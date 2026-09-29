@@ -485,6 +485,10 @@ export const TimelineMarkers = memo(function TimelineMarkers({
   // Unified scrubbing refs (scroll + playhead in same RAF frame)
   const scrollContainerRef = useRef<HTMLDivElement | null>(null)
   const scrubMouseClientXRef = useRef<number>(0)
+  const scrubInputRef = useRef<{ mode: 'mouse' | 'pointer'; pointerId: number | null }>({
+    mode: 'mouse',
+    pointerId: null,
+  })
   const scrubRAFIdRef = useRef<number | null>(null)
   const scrubAnimationTimeRef = useRef<number | null>(null)
   const scrubPlayheadElementsRef = useRef<HTMLElement[]>([])
@@ -993,7 +997,13 @@ export const TimelineMarkers = memo(function TimelineMarkers({
 
   // Scrubbing handlers
   const handleMouseDown = useCallback(
-    (e: React.MouseEvent) => {
+    (e: React.MouseEvent | React.PointerEvent) => {
+      const isPointerInput = 'pointerType' in e && e.pointerType !== 'mouse'
+      scrubInputRef.current = {
+        mode: isPointerInput ? 'pointer' : 'mouse',
+        pointerId: isPointerInput && 'pointerId' in e ? e.pointerId : null,
+      }
+      if (isPointerInput) e.currentTarget.setPointerCapture?.(e.pointerId)
       e.preventDefault()
       e.stopPropagation() // Prevent click from bubbling to container and clearing selection
       if (!containerRef.current) return
@@ -1062,9 +1072,14 @@ export const TimelineMarkers = memo(function TimelineMarkers({
     const originalCursor = document.body.style.cursor
     document.body.style.cursor = 'ew-resize'
 
+    const activePointerId = scrubInputRef.current.pointerId
+    const matchesActivePointer = (event: PointerEvent) =>
+      activePointerId === null || event.pointerId === activePointerId
     const handleMouseMove = (e: MouseEvent) => {
-      // Just store position - the unified RAF loop handles everything else
       scrubMouseClientXRef.current = e.clientX
+    }
+    const handlePointerMove = (e: PointerEvent) => {
+      if (matchesActivePointer(e)) scrubMouseClientXRef.current = e.clientX
     }
 
     const handleMouseUp = () => {
@@ -1082,6 +1097,7 @@ export const TimelineMarkers = memo(function TimelineMarkers({
       }
       scrubAnimationTimeRef.current = null
       scrubPlayheadElementsRef.current = []
+      scrubInputRef.current = { mode: 'mouse', pointerId: null }
       setIsDragging(false)
       setPreviewFrameRef.current(null)
       // Clear after the preview notification so linked playheads retain the
@@ -1089,15 +1105,28 @@ export const TimelineMarkers = memo(function TimelineMarkers({
       mainTimelineScrubActiveRef.current = false
       endTimelineSkimmerScrub(skimmerScrubOwner)
     }
+    const handlePointerUp = (e: PointerEvent) => {
+      if (matchesActivePointer(e)) handleMouseUp()
+    }
 
-    document.addEventListener('mousemove', handleMouseMove)
-    document.addEventListener('mouseup', handleMouseUp)
+    if (scrubInputRef.current.mode === 'pointer') {
+      document.addEventListener('pointermove', handlePointerMove)
+      document.addEventListener('pointerup', handlePointerUp)
+      document.addEventListener('pointercancel', handlePointerUp)
+    } else {
+      document.addEventListener('mousemove', handleMouseMove)
+      document.addEventListener('mouseup', handleMouseUp)
+    }
     window.addEventListener('blur', handleMouseUp)
 
     return () => {
       document.removeEventListener('mousemove', handleMouseMove)
       document.removeEventListener('mouseup', handleMouseUp)
+      document.removeEventListener('pointermove', handlePointerMove)
+      document.removeEventListener('pointerup', handlePointerUp)
+      document.removeEventListener('pointercancel', handlePointerUp)
       window.removeEventListener('blur', handleMouseUp)
+      scrubInputRef.current = { mode: 'mouse', pointerId: null }
       document.body.style.cursor = originalCursor
       // Ensure cleanup
       isScrubActiveRef.current = false
@@ -1120,11 +1149,16 @@ export const TimelineMarkers = memo(function TimelineMarkers({
       ref={containerRef}
       className="border-b border-border/80 relative"
       onMouseDown={handleMouseDown}
+      onPointerDown={(event) => {
+        if (event.pointerType === 'mouse') return
+        handleMouseDown(event)
+      }}
       onMouseMove={handleRulerMouseMove}
       onMouseLeave={handleRulerMouseLeave}
       style={{
         background: 'oklch(0.22 0 0 / 0.22)',
         userSelect: 'none',
+        touchAction: 'none',
         cursor: 'ew-resize',
         height: EDITOR_LAYOUT_CSS_VALUES.timelineRulerHeight,
         width: width ? `${width}px` : undefined,

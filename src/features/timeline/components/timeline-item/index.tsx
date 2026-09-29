@@ -594,7 +594,7 @@ export const TimelineItem = memo(function TimelineItem({
     }
   }, [item.type])
 
-  const { handleClick, handleDoubleClick, handleMouseDown, handleSmartTrimStart } =
+  const { handleClick, handleDoubleClick, handleMouseDown, handlePointerDown, handleSmartTrimStart } =
     useTimelineItemPointerHandlers({
       item,
       trackLocked,
@@ -967,6 +967,7 @@ export const TimelineItem = memo(function TimelineItem({
                     100
                   : audioVolumeLineYPercent
               }%`,
+              touchAction: activeTool === 'select' ? 'none' : undefined,
               '--timeline-audio-waveform-scale': String(
                 item.type === 'audio' && audioVolumeEdit !== null
                   ? getAudioVisualizationScale(audioVolumePreviewRef.current)
@@ -977,6 +978,7 @@ export const TimelineItem = memo(function TimelineItem({
           onClick={handleClick}
           onDoubleClick={handleDoubleClick}
           onMouseDown={handleMouseDown}
+          onPointerDown={handlePointerDown}
           onMouseEnter={() => onHoverChange?.(item.id, true)}
           onMouseMove={handleMouseMove}
           onMouseLeave={() => {

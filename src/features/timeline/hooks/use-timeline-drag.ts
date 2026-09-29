@@ -32,6 +32,10 @@ import { createRafCoalescedCallback } from '../utils/raf-coalesced-callback'
 
 const logger = createLogger('TimelineDrag')
 
+type TimelineDragReactEvent = React.MouseEvent | React.PointerEvent
+type TimelineDragDomEvent = MouseEvent | PointerEvent
+type TimelineDragInput = { mode: 'mouse' | 'pointer'; pointerId: number | null }
+
 // Shared ref for drag offset (avoids re-renders from store updates)
 export const dragOffsetRef = { current: { x: 0, y: 0 } }
 export const dragPreviewOffsetByItemRef = {
@@ -456,6 +460,8 @@ export function useTimelineDrag(
   // reserved by FreeCut for duplicate-drag, so overloading it would be ambiguous.
   const snapBypassRef = useRef(false)
 
+  const dragInputRef = useRef<TimelineDragInput>({ mode: 'mouse', pointerId: null })
+
   // Track previous snap target to avoid unnecessary store updates
   const prevSnapTargetRef = useRef<{ frame: number; type: string } | null>(null)
 
@@ -748,10 +754,17 @@ export function useTimelineDrag(
   )
 
   /**
-   * Handle mouse down - start dragging
+   * Start dragging from the existing desktop mouse path or the compact
+   * touch/pen pointer path. Both feed the same snap/collision/undo engine.
    */
   const handleDragStart = useCallback(
-    (e: React.MouseEvent) => {
+    (e: TimelineDragReactEvent) => {
+      const isPointerInput = 'pointerType' in e && e.pointerType !== 'mouse'
+      dragInputRef.current = {
+        mode: isPointerInput ? 'pointer' : 'mouse',
+        pointerId: isPointerInput && 'pointerId' in e ? e.pointerId : null,
+      }
+      if (isPointerInput) e.preventDefault()
       // Don't allow dragging on locked tracks
       if (trackLocked) {
         return
@@ -819,48 +832,63 @@ export function useTimelineDrag(
       // moves can derive every preview offset without forcing layout again.
       dragVisualTopByTrackIdRef.current = captureTrackVisualTops()
 
-      // Don't set cursor immediately - wait for drag threshold
+      // Don't set cursor immediately - wait for drag threshold.
+      // Touch/pen uses Pointer Events; mouse keeps the existing mouse listeners.
+      const activePointerId = dragInputRef.current.pointerId
+      const matchesActivePointer = (event: PointerEvent) =>
+        activePointerId === null || event.pointerId === activePointerId
 
-      // Attach a temporary mousemove listener to detect drag threshold
-      const checkDragThreshold = (e: MouseEvent) => {
-        if (!dragStateRef.current) return
-
-        const deltaX = e.clientX - dragStateRef.current.startMouseX
-        const deltaY = e.clientY - dragStateRef.current.startMouseY
-
-        // Check if we've moved enough to start dragging
-        if (Math.abs(deltaX) > DRAG_THRESHOLD_PIXELS || Math.abs(deltaY) > DRAG_THRESHOLD_PIXELS) {
-          // Start the drag - track modifier state
-          isAltDragRef.current = e.altKey
-          snapBypassRef.current = e.ctrlKey || e.metaKey
-          setIsDragging(true)
-          setGlobalDragCursor(e.altKey ? 'copy' : 'grabbing')
-          document.body.style.userSelect = 'none'
-
-          // Broadcast drag state to all selected items
-          const draggedIds = dragStateRef.current?.draggedItems.map((item) => item.id) || []
-          magneticSnapTargetsRef.current = generateSnapTargets(e.altKey ? null : draggedIds)
-          if (e.altKey) {
-            startLargeAltDragCanvas(draggedIds)
-          }
-          setDragState({
-            isDragging: true,
-            draggedItemIds: draggedIds,
-            offset: { x: 0, y: 0 },
-            isAltDrag: e.altKey,
-          })
-          setActiveSnapTarget(null)
-          setActiveLinkedDropTarget(null)
-          clearLinkedMovePreview()
-
-          // Remove this listener - the main useEffect will handle it now
-          window.removeEventListener('mousemove', checkDragThreshold)
-          window.removeEventListener('mouseup', cancelDrag)
-        }
+      const removeThresholdListeners = () => {
+        window.removeEventListener('mousemove', checkMouseThreshold)
+        window.removeEventListener('mouseup', cancelMouseDrag)
+        window.removeEventListener('pointermove', checkPointerThreshold)
+        window.removeEventListener('pointerup', cancelPointerDrag)
+        window.removeEventListener('pointercancel', cancelPointerDrag)
       }
 
-      const cancelDrag = () => {
-        // Clean up if mouse released before threshold
+      const beginDragAfterThreshold = (event: TimelineDragDomEvent) => {
+        if (!dragStateRef.current) return
+
+        const deltaX = event.clientX - dragStateRef.current.startMouseX
+        const deltaY = event.clientY - dragStateRef.current.startMouseY
+        if (
+          Math.abs(deltaX) <= DRAG_THRESHOLD_PIXELS &&
+          Math.abs(deltaY) <= DRAG_THRESHOLD_PIXELS
+        ) {
+          return
+        }
+
+        isAltDragRef.current = event.altKey
+        snapBypassRef.current = event.ctrlKey || event.metaKey
+        setIsDragging(true)
+        setGlobalDragCursor(event.altKey ? 'copy' : 'grabbing')
+        document.body.style.userSelect = 'none'
+
+        const draggedIds = dragStateRef.current.draggedItems.map((dragged) => dragged.id)
+        magneticSnapTargetsRef.current = generateSnapTargets(event.altKey ? null : draggedIds)
+        if (event.altKey) startLargeAltDragCanvas(draggedIds)
+        setDragState({
+          isDragging: true,
+          draggedItemIds: draggedIds,
+          offset: { x: 0, y: 0 },
+          isAltDrag: event.altKey,
+        })
+        setActiveSnapTarget(null)
+        setActiveLinkedDropTarget(null)
+        clearLinkedMovePreview()
+        removeThresholdListeners()
+      }
+
+      const checkMouseThreshold = (event: MouseEvent) => {
+        if (dragInputRef.current.mode !== 'mouse') return
+        beginDragAfterThreshold(event)
+      }
+      const checkPointerThreshold = (event: PointerEvent) => {
+        if (dragInputRef.current.mode !== 'pointer' || !matchesActivePointer(event)) return
+        beginDragAfterThreshold(event)
+      }
+
+      const cancelDragBeforeThreshold = () => {
         dragStateRef.current = null
         magneticSnapTargetsRef.current = []
         snapBypassRef.current = false
@@ -868,12 +896,26 @@ export function useTimelineDrag(
         dragPreviewOffsetByItemRef.current = {}
         clearLargeAltDragCanvas()
         clearLinkedMovePreview()
-        window.removeEventListener('mousemove', checkDragThreshold)
-        window.removeEventListener('mouseup', cancelDrag)
+        dragInputRef.current = { mode: 'mouse', pointerId: null }
+        removeThresholdListeners()
+      }
+      const cancelMouseDrag = () => {
+        if (dragInputRef.current.mode !== 'mouse') return
+        cancelDragBeforeThreshold()
+      }
+      const cancelPointerDrag = (event: PointerEvent) => {
+        if (dragInputRef.current.mode !== 'pointer' || !matchesActivePointer(event)) return
+        cancelDragBeforeThreshold()
       }
 
-      window.addEventListener('mousemove', checkDragThreshold)
-      window.addEventListener('mouseup', cancelDrag)
+      if (dragInputRef.current.mode === 'pointer') {
+        window.addEventListener('pointermove', checkPointerThreshold)
+        window.addEventListener('pointerup', cancelPointerDrag)
+        window.addEventListener('pointercancel', cancelPointerDrag)
+      } else {
+        window.addEventListener('mousemove', checkMouseThreshold)
+        window.addEventListener('mouseup', cancelMouseDrag)
+      }
     },
     [
       clearLinkedMovePreview,
@@ -896,7 +938,7 @@ export function useTimelineDrag(
   useEffect(() => {
     if (!dragStateRef.current || !isDragging) return
 
-    const handleMouseMove = (e: MouseEvent) => {
+    const handleMouseMove = (e: TimelineDragDomEvent) => {
       if (!dragStateRef.current) return
 
       const deltaX = e.clientX - dragStateRef.current.startMouseX
@@ -1529,18 +1571,45 @@ export function useTimelineDrag(
     }
 
     if (dragStateRef.current) {
-      const coalescedMouseMove = createRafCoalescedCallback(handleMouseMove)
-      const handleCoalescedMouseUp = () => {
+      const coalescedMouseMove = createRafCoalescedCallback<TimelineDragDomEvent>(handleMouseMove)
+      const activePointerId = dragInputRef.current.pointerId
+      const matchesActivePointer = (event: PointerEvent) =>
+        activePointerId === null || event.pointerId === activePointerId
+      const handleMouseMoveEvent = (event: MouseEvent) => coalescedMouseMove.queue(event)
+      const handlePointerMoveEvent = (event: PointerEvent) => {
+        if (matchesActivePointer(event)) coalescedMouseMove.queue(event)
+      }
+      const finishDrag = () => {
         coalescedMouseMove.flush()
         handleMouseUp()
+        dragInputRef.current = { mode: 'mouse', pointerId: null }
+      }
+      const handlePointerUp = (event: PointerEvent) => {
+        if (!matchesActivePointer(event)) return
+        finishDrag()
+      }
+      const handlePointerCancel = (event: PointerEvent) => {
+        if (!matchesActivePointer(event)) return
+        coalescedMouseMove.cancel()
+        handleMouseUp()
+        dragInputRef.current = { mode: 'mouse', pointerId: null }
       }
 
-      window.addEventListener('mousemove', coalescedMouseMove.queue)
-      window.addEventListener('mouseup', handleCoalescedMouseUp)
+      if (dragInputRef.current.mode === 'pointer') {
+        window.addEventListener('pointermove', handlePointerMoveEvent)
+        window.addEventListener('pointerup', handlePointerUp)
+        window.addEventListener('pointercancel', handlePointerCancel)
+      } else {
+        window.addEventListener('mousemove', handleMouseMoveEvent)
+        window.addEventListener('mouseup', finishDrag)
+      }
 
       return () => {
-        window.removeEventListener('mousemove', coalescedMouseMove.queue)
-        window.removeEventListener('mouseup', handleCoalescedMouseUp)
+        window.removeEventListener('mousemove', handleMouseMoveEvent)
+        window.removeEventListener('mouseup', finishDrag)
+        window.removeEventListener('pointermove', handlePointerMoveEvent)
+        window.removeEventListener('pointerup', handlePointerUp)
+        window.removeEventListener('pointercancel', handlePointerCancel)
         coalescedMouseMove.cancel()
         magneticSnapTargetsRef.current = []
         snapBypassRef.current = false
@@ -1548,6 +1617,7 @@ export function useTimelineDrag(
         clearLargeAltDragCanvas()
         clearLinkedMovePreview()
         clearGlobalDragCursor()
+        dragInputRef.current = { mode: 'mouse', pointerId: null }
         document.body.style.userSelect = ''
       }
     }

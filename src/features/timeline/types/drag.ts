@@ -52,5 +52,5 @@ export interface UseTimelineDragReturn {
   /** Pixel offset for visual drag preview (CSS transform) */
   dragOffset: { x: number; y: number }
   /** Handler to start dragging */
-  handleDragStart: (e: React.MouseEvent) => void
+  handleDragStart: (e: React.MouseEvent | React.PointerEvent) => void
 }

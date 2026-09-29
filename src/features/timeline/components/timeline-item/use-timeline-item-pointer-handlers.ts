@@ -70,6 +70,7 @@ export interface TimelineItemPointerHandlers {
   handleClick: (e: React.MouseEvent) => void
   handleDoubleClick: (e: React.MouseEvent) => void
   handleMouseDown: (e: React.MouseEvent) => void
+  handlePointerDown: (e: React.PointerEvent) => void
   handleSmartTrimStart: (e: React.MouseEvent, handle: 'start' | 'end') => void
 }
 
@@ -360,6 +361,22 @@ export function useTimelineItemPointerHandlers({
     ],
   )
 
+  const handlePointerDown = useCallback(
+    (e: React.PointerEvent) => {
+      if (e.pointerType === 'mouse' || e.button !== 0) return
+      if (trackLocked || activeToolRef.current !== 'select') return
+
+      // Compact/touch editing exposes the reliable core gesture first:
+      // select + move. Advanced trim/slip/stretch keeps its desktop mouse path
+      // until those tools have dedicated touch affordances.
+      e.preventDefault()
+      e.stopPropagation()
+      e.currentTarget.setPointerCapture?.(e.pointerId)
+      handleDragStart(e)
+    },
+    [activeToolRef, handleDragStart, trackLocked],
+  )
+
   const handleSmartTrimStart = useCallback(
     (e: React.MouseEvent, handle: 'start' | 'end') => {
       const currentIntent = smartTrimIntentRef.current
@@ -388,5 +405,5 @@ export function useTimelineItemPointerHandlers({
     [activeToolRef, handleTrimStart, item.id, smartTrimIntentRef],
   )
 
-  return { handleClick, handleDoubleClick, handleMouseDown, handleSmartTrimStart }
+  return { handleClick, handleDoubleClick, handleMouseDown, handlePointerDown, handleSmartTrimStart }
 }
