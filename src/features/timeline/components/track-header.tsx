@@ -24,6 +24,7 @@ interface TrackHeaderProps {
   canDeleteTrack: boolean
   canDeleteEmptyTracks: boolean
   simplified?: boolean
+  displayName?: string
   onToggleLock: () => void
   onToggleSyncLock: () => void
   onToggleDisabled: () => void
@@ -46,7 +47,8 @@ function areTrackHeaderPropsEqual(prev: TrackHeaderProps, next: TrackHeaderProps
     prev.isSelected === next.isSelected &&
     prev.canDeleteTrack === next.canDeleteTrack &&
     prev.canDeleteEmptyTracks === next.canDeleteEmptyTracks &&
-    prev.simplified === next.simplified
+    prev.simplified === next.simplified &&
+    prev.displayName === next.displayName
   )
   // Callbacks (onToggleLock, etc.) are ignored - they're recreated each render but functionality is same
 }
@@ -67,6 +69,7 @@ export const TrackHeader = memo(function TrackHeader({
   canDeleteTrack,
   canDeleteEmptyTracks,
   simplified = false,
+  displayName,
   onToggleLock,
   onToggleSyncLock,
   onToggleDisabled,
@@ -96,11 +99,12 @@ export const TrackHeader = memo(function TrackHeader({
   const { handleDragStart } = useTrackDrag(track)
   const itemCountLabel = t('timeline.trackHeader.clipCount', { count: itemCount })
   const producerTrackLabel =
-    /^V\d+$/i.test(track.name)
+    displayName ??
+    (/^V\d+$/i.test(track.name)
       ? `Video ${track.name.slice(1)}`
       : /^A\d+$/i.test(track.name)
         ? `Audio ${track.name.slice(1)}`
-        : track.name
+        : track.name)
 
   return (
     <ContextMenu>
@@ -118,7 +122,7 @@ export const TrackHeader = memo(function TrackHeader({
           <div
             className={`
               flex flex-col overflow-hidden px-1
-              cursor-grab active:cursor-grabbing relative
+              ${simplified ? 'cursor-default' : 'cursor-grab active:cursor-grabbing'} relative
               ${isSelected ? 'bg-primary/10' : trackDisabled ? 'bg-muted/30 hover:bg-muted/40' : 'hover:bg-secondary/50'}
               ${isActive ? 'border-l-3 border-l-primary' : 'border-l-3 border-l-transparent'}
               ${trackDisabled ? 'text-muted-foreground' : ''}
@@ -126,7 +130,7 @@ export const TrackHeader = memo(function TrackHeader({
             `}
             style={{ height: `${track.height}px` }}
             onClick={onSelect}
-            onMouseDown={handleDragStart}
+            onMouseDown={simplified ? undefined : handleDragStart}
           >
             {simplified ? (
               <div className="flex h-full min-h-0 items-center gap-1.5 px-1.5">
