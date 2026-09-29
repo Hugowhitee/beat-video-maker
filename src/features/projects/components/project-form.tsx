@@ -128,7 +128,7 @@ function ProjectFormBase({
       <div className={isInlineSurface ? '' : 'max-w-[1400px] mx-auto px-6 py-8'}>
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
           <input type="hidden" {...register('beatvideoMode')} />
-          <div className="panel-bg border border-border rounded-lg p-5">
+          <div className="panel-bg border border-border rounded-lg p-4 sm:p-5">
             <div className="mb-3">
               <h2 className="text-sm font-semibold text-foreground">Project type</h2>
               <p className="mt-1 text-xs text-muted-foreground">
@@ -185,7 +185,7 @@ function ProjectFormBase({
           <div className="grid grid-cols-1 lg:grid-cols-[minmax(320px,420px)_1fr] gap-6 items-start">
             {/* Project Details */}
             <div
-              className={`panel-bg border border-border rounded-lg p-6 ${isInlineSurface ? '' : 'lg:sticky lg:top-6'}`}
+              className={`panel-bg border border-border rounded-lg p-4 sm:p-6 ${isInlineSurface ? '' : 'lg:sticky lg:top-6'}`}
             >
               <div className="flex items-center gap-3 mb-6">
                 <div className="h-8 w-1 bg-primary rounded-full" />
@@ -262,7 +262,7 @@ function ProjectFormBase({
             </div>
 
             {/* Video Settings */}
-            <div className="panel-bg border border-border rounded-lg p-6">
+            <div className="panel-bg border border-border rounded-lg p-4 sm:p-6">
               <div className="flex items-center gap-3 mb-6">
                 <div className="h-8 w-1 bg-primary rounded-full" />
                 <h2 className="text-lg font-medium text-foreground">
@@ -276,7 +276,7 @@ function ProjectFormBase({
                 onSelectCustom={handleCustomSelect}
               />
               {selectedTemplateId === 'custom' && (
-                <div className="mt-5 flex items-center gap-3">
+                <div className="mt-5 grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-end gap-2 sm:gap-3">
                   <div className="flex-1">
                     <label
                       htmlFor="width"
@@ -296,7 +296,7 @@ function ProjectFormBase({
                       <p className="mt-1 text-xs text-destructive">{errors.width.message}</p>
                     )}
                   </div>
-                  <span className="text-muted-foreground mt-4">×</span>
+                  <span className="pb-2 text-muted-foreground">×</span>
                   <div className="flex-1">
                     <label
                       htmlFor="height"
@@ -324,7 +324,7 @@ function ProjectFormBase({
           <Separator />
 
           {/* Actions */}
-          <div className="flex gap-3 justify-end">
+          <div className="grid grid-cols-2 gap-2 sm:flex sm:justify-end sm:gap-3">
             {onCancel ? (
               <Button
                 type="button"
@@ -337,7 +337,7 @@ function ProjectFormBase({
               </Button>
             ) : (
               <Link to="/projects">
-                <Button type="button" variant="outline" size="lg" disabled={isSubmitting}>
+                <Button type="button" variant="outline" size="lg" className="w-full" disabled={isSubmitting}>
                   {t('common.cancel')}
                 </Button>
               </Link>
@@ -345,7 +345,7 @@ function ProjectFormBase({
             <Button
               type="submit"
               size="lg"
-              className="min-w-[160px]"
+              className="w-full sm:w-auto sm:min-w-[160px]"
               disabled={!isValid || isSubmitting}
             >
               {isSubmitting

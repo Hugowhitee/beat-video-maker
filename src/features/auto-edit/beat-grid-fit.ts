@@ -350,6 +350,82 @@ function collectLowEndTempoObservations(params: {
   return observations
 }
 
+type SparsePeriodEvidence = {
+  period: number
+  spread: number
+  sampleCount: number
+}
+
+function estimateSparsePeriodEvidence(
+  times: readonly number[],
+  seedPeriod: number,
+): SparsePeriodEvidence | null {
+  if (times.length < 4 || !Number.isFinite(seedPeriod) || seedPeriod <= 0) return null
+
+  const periods: number[] = []
+  for (let left = 0; left < times.length - 1; left += 1) {
+    const maxRight = Math.min(times.length, left + 13)
+    for (let right = left + 1; right < maxRight; right += 1) {
+      const gap = (times[right] ?? 0) - (times[left] ?? 0)
+      if (!Number.isFinite(gap) || gap <= 0) continue
+
+      const steps = Math.round(gap / seedPeriod)
+      if (steps < 2 || steps > 16) continue
+
+      const candidate = gap / steps
+      const deviation = Math.abs(candidate - seedPeriod) / seedPeriod
+      if (deviation <= 0.025) periods.push(candidate)
+    }
+  }
+
+  if (periods.length < 6) return null
+
+  const center = median(periods)
+  const kept = periods.filter(
+    (candidate) => Math.abs(candidate - center) / Math.max(EPSILON, center) <= 0.012,
+  )
+  if (kept.length < 5) return null
+
+  const period = median(kept)
+  const spread =
+    (percentile(kept, 0.9) - percentile(kept, 0.1)) / Math.max(EPSILON, period)
+  if (!Number.isFinite(period) || period <= 0 || spread > 0.015) return null
+
+  return { period, spread, sampleCount: kept.length }
+}
+
+function lowEndPeriodScore(params: {
+  phase: number
+  period: number
+  observations: readonly Observation[]
+  lowEndTransients: readonly MusicTransient[]
+}): { score: number; supportRatio: number } {
+  const { phase, period, observations, lowEndTransients } = params
+  if (observations.length === 0 || lowEndTransients.length === 0) {
+    return { score: 0, supportRatio: 0 }
+  }
+
+  const radius = Math.min(0.095, period * 0.16)
+  let score = 0
+  let support = 0
+
+  for (const observation of observations) {
+    const predicted = phase + observation.cycle * period
+    const transient = nearestMusicalTransient(lowEndTransients, predicted, radius)
+    if (!transient) continue
+
+    const distance = Math.abs(transient.time - predicted)
+    const proximity = 1 - distance / Math.max(radius, EPSILON)
+    score += transient.strength * (0.35 + 0.65 * proximity)
+    support += 1
+  }
+
+  return {
+    score: score / Math.max(1, observations.length),
+    supportRatio: support / Math.max(1, observations.length),
+  }
+}
+
 function robustObservationFit(
   input: readonly Observation[],
   minimumCount: number,
@@ -403,74 +479,111 @@ function refinePeriodWithLowEndTransients(params: {
   const { phase, period, detectorObservations, transients } = params
   if (detectorObservations.length < 16 || transients.length === 0) return null
 
-  // This is deliberately independent from detector positions after the initial
-  // seed period. Matching every onset back to an already-drifting grid causes a
-  // late-song kick to alias onto the neighbouring detector beat—the exact
-  // failure this second measurement is meant to catch.
+  const lowEndTransients = transients
+    .filter(isLowEndTempoTransient)
+    .slice()
+    .sort((left, right) => left.time - right.time)
+  if (lowEndTransients.length < 6) return null
+
+  const firstDetectorTime = detectorObservations[0]?.time ?? 0
+  const lastDetectorTime = detectorObservations.at(-1)?.time ?? firstDetectorTime
+  const detectorSpan = lastDetectorTime - firstDetectorTime
+  if (detectorSpan <= period * 12) return null
+
+  const firstOnset = lowEndTransients[0]?.time ?? firstDetectorTime
+  const lastOnset = lowEndTransients.at(-1)?.time ?? firstOnset
+  const evidenceCoverage = (lastOnset - firstOnset) / Math.max(EPSILON, detectorSpan)
+  if (evidenceCoverage < 0.55) return null
+
+  // Measurement 1: use long low-end onset spans. Pairwise spans average the
+  // tracker's frame jitter and keep working when several beats intentionally
+  // have no kick, so sparse arrangements can still measure whole-song tempo.
+  const globalEvidence = estimateSparsePeriodEvidence(
+    lowEndTransients.map((transient) => transient.time),
+    period,
+  )
+  if (!globalEvidence) return null
+
+  // Measurements 2-4: beginning / middle / end. No single fill or bass-heavy
+  // phrase is allowed to own the song tempo.
+  const regionWidth = detectorSpan * 0.46
+  const regionStarts = [
+    firstDetectorTime,
+    firstDetectorTime + detectorSpan * 0.27,
+    Math.max(firstDetectorTime, lastDetectorTime - regionWidth),
+  ]
+  const regionEvidence = regionStarts
+    .map((start) => {
+      const end = start + regionWidth
+      const times = lowEndTransients
+        .filter((transient) => transient.time >= start && transient.time <= end)
+        .map((transient) => transient.time)
+      return estimateSparsePeriodEvidence(times, period)
+    })
+    .filter((evidence): evidence is SparsePeriodEvidence => evidence !== null)
+
+  if (regionEvidence.length < 2) return null
+
+  // Measurement 5: keep the existing sequential onset fit as a cross-check,
+  // but do not let a greedy kick-cycle assignment own tempo by itself.
   const onsetObservations = collectLowEndTempoObservations({
     phase,
     period,
-    transients,
+    transients: lowEndTransients,
   })
-  const onsetFit = robustObservationFit(onsetObservations, 8)
-  if (!onsetFit) return null
+  const onsetFit = robustObservationFit(onsetObservations, 6)
 
-  const firstCycle = onsetFit.observations[0]?.cycle ?? 0
-  const lastCycle = onsetFit.observations.at(-1)?.cycle ?? firstCycle
-  if (lastCycle - firstCycle < 12) return null
+  const independentPeriods = [
+    globalEvidence.period,
+    ...regionEvidence.map((evidence) => evidence.period),
+  ]
+  const consensusPeriod = median(independentPeriods)
+  const consensusSpread =
+    (Math.max(...independentPeriods) - Math.min(...independentPeriods)) /
+    Math.max(EPSILON, consensusPeriod)
+  if (consensusSpread > 0.0075) return null
 
-  const deviation = Math.abs(onsetFit.period - period) / Math.max(EPSILON, period)
+  const deviation = Math.abs(consensusPeriod - period) / Math.max(EPSILON, period)
   if (deviation > 0.02) return null
 
-  const supportRatio =
-    onsetFit.observations.length / Math.max(1, detectorObservations.length)
-  if (supportRatio < 0.16 || onsetFit.medianError > 0.035 || onsetFit.p90Error > 0.075) {
+  if (
+    onsetFit &&
+    Math.abs(onsetFit.period - consensusPeriod) / Math.max(EPSILON, consensusPeriod) > 0.012
+  ) {
     return null
   }
 
-  const detectorFirstCycle = detectorObservations[0]?.cycle ?? firstCycle
-  const detectorLastCycle = detectorObservations.at(-1)?.cycle ?? lastCycle
-  const detectorCycleSpan = Math.max(1, detectorLastCycle - detectorFirstCycle)
-  const evidenceCoverage = (lastCycle - firstCycle) / detectorCycleSpan
+  // Final acceptance is independent from the pairwise estimator: measure how
+  // many real low-end onsets the candidate lattice explains across the complete
+  // detector cycle span. A retune must improve late-song audio alignment.
+  const baseline = lowEndPeriodScore({
+    phase,
+    period,
+    observations: detectorObservations,
+    lowEndTransients,
+  })
+  const candidate = lowEndPeriodScore({
+    phase,
+    period: consensusPeriod,
+    observations: detectorObservations,
+    lowEndTransients,
+  })
+  const requiredGain = Math.max(0.006, baseline.score * 0.06)
+  const improvesAlignment =
+    candidate.score >= baseline.score + requiredGain ||
+    (candidate.supportRatio >= baseline.supportRatio + 0.06 &&
+      candidate.score >= baseline.score - 0.002)
 
-  // A bass-heavy intro or one repeating fill may be internally periodic but
-  // still cannot own the whole-song BPM. Require evidence to cover a material
-  // part of the detector's complete song span.
-  if (detectorCycleSpan >= 32 && evidenceCoverage < 0.55) return null
-
-  // Independently fit beginning / middle / end regions. Two agreeing regions
-  // are enough because real hip-hop arrangements can intentionally drop kicks
-  // for a full section; one local region is never enough to retune the song.
-  const regionSpan = detectorCycleSpan / 3
-  const regionFits = [0, 1, 2]
-    .map((regionIndex) => {
-      const startCycle = detectorFirstCycle + regionSpan * regionIndex
-      const endCycle =
-        regionIndex === 2
-          ? detectorLastCycle + EPSILON
-          : detectorFirstCycle + regionSpan * (regionIndex + 1)
-      const region = onsetFit.observations.filter(
-        (observation) =>
-          observation.cycle >= startCycle && observation.cycle < endCycle,
-      )
-      if (region.length < 3) return null
-      const first = region[0]?.cycle ?? 0
-      const last = region.at(-1)?.cycle ?? first
-      if (last - first < 4) return null
-      return linearFit(region)
-    })
-    .filter((fit): fit is { phase: number; period: number } => fit !== null)
-
-  if (regionFits.length < 2) return null
-  const regionPeriods = regionFits.map((fit) => fit.period)
-  const consensusSpread =
-    (Math.max(...regionPeriods) - Math.min(...regionPeriods)) /
-    Math.max(EPSILON, onsetFit.period)
-  if (consensusSpread > 0.008) return null
+  if (candidate.supportRatio < 0.1 || !improvesAlignment) return null
 
   return {
-    period: onsetFit.period,
-    supportRatio,
+    period: consensusPeriod,
+    supportRatio: Math.max(
+      candidate.supportRatio,
+      onsetFit
+        ? onsetFit.observations.length / Math.max(1, detectorObservations.length)
+        : 0,
+    ),
     consensusSpread,
   }
 }

@@ -52,7 +52,10 @@ import {
   isExternalTimelineDragEvent,
 } from '../utils/timeline-external-drag'
 import { getDefaultActiveTrackId } from '../utils/default-active-track'
-import { resolveWorkspaceVisibleTracks } from '../utils/workspace-visible-tracks'
+import {
+  resolveCompactProducerTracks,
+  resolveWorkspaceVisibleTracks,
+} from '../utils/workspace-visible-tracks'
 import { KeyframeGraphPanel } from './keyframe-graph-panel'
 import { createRafCoalescedCallback } from '../utils/raf-coalesced-callback'
 import type { BeatvideoProjectMode } from '@/types/project'
@@ -115,10 +118,13 @@ export const Timeline = memo(function Timeline({
   const selectTracks = useSelectionStore((s) => s.selectTracks)
   const selectedTrackIdsSet = useMemo(() => new Set(selectedTrackIds), [selectedTrackIds])
 
-  const visibleTracks = useMemo(
-    () => resolveWorkspaceVisibleTracks(tracks, workspace),
-    [tracks, workspace],
-  )
+  const itemsByTrackId = useItemsStore((s) => s.itemsByTrackId)
+  const visibleTracks = useMemo(() => {
+    const workspaceTracks = resolveWorkspaceVisibleTracks(tracks, workspace)
+    return compact && simplifiedBeatvideoTimeline
+      ? resolveCompactProducerTracks(workspaceTracks, itemsByTrackId)
+      : workspaceTracks
+  }, [compact, itemsByTrackId, simplifiedBeatvideoTimeline, tracks, workspace])
   const canDeleteEmptyTracks = useItemsStore(
     useCallback(
       (s) => {

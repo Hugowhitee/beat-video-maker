@@ -16,3 +16,23 @@ export function resolveWorkspaceVisibleTracks(
   const audioTracks = tracks.filter((track) => getTrackKind(track) === 'audio')
   return audioTracks.length > 0 ? audioTracks : tracks
 }
+
+/**
+ * Compact producer surfaces keep the canonical track list in state but omit
+ * empty generic V/A lanes once real project content exists. Dedicated producer
+ * lanes and every non-empty edit lane remain visible.
+ */
+export function resolveCompactProducerTracks(
+  tracks: TimelineTrack[],
+  itemsByTrackId: Record<string, readonly unknown[] | undefined>,
+): TimelineTrack[] {
+  const hasProjectContent = tracks.some(
+    (track) => (itemsByTrackId[track.id]?.length ?? 0) > 0,
+  )
+  if (!hasProjectContent) return tracks
+
+  return tracks.filter((track) => {
+    if ((itemsByTrackId[track.id]?.length ?? 0) > 0) return true
+    return !/^[VA]\d+$/i.test(track.name.trim())
+  })
+}

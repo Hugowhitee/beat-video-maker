@@ -754,7 +754,7 @@ export const LoadedEditor = memo(function LoadedEditor({
 
   return (
     <div
-      className="h-screen bg-background flex flex-col overflow-hidden"
+      className="h-dvh min-h-0 bg-background flex flex-col overflow-hidden"
       style={editorLayoutCssVars as import('react').CSSProperties}
       role="application"
       aria-label={t('editor.editor.appLabel')}
@@ -793,7 +793,23 @@ export const LoadedEditor = memo(function LoadedEditor({
                 {isMotionWorkspace ? (
                   <MotionPreviewArea project={project} />
                 ) : (
-                  <PreviewArea project={project} compact />
+                  <div className="flex h-full min-h-0 flex-col overflow-hidden">
+                    <div className="min-h-0 flex-1">
+                      <PreviewArea project={project} compact />
+                    </div>
+                    <InteractionLockRegion
+                      locked={isMaskEditingActive}
+                      className="h-[38%] min-h-[150px] max-h-[280px] shrink-0 border-t border-border"
+                    >
+                      <Suspense fallback={null}>
+                        <LazyTimeline
+                          duration={timelineDuration}
+                          beatvideoMode={beatvideoMode}
+                          compact
+                        />
+                      </Suspense>
+                    </InteractionLockRegion>
+                  </div>
                 )}
               </ErrorBoundary>
             ) : mobileSurface === 'inspector' ? (

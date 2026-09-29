@@ -334,9 +334,9 @@ export function ProjectList({ onEditProject, onImportProject }: ProjectListProps
     <div className="space-y-6">
       {/* Search and Filters Bar */}
       {!isEmpty && (
-        <div className="flex items-center gap-3">
+        <div className="grid grid-cols-2 gap-2 sm:flex sm:items-center sm:gap-3">
           {/* Search */}
-          <div className="relative flex-1 max-w-md">
+          <div className="relative col-span-2 w-full sm:max-w-md sm:flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <Input
               type="text"
@@ -362,7 +362,7 @@ export function ProjectList({ onEditProject, onImportProject }: ProjectListProps
             value={filterResolution || 'all'}
             onValueChange={(value) => setFilterResolution(value === 'all' ? undefined : value)}
           >
-            <SelectTrigger className="w-[180px]">
+            <SelectTrigger className="w-full sm:w-[180px]">
               <SelectValue placeholder={t('projects.list.allResolutions')} />
             </SelectTrigger>
             <SelectContent>
@@ -380,7 +380,7 @@ export function ProjectList({ onEditProject, onImportProject }: ProjectListProps
             value={filterFps?.toString() || 'all'}
             onValueChange={(value) => setFilterFps(value === 'all' ? undefined : Number(value))}
           >
-            <SelectTrigger className="w-[140px]">
+            <SelectTrigger className="w-full sm:w-[140px]">
               <SelectValue placeholder={t('projects.list.allFps')} />
             </SelectTrigger>
             <SelectContent>

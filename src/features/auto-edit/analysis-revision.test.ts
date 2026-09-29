@@ -38,6 +38,12 @@ describe('Beatvideo analysis revision', () => {
     ).toBe(true)
   })
 
+  it('refreshes untouched revision-4 grids after distributed tempo consensus', () => {
+    expect(
+      shouldRefreshBeatvideoAnalysis(analysis({ analysisRevision: 4 })),
+    ).toBe(true)
+  })
+
   it('does not keep refreshing the current detector revision', () => {
     expect(
       shouldRefreshBeatvideoAnalysis(
