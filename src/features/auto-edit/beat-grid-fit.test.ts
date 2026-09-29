@@ -242,6 +242,48 @@ describe('stabilizeBeatGrid', () => {
     expect(Math.abs((lateBeat ?? 0) - nearestActualBeat)).toBeLessThan(0.035)
   })
 
+  it('uses sparse long-span kick evidence across song regions to remove cumulative drift', () => {
+    const detectorBpm = 91.05
+    const actualBpm = 91.8
+    const detectorPeriod = 60 / detectorBpm
+    const actualPeriod = 60 / actualBpm
+    const phase = 0.42
+    const duration = 170
+    const beats = Array.from(
+      { length: Math.floor((duration - phase) / detectorPeriod) },
+      (_, index) => phase + index * detectorPeriod,
+    )
+
+    const transients = Array.from(
+      { length: Math.floor((duration - phase) / (actualPeriod * 8)) },
+      (_, index) => ({
+        time: phase + index * actualPeriod * 8,
+        index,
+        strength: 0.96,
+        low: 0.97,
+        mid: 0.12,
+        high: 0.04,
+      }),
+    )
+
+    const result = stabilizeBeatGrid(
+      rhythm({
+        beats,
+        bpm: detectorBpm,
+        downbeats: beats.filter((_, index) => index % 4 === 0),
+        transients,
+      }),
+      duration,
+    )
+
+    expect(result.fit.mode).toBe('fixed')
+    expect(result.rhythm.bpm).toBeCloseTo(actualBpm, 1)
+    const lateBeat = result.rhythm.beats.findLast((time) => time < 160)
+    expect(lateBeat).toBeDefined()
+    const cycle = Math.round(((lateBeat ?? phase) - phase) / actualPeriod)
+    expect(Math.abs((lateBeat ?? 0) - (phase + cycle * actualPeriod))).toBeLessThan(0.04)
+  })
+
   it('does not retune the whole song from low-end evidence confined to one region', () => {
     const detectorBpm = 119.4
     const actualBpm = 120
