@@ -669,10 +669,19 @@ export function BeatvideoVisualSourcePanel({
   }
 
   return (
-    <section className="space-y-3 border-b border-border bg-secondary/10 px-3 py-3">
-      <div className="flex items-center gap-2">
-        <Film className="h-3.5 w-3.5 text-muted-foreground" />
-        <span className="text-xs font-medium text-foreground">Visual source</span>
+    <section className="max-h-[62vh] shrink-0 space-y-3 overflow-y-auto border-b border-border bg-secondary/10 px-3 py-3">
+      <div className="flex items-center justify-between gap-2">
+        <div className="flex min-w-0 items-center gap-2">
+          <Film className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+          <div className="min-w-0">
+            <div className="text-xs font-medium text-foreground">Footage</div>
+            <div className="font-mono text-[9px] text-muted-foreground">
+              {videoCandidates.length === 0
+                ? 'No video added'
+                : `${videoCandidates.length} source${videoCandidates.length === 1 ? '' : 's'}`}
+            </div>
+          </div>
+        </div>
       </div>
 
       <Button
@@ -685,6 +694,43 @@ export function BeatvideoVisualSourcePanel({
         <Film className="h-3.5 w-3.5" />
         {importingFootage ? 'Importing footage…' : 'Add footage'}
       </Button>
+
+      {videoCandidates.length > 0 ? (
+        <div className="border-t border-border pt-2.5">
+          <div className="mb-2 flex items-start justify-between gap-2">
+            <div>
+              <div className="text-[11px] font-medium text-foreground">Shots</div>
+              <div className="mt-0.5 text-[9px] leading-relaxed text-muted-foreground">
+                Review scene splits before placement. Skip weak shots; drag good shots into the sequence later.
+              </div>
+            </div>
+            <Button
+              type="button"
+              size="sm"
+              variant="ghost"
+              className="h-7 shrink-0 px-2 text-[10px]"
+              disabled={preparingFootage || autoArranging || importingFootage}
+              onClick={() => void prepareCurrentFootage()}
+            >
+              {preparingFootage ? 'Detecting…' : lastClipMap ? 'Refresh' : 'Detect'}
+            </Button>
+          </div>
+          {lastClipMap ? (
+            <BeatvideoShotBin
+              clipMap={lastClipMap}
+              excludedShotIds={excludedShotIds}
+              draggingShotId={draggingShotId}
+              onToggleAvoid={toggleAvoidShot}
+              onDragStart={beginArrangementShotDrag}
+              onDragEnd={endArrangementShotDrag}
+            />
+          ) : (
+            <div className="text-[9px] text-muted-foreground">
+              Detect shots to inspect the automatic split before building an edit.
+            </div>
+          )}
+        </div>
+      ) : null}
 
       {videoCandidates.length > 0 ? (
         <>
