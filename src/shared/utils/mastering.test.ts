@@ -43,9 +43,10 @@ describe('createSaturationMixCurve', () => {
 
 
 describe('mastering presets', () => {
-  it('provides a complete Detroit recipe on the canonical master chain', () => {
+  it('keeps the legacy preset id compatible while exposing a genre-neutral recipe', () => {
     const preset = getMasteringPreset('detroit')
     expect(preset.id).toBe('detroit')
+    expect(preset.label).toBe('Dry Punch')
     expect(preset.settings.enabled).toBe(true)
     expect(preset.settings.compressor?.enabled).toBe(true)
     expect(preset.settings.saturator?.enabled).toBe(true)

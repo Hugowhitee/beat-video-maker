@@ -36,7 +36,11 @@ import { useTimelineStore } from '@/features/editor/deps/timeline-store'
 import { importBundleExportDialog } from '@/features/editor/deps/project-bundle'
 import { useMediaLibraryStore } from '@/features/editor/deps/media-library'
 import { useSettingsStore } from '@/features/editor/deps/settings'
-import { useMaskEditorStore } from '@/features/editor/deps/preview'
+import {
+  PlaybackControls,
+  useItemsStore,
+  useMaskEditorStore,
+} from '@/features/editor/deps/preview'
 import { usePlaybackStore } from '@/shared/state/playback'
 import { useEditorStore } from '@/shared/state/editor'
 import { clearPreviewAudioCache } from '@/features/editor/deps/composition-runtime'
@@ -455,6 +459,11 @@ export const LoadedEditor = memo(function LoadedEditor({
   const hasRefreshedMigrationStateRef = useRef(false)
   const timelinePanelRef = useRef<ImperativePanelHandle>(null)
   const previousWorkspaceRef = useRef(workspace)
+  const maxItemEndFrame = useItemsStore((s) => s.maxItemEndFrame)
+  const mobileTotalFrames = Math.max(
+    1,
+    maxItemEndFrame > 0 ? maxItemEndFrame : project.fps * 10,
+  )
 
   // Guard against concurrent saves (e.g., spamming Ctrl+S)
   const isSavingRef = useRef(false)
@@ -784,7 +793,7 @@ export const LoadedEditor = memo(function LoadedEditor({
                 {isMotionWorkspace ? (
                   <MotionPreviewArea project={project} />
                 ) : (
-                  <PreviewArea project={project} />
+                  <PreviewArea project={project} compact />
                 )}
               </ErrorBoundary>
             ) : mobileSurface === 'inspector' ? (
@@ -801,7 +810,11 @@ export const LoadedEditor = memo(function LoadedEditor({
                       <MotionTimelineDock project={project} />
                     ) : (
                       <Suspense fallback={null}>
-                        <LazyTimeline duration={timelineDuration} beatvideoMode={beatvideoMode} />
+                        <LazyTimeline
+                          duration={timelineDuration}
+                          beatvideoMode={beatvideoMode}
+                          compact
+                        />
                       </Suspense>
                     )}
                   </div>
@@ -823,6 +836,15 @@ export const LoadedEditor = memo(function LoadedEditor({
               </ErrorBoundary>
             )}
           </div>
+
+          {mobileSurface !== 'preview' ? (
+            <div
+              className="flex h-10 shrink-0 items-center justify-center overflow-x-auto border-t border-border bg-background/95 px-1"
+              aria-label="Playback"
+            >
+              <PlaybackControls totalFrames={mobileTotalFrames} fps={project.fps} compact />
+            </div>
+          ) : null}
 
           <nav
             className="grid shrink-0 border-t border-border bg-background/95 pb-[env(safe-area-inset-bottom)]"

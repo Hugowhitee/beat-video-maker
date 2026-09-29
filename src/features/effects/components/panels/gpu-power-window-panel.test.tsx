@@ -143,6 +143,12 @@ describe('GpuPowerWindowPanel', () => {
 
     expect(disclosure).toHaveAttribute('aria-expanded', 'false')
     expect(screen.queryByRole('button', { name: 'Ellipse' })).not.toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /remove effect/i })).toBeInTheDocument()
+
+    fireEvent.pointerDown(screen.getByRole('button', { name: 'More options' }), {
+      button: 0,
+      ctrlKey: false,
+    })
+
+    expect(screen.getByRole('menuitem', { name: /remove effect/i })).toBeInTheDocument()
   })
 })

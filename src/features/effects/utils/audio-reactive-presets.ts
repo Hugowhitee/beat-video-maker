@@ -26,7 +26,12 @@ export const AUDIO_REACTIVE_PRESETS: ReadonlyArray<{
   {
     id: 'gentle-punch',
     label: 'Pulse',
-    description: 'Small scale hit on strong beats.',
+    description: 'Small scale punch on strong low hits or beats.',
+  },
+  {
+    id: 'subtle-shake',
+    label: 'Shake',
+    description: 'Restrained movement on strong low hits or downbeats.',
   },
   {
     id: 'beat-flash',
@@ -36,17 +41,12 @@ export const AUDIO_REACTIVE_PRESETS: ReadonlyArray<{
   {
     id: 'glow-hit',
     label: 'Glow',
-    description: 'Adds a restrained glow pulse on strong beats.',
-  },
-  {
-    id: 'subtle-shake',
-    label: 'Shake',
-    description: 'Barely perceptible deterministic movement on downbeats.',
+    description: 'Glow pulse on strong high-frequency hits or beats.',
   },
   {
     id: 'chromatic-hit',
     label: 'RGB',
-    description: 'Brief RGB separation on strong downbeats.',
+    description: 'Brief chromatic split on strong mid hits or downbeats.',
   },
 ]
 
@@ -249,8 +249,8 @@ export function buildAudioReactivePresetUpdate(params: {
       fps,
       {
         driver: audioDriver(grid, 'low', 'beat'),
-        amount: 0.018,
-        threshold: 0.58,
+        amount: 0.028,
+        threshold: 0.5,
         releaseFrames: Math.max(1, Math.round(fps * 0.1)),
       },
     )
@@ -261,9 +261,9 @@ export function buildAudioReactivePresetUpdate(params: {
       fps,
       {
         driver: audioDriver(grid, 'low', 'downbeat'),
-        amount: 0.14,
-        threshold: 0.72,
-        releaseFrames: Math.max(1, Math.round(fps * 0.09)),
+        amount: 0.4,
+        threshold: 0.58,
+        releaseFrames: Math.max(1, Math.round(fps * 0.08)),
       },
     )
   } else {
@@ -280,10 +280,10 @@ export function buildAudioReactivePresetUpdate(params: {
     const paramKey = 'amount'
     const amount =
       presetId === 'beat-flash'
-        ? 0.16
+        ? 0.2
         : presetId === 'glow-hit'
-          ? 0.4
-          : 0.006
+          ? 0.5
+          : 0.01
 
     binding = baseBinding(
       {
@@ -303,10 +303,10 @@ export function buildAudioReactivePresetUpdate(params: {
         amount,
         threshold:
           presetId === 'beat-flash'
-            ? 0.66
+            ? 0.6
             : presetId === 'glow-hit'
-              ? 0.64
-              : 0.7,
+              ? 0.58
+              : 0.62,
         releaseFrames: Math.max(
           1,
           Math.round(fps * (presetId === 'glow-hit' ? 0.16 : 0.1)),

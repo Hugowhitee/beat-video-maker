@@ -274,12 +274,20 @@ describe('GpuCurvesPanel', () => {
     expect(updates.masterHighlightY).toBeCloseTo(0.75, 4)
   })
 
-  it('disables the header reset button when every channel is identity', () => {
+  it('disables the header reset action when every channel is identity', () => {
     render(<GpuCurvesPanel {...makeProps()} />)
-    expect(screen.getByTitle('Reset To Defaults')).toBeDisabled()
+
+    fireEvent.pointerDown(screen.getByRole('button', { name: 'More options' }), {
+      button: 0,
+      ctrlKey: false,
+    })
+
+    expect(screen.getByRole('menuitem', { name: 'Reset To Defaults' })).toHaveAttribute(
+      'data-disabled',
+    )
   })
 
-  it('enables the header reset button when a channel deviates from identity', () => {
+  it('enables the header reset action when a channel deviates from identity', () => {
     const points: GpuCurvesControlPoint[] = [
       { x: 0, y: 0.2 },
       { x: 1, y: 1 },
@@ -287,7 +295,15 @@ describe('GpuCurvesPanel', () => {
     render(
       <GpuCurvesPanel {...makeProps({ redPoints: serializeGpuCurvesChannelPoints(points) })} />,
     )
-    expect(screen.getByTitle('Reset To Defaults')).not.toBeDisabled()
+
+    fireEvent.pointerDown(screen.getByRole('button', { name: 'More options' }), {
+      button: 0,
+      ctrlKey: false,
+    })
+
+    expect(screen.getByRole('menuitem', { name: 'Reset To Defaults' })).not.toHaveAttribute(
+      'data-disabled',
+    )
   })
 
   it('blocks all curve interactions when the effect is disabled', () => {

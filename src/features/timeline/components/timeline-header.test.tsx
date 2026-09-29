@@ -301,6 +301,16 @@ describe('TimelineHeader zoom slider', () => {
     expect(onZoomChange).toHaveBeenCalledTimes(3)
   })
 
+  it('removes the permanent zoom slider in compact producer mode', () => {
+    render(<TimelineHeader simplifiedBeatvideo compact />)
+
+    expect(screen.queryByTestId('zoom-slider')).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /grid: auto/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /zoom out/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /zoom in/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /zoom to fit/i })).toBeInTheDocument()
+  })
+
   it('toggles the keyframe panel without a selected clip', () => {
     render(<TimelineHeader />)
 

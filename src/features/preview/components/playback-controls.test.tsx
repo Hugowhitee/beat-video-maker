@@ -85,6 +85,14 @@ describe('PlaybackControls frame capture', () => {
     expect(onToggleFullscreen).toHaveBeenCalledOnce()
   })
 
+  it('uses touch-sized transport buttons in compact mode', () => {
+    render(<PlaybackControls totalFrames={1000} fps={30} compact />)
+
+    const play = screen.getByRole('button', { name: 'Play' })
+    expect(play).toHaveStyle({ width: '40px', height: '40px' })
+    expect(play.closest('[data-compact="true"]')).not.toBeNull()
+  })
+
   it('captures the current frame, downloads it, and saves it to the media library', async () => {
     const savedMedia = {
       id: 'captured-frame-1',

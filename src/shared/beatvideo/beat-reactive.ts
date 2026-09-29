@@ -133,7 +133,11 @@ export function evaluateAudioReactiveBinding(
   const attackFrames = Math.max(0, Math.round(binding.attackFrames))
   const releaseFrames = Math.max(1, Math.round(binding.releaseFrames))
   const everyNthBeat = Math.max(1, Math.round(binding.everyNthBeat))
-  const earliestFrame = relativeFrame - attackFrames - releaseFrames
+  // `attackFrames` is an optional visual lead-in. Sparse event positions are
+  // known ahead of time, so a non-zero value should anticipate the hit rather
+  // than make the picture react late after the audio transient.
+  const earliestFrame = relativeFrame - releaseFrames
+  const latestFrame = relativeFrame + attackFrames
   const direction = binding.invert ? -1 : 1
   let winner = rest
 
@@ -149,12 +153,12 @@ export function evaluateAudioReactiveBinding(
     if (strength < threshold) return
 
     const elapsed = relativeFrame - frame
-    if (elapsed < 0 || elapsed > attackFrames + releaseFrames) return
+    if (elapsed < -attackFrames || elapsed > releaseFrames) return
 
     const envelope =
-      attackFrames > 0 && elapsed < attackFrames
-        ? elapsed / attackFrames
-        : Math.exp((-4 * Math.max(0, elapsed - attackFrames)) / releaseFrames)
+      elapsed < 0 && attackFrames > 0
+        ? clamp01((attackFrames + elapsed) / attackFrames)
+        : Math.exp((-4 * Math.max(0, elapsed)) / releaseFrames)
     const gatedStrength = binding.useStrength
       ? clamp01(((strength - threshold) / Math.max(0.001, 1 - threshold)) * sensitivity)
       : clamp01(sensitivity)
@@ -175,7 +179,7 @@ export function evaluateAudioReactiveBinding(
     let index = lowerBoundFrame(beats, earliestFrame)
     for (; index < beats.length; index += 1) {
       const beat = beats[index]!
-      if (beat.frame > relativeFrame) break
+      if (beat.frame > latestFrame) break
       if (binding.driver === 'downbeat' && !beat.downbeat) continue
       considerEvent(beat.frame, beat.index, beat.strength, beat.downbeat)
     }
@@ -186,7 +190,7 @@ export function evaluateAudioReactiveBinding(
   let index = lowerBoundFrame(transients, earliestFrame)
   for (; index < transients.length; index += 1) {
     const transient = transients[index]!
-    if (transient.frame > relativeFrame) break
+    if (transient.frame > latestFrame) break
     const strength =
       binding.driver === 'audio'
         ? transient.strength
@@ -264,12 +268,15 @@ export function applyAudioReactiveTransform(
     }
 
     if (binding.target.kind === 'transform-shake') {
-      const maxShakePx = Math.max(0, Math.min(frameWidth, frameHeight) * 0.004)
+      // Keep the full control range useful: Medium should read clearly on a
+      // 1080p frame without turning into short-form-video chaos. The preset
+      // uses only part of this bounded range, while Amount=1 remains modest.
+      const maxShakePx = Math.max(0, Math.min(frameWidth, frameHeight) * 0.012)
       const intensity = Math.min(1, Math.abs(evaluated.delta))
       const seedBase = (evaluated.beatFrame ?? 0) * 17 + Math.round(relativeFrame) * 0.73
       shakeX += hashNoise(seedBase + 11) * maxShakePx * intensity
       shakeY += hashNoise(seedBase + 29) * maxShakePx * intensity
-      shakeRotation += hashNoise(seedBase + 47) * 0.18 * intensity
+      shakeRotation += hashNoise(seedBase + 47) * 0.45 * intensity
     }
   }
 

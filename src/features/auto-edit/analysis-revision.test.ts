@@ -32,6 +32,12 @@ describe('Beatvideo analysis revision', () => {
     expect(shouldRefreshBeatvideoAnalysis(analysis())).toBe(true)
   })
 
+  it('refreshes untouched revision-3 grids after the tempo-drift repair', () => {
+    expect(
+      shouldRefreshBeatvideoAnalysis(analysis({ analysisRevision: 3 })),
+    ).toBe(true)
+  })
+
   it('does not keep refreshing the current detector revision', () => {
     expect(
       shouldRefreshBeatvideoAnalysis(

@@ -12,7 +12,12 @@ const mocks = vi.hoisted(() => {
     removeEffect: vi.fn(),
     toggleEffect: vi.fn(),
     setItemEffects: vi.fn(),
+    setItemEffectsAndAudioReactive: vi.fn(),
+    setAudioReactiveStates: vi.fn(),
+    removeEffects: vi.fn(),
     applyAutoKeyframeOperations: vi.fn(),
+    items: [],
+    fps: 30,
   }
   const gizmoState = {
     setEffectsPreviewNew: vi.fn(),
@@ -52,6 +57,10 @@ vi.mock('@/features/effects/deps/preview-contract', () => ({
     selector: (state: typeof mocks.spatialEffectEditorState) => unknown,
   ) => selector(mocks.spatialEffectEditorState),
   useThrottledFrame: () => 24,
+}))
+
+vi.mock('./effect-thumbnail', () => ({
+  EffectThumbnail: () => <span data-testid="effect-thumbnail" />,
 }))
 
 vi.mock('../hooks/use-keyframes-by-item-id', () => ({
@@ -126,6 +135,37 @@ function makeItem(id: string, effects: ItemEffect[]): TimelineItem {
 describe('EffectsSection', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+  })
+
+  it('puts common producer effects directly at the top of the effect picker', () => {
+    render(<EffectsSection items={[makeItem('clip-a', [])]} />)
+
+    fireEvent.click(screen.getByRole('button', { name: /add effect/i }))
+
+    expect(screen.getByText('Quick effects')).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: /film grain/i }))
+
+    expect(mocks.timelineState.addEffect).toHaveBeenCalledTimes(1)
+    expect(mocks.timelineState.addEffect).toHaveBeenCalledWith(
+      'clip-a',
+      expect.objectContaining({
+        type: 'gpu-effect',
+        gpuEffectType: 'gpu-grain',
+      }),
+    )
+  })
+
+  it('keeps reactive starters inside Add Effect instead of a separate permanent panel', () => {
+    render(<EffectsSection items={[makeItem('clip-a', [])]} />)
+
+    expect(screen.queryByText('Reactive starters')).not.toBeInTheDocument()
+    expect(screen.queryByText('Reactive motion')).not.toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole('button', { name: /add effect/i }))
+
+    expect(screen.getByText('Reactive starters')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /add pulse reaction/i })).toBeDisabled()
+    expect(screen.getByText('Analyze beat first')).toBeInTheDocument()
   })
 
   it('reorders visible effects across selected items while preserving hidden color dock effects', () => {

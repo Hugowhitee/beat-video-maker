@@ -1,4 +1,4 @@
-import type { MusicMap } from '@/types/beatvideo'
+import type { BeatvideoMusicAnalysis, MusicMap } from '@/types/beatvideo'
 
 function median(values: number[]): number {
   if (values.length === 0) return 0
@@ -49,4 +49,35 @@ export function resolveNearestBeatOffsetMs(
   }
 
   return (timelineTime - nearest.time) * 1000
+}
+
+
+export type BeatGridReviewState = 'hidden' | 'recommended' | 'manual'
+
+/**
+ * Keep beat-grid repair out of the normal producer flow when the automatic
+ * evidence is healthy. Manual controls return when the analysis is uncertain,
+ * or remain available after the user has deliberately edited the grid.
+ */
+export function resolveBeatGridReviewState(
+  analysis: BeatvideoMusicAnalysis,
+): BeatGridReviewState {
+  const hasManualState =
+    analysis.gridMode === 'fixed' ||
+    analysis.bpmOverride !== null ||
+    analysis.barOneVerified ||
+    (analysis.correctionAnchors?.length ?? 0) > 0
+
+  if (hasManualState) return 'manual'
+
+  const fit = analysis.musicMap.gridFit
+  const uncertainAutomaticGrid =
+    analysis.musicMap.beatsPerBar !== 4 ||
+    analysis.detectedBarOneTime === null ||
+    !fit ||
+    fit.mode !== 'fixed' ||
+    fit.confidence < 0.6 ||
+    (fit.medianErrorMs !== null && fit.medianErrorMs > 35)
+
+  return uncertainAutomaticGrid ? 'recommended' : 'hidden'
 }

@@ -1,8 +1,25 @@
 import { useTranslation } from 'react-i18next'
-import { ChevronDown, ChevronRight, Eye, EyeOff, Palette, RotateCcw, Trash2 } from 'lucide-react'
+import {
+  ChevronDown,
+  ChevronRight,
+  ChevronUp,
+  Eye,
+  EyeOff,
+  MoreHorizontal,
+  Palette,
+  RotateCcw,
+  Trash2,
+} from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip'
-import { EffectMoveButtons, type EffectMoveProps } from './effect-move-buttons'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
+import type { EffectMoveProps } from './effect-move-buttons'
 
 const EFFECT_HEADER_CLASS =
   'flex min-w-0 items-center justify-between gap-2 border-y border-border/70 bg-secondary/35 px-2 py-1.5'
@@ -35,6 +52,8 @@ function EffectPanelHeaderActions({
   const toggleLabel = enabled ? t('effects.panel.disableEffect') : t('effects.panel.enableEffect')
   const removeLabel = t('effects.panel.removeEffect')
   const editInColorLabel = t('effects.panel.editInColor')
+  const moveUpLabel = t('effects.panel.moveUp')
+  const moveDownLabel = t('effects.panel.moveDown')
 
   return (
     <>
@@ -47,26 +66,9 @@ function EffectPanelHeaderActions({
           title={editInColorLabel}
           aria-label={editInColorLabel}
         >
-          <Palette className="w-3 h-3" />
+          <Palette className="h-3 w-3" />
         </Button>
       ) : null}
-      <EffectMoveButtons
-        effectId={effectId}
-        onMove={onMove}
-        canMoveUp={canMoveUp}
-        canMoveDown={canMoveDown}
-      />
-      <Button
-        variant="ghost"
-        size="icon"
-        className={`h-6 w-6 flex-shrink-0 ${isDefault ? 'opacity-30' : ''}`}
-        onClick={() => onReset(effectId)}
-        title={resetLabel}
-        aria-label={resetLabel}
-        disabled={isDefault}
-      >
-        <RotateCcw className="w-3 h-3" />
-      </Button>
       <Button
         variant="ghost"
         size="icon"
@@ -76,21 +78,57 @@ function EffectPanelHeaderActions({
         aria-label={toggleLabel}
       >
         {enabled ? (
-          <Eye className="w-3 h-3" />
+          <Eye className="h-3 w-3" />
         ) : (
-          <EyeOff className="w-3 h-3 text-muted-foreground" />
+          <EyeOff className="h-3 w-3 text-muted-foreground" />
         )}
       </Button>
-      <Button
-        variant="ghost"
-        size="icon"
-        className="h-6 w-6 flex-shrink-0 text-muted-foreground hover:text-destructive"
-        onClick={() => onRemove(effectId)}
-        title={removeLabel}
-        aria-label={removeLabel}
-      >
-        <Trash2 className="h-3.5 w-3.5" />
-      </Button>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-6 w-6 flex-shrink-0"
+            aria-label={t('common.moreOptions', { defaultValue: 'More options' })}
+            title={t('common.moreOptions', { defaultValue: 'More options' })}
+          >
+            <MoreHorizontal className="h-3.5 w-3.5" />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" className="min-w-44">
+          {onMove ? (
+            <>
+              <DropdownMenuItem
+                disabled={!canMoveUp}
+                onSelect={() => onMove(effectId, -1)}
+              >
+                <ChevronUp className="h-3.5 w-3.5" />
+                {moveUpLabel}
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                disabled={!canMoveDown}
+                onSelect={() => onMove(effectId, 1)}
+              >
+                <ChevronDown className="h-3.5 w-3.5" />
+                {moveDownLabel}
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+            </>
+          ) : null}
+          <DropdownMenuItem disabled={isDefault} onSelect={() => onReset(effectId)}>
+            <RotateCcw className="h-3.5 w-3.5" />
+            {resetLabel}
+          </DropdownMenuItem>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem
+            className="text-destructive focus:text-destructive"
+            onSelect={() => onRemove(effectId)}
+          >
+            <Trash2 className="h-3.5 w-3.5" />
+            {removeLabel}
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
     </>
   )
 }

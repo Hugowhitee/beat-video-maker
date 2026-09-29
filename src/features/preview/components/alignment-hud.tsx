@@ -62,6 +62,7 @@ const BUTTON_STYLE = { height: 22, width: 22 }
 
 interface AlignmentToolbarProps {
   projectSize: { width: number; height: number }
+  compact?: boolean
 }
 
 interface DeferredAlignmentToolbarProps extends AlignmentToolbarProps {
@@ -71,9 +72,16 @@ interface DeferredAlignmentToolbarProps extends AlignmentToolbarProps {
 const DeferredAlignmentToolbar = memo(function DeferredAlignmentToolbar({
   itemsSnapshot,
   projectSize,
+  compact = false,
 }: DeferredAlignmentToolbarProps) {
   const deferredItems = useRafDeferredValue(itemsSnapshot)
-  return <AlignmentToolbarCore projectSize={projectSize} items={deferredItems} />
+  return (
+    <AlignmentToolbarCore
+      projectSize={projectSize}
+      items={deferredItems}
+      compact={compact}
+    />
+  )
 })
 
 interface AlignmentToolbarCoreProps extends AlignmentToolbarProps {
@@ -83,6 +91,7 @@ interface AlignmentToolbarCoreProps extends AlignmentToolbarProps {
 const AlignmentToolbarCore = memo(function AlignmentToolbarCore({
   projectSize,
   items,
+  compact = false,
 }: AlignmentToolbarCoreProps) {
   const { t } = useTranslation()
   const selectedItemIds = useSelectionStore((s) => s.selectedItemIds)
@@ -105,6 +114,8 @@ const AlignmentToolbarCore = memo(function AlignmentToolbarCore({
   const visualTransformsMap = useVisualTransforms(selectedVisualItems, projectSize, items)
 
   const itemCount = selectedVisualItems.length
+
+  const buttonStyle = compact ? { height: 36, width: 36 } : BUTTON_STYLE
 
   const handleAlign = useCallback(
     (alignment: AlignmentType) => {
@@ -240,7 +251,7 @@ const AlignmentToolbarCore = memo(function AlignmentToolbarCore({
       variant="ghost"
       size="icon"
       className="flex-shrink-0 text-muted-foreground hover:text-foreground"
-      style={BUTTON_STYLE}
+      style={buttonStyle}
       onClick={() => handleAlign(type)}
       disabled={itemCount < minItems}
       data-tooltip={t(labelKey)}
@@ -250,14 +261,20 @@ const AlignmentToolbarCore = memo(function AlignmentToolbarCore({
     </Button>
   )
 
+  const showDistribution = !compact || itemCount >= 3
+
   return (
     <>
       {ALIGNMENT_ACTIONS.slice(0, 3).map(renderButton)}
-      <div className="w-px h-3.5 bg-border mx-0.5" />
+      <div className="w-px h-3.5 bg-border mx-0.5 shrink-0" />
       {ALIGNMENT_ACTIONS.slice(3, 6).map(renderButton)}
-      <div className="w-px h-3.5 bg-border mx-0.5" />
-      {ALIGNMENT_ACTIONS.slice(6).map(renderButton)}
-      <div className="w-px h-3.5 bg-border mx-0.5" />
+      {showDistribution ? (
+        <>
+          <div className="w-px h-3.5 bg-border mx-0.5 shrink-0" />
+          {ALIGNMENT_ACTIONS.slice(6).map(renderButton)}
+        </>
+      ) : null}
+      <div className="w-px h-3.5 bg-border mx-0.5 shrink-0" />
       <Button
         variant="ghost"
         size="icon"
@@ -265,7 +282,7 @@ const AlignmentToolbarCore = memo(function AlignmentToolbarCore({
           'flex-shrink-0 text-muted-foreground hover:text-foreground',
           canvasSnapEnabled && 'text-foreground bg-accent',
         )}
-        style={BUTTON_STYLE}
+        style={buttonStyle}
         onClick={() => setSetting('canvasSnapEnabled', !canvasSnapEnabled)}
         data-tooltip={
           canvasSnapEnabled
@@ -283,12 +300,14 @@ const AlignmentToolbarCore = memo(function AlignmentToolbarCore({
 
 export const AlignmentToolbar = memo(function AlignmentToolbar({
   projectSize,
+  compact = false,
 }: AlignmentToolbarProps) {
   const itemsSnapshot = useTimelineStore((state) => state.items)
   return (
     <DeferredAlignmentToolbar
       itemsSnapshot={itemsSnapshot}
       projectSize={projectSize}
+      compact={compact}
     />
   )
 })

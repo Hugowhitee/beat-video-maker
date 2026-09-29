@@ -16,17 +16,18 @@ The normal flow is:
 2. choose **Photo** or **Video**, a name, format and FPS — project type is changed from Project Settings, not from a persistent editor toggle;
 3. use **Beat** to import/select the beat, analyze it or enter a known BPM, verify the grid and place producer tags/watermarks;
 4. use **Visual** to import the hero cover/footage, add layers and effects, and make compatible effect parameters audio-reactive;
-5. use **Master** for the project EQ/compressor/saturation/limiter chain;
-6. use Advanced Motion/Color or deeper FreeCut editing only when needed;
-7. export locally for publishing.
+5. use **Color** for focused grading/correction of the same visual state;
+6. use **Master** for the project EQ/compressor/saturation/limiter chain;
+7. use Advanced Motion or deeper FreeCut editing only when needed;
+8. export locally for publishing.
 
 ## Product modes
 
 ### Photo
 
-Focused cover-art workflow. **Beat → Visual → Master** is the normal path. Visual owns the cover, layers and effects; compatible numeric/animatable effect parameters expose **React** controls for Beat/Downbeat, Threshold, Amount and Release. Reactive presets are only quick starts, not the limit of what can react.
+Focused cover-art workflow. **Beat → Visual → Color → Master** is the normal path. Visual owns the cover, layers and effects; compatible numeric/animatable effect parameters expose **Reactive** controls for Source, Amount, Threshold and Release. Reactive presets are quick starts that create the same canonical effect/binding state, not a second effect system.
 
-The photo stays the visual hero and normally spans the beat. Photo mode reuses the same timeline, renderer and export path as Video mode; deeper Motion/Color tools remain available under Advanced.
+The photo stays the visual hero and normally spans the beat. Photo mode reuses the same timeline, renderer and export path as Video mode; deeper Motion tools remain available under Advanced while Color stays a normal finishing step.
 
 ### Video
 

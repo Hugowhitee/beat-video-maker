@@ -28,15 +28,23 @@ vi.mock('@/features/editor/deps/preview', async () => {
       />
     ),
     ColorVideoPreview: () => <div data-testid="color-video-preview" />,
-    AlignmentToolbar: () => <div data-testid="alignment-toolbar" />,
+    AlignmentToolbar: ({ compact }: { compact?: boolean }) => (
+      <div data-testid="alignment-toolbar" data-compact={compact ? 'true' : 'false'} />
+    ),
     PlaybackControls: ({
       totalFrames,
       onToggleFullscreen,
+      compact,
     }: {
       totalFrames: number
       onToggleFullscreen?: () => void
+      compact?: boolean
     }) => (
-      <div data-testid="playback-controls" data-total-frames={totalFrames}>
+      <div
+        data-testid="playback-controls"
+        data-total-frames={totalFrames}
+        data-compact={compact ? 'true' : 'false'}
+      >
         {onToggleFullscreen ? (
           <button type="button" onClick={onToggleFullscreen}>
             toggle-fullscreen
@@ -237,6 +245,20 @@ describe('PreviewArea mask editor toolbar', () => {
     expect(screen.getByTestId('video-preview')).toBeInTheDocument()
     expect(screen.getByTestId('alignment-toolbar')).toBeInTheDocument()
     expect(screen.queryByTestId('color-video-preview')).not.toBeInTheDocument()
+  })
+
+  it('uses one non-overlapping transport row and scroll-safe alignment on compact preview', () => {
+    render(
+      <PreviewArea
+        project={{ width: 1920, height: 1080, fps: 30 }}
+        compact
+      />,
+    )
+
+    expect(screen.getByTestId('alignment-toolbar')).toHaveAttribute('data-compact', 'true')
+    expect(screen.getByTestId('playback-controls')).toHaveAttribute('data-compact', 'true')
+    expect(screen.queryByTestId('timecode-display')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('preview-zoom-controls')).not.toBeInTheDocument()
   })
 
   it('uses provided composition metadata and authored duration when requested', () => {

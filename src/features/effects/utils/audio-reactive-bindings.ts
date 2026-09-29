@@ -41,8 +41,9 @@ export function createDefaultAudioReactiveEffectBinding(params: {
   const max = typeof param.max === 'number' ? param.max : Math.max(1, min + 1)
   const step = typeof param.step === 'number' && param.step > 0 ? param.step : 0.01
   const span = Math.max(step, Math.abs(max - min))
-  // ~8% of the native parameter range keeps first-use musical instead of flashy.
-  const amount = Math.max(step, roundToStep(span * 0.08, step))
+  // ~12% of the native parameter range is visible enough to understand on
+  // first use while leaving plenty of headroom for stronger authored reactions.
+  const amount = Math.max(step, roundToStep(span * 0.12, step))
 
   return {
     id: crypto.randomUUID(),
@@ -55,7 +56,7 @@ export function createDefaultAudioReactiveEffectBinding(params: {
     },
     driver,
     amount,
-    threshold: 0.58,
+    threshold: 0.5,
     sensitivity: 1,
     attackFrames: 0,
     releaseFrames: Math.max(1, Math.round(Math.max(1, fps) * 0.12)),

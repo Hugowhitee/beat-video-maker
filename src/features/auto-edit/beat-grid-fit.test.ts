@@ -172,6 +172,234 @@ describe('stabilizeBeatGrid', () => {
     expect(result.rhythm.beats[0]).toBeCloseTo(phase, 2)
   })
 
+  it('fits a long stable grid without cycle slip when the seed BPM is slightly wrong', () => {
+    const actualBpm = 89.72
+    const seedBpm = 90
+    const period = 60 / actualBpm
+    const phase = 0.37
+    const duration = 180
+    const beats = Array.from(
+      { length: Math.floor((duration - phase) / period) },
+      (_, index) =>
+        phase + index * period + (index % 4 === 0 ? 0.009 : index % 4 === 1 ? -0.006 : 0),
+    )
+
+    const result = stabilizeBeatGrid(
+      rhythm({
+        beats,
+        bpm: seedBpm,
+        downbeats: beats.filter((_, index) => index % 4 === 0),
+      }),
+      duration,
+    )
+
+    expect(result.fit.mode).toBe('fixed')
+    expect(result.rhythm.bpm).toBeCloseTo(actualBpm, 1)
+    const lateBeat = result.rhythm.beats.findLast((time) => time < 170)
+    expect(lateBeat).toBeDefined()
+    const cycle = Math.round(((lateBeat ?? phase) - phase) / period)
+    expect(Math.abs((lateBeat ?? 0) - (phase + cycle * period))).toBeLessThan(0.03)
+  })
+
+  it('uses recurring low-end onset measurements to correct cumulative BPM drift', () => {
+    const detectorBpm = 119.4
+    const actualBpm = 120
+    const detectorPeriod = 60 / detectorBpm
+    const actualPeriod = 60 / actualBpm
+    const phase = 0.31
+    const duration = 180
+    const count = Math.floor((duration - phase) / detectorPeriod)
+    const beats = Array.from({ length: count }, (_, index) => phase + index * detectorPeriod)
+    const transients = Array.from(
+      { length: Math.floor((duration - phase) / actualPeriod) },
+      (_, index) => ({
+        time: phase + index * actualPeriod,
+        index,
+        strength: 0.94,
+        low: 0.95,
+        mid: 0.18,
+        high: 0.04,
+      }),
+    )
+
+    const result = stabilizeBeatGrid(
+      rhythm({
+        beats,
+        bpm: detectorBpm,
+        downbeats: beats.filter((_, index) => index % 4 === 0),
+        transients,
+      }),
+      duration,
+    )
+
+    expect(result.fit.mode).toBe('fixed')
+    expect(result.rhythm.bpm).toBeCloseTo(actualBpm, 1)
+    expect(result.rhythm.beats[0]).toBeCloseTo(phase, 2)
+    const lateBeat = result.rhythm.beats.findLast((time) => time < 170)
+    expect(lateBeat).toBeDefined()
+    const nearestActualCycle = Math.round(((lateBeat ?? phase) - phase) / actualPeriod)
+    const nearestActualBeat = phase + nearestActualCycle * actualPeriod
+    expect(Math.abs((lateBeat ?? 0) - nearestActualBeat)).toBeLessThan(0.035)
+  })
+
+  it('does not retune the whole song from low-end evidence confined to one region', () => {
+    const detectorBpm = 119.4
+    const actualBpm = 120
+    const detectorPeriod = 60 / detectorBpm
+    const actualPeriod = 60 / actualBpm
+    const phase = 0.31
+    const duration = 180
+    const beats = Array.from(
+      { length: Math.floor((duration - phase) / detectorPeriod) },
+      (_, index) => phase + index * detectorPeriod,
+    )
+    const transients = Array.from({ length: 80 }, (_, index) => ({
+      time: phase + index * actualPeriod,
+      index,
+      strength: 0.94,
+      low: 0.95,
+      mid: 0.18,
+      high: 0.04,
+    }))
+
+    const result = stabilizeBeatGrid(
+      rhythm({
+        beats,
+        bpm: detectorBpm,
+        downbeats: beats.filter((_, index) => index % 4 === 0),
+        transients,
+      }),
+      duration,
+    )
+
+    expect(result.fit.mode).toBe('fixed')
+    expect(result.rhythm.bpm).toBeCloseTo(detectorBpm, 2)
+  })
+
+  it('does not retune tempo from sparse isolated low-end fills', () => {
+    const bpm = 120
+    const period = 60 / bpm
+    const phase = 0.31
+    const beats = Array.from({ length: 240 }, (_, index) => phase + index * period)
+    const transients = [
+      {
+        time: phase + 0.08,
+        index: 0,
+        strength: 1,
+        low: 1,
+        mid: 0.1,
+        high: 0.02,
+      },
+      {
+        time: phase + period * 80 - 0.06,
+        index: 1,
+        strength: 0.95,
+        low: 0.9,
+        mid: 0.1,
+        high: 0.02,
+      },
+      {
+        time: phase + period * 160 + 0.07,
+        index: 2,
+        strength: 0.95,
+        low: 0.9,
+        mid: 0.1,
+        high: 0.02,
+      },
+    ]
+
+    const result = stabilizeBeatGrid(rhythm({ beats, bpm, transients }), 125)
+
+    expect(result.fit.mode).toBe('fixed')
+    expect(result.rhythm.bpm).toBeCloseTo(120, 3)
+    expect(result.rhythm.beats[0]).toBeCloseTo(phase, 2)
+  })
+
+  it('can recover kick phase when low-end onsets are missing on alternating beats', () => {
+    const period = 0.5
+    const kickPhase = 0.28
+    const detectorPhase = kickPhase + period / 2
+    const beats = Array.from({ length: 48 }, (_, index) => detectorPhase + index * period)
+    const transients = beats.flatMap((time, index) => {
+      const evidence = [{
+        time,
+        index: index * 2 + 1,
+        strength: 1,
+        low: 0.05,
+        mid: 0.8,
+        high: 0.45,
+      }]
+      if (index % 2 === 0) {
+        evidence.push({
+          time: kickPhase + index * period,
+          index: index * 2,
+          strength: 0.92,
+          low: 0.97,
+          mid: 0.16,
+          high: 0.04,
+        })
+      }
+      return evidence
+    })
+
+    const result = stabilizeBeatGrid(rhythm({ beats, bpm: 120, transients }), 25)
+
+    expect(result.fit.mode).toBe('fixed')
+    expect(result.fit.phaseShiftMs).toBeLessThan(-220)
+    expect(result.rhythm.beats[0]).toBeCloseTo(kickPhase, 2)
+  })
+
+  it('does not move a whole grid from one isolated low-end attack in a sustained passage', () => {
+    const period = 0.5
+    const kickPhase = 0.28
+    const detectorPhase = kickPhase + period / 2
+    const beats = Array.from({ length: 48 }, (_, index) => detectorPhase + index * period)
+    const transients = [{
+      time: kickPhase,
+      index: 0,
+      strength: 1,
+      low: 1,
+      mid: 0.1,
+      high: 0,
+    }]
+
+    const result = stabilizeBeatGrid(rhythm({ beats, bpm: 120, transients }), 25)
+
+    expect(result.fit.mode).toBe('fixed')
+    expect(Math.abs(result.fit.phaseShiftMs)).toBeLessThan(80)
+    expect(result.rhythm.beats[0]).toBeCloseTo(detectorPhase, 2)
+  })
+
+  it('keeps the first fitted downbeat when detector jitter lands just after the fitted phase', () => {
+    const period = 0.5
+    const musicalPhase = 0.42
+    const beats = Array.from({ length: 48 }, (_, index) =>
+      musicalPhase + index * period + (index === 0 ? 0.012 : index % 3 === 1 ? -0.006 : 0.004),
+    )
+    const downbeats = beats.filter((_, index) => index % 4 === 0)
+
+    const result = stabilizeBeatGrid(rhythm({ beats, bpm: 120, downbeats }), 25)
+
+    expect(result.fit.mode).toBe('fixed')
+    expect(result.rhythm.beats[0]).toBeLessThan(0.5)
+    expect(result.rhythm.downbeats[0]).toBeLessThan(0.5)
+    expect(result.fit.anchorTime).toBe(result.rhythm.downbeats[0])
+  })
+
+  it('preserves a musical Bar 1 after a long quiet intro instead of pulling the grid to zero', () => {
+    const period = 60 / 96
+    const firstBeat = 8.31
+    const beats = Array.from({ length: 48 }, (_, index) => firstBeat + index * period)
+    const downbeats = beats.filter((_, index) => index % 4 === 0)
+
+    const result = stabilizeBeatGrid(rhythm({ beats, bpm: 96, downbeats }), 40)
+
+    expect(result.fit.mode).toBe('fixed')
+    expect(result.fit.anchorTime).toBeCloseTo(firstBeat, 2)
+    expect(result.rhythm.downbeats[0]).toBeCloseTo(firstBeat, 2)
+    expect(result.rhythm.beats[0]).toBeGreaterThan(8)
+  })
+
   it('keeps a drifting live-tempo sequence as a variable beat map', () => {
     const beats: number[] = []
     let time = 0.4
