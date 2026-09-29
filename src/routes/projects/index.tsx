@@ -258,38 +258,45 @@ function ProjectsIndex() {
 
   return (
     <>
-      <div className="min-h-screen bg-background">
+      <div className="min-h-dvh overflow-x-hidden bg-background">
         {/* Header */}
         <div className="panel-header border-b border-border" data-no-marquee>
-          <div className="max-w-[1920px] mx-auto px-6 py-5 flex items-center justify-between">
-            <Link to="/">
-              <FreeCutLogo
-                variant="full"
-                size="md"
-                className="hover:opacity-80 transition-opacity"
-              />
-            </Link>
-            <div className="flex items-center gap-3">
-              <LanguageSwitcher size="md" align="end" side="bottom" />
+          <div className="mx-auto flex max-w-[1920px] flex-col gap-3 px-3 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-6 sm:py-5">
+            <div className="flex min-w-0 items-center justify-between gap-3">
+              <Link to="/" className="min-w-0">
+                <FreeCutLogo
+                  variant="full"
+                  size="md"
+                  className="hover:opacity-80 transition-opacity"
+                />
+              </Link>
+              <div className="shrink-0 sm:hidden">
+                <LanguageSwitcher size="md" align="end" side="bottom" />
+              </div>
+            </div>
+            <div className="grid min-w-0 grid-cols-2 gap-2 sm:flex sm:items-center sm:gap-3">
+              <div className="hidden sm:block">
+                <LanguageSwitcher size="md" align="end" side="bottom" />
+              </div>
 
-              <Separator orientation="vertical" className="h-6" />
+              <Separator orientation="vertical" className="hidden h-6 sm:block" />
 
-              <Separator orientation="vertical" className="h-6" />
-
-              <WorkspaceIndicator />
+              <div className="hidden sm:block">
+                <WorkspaceIndicator />
+              </div>
               <Button
                 variant="outline"
                 size="lg"
-                className="gap-2 px-4"
+                className="w-full min-w-0 gap-2 px-3 sm:w-auto sm:px-4"
                 onClick={handleImportClick}
               >
-                <Upload className="w-4 h-4" />
-                {t('projects.importProject')}
+                <Upload className="h-4 w-4 shrink-0" />
+                <span className="truncate">{t('projects.importProject')}</span>
               </Button>
-              <Link to="/projects/new">
-                <Button size="lg" className="gap-2 px-4">
-                  <Plus className="w-4 h-4" />
-                  {t('projects.newProject')}
+              <Link to="/projects/new" className="min-w-0">
+                <Button size="lg" className="w-full min-w-0 gap-2 px-3 sm:w-auto sm:px-4">
+                  <Plus className="h-4 w-4 shrink-0" />
+                  <span className="truncate">{t('projects.newProject')}</span>
                 </Button>
               </Link>
             </div>
@@ -307,7 +314,7 @@ function ProjectsIndex() {
 
         {/* Error state */}
         {error && (
-          <div className="max-w-[1920px] mx-auto px-6 py-4">
+          <div className="max-w-[1920px] mx-auto px-3 py-4 sm:px-6">
             <div className="panel-bg border border-destructive/50 rounded-lg p-4 text-destructive">
               <p className="font-medium">{t('projects.errorLoading')}</p>
               <p className="text-sm mt-1">{error}</p>
@@ -316,7 +323,7 @@ function ProjectsIndex() {
         )}
 
         {/* Legacy IDB migration banner — appears only when old data is present and unmigrated */}
-        <div className="max-w-[1920px] mx-auto px-6 pt-6 space-y-3">
+        <div className="max-w-[1920px] mx-auto px-3 pt-4 space-y-3 sm:px-6 sm:pt-6">
           <LegacyMigrationBanner onMigrated={loadProjects} />
           {/* Retry banner — appears only when a previous migration left failed items behind */}
           <LegacyMigrationErrors onRetried={loadProjects} />
@@ -324,7 +331,7 @@ function ProjectsIndex() {
 
         {/* Loading state */}
         {showInitialLoadingSpinner ? (
-          <div className="max-w-[1920px] mx-auto px-6 py-16 flex items-center justify-center">
+          <div className="max-w-[1920px] mx-auto px-3 py-16 flex items-center justify-center sm:px-6">
             <div className="text-center">
               <div className="w-12 h-12 border-4 border-primary/20 border-t-primary rounded-full animate-spin mx-auto mb-4" />
               <p className="text-muted-foreground">{t('projects.loadingProjects')}</p>
@@ -332,7 +339,7 @@ function ProjectsIndex() {
           </div>
         ) : (
           /* Projects List */
-          <div className="max-w-[1920px] mx-auto px-6 py-8">
+          <div className="max-w-[1920px] mx-auto px-3 py-5 sm:px-6 sm:py-8">
             <ProjectList onEditProject={handleEditProject} onImportProject={handleImportClick} />
             <TrashSection />
           </div>

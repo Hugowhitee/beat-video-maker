@@ -53,10 +53,10 @@ function NewProject() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-dvh overflow-x-hidden bg-background">
       {/* Header */}
       <div className="panel-header border-b border-border">
-        <div className="max-w-7xl mx-auto px-6 py-5">
+        <div className="max-w-7xl mx-auto px-3 py-4 sm:px-6 sm:py-5">
           <Link to="/projects">
             <FreeCutLogo variant="full" size="md" className="hover:opacity-80 transition-opacity" />
           </Link>
@@ -64,7 +64,7 @@ function NewProject() {
       </div>
 
       {/* Content */}
-      <div className="max-w-7xl mx-auto px-6 py-8">
+      <div className="max-w-7xl mx-auto px-3 py-5 sm:px-6 sm:py-8">
         <InlineCreateProjectForm onSubmit={handleSubmit} isSubmitting={isSubmitting} />
       </div>
     </div>

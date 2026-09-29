@@ -246,6 +246,7 @@ export function PlaybackControls({
           <SkipBack className="w-3.5 h-3.5" />
         </Button>
 
+        {!compact ? (
         <Button
           variant="ghost"
           size="icon"
@@ -257,6 +258,8 @@ export function PlaybackControls({
         >
           <ChevronLeft className="w-3.5 h-3.5" />
         </Button>
+
+        ) : null}
 
         <Button
           size="icon"
@@ -271,6 +274,7 @@ export function PlaybackControls({
           {isPlaying ? <Pause className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5 ml-0.5" />}
         </Button>
 
+        {!compact ? (
         <Button
           variant="ghost"
           size="icon"
@@ -282,6 +286,8 @@ export function PlaybackControls({
         >
           <ChevronRight className="w-3.5 h-3.5" />
         </Button>
+
+        ) : null}
 
         <Button
           variant="ghost"

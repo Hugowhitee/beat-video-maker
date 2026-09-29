@@ -16,7 +16,7 @@ export function ProjectTemplatePicker({
   const { t } = useTranslation()
   const isCustomSelected = selectedTemplateId === 'custom'
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+    <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4">
       {PROJECT_TEMPLATES.map((template) => {
         const isSelected = selectedTemplateId === template.id
         const aspectRatio = getAspectRatio(template.width, template.height)
@@ -28,13 +28,13 @@ export function ProjectTemplatePicker({
             type="button"
             aria-pressed={isSelected}
             onClick={() => onSelectTemplate(template)}
-            className={`group relative flex flex-col gap-3 p-4 panel-bg border rounded-lg transition-[transform,border-color,box-shadow] duration-150 active:scale-[0.98] hover:border-primary/50 hover:shadow-lg hover:shadow-primary/5 ${
+            className={`group relative flex flex-col gap-2 p-3 panel-bg sm:gap-3 sm:p-4 border rounded-lg transition-[transform,border-color,box-shadow] duration-150 active:scale-[0.98] hover:border-primary/50 hover:shadow-lg hover:shadow-primary/5 ${
               isSelected ? 'border-primary ring-2 ring-primary/30' : 'border-border'
             }`}
           >
             {/* Silhouette Container */}
             <div
-              className="relative h-24 bg-secondary/30 rounded overflow-hidden flex items-center justify-center"
+              className="relative h-20 bg-secondary/30 sm:h-24 rounded overflow-hidden flex items-center justify-center"
               style={{ containerType: 'size' }}
             >
               {/* Aspect Ratio Silhouette */}
@@ -72,11 +72,11 @@ export function ProjectTemplatePicker({
           type="button"
           aria-pressed={isCustomSelected}
           onClick={onSelectCustom}
-          className={`group relative flex flex-col gap-3 p-4 panel-bg border rounded-lg transition-[transform,border-color,box-shadow] duration-150 active:scale-[0.98] hover:border-primary/50 hover:shadow-lg hover:shadow-primary/5 ${
+          className={`group relative flex flex-col gap-2 p-3 panel-bg sm:gap-3 sm:p-4 border rounded-lg transition-[transform,border-color,box-shadow] duration-150 active:scale-[0.98] hover:border-primary/50 hover:shadow-lg hover:shadow-primary/5 ${
             isCustomSelected ? 'border-primary ring-2 ring-primary/30' : 'border-border'
           }`}
         >
-          <div className="relative h-24 bg-secondary/30 rounded overflow-hidden flex items-center justify-center">
+          <div className="relative h-20 bg-secondary/30 sm:h-24 rounded overflow-hidden flex items-center justify-center">
             <div
               className={`border-2 border-dashed rounded-sm transition-colors ${
                 isCustomSelected

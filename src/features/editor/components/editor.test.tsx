@@ -531,11 +531,12 @@ describe('LoadedEditor migration metadata refresh', () => {
       expect(screen.getByTestId('toolbar')).toHaveAttribute('data-compact', 'true'),
     )
 
+    expect(screen.getByRole('application')).toHaveClass('h-dvh')
     expect(screen.getByTestId('preview-area')).toHaveAttribute('data-compact', 'true')
+    expect(await screen.findByTestId('timeline')).toHaveAttribute('data-compact', 'true')
     expect(screen.queryByTestId('mobile-playback-controls')).not.toBeInTheDocument()
     expect(screen.queryByTestId('media-sidebar')).not.toBeInTheDocument()
     expect(screen.queryByTestId('properties-sidebar')).not.toBeInTheDocument()
-    expect(screen.queryByTestId('timeline')).not.toBeInTheDocument()
 
     const dock = screen.getByRole('navigation', { name: 'Editor surfaces' })
     fireEvent.click(screen.getByRole('button', { name: 'Tools' }))
@@ -549,6 +550,7 @@ describe('LoadedEditor migration metadata refresh', () => {
       'true',
     )
     expect(screen.queryByTestId('preview-area')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('timeline')).not.toBeInTheDocument()
 
     fireEvent.click(screen.getByRole('button', { name: 'Inspector' }))
     expect(screen.getByTestId('properties-sidebar')).toHaveAttribute('data-mobile', 'true')

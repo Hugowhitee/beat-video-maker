@@ -85,12 +85,16 @@ describe('PlaybackControls frame capture', () => {
     expect(onToggleFullscreen).toHaveBeenCalledOnce()
   })
 
-  it('uses touch-sized transport buttons in compact mode', () => {
+  it('uses touch-sized producer transport without desktop frame-step controls', () => {
     render(<PlaybackControls totalFrames={1000} fps={30} compact />)
 
     const play = screen.getByRole('button', { name: 'Play' })
     expect(play).toHaveStyle({ width: '40px', height: '40px' })
     expect(play.closest('[data-compact="true"]')).not.toBeNull()
+    expect(screen.getByRole('button', { name: 'Go to start' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Go to end' })).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Previous frame' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Next frame' })).not.toBeInTheDocument()
   })
 
   it('captures the current frame, downloads it, and saves it to the media library', async () => {
