@@ -753,7 +753,7 @@ export function BeatvideoVisualSourcePanel({
                     : 'text-muted-foreground hover:bg-secondary/30 hover:text-foreground'
                 }`}
               >
-                Auto cut
+                Auto arrange
               </button>
               <button
                 type="button"
@@ -769,20 +769,20 @@ export function BeatvideoVisualSourcePanel({
               </button>
             </div>
 
-            <label className="mt-2 block space-y-1 text-[9px] text-muted-foreground">
-              <span>Pace</span>
-              <select
-                value={arrangePace}
-                onChange={(event) => setArrangePace(event.target.value as EditPace)}
-                className="h-8 w-full rounded-md border border-input bg-secondary px-2 text-xs text-foreground"
-              >
-                <option value="relaxed">Relaxed</option>
-                <option value="balanced">Balanced</option>
-                <option value="energetic">Energetic</option>
-              </select>
-            </label>
-
             <div className="mt-2 grid grid-cols-2 gap-1.5">
+              <label className="space-y-1 text-[9px] text-muted-foreground">
+                <span>Pace</span>
+                <select
+                  value={arrangePace}
+                  onChange={(event) => setArrangePace(event.target.value as EditPace)}
+                  className="h-8 w-full rounded-md border border-input bg-secondary px-2 text-xs text-foreground"
+                >
+                  <option value="relaxed">Relaxed</option>
+                  <option value="balanced">Balanced</option>
+                  <option value="energetic">Energetic</option>
+                </select>
+              </label>
+
               <label className="space-y-1 text-[9px] text-muted-foreground">
                 <span>Transitions</span>
                 <select
@@ -796,25 +796,23 @@ export function BeatvideoVisualSourcePanel({
                   <option value="accent">Accent transitions</option>
                 </select>
               </label>
-
-              {arrangeMode === 'loop' ? (
-                <label className="space-y-1 text-[9px] text-muted-foreground">
-                  <span>Loop bars</span>
-                  <select
-                    value={loopBars}
-                    onChange={(event) => setLoopBars(Number(event.target.value))}
-                    className="h-8 w-full rounded-md border border-input bg-secondary px-2 text-xs text-foreground"
-                  >
-                    <option value={2}>2 bars</option>
-                    <option value={4}>4 bars</option>
-                    <option value={8}>8 bars</option>
-                    <option value={16}>16 bars</option>
-                  </select>
-                </label>
-              ) : (
-                <div />
-              )}
             </div>
+
+            {arrangeMode === 'loop' ? (
+              <label className="mt-2 grid grid-cols-[72px_1fr] items-center gap-2 text-[9px] text-muted-foreground">
+                <span>Loop length</span>
+                <select
+                  value={loopBars}
+                  onChange={(event) => setLoopBars(Number(event.target.value))}
+                  className="h-8 rounded-md border border-input bg-secondary px-2 text-xs text-foreground"
+                >
+                  <option value={2}>2 bars</option>
+                  <option value={4}>4 bars</option>
+                  <option value={8}>8 bars</option>
+                  <option value={16}>16 bars</option>
+                </select>
+              </label>
+            ) : null}
 
             <button
               type="button"
@@ -846,8 +844,13 @@ export function BeatvideoVisualSourcePanel({
 
           {editableArrangementSlots.length > 0 && lastClipMap ? (
             <div className="border-t border-border pt-2">
-              <div className="mb-1.5 flex items-center justify-between gap-2">
-                <span className="text-[10px] font-medium text-foreground">Sequence</span>
+              <div className="mb-1.5 flex items-end justify-between gap-2">
+                <div>
+                  <div className="text-[10px] font-medium text-foreground">Sequence</div>
+                  <div className="text-[8px] text-muted-foreground">
+                    Drag shot → slot · click slot → timeline cut
+                  </div>
+                </div>
                 <span className="font-mono text-[9px] text-muted-foreground">
                   {editableArrangementSlots.length} slots
                 </span>
@@ -957,7 +960,7 @@ export function BeatvideoVisualSourcePanel({
 
           <details className="border-t border-border pt-2">
             <summary className="cursor-pointer list-none text-[10px] font-medium text-muted-foreground marker:hidden [&::-webkit-details-marker]:hidden">
-              Fill with one clip
+              Single-clip fill
             </summary>
             <div className="mt-2 space-y-1.5">
               <select
