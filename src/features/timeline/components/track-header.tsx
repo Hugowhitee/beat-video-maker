@@ -342,20 +342,24 @@ export const TrackHeader = memo(function TrackHeader({
           {t('timeline.trackHeader.closeAllGaps')}
         </ContextMenuItem>
 
-        <ContextMenuSeparator />
-        <ContextMenuItem onClick={onAddVideoTrack}>
-          {t('timeline.trackHeader.addVideoTrack')}
-        </ContextMenuItem>
-        <ContextMenuItem onClick={onAddAudioTrack}>
-          {t('timeline.trackHeader.addAudioTrack')}
-        </ContextMenuItem>
-        <ContextMenuSeparator />
-        <ContextMenuItem disabled={!canDeleteTrack} onClick={onDeleteTrack}>
-          {t('timeline.trackHeader.deleteTrack')}
-        </ContextMenuItem>
-        <ContextMenuItem disabled={!canDeleteEmptyTracks} onClick={onDeleteEmptyTracks}>
-          {t('timeline.trackHeader.deleteEmptyTracks')}
-        </ContextMenuItem>
+        {!simplified ? (
+          <>
+            <ContextMenuSeparator />
+            <ContextMenuItem onClick={onAddVideoTrack}>
+              {t('timeline.trackHeader.addVideoTrack')}
+            </ContextMenuItem>
+            <ContextMenuItem onClick={onAddAudioTrack}>
+              {t('timeline.trackHeader.addAudioTrack')}
+            </ContextMenuItem>
+            <ContextMenuSeparator />
+            <ContextMenuItem disabled={!canDeleteTrack} onClick={onDeleteTrack}>
+              {t('timeline.trackHeader.deleteTrack')}
+            </ContextMenuItem>
+            <ContextMenuItem disabled={!canDeleteEmptyTracks} onClick={onDeleteEmptyTracks}>
+              {t('timeline.trackHeader.deleteEmptyTracks')}
+            </ContextMenuItem>
+          </>
+        ) : null}
       </ContextMenuContent>
     </ContextMenu>
   )
