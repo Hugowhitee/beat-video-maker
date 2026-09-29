@@ -314,6 +314,7 @@ describe('stabilizeBeatGrid', () => {
 
     expect(result.fit.mode).toBe('fixed')
     expect(result.rhythm.bpm).toBeCloseTo(actualBpm, 1)
+    expect(Math.abs(result.fit.phaseShiftMs)).toBeLessThan(80)
     const lateBeat = result.rhythm.beats.findLast((time) => time < 140)
     const cycle = Math.round(((lateBeat ?? phase) - phase) / actualPeriod)
     expect(Math.abs((lateBeat ?? 0) - (phase + cycle * actualPeriod))).toBeLessThan(0.04)

@@ -709,10 +709,34 @@ function phaseCandidateScore(params: {
   let score = 0
   let support = 0
   let lowSupport = 0
+  let evidenceOpportunities = 0
   const offsets: number[] = []
+
+  // Phase evidence can legitimately occupy only part of a song (intro/outro
+  // drops, sparse 808 sections). Normalizing by every detector beat would turn
+  // "no transient evidence here" into evidence against an otherwise coherent
+  // phase. Score only lattice positions inside the observed transient span;
+  // the minimum-offset gate below still prevents one isolated fill from moving
+  // the whole grid.
+  let firstTransientTime = Number.POSITIVE_INFINITY
+  let lastTransientTime = Number.NEGATIVE_INFINITY
+  for (const transient of transients) {
+    if (!Number.isFinite(transient.time)) continue
+    firstTransientTime = Math.min(firstTransientTime, transient.time)
+    lastTransientTime = Math.max(lastTransientTime, transient.time)
+  }
+  const hasEvidenceSpan =
+    Number.isFinite(firstTransientTime) && Number.isFinite(lastTransientTime)
 
   for (const observation of observations) {
     const predicted = phase + shift + observation.cycle * period
+    if (
+      hasEvidenceSpan &&
+      (predicted < firstTransientTime - radius || predicted > lastTransientTime + radius)
+    ) {
+      continue
+    }
+    evidenceOpportunities += 1
     const transient = nearestMusicalTransient(transients, predicted, radius)
     if (!transient || transient.strength < 0.28) continue
 
@@ -738,10 +762,11 @@ function phaseCandidateScore(params: {
     offsets.push(transient.time - predicted)
   }
 
+  const denominator = Math.max(1, evidenceOpportunities)
   return {
-    score: score / Math.max(1, observations.length),
-    supportRatio: support / Math.max(1, observations.length),
-    lowSupportRatio: lowSupport / Math.max(1, observations.length),
+    score: score / denominator,
+    supportRatio: support / denominator,
+    lowSupportRatio: lowSupport / denominator,
     offsets,
   }
 }
