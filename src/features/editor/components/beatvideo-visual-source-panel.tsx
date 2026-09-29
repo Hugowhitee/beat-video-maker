@@ -7,6 +7,7 @@ import {
   type DragEvent,
 } from 'react'
 import { useEditorStore } from '@/shared/state/editor'
+import { usePlaybackStore } from '@/shared/state/playback'
 import { Film, ImagePlus, Repeat2, Sparkles } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
@@ -127,25 +128,11 @@ export function BeatvideoVisualSourcePanel({
       seen.add(key)
       const shot = shotById.get(segment.shotId)
       const duration = segmentDuration(segment)
-      const alternatives = lastClipMap.sources.flatMap((source) =>
-        source.shots
-          .filter(
-            (candidate) =>
-              candidate.end - candidate.start >= duration - 1e-6 &&
-              (!excludedShotIds.includes(candidate.id) || candidate.id === segment.shotId),
-          )
-          .map((candidate) => ({
-            ...candidate,
-            sourceName: source.name,
-          })),
-      )
-
       return [
         {
           key,
           segment,
           shot,
-          alternatives,
           linkedRepeats: segment.motifSlot
             ? lastPlan.segments.filter(
                 (candidate) =>
@@ -214,8 +201,14 @@ export function BeatvideoVisualSourcePanel({
       abortRef.current?.abort()
       const controller = new AbortController()
       abortRef.current = controller
+      const allVideos = [
+        ...videoCandidates,
+        ...videos.filter(
+          (video) => !videoCandidates.some((candidate) => candidate.id === video.id),
+        ),
+      ]
       const clipMap = await buildClipMapForMedia({
-        media: videos,
+        media: allVideos,
         analyzeMissing: true,
         signal: controller.signal,
         onProgress: describeProgress,
@@ -237,7 +230,63 @@ export function BeatvideoVisualSourcePanel({
       setPreparingFootage(false)
       setProgressLabel(null)
     }
-  }, [autoArranging, describeProgress, importingFootage, preparingFootage])
+  }, [
+    autoArranging,
+    describeProgress,
+    importingFootage,
+    preparingFootage,
+    videoCandidates,
+  ])
+
+  const prepareCurrentFootage = useCallback(async () => {
+    if (preparingFootage || autoArranging || importingFootage) return
+    if (videoCandidates.length === 0) {
+      toast.warning('Add footage first')
+      return
+    }
+
+    setPreparingFootage(true)
+    setProgressLabel('Detecting shots…')
+    abortRef.current?.abort()
+    const controller = new AbortController()
+    abortRef.current = controller
+    try {
+      const clipMap = await buildClipMapForMedia({
+        media: videoCandidates,
+        analyzeMissing: true,
+        signal: controller.signal,
+        onProgress: describeProgress,
+      })
+      setLastClipMap(clipMap)
+      const validShotIds = new Set(
+        clipMap.sources.flatMap((source) => source.shots.map((shot) => shot.id)),
+      )
+      setExcludedShotIds((current) =>
+        current.filter((shotId) => validShotIds.has(shotId)),
+      )
+      const shotCount = clipMap.sources.reduce(
+        (total, source) => total + source.shots.length,
+        0,
+      )
+      toast.success(`${shotCount} shot${shotCount === 1 ? '' : 's'} ready`)
+    } catch (error) {
+      if (!(error instanceof DOMException && error.name === 'AbortError')) {
+        toast.error('Could not detect shots', {
+          description: error instanceof Error ? error.message : String(error),
+        })
+      }
+    } finally {
+      if (abortRef.current === controller) abortRef.current = null
+      setPreparingFootage(false)
+      setProgressLabel(null)
+    }
+  }, [
+    autoArranging,
+    describeProgress,
+    importingFootage,
+    preparingFootage,
+    videoCandidates,
+  ])
 
   const resolveRelativeMusic = useCallback((): {
     timelineStart: number
@@ -489,6 +538,25 @@ export function BeatvideoVisualSourcePanel({
         : [...current, shotId],
     )
   }, [])
+
+  const focusArrangementSegment = useCallback(
+    (segment: EditPlan['segments'][number]) => {
+      const itemId = lastItemIdBySegmentId[segment.id]
+      if (!itemId) return
+      const item = useItemsStore.getState().items.find((candidate) => candidate.id === itemId)
+      if (!item) return
+
+      const selection = useSelectionStore.getState()
+      selection.setActiveTrack(item.trackId)
+      selection.selectItems([itemId])
+
+      const playback = usePlaybackStore.getState()
+      playback.pause()
+      playback.setPreviewFrame(null)
+      playback.setCurrentFrame(Math.max(0, Math.round(segment.timelineStart * fps)))
+    },
+    [fps, lastItemIdBySegmentId],
+  )
 
   const groupLoopRepeats = useCallback(() => {
     if (!lastPlan || lastPlan.mode !== 'loop' || loopBlocksGrouped) return
