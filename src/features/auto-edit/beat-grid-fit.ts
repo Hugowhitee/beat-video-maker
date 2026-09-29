@@ -1023,10 +1023,23 @@ export function stabilizeBeatGrid(
   // half-beat ambiguity it can sit one cycle earlier than the first detector
   // landmark, so compare the audible phase to the first real detector beat.
   const firstDetectorBeat = result.beats.find((time) => Number.isFinite(time))
-  const totalPhaseShift = wrapPhaseShift(
+  let totalPhaseShift = wrapPhaseShift(
     finalPhase.phase - (firstDetectorBeat ?? fitted.phase),
     stablePeriod,
   )
+
+  // Exactly half a beat has two numerically different but musically identical
+  // representations (+½ and -½). Always choose the earlier/negative one so the
+  // first audible low-end onset is not dropped from the finite song window and
+  // phaseShiftMs remains deterministic across floating-point/cycle tie choices.
+  const halfPeriod = stablePeriod / 2
+  const halfBeatTieTolerance = Math.max(EPSILON, stablePeriod * 1e-6)
+  if (
+    totalPhaseShift > 0 &&
+    Math.abs(Math.abs(totalPhaseShift) - halfPeriod) <= halfBeatTieTolerance
+  ) {
+    totalPhaseShift -= stablePeriod
+  }
 
   const stable = buildStableBeats({
     phase: finalPhase.phase,
