@@ -980,7 +980,9 @@ export const LoadedEditor = memo(function LoadedEditor({
 
             <ResizableHandle
               withHandle
-              className={isMaskEditingActive ? 'pointer-events-none opacity-60' : undefined}
+              className={`data-[panel-group-direction=vertical]:h-3 data-[panel-group-direction=vertical]:bg-transparent data-[panel-group-direction=vertical]:before:pointer-events-none data-[panel-group-direction=vertical]:before:absolute data-[panel-group-direction=vertical]:before:inset-x-0 data-[panel-group-direction=vertical]:before:top-1/2 data-[panel-group-direction=vertical]:before:h-px data-[panel-group-direction=vertical]:before:-translate-y-1/2 data-[panel-group-direction=vertical]:before:bg-border ${
+                isMaskEditingActive ? 'pointer-events-none opacity-60' : ''
+              }`}
             />
 
             {/* Bottom - Timeline */}
