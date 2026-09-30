@@ -160,6 +160,7 @@ export function BeatvideoMusicPanel() {
   const [importingTag, setImportingTag] = useState(false)
   const [analyzing, setAnalyzing] = useState(false)
   const [bpmDraft, setBpmDraft] = useState('')
+  const [wholeGridShiftArmed, setWholeGridShiftArmed] = useState(false)
   const abortRef = useRef<AbortController | null>(null)
   const pendingAutoAnalyzeMediaIdRef = useRef<string | null>(null)
   const attemptedRevisionRefreshMediaIdRef = useRef<string | null>(null)
@@ -180,6 +181,10 @@ export function BeatvideoMusicPanel() {
         : null,
     [currentFrame, fps, timelineGrid],
   )
+
+  useEffect(() => {
+    setWholeGridShiftArmed(false)
+  }, [playheadBeatOffsetMs, selectedMediaId])
 
   const effectiveAnalysis = timelineGrid?.analysis ?? selectedAnalysis
   const resolvedSourceGrid = effectiveAnalysis
@@ -1293,20 +1298,6 @@ export function BeatvideoMusicPanel() {
           ) : null}
         </section>
 
-        {selectedMedia ? (
-          <BeatvideoFileMetadata
-            mediaId={selectedMedia.id}
-            fileName={selectedMedia.fileName}
-            mimeType={selectedMedia.mimeType}
-            projectName={currentProject?.name ?? ''}
-            beatBpm={
-              effectiveAnalysis?.bpmOverride ??
-              effectiveAnalysis?.musicMap.bpm ??
-              null
-            }
-          />
-        ) : null}
-
         {effectiveAnalysis && resolvedSourceGrid && gridReviewState !== 'hidden' ? (
           <details
             className="border-t border-border pt-3"
@@ -1358,16 +1349,23 @@ export function BeatvideoMusicPanel() {
                 </Button>
               </div>
 
-              <Button
-                type="button"
-                size="sm"
-                className="w-full justify-start"
-                disabled={!timelineGrid}
-                onClick={() => void alignGridToPlayhead()}
-              >
-                <Crosshair className="h-3.5 w-3.5" />
-                Align nearest grid line to playhead
-              </Button>
+              {gridMode === 'detected' ? (
+                <Button
+                  type="button"
+                  size="sm"
+                  className="w-full justify-start"
+                  disabled={!timelineGrid}
+                  onClick={() => void alignNearestBeatToPlayhead()}
+                >
+                  Align this beat locally
+                  {playheadBeatOffsetMs !== null ? (
+                    <span className="ml-auto font-mono text-[10px] opacity-70">
+                      {playheadBeatOffsetMs >= 0 ? '+' : ''}
+                      {playheadBeatOffsetMs.toFixed(1)} ms
+                    </span>
+                  ) : null}
+                </Button>
+              ) : null}
 
               <Button
                 type="button"
@@ -1380,36 +1378,78 @@ export function BeatvideoMusicPanel() {
                 Set Bar 1 at playhead
               </Button>
 
-              {gridMode === 'detected' ? (
-                <details className="border-t border-border/70 pt-2">
-                  <summary className="cursor-pointer list-none text-[10px] font-medium text-muted-foreground marker:hidden [&::-webkit-details-marker]:hidden">
-                    Local drift correction
-                  </summary>
-                  <div className="mt-2 space-y-1.5">
+              {gridMode === 'detected' &&
+              (effectiveAnalysis.correctionAnchors?.length ?? 0) > 0 ? (
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="ghost"
+                  className="w-full justify-start"
+                  onClick={() => void undoLastAnchor()}
+                >
+                  <Undo2 className="h-3.5 w-3.5" />
+                  Undo last local anchor
+                </Button>
+              ) : null}
+
+              <details className="border-t border-border/70 pt-2">
+                <summary className="cursor-pointer list-none text-[10px] font-medium text-muted-foreground marker:hidden [&::-webkit-details-marker]:hidden">
+                  Shift entire grid
+                </summary>
+                <div className="mt-2 space-y-2">
+                  <p className="text-[10px] leading-relaxed text-muted-foreground">
+                    Advanced: this moves every beat and every existing correction anchor. Use a local
+                    beat anchor above unless the complete grid has the same offset.
+                  </p>
+                  {!wholeGridShiftArmed ? (
                     <Button
                       type="button"
                       size="sm"
                       variant="outline"
                       className="w-full justify-start"
-                      disabled={!timelineGrid}
-                      onClick={() => void alignNearestBeatToPlayhead()}
+                      disabled={!timelineGrid || playheadBeatOffsetMs === null}
+                      onClick={() => setWholeGridShiftArmed(true)}
                     >
-                      Pin this beat to playhead
+                      Prepare whole-grid shift
+                      {playheadBeatOffsetMs !== null ? (
+                        <span className="ml-auto font-mono text-[10px]">
+                          {playheadBeatOffsetMs >= 0 ? '+' : ''}
+                          {playheadBeatOffsetMs.toFixed(1)} ms
+                        </span>
+                      ) : null}
                     </Button>
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="ghost"
-                      className="w-full justify-start"
-                      disabled={(effectiveAnalysis.correctionAnchors?.length ?? 0) === 0}
-                      onClick={() => void undoLastAnchor()}
-                    >
-                      <Undo2 className="h-3.5 w-3.5" />
-                      Undo last local anchor
-                    </Button>
-                  </div>
-                </details>
-              ) : null}
+                  ) : (
+                    <div className="border-l-2 border-amber-500/60 pl-2">
+                      <p className="font-mono text-[10px] text-foreground">
+                        Entire grid: {playheadBeatOffsetMs !== null && playheadBeatOffsetMs >= 0 ? '+' : ''}
+                        {playheadBeatOffsetMs?.toFixed(1) ?? '—'} ms
+                      </p>
+                      <div className="mt-2 flex gap-1.5">
+                        <Button
+                          type="button"
+                          size="sm"
+                          className="flex-1"
+                          disabled={!timelineGrid}
+                          onClick={() => {
+                            setWholeGridShiftArmed(false)
+                            void alignGridToPlayhead()
+                          }}
+                        >
+                          Apply to entire grid
+                        </Button>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => setWholeGridShiftArmed(false)}
+                        >
+                          Cancel
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </details>
 
               <details className="border-t border-border/70 pt-2">
                 <summary className="cursor-pointer list-none text-[10px] font-medium text-muted-foreground marker:hidden [&::-webkit-details-marker]:hidden">
@@ -1474,6 +1514,30 @@ export function BeatvideoMusicPanel() {
                   </Button>
                 </div>
               </details>
+            </div>
+          </details>
+        ) : null}
+
+        {selectedMedia ? (
+          <details className="border-t border-border pt-3">
+            <summary className="flex cursor-pointer list-none items-center justify-between gap-2 text-xs font-medium text-foreground marker:hidden [&::-webkit-details-marker]:hidden">
+              <span>File metadata</span>
+              <span className="max-w-36 truncate font-mono text-[9px] font-normal text-muted-foreground">
+                {selectedMedia.fileName}
+              </span>
+            </summary>
+            <div className="mt-3">
+              <BeatvideoFileMetadata
+                mediaId={selectedMedia.id}
+                fileName={selectedMedia.fileName}
+                mimeType={selectedMedia.mimeType}
+                projectName={currentProject?.name ?? ''}
+                beatBpm={
+                  effectiveAnalysis?.bpmOverride ??
+                  effectiveAnalysis?.musicMap.bpm ??
+                  null
+                }
+              />
             </div>
           </details>
         ) : null}
