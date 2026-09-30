@@ -6,6 +6,11 @@ export { buildMediaTimelineItems } from '@/features/timeline/utils/media-timelin
 export { createClassicTrack, getTrackKind } from '@/features/timeline/utils/classic-tracks'
 export { canAddTransition } from '@/features/timeline/utils/transition-utils'
 export {
+  resolveBeatvideoTimelineGrid,
+  resolveBeatvideoTimelineMarkers,
+  resolveBeatvideoTimelineSnapFrames,
+} from '@/features/timeline/utils/beatvideo-timeline-grid'
+export {
   getMediaType,
   resolveMediaUrl,
 } from '@/features/timeline/deps/media-library-resolver'

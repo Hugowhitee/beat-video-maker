@@ -622,6 +622,60 @@ test('section boundaries never pull Auto Arrange cuts off the musical grid', () 
     .toBe(false)
 })
 
+test('Auto Arrange refuses to invent an off-grid cut when every shot is shorter than one beat', () => {
+  const music = musicMap([
+    {
+      id: 'verse',
+      start: 0,
+      end: 4,
+      kind: 'verse',
+      energy: 0.5,
+      confidence: 0.9,
+    },
+  ], 4)
+
+  const clips: ClipMap = {
+    sources: [
+      {
+        id: 'micro',
+        name: 'micro.mp4',
+        duration: 1,
+        shots: [
+          {
+            id: 'micro-1',
+            sourceId: 'micro',
+            start: 0,
+            end: 0.2,
+            motion: 0.5,
+            quality: 0.9,
+            boundaryKind: 'source-start',
+            boundaryConfidence: 1,
+          },
+          {
+            id: 'micro-2',
+            sourceId: 'micro',
+            start: 0.2,
+            end: 0.4,
+            motion: 0.5,
+            quality: 0.9,
+            boundaryKind: 'hard-cut',
+            boundaryConfidence: 1,
+          },
+        ],
+      },
+    ],
+  }
+
+  expect(() =>
+    createEditPlan(music, clips, {
+      mode: 'auto',
+      pace: 'energetic',
+      transitionProfile: 'clean',
+      seed: 1,
+    }),
+  ).toThrow('cannot keep cuts on the beat grid')
+})
+
 test('Auto Arrange pace changes edit density without changing the grid source', () => {
   const music = musicMap([
     {

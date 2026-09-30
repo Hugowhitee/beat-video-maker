@@ -5,6 +5,7 @@ import {
   findBeatvideoMusicPlacement,
   normalizeBeatvideoAnalysisForPlacement,
   resolveBeatvideoTimelineGrid,
+  resolveBeatvideoTimelineMarkers,
   resolveBeatvideoTimelineSnapFrames,
 } from './beatvideo-timeline-grid'
 
@@ -93,6 +94,32 @@ describe('Beatvideo timeline musical grid', () => {
         30,
       ).slice(0, 3),
     ).toEqual([105, 120, 135])
+  })
+
+  it('uses the exact same rounded frames for visible markers and musical snap targets', () => {
+    const placement = audio({
+      from: 37,
+      durationInFrames: 96,
+      sourceStart: 15,
+      sourceEnd: 135,
+      speed: 1.25,
+    })
+    const timelineGrid = resolveBeatvideoTimelineGrid(analysis(), [placement], 30)
+
+    expect(timelineGrid).not.toBeNull()
+    const visible = resolveBeatvideoTimelineMarkers(timelineGrid!, 30, {
+      resolution: 'beat',
+      pixelsPerSecond: 137,
+    }).markers
+    const snap = resolveBeatvideoTimelineSnapFrames(analysis(), [placement], 30, {
+      resolution: 'beat',
+      pixelsPerSecond: 137,
+    })
+
+    expect(visible.map((marker) => marker.frame)).toEqual(snap)
+    expect(
+      visible.every((marker) => Math.abs(marker.timelineTime * 30 - marker.frame) < 1e-9),
+    ).toBe(true)
   })
 
   it('filters snap points to the selected visible bar resolution', () => {

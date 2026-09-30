@@ -13,6 +13,7 @@ import {
 } from './media-item-frames'
 import {
   resolveBeatGridMarkers,
+  type BeatGridMarker,
   type BeatGridResolution,
 } from './beatvideo-grid-resolution'
 
@@ -246,6 +247,65 @@ export function resolveBeatvideoTimelineGrid(
 }
 
 
+export interface BeatvideoTimelineMarker extends BeatGridMarker {
+  frame: number
+  timelineTime: number
+}
+
+/**
+ * Canonical frame-quantized marker projection shared by the visible grid and
+ * musical snapping. The timeline cannot display or snap between frames, so the
+ * visual marker itself is placed at the same rounded frame used by editing.
+ */
+export function resolveBeatvideoTimelineMarkers(
+  timelineGrid: BeatvideoTimelineGrid,
+  timelineFps: number,
+  options: {
+    resolution?: BeatGridResolution
+    pixelsPerSecond?: number
+  } = {},
+): {
+  markers: BeatvideoTimelineMarker[]
+  labelStride: number
+} {
+  if (!Number.isFinite(timelineFps) || timelineFps <= 0) {
+    return { markers: [], labelStride: 1 }
+  }
+
+  const resolution = options.resolution ?? 'beat'
+  const pixelsPerSecond = options.pixelsPerSecond ?? Number.MAX_SAFE_INTEGER
+  const resolved = resolveBeatGridMarkers({
+    beats: timelineGrid.grid.beats,
+    beatsPerBar: timelineGrid.grid.beatsPerBar,
+    barOneTime: timelineGrid.barOneTimelineTime,
+    resolution,
+    pixelsPerSecond,
+  })
+
+  const byFrame = new Map<number, BeatvideoTimelineMarker>()
+  for (const marker of resolved.markers) {
+    const frame = Math.max(0, Math.round(marker.beat.time * timelineFps))
+    const candidate: BeatvideoTimelineMarker = {
+      ...marker,
+      frame,
+      timelineTime: frame / timelineFps,
+    }
+    const existing = byFrame.get(frame)
+    if (
+      !existing ||
+      candidate.isBarOne ||
+      (!existing.isBarOne && candidate.beat.downbeat && !existing.beat.downbeat)
+    ) {
+      byFrame.set(frame, candidate)
+    }
+  }
+
+  return {
+    markers: [...byFrame.values()].sort((left, right) => left.frame - right.frame),
+    labelStride: resolved.labelStride,
+  }
+}
+
 /**
  * Timeline snap points for Beatvideo editing.
  *
@@ -266,23 +326,10 @@ export function resolveBeatvideoTimelineSnapFrames(
   if (!timelineGrid) return []
 
   // Calls that do not opt into a view resolution preserve the historical
-  // all-beat behavior. The interactive timeline always supplies its current
-  // resolution + zoom so visible musical lines and snap targets stay identical.
-  const resolution = options.resolution ?? 'beat'
-  const pixelsPerSecond = options.pixelsPerSecond ?? Number.MAX_SAFE_INTEGER
-  const { markers } = resolveBeatGridMarkers({
-    beats: timelineGrid.grid.beats,
-    beatsPerBar: timelineGrid.grid.beatsPerBar,
-    barOneTime: timelineGrid.barOneTimelineTime,
-    resolution,
-    pixelsPerSecond,
-  })
-
-  return [
-    ...new Set(
-      markers.map(({ beat }) =>
-        Math.max(0, Math.round(beat.time * timelineFps)),
-      ),
-    ),
-  ].sort((left, right) => left - right)
+  // all-beat behavior. The interactive timeline supplies its current
+  // resolution + zoom, and both display and snapping consume this same
+  // frame-quantized marker projection.
+  return resolveBeatvideoTimelineMarkers(timelineGrid, timelineFps, options)
+    .markers
+    .map((marker) => marker.frame)
 }

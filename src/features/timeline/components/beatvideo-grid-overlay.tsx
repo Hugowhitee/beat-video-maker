@@ -3,8 +3,10 @@ import { useProjectStore } from '@/features/timeline/deps/projects'
 import { useItemsStore } from '../stores/items-store'
 import { useTimelineSettingsStore } from '../stores/timeline-settings-store'
 import { useZoomStore } from '../stores/zoom-store'
-import { resolveBeatvideoTimelineGrid } from '../utils/beatvideo-timeline-grid'
-import { resolveBeatGridMarkers } from '../utils/beatvideo-grid-resolution'
+import {
+  resolveBeatvideoTimelineGrid,
+  resolveBeatvideoTimelineMarkers,
+} from '../utils/beatvideo-timeline-grid'
 import type { MusicSection } from '@/types/beatvideo'
 
 interface BeatvideoGridOverlayProps {
@@ -61,14 +63,15 @@ export const BeatvideoGridOverlay = memo(function BeatvideoGridOverlay({
     duration <= 0
   ) return null
 
-  const { grid, barOneTimelineTime } = timelineGrid
-  const { markers, labelStride } = resolveBeatGridMarkers({
-    beats: grid.beats,
-    beatsPerBar: grid.beatsPerBar,
-    barOneTime: barOneTimelineTime,
-    resolution: beatGridResolution,
-    pixelsPerSecond,
-  })
+  const { grid } = timelineGrid
+  const { markers, labelStride } = resolveBeatvideoTimelineMarkers(
+    timelineGrid,
+    fps,
+    {
+      resolution: beatGridResolution,
+      pixelsPerSecond,
+    },
+  )
 
   return (
     <div
@@ -109,7 +112,8 @@ export const BeatvideoGridOverlay = memo(function BeatvideoGridOverlay({
           </div>
         )
       })}
-            {markers.map(({ beat, isBarOne, barNumber }) => {
+            {markers.map((marker) => {
+        const { beat, isBarOne, barNumber } = marker
         const showBarLabel =
           variant === 'ruler' &&
           beat.downbeat &&
@@ -120,7 +124,7 @@ export const BeatvideoGridOverlay = memo(function BeatvideoGridOverlay({
           <div
             key={`${beat.index}:${beat.time.toFixed(4)}`}
             className="absolute inset-y-0"
-            style={{ left: `${leftPercent(beat.time, duration)}%` }}
+            style={{ left: `${leftPercent(marker.timelineTime, duration)}%` }}
           >
             <div
               className={

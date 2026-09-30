@@ -111,17 +111,14 @@ function capSlotToAvailableShot(
   start: number,
   proposedEnd: number,
   maxShotDuration: number,
-) {
+): number | null {
   if (proposedEnd - start <= maxShotDuration + EPSILON) return proposedEnd;
 
-  const beatLimited = previousBeatTimeAtOrBefore(
+  return previousBeatTimeAtOrBefore(
     music,
     start + maxShotDuration,
     start,
   );
-  if (beatLimited !== null) return beatLimited;
-
-  return Math.min(proposedEnd, start + maxShotDuration);
 }
 
 function buildTimelineSlots(
@@ -160,11 +157,30 @@ function buildTimelineSlots(
     end = Math.min(end, rangeEnd);
 
     if (end <= cursor + EPSILON) {
-      const nextBeat = beatTime(music, currentBeat + 1);
-      end = Math.min(rangeEnd, Math.max(nextBeat, cursor + 0.05));
+      const nextBeat = music.beats[currentBeat + 1]?.time;
+      if (nextBeat !== undefined && nextBeat <= rangeEnd + EPSILON) {
+        end = nextBeat;
+      } else if (rangeEnd > cursor + EPSILON) {
+        // The project/loop end may be shorter than one more beat. That terminal
+        // boundary is allowed; internal boundaries must still be real beat times.
+        end = rangeEnd;
+      } else {
+        throw new Error('Unable to create a positive-length edit slot from the supplied media.');
+      }
     }
 
-    end = capSlotToAvailableShot(music, cursor, end, maxShotDuration);
+    const cappedEnd = capSlotToAvailableShot(
+      music,
+      cursor,
+      end,
+      maxShotDuration,
+    );
+    if (cappedEnd === null) {
+      throw new Error(
+        'Auto Arrange cannot keep cuts on the beat grid because every usable footage shot is shorter than the next musical interval. Add a longer shot or exclude very short scene fragments.',
+      );
+    }
+    end = cappedEnd;
 
     if (end <= cursor + EPSILON) {
       throw new Error('Unable to create a positive-length edit slot from the supplied media.');
