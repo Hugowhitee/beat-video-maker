@@ -1773,8 +1773,8 @@ const MediaCardInternal = memo(function MediaCardInternal({
         ${CARD_GRID_BASE}
         ${
           selected
-            ? 'border-primary ring-2 ring-primary/20'
-            : 'border-border hover:border-primary/50 hover:shadow-lg hover:shadow-primary/10'
+            ? 'border-primary bg-primary/[0.035]'
+            : 'border-border hover:border-foreground/35 hover:bg-secondary/10'
         }
         ${isPreparingMedia ? 'cursor-default' : 'cursor-grab active:cursor-grabbing'}
       `}
@@ -1791,14 +1791,10 @@ const MediaCardInternal = memo(function MediaCardInternal({
                   }
             }
           >
-            {/* Film strip perforations effect */}
-            <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-secondary via-muted to-secondary" />
-            <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-secondary via-muted to-secondary" />
-
-            {/* Thumbnail - takes most of square space */}
+            {/* Thumbnail — footage stays visually primary. */}
             <div
               ref={thumbnailContainerRef}
-              className="flex-1 bg-secondary relative overflow-hidden min-h-0"
+              className="aspect-video bg-black/45 relative overflow-hidden flex-shrink-0"
               onPointerEnter={handleThumbnailPointerEnter}
               onPointerMove={handleThumbnailPointerMove}
               onPointerLeave={handleThumbnailPointerLeave}
@@ -1808,7 +1804,7 @@ const MediaCardInternal = memo(function MediaCardInternal({
                   ref={thumbnailRef}
                   src={thumbnailUrl}
                   alt={media.fileName}
-                  className="w-full h-full object-contain transition-transform duration-500 group-hover:scale-105"
+                  className="w-full h-full object-cover"
                 />
               ) : (
                 <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-secondary to-panel-bg">
@@ -1816,10 +1812,7 @@ const MediaCardInternal = memo(function MediaCardInternal({
                 </div>
               )}
 
-              {/* Selection glow - subtle overlay only */}
-              {selected && !isPreparingMedia && (
-                <div className="absolute inset-0 bg-primary/10 pointer-events-none" />
-              )}
+              {/* Selection is carried by the card border so footage remains un-tinted. */}
 
               {/* Preparing overlay */}
               {isPreparingMedia && (
