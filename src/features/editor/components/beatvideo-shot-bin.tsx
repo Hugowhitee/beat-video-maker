@@ -1,10 +1,19 @@
-import { useEffect, useMemo, useState, type DragEvent } from 'react'
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+  type DragEvent,
+  type PointerEvent,
+} from 'react'
 import {
   resolveMediaUrl,
   useMediaLibraryStore,
 } from '@/features/editor/deps/media-library'
 import { useFilmstrip, type FilmstripFrame } from '@/features/editor/deps/timeline-hooks'
 import type { ClipMap, ClipShot } from '@/features/editor/deps/auto-edit-contract'
+import { useEditorStore } from '@/shared/state/editor'
+import { usePlaybackStore } from '@/shared/state/playback'
 
 export type BeatvideoVisualShot = ClipShot & {
   sourceName: string
@@ -117,6 +126,31 @@ export function BeatvideoShotBin({
     clipMap.sources[0]?.id ?? null,
   )
 
+  const setMediaSkimPreview = useEditorStore((state) => state.setMediaSkimPreview)
+
+  const previewShotAtPointer = useCallback(
+    (event: PointerEvent<HTMLDivElement>, shot: ClipShot) => {
+      const media = mediaById[shot.sourceId]
+      if (!media || media.fps <= 0) return
+
+      const rect = event.currentTarget.getBoundingClientRect()
+      if (rect.width <= 0) return
+      const ratio = Math.max(0, Math.min(1, (event.clientX - rect.left) / rect.width))
+      const sourceTime = shot.start + (shot.end - shot.start) * ratio
+      const sourceFrame = Math.max(0, Math.round(sourceTime * media.fps))
+
+      const playback = usePlaybackStore.getState()
+      if (playback.isPlaying) playback.pause()
+      playback.setPreviewFrame(null)
+      setMediaSkimPreview(shot.sourceId, sourceFrame)
+    },
+    [mediaById, setMediaSkimPreview],
+  )
+
+  const clearShotPreview = useCallback(() => {
+    setMediaSkimPreview(null)
+  }, [setMediaSkimPreview])
+
   useEffect(() => {
     if (activeSourceId && sourceIds.includes(activeSourceId)) return
     setActiveSourceId(sourceIds[0] ?? null)
@@ -166,9 +200,18 @@ export function BeatvideoShotBin({
                 draggable
                 tabIndex={0}
                 aria-label={`Shot ${index + 1} from ${activeSource.name}. Drag onto a sequence slot.`}
-                title="Drag onto a sequence slot"
-                onDragStart={(event) => onDragStart(event, shot.id)}
-                onDragEnd={onDragEnd}
+                title="Hover to scrub · drag onto a sequence slot"
+                onPointerEnter={(event) => previewShotAtPointer(event, shot)}
+                onPointerMove={(event) => previewShotAtPointer(event, shot)}
+                onPointerLeave={clearShotPreview}
+                onDragStart={(event) => {
+                  clearShotPreview()
+                  onDragStart(event, shot.id)
+                }}
+                onDragEnd={() => {
+                  clearShotPreview()
+                  onDragEnd()
+                }}
                 onKeyDown={(event) => {
                   if (event.key !== 'Enter' && event.key !== ' ') return
                   event.preventDefault()
@@ -187,12 +230,12 @@ export function BeatvideoShotBin({
                   sourceDuration={sourceDuration}
                   className="aspect-video w-full"
                 />
-                <div className="flex items-center justify-between gap-1 border-t border-border/60 px-1 py-1">
+                <div className="flex items-center justify-between gap-1 border-t border-border/60 px-1.5 py-1">
                   <span className="font-mono text-[8px] text-foreground/80">
                     {String(index + 1).padStart(2, '0')}
                   </span>
                   <span className="font-mono text-[8px] text-muted-foreground">
-                    {(shot.end - shot.start).toFixed(1)}s
+                    {shot.start.toFixed(1)}–{shot.end.toFixed(1)}s
                   </span>
                   <button
                     type="button"
