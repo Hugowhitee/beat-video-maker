@@ -1824,67 +1824,42 @@ const MediaCardInternal = memo(function MediaCardInternal({
                 </div>
               )}
 
-              {/* Top-right badges & info */}
               {!isPreparingMedia && (
-                <div className="absolute top-1 right-1 z-10 flex flex-col items-end gap-0.5">
-                  {isBroken && (
-                    <div className="p-1 rounded bg-destructive/90 text-destructive-foreground">
-                      <Link2Off className="w-3 h-3" />
+                <>
+                  <div className="absolute top-1 right-1 z-10 flex items-center gap-1">
+                    {isBroken && (
+                      <div className="flex h-5 items-center gap-1 bg-destructive/90 px-1.5 text-[8px] font-medium text-destructive-foreground">
+                        <Link2Off className="h-2.5 w-2.5" />
+                        Offline
+                      </div>
+                    )}
+                    {!isBroken && proxyStatus === 'generating' && (
+                      <div className="flex h-5 items-center gap-1 bg-black/75 px-1.5 font-mono text-[8px] text-white/85 pointer-events-none">
+                        <Loader2 className="h-2.5 w-2.5 animate-spin" />
+                        PROXY
+                      </div>
+                    )}
+                    {!isBroken && hasProxy && (
+                      <div className="h-5 bg-black/75 px-1.5 py-1 font-mono text-[8px] text-white/80 pointer-events-none">
+                        PROXY
+                      </div>
+                    )}
+                    <div className="opacity-0 transition-opacity group-hover:opacity-100">
+                      <MediaInfoPopover media={media} onSeekToCaption={handleSeekToCaption} />
                     </div>
-                  )}
-                  {!isBroken && proxyStatus === 'generating' && (
-                    <div className="p-0.5 rounded bg-green-500/90 text-black pointer-events-none">
-                      <Loader2 className="w-2.5 h-2.5 animate-spin" />
-                    </div>
-                  )}
-                  {!isBroken && isTagging && (
-                    <div
-                      className="p-0.5 rounded bg-purple-500/90 text-white pointer-events-none"
-                      title={t('media.card.analyzingWithAI')}
-                    >
-                      <Loader2 className="w-2.5 h-2.5 animate-spin" />
-                    </div>
-                  )}
-                  {!isBroken && hasProxy && (
-                    <div className="p-0.5 rounded bg-green-500/90 text-black pointer-events-none">
-                      <Zap className="w-2.5 h-2.5" />
-                    </div>
-                  )}
-                  {!isBroken && hasCaptions && (
-                    <div
-                      className="p-0.5 rounded bg-purple-500/90 text-white pointer-events-none"
-                      title={t('media.card.aiCaptionsCount', { count: media.aiCaptions!.length })}
-                    >
-                      <Sparkles className="w-2.5 h-2.5" />
-                    </div>
-                  )}
-                  <div className="opacity-0 group-hover:opacity-100 transition-opacity">
-                    <MediaInfoPopover media={media} onSeekToCaption={handleSeekToCaption} />
-                  </div>
-                </div>
-              )}
-
-              {/* Overlaid badges - hidden during preparation */}
-              {!isPreparingMedia && (
-                <div className="absolute inset-x-0 bottom-0 px-1.5 py-1 bg-gradient-to-t from-black/60 to-transparent flex items-center justify-between gap-1 pointer-events-none">
-                  <div
-                    className={`flex items-center gap-1 rounded px-1 py-0.5 ${mediaTypeBadgeClass}`}
-                    title="Drag to timeline"
-                  >
-                    {mediaType === 'video' && <Video className="h-2.5 w-2.5" />}
-                    {mediaType === 'audio' && <FileAudio className="h-2.5 w-2.5" />}
-                    {mediaType === 'image' && <ImageIcon className="h-2.5 w-2.5" />}
-                    {mediaType === 'lottie' && <FileJson className="h-2.5 w-2.5" />}
-                    <span className="text-[8px] font-semibold tracking-wide">{mediaTypeLabel}</span>
                   </div>
 
-                  {/* Duration badge */}
                   {(mediaType === 'video' || mediaType === 'audio') && media.duration > 0 && (
-                    <div className="px-1 py-0.5 bg-black/70 border border-white/20 rounded text-[8px] font-mono text-white">
+                    <div className="absolute bottom-1 right-1 bg-black/75 px-1.5 py-0.5 font-mono text-[8px] text-white/90 pointer-events-none">
                       {formatDuration(media.duration)}
                     </div>
                   )}
-                </div>
+                  {skimTimeLabel && (
+                    <div className="absolute bottom-1 left-1 bg-black/75 px-1.5 py-0.5 font-mono text-[8px] text-white pointer-events-none">
+                      {skimTimeLabel}
+                    </div>
+                  )}
+                </>
               )}
               {canScrubPreview && skimProgress !== null && (
                 <div
