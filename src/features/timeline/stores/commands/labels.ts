@@ -94,6 +94,11 @@ export function formatTimelineCommandLabel(command: TimelineCommand): string {
     return 'Apply bento layout'
   }
 
+  if (command.type === 'ADJUST_BEAT_GRID_PHASE') return 'Adjust Beat grid phase'
+  if (command.type === 'SET_BEAT_GRID_TEMPO') return 'Set Beat grid tempo'
+  if (command.type === 'ADD_BEAT_GRID_ANCHOR') return 'Add Beat grid correction'
+  if (command.type === 'REMOVE_BEAT_GRID_ANCHOR') return 'Remove Beat grid correction'
+  if (command.type === 'RESET_BEAT_GRID') return 'Reset Beat grid'
   if (command.type === 'SET_IN_POINT') return 'Set In point'
   if (command.type === 'SET_OUT_POINT') return 'Set Out point'
   if (command.type === 'CLEAR_IN_OUT_POINTS') return 'Clear In/Out points'

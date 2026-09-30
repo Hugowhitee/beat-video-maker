@@ -4,6 +4,7 @@ import type { Transition } from '@/types/transition'
 import type { ItemKeyframes } from '@/types/keyframe'
 import type { SubComposition } from '../compositions-store'
 import type { ProjectResolution } from '@/types/project'
+import type { BeatvideoMusicAnalysis } from '@/types/beatvideo'
 
 /**
  * Snapshot of all timeline state for undo/redo.
@@ -31,6 +32,8 @@ export interface TimelineSnapshot {
   masterFx?: MasterFxSettings
   projectId: string | null
   projectMetadata: ProjectResolution | null
+  /** Project-scoped Beatvideo timing state so manual grid edits participate in undo/redo. */
+  projectBeatvideoMusic?: BeatvideoMusicAnalysis | null
 }
 
 /**

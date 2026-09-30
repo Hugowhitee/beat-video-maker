@@ -35,6 +35,64 @@ function projectMetadataEqual(
   )
 }
 
+function projectBeatvideoMusicEqual(
+  left: TimelineSnapshot['projectBeatvideoMusic'],
+  right: TimelineSnapshot['projectBeatvideoMusic'],
+): boolean {
+  if (left === right) return true
+  return JSON.stringify(left ?? null) === JSON.stringify(right ?? null)
+}
+
+function restoreProjectBeatvideoMusic(snapshot: TimelineSnapshot): void {
+  if (!snapshot.projectId || snapshot.projectBeatvideoMusic === undefined) return
+
+  const projectStoreState = useProjectStore.getState()
+  const currentProject = projectStoreState.currentProject
+  const storedProject =
+    currentProject?.id === snapshot.projectId
+      ? currentProject
+      : (projectStoreState.projects.find((project) => project.id === snapshot.projectId) ?? null)
+
+  if (
+    !storedProject ||
+    projectBeatvideoMusicEqual(storedProject.beatvideoMusic ?? null, snapshot.projectBeatvideoMusic)
+  ) {
+    return
+  }
+
+  const nextUpdatedAt = Date.now()
+  useProjectStore.setState((state) => ({
+    currentProject:
+      state.currentProject?.id === snapshot.projectId
+        ? {
+            ...state.currentProject,
+            beatvideoMusic: snapshot.projectBeatvideoMusic ?? undefined,
+            updatedAt: nextUpdatedAt,
+          }
+        : state.currentProject,
+    projects: state.projects.map((project) =>
+      project.id === snapshot.projectId
+        ? {
+            ...project,
+            beatvideoMusic: snapshot.projectBeatvideoMusic ?? undefined,
+            updatedAt: nextUpdatedAt,
+          }
+        : project,
+    ),
+  }))
+
+  void Promise.resolve(
+    updateProject(snapshot.projectId, {
+      beatvideoMusic: snapshot.projectBeatvideoMusic ?? undefined,
+    }),
+  ).catch((error) => {
+    logger.error(
+      `Failed to persist restored Beatvideo timing for ${snapshot.projectId}:`,
+      error,
+    )
+  })
+}
+
 function restoreProjectMetadata(snapshot: TimelineSnapshot): void {
   if (!snapshot.projectId || !snapshot.projectMetadata) {
     return
@@ -115,6 +173,7 @@ export function captureSnapshot(): TimelineSnapshot {
     masterFx: playbackState.masterFx,
     projectId: currentProject?.id ?? null,
     projectMetadata: currentProject ? { ...currentProject.metadata } : null,
+    projectBeatvideoMusic: currentProject?.beatvideoMusic ?? null,
   }
 }
 
@@ -162,8 +221,9 @@ export function restoreSnapshot(snapshot: TimelineSnapshot): void {
   usePlaybackStore.getState().setMasterBusDb(snapshot.masterBusDb ?? 0)
   usePlaybackStore.getState().setMasterFx(snapshot.masterFx)
 
-  // Restore current project metadata so canvas/project changes undo with the editor history.
+  // Restore project-owned editor state so project changes undo with the same history.
   restoreProjectMetadata(snapshot)
+  restoreProjectBeatvideoMusic(snapshot)
 }
 
 /**
@@ -189,6 +249,7 @@ export function snapshotsEqual(a: TimelineSnapshot, b: TimelineSnapshot): boolea
     JSON.stringify(a.busAudioEq ?? null) === JSON.stringify(b.busAudioEq ?? null) &&
     a.masterBusDb === b.masterBusDb &&
     a.projectId === b.projectId &&
-    projectMetadataEqual(a.projectMetadata, b.projectMetadata)
+    projectMetadataEqual(a.projectMetadata, b.projectMetadata) &&
+    projectBeatvideoMusicEqual(a.projectBeatvideoMusic, b.projectBeatvideoMusic)
   )
 }

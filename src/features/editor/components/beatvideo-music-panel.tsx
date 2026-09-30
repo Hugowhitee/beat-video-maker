@@ -3,8 +3,6 @@ import {
   AudioLines,
   CheckCircle2,
   Crosshair,
-  Focus,
-  Undo2,
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
@@ -93,14 +91,6 @@ function frameInsidePlacement(
   placement: { from: number; durationInFrames: number },
 ): boolean {
   return frame >= placement.from && frame <= placement.from + placement.durationInFrames
-}
-
-function sourceDeltaForTimelineNudge(
-  placement: { speed?: number; isReversed?: boolean },
-  timelineDeltaSeconds: number,
-): number {
-  const speed = Math.max(0.0001, placement.speed ?? 1)
-  return timelineDeltaSeconds * speed * (placement.isReversed ? -1 : 1)
 }
 
 function correctionOrderAnchors(
@@ -282,6 +272,28 @@ export function BeatvideoMusicPanel() {
       useProjectStore.getState().setCurrentProject(updated)
     },
     [currentProject],
+  )
+
+  const commitManualAnalysisChange = useCallback(
+    async (
+      next: BeatvideoMusicAnalysis,
+      commandType:
+        | 'ADJUST_BEAT_GRID_PHASE'
+        | 'SET_BEAT_GRID_TEMPO'
+        | 'ADD_BEAT_GRID_ANCHOR'
+        | 'REMOVE_BEAT_GRID_ANCHOR'
+        | 'RESET_BEAT_GRID',
+    ) => {
+      if (!currentProject) return
+      const before = captureSnapshot()
+      await persistAnalysis(next)
+      useTimelineStore.getState().markDirty()
+      useTimelineCommandStore.getState().addUndoEntry(
+        { type: commandType },
+        before,
+      )
+    },
+    [currentProject, persistAnalysis],
   )
 
   const ensureTagTrack = useCallback((kind: 'producer' | 'watermark') => {
@@ -910,20 +922,42 @@ export function BeatvideoMusicPanel() {
     if (!mapped) return
 
     const base = mapped.timelineGrid.analysis
-    const explicitAnchors = (base.correctionAnchors ?? []).filter(
-      (anchor) =>
-        base.detectedBarOneTime === null ||
-        Math.abs(anchor.sourceTime - base.detectedBarOneTime) > ANCHOR_EPSILON,
+    const currentBarOne = base.barOneTime ?? base.detectedBarOneTime ?? 0
+    const sourceDelta = mapped.sourceTime - currentBarOne
+    const explicitAnchors = (base.correctionAnchors ?? [])
+      .filter(
+        (anchor) =>
+          base.detectedBarOneTime === null ||
+          Math.abs(anchor.sourceTime - base.detectedBarOneTime) > ANCHOR_EPSILON,
+      )
+      .map((anchor) => ({
+        ...anchor,
+        correctedTime: anchor.correctedTime + sourceDelta,
+      }))
+
+    if (
+      explicitAnchors.some(
+        (anchor) =>
+          anchor.correctedTime < 0 ||
+          anchor.correctedTime > base.musicMap.duration,
+      )
+    ) {
+      toast.error('Bar 1 cannot move this far without pushing a local correction outside the song')
+      return
+    }
+
+    await commitManualAnalysisChange(
+      {
+        ...base,
+        version: 2,
+        barOneTime: mapped.sourceTime,
+        barOneVerified: true,
+        correctionAnchors: explicitAnchors,
+      },
+      'ADJUST_BEAT_GRID_PHASE',
     )
-    await persistAnalysis({
-      ...base,
-      version: 2,
-      barOneTime: mapped.sourceTime,
-      barOneVerified: true,
-      correctionAnchors: explicitAnchors,
-    })
     toast.success('Bar 1 aligned to playhead')
-  }, [persistAnalysis, requirePlacementAtPlayhead])
+  }, [commitManualAnalysisChange, requirePlacementAtPlayhead])
 
   const focusTimelineFrame = useCallback(
     (frame: number) => {
@@ -983,13 +1017,16 @@ export function BeatvideoMusicPanel() {
           toast.error('Analyze a valid BPM before switching to Fixed BPM')
           return
         }
-        await persistAnalysis({
-          ...effectiveAnalysis,
-          version: 2,
-          gridMode: 'fixed',
-          bpmOverride: detectedBpm,
-          correctionAnchors: effectiveAnalysis.correctionAnchors ?? [],
-        })
+        await commitManualAnalysisChange(
+          {
+            ...effectiveAnalysis,
+            version: 2,
+            gridMode: 'fixed',
+            bpmOverride: detectedBpm,
+            correctionAnchors: effectiveAnalysis.correctionAnchors ?? [],
+          },
+          'SET_BEAT_GRID_TEMPO',
+        )
         return
       }
 
@@ -998,14 +1035,17 @@ export function BeatvideoMusicPanel() {
         return
       }
 
-      await persistAnalysis({
-        ...effectiveAnalysis,
-        version: 2,
-        gridMode: 'detected',
-        correctionAnchors: effectiveAnalysis.correctionAnchors ?? [],
-      })
+      await commitManualAnalysisChange(
+        {
+          ...effectiveAnalysis,
+          version: 2,
+          gridMode: 'detected',
+          correctionAnchors: effectiveAnalysis.correctionAnchors ?? [],
+        },
+        'SET_BEAT_GRID_TEMPO',
+      )
     },
-    [effectiveAnalysis, persistAnalysis],
+    [commitManualAnalysisChange, effectiveAnalysis],
   )
 
   const applyBpm = useCallback(async () => {
@@ -1025,13 +1065,16 @@ export function BeatvideoMusicPanel() {
     }
 
     if (effectiveAnalysis) {
-      await persistAnalysis({
-        ...effectiveAnalysis,
-        version: 2,
-        bpmOverride: nextBpm,
-        gridMode: 'fixed',
-        correctionAnchors: effectiveAnalysis.correctionAnchors ?? [],
-      })
+      await commitManualAnalysisChange(
+        {
+          ...effectiveAnalysis,
+          version: 2,
+          bpmOverride: nextBpm,
+          gridMode: 'fixed',
+          correctionAnchors: effectiveAnalysis.correctionAnchors ?? [],
+        },
+        'SET_BEAT_GRID_TEMPO',
+      )
       toast.success(`Fixed grid set to ${nextBpm} BPM`)
       return
     }
@@ -1046,6 +1089,13 @@ export function BeatvideoMusicPanel() {
       version: 2,
       mediaId: media.id,
       analyzedAt: Date.now(),
+      sourceFingerprint: {
+        contentHash: media.contentHash,
+        fileSize: media.fileSize,
+        fileLastModified: media.fileLastModified,
+        duration: media.duration,
+        mimeType: media.mimeType,
+      },
       musicMap: {
         duration: media.duration,
         bpm: nextBpm,
@@ -1060,94 +1110,16 @@ export function BeatvideoMusicPanel() {
       gridMode: 'fixed',
       correctionAnchors: [],
     }
-    await persistAnalysis(next)
+    await commitManualAnalysisChange(next, 'SET_BEAT_GRID_TEMPO')
     toast.success(`Fixed grid set to ${nextBpm} BPM`)
   }, [
     bpmDraft,
+    commitManualAnalysisChange,
     effectiveAnalysis,
     ensureBeatPlacement,
     mediaItems,
-    persistAnalysis,
     selectedMediaId,
   ])
-
-  const nudgeGrid = useCallback(
-    async (timelineDeltaSeconds: number) => {
-      if (!timelineGrid) {
-        toast.error('Place the analyzed beat source on the timeline first')
-        return
-      }
-
-      const base = timelineGrid.analysis
-      const barOne = base.barOneTime ?? base.detectedBarOneTime
-      if (barOne === null) return
-
-      const sourceDelta = sourceDeltaForTimelineNudge(
-        timelineGrid.placement,
-        timelineDeltaSeconds,
-      )
-      const nextBarOne = barOne + sourceDelta
-      const nextAnchors = (base.correctionAnchors ?? []).map((anchor) => ({
-        ...anchor,
-        correctedTime: anchor.correctedTime + sourceDelta,
-      }))
-      const allCorrectedTimes = [
-        nextBarOne,
-        ...nextAnchors.map((anchor) => anchor.correctedTime),
-      ]
-      if (
-        allCorrectedTimes.some(
-          (time) => time < 0 || time > base.musicMap.duration,
-        )
-      ) {
-        toast.error('Grid cannot be nudged past the source boundary')
-        return
-      }
-
-      await persistAnalysis({
-        ...base,
-        version: 2,
-        barOneTime: nextBarOne,
-        barOneVerified: true,
-        correctionAnchors: nextAnchors,
-      })
-    },
-    [persistAnalysis, timelineGrid],
-  )
-
-  const alignGridToPlayhead = useCallback(async () => {
-    if (!timelineGrid || fps <= 0) {
-      toast.error('Place the analyzed beat source on the timeline first')
-      return
-    }
-    if (!frameInsidePlacement(currentFrame, timelineGrid.placement)) {
-      toast.error('Move the playhead onto the beat source first')
-      return
-    }
-
-    const nearest = timelineGrid.grid.beats.reduce<
-      (typeof timelineGrid.grid.beats)[number] | null
-    >((best, beat) => {
-      if (!best) return beat
-      return Math.abs(beat.time * fps - currentFrame) <
-        Math.abs(best.time * fps - currentFrame)
-        ? beat
-        : best
-    }, null)
-    if (!nearest) {
-      toast.error('No beat is visible at this timeline position')
-      return
-    }
-
-    const timelineDeltaSeconds = currentFrame / fps - nearest.time
-    if (Math.abs(timelineDeltaSeconds) < 0.0005) {
-      toast.info('Grid is already aligned to the playhead')
-      return
-    }
-
-    await nudgeGrid(timelineDeltaSeconds)
-    toast.success('Whole beat grid aligned to playhead')
-  }, [currentFrame, fps, nudgeGrid, timelineGrid])
 
   const alignNearestBeatToPlayhead = useCallback(async () => {
     const mapped = requirePlacementAtPlayhead()
@@ -1203,13 +1175,16 @@ export function BeatvideoMusicPanel() {
         (anchor) =>
           Math.abs(anchor.sourceTime - originalBeat.time) > ANCHOR_EPSILON,
       )
-      await persistAnalysis({
-        ...base,
-        version: 2,
-        barOneTime: mapped.sourceTime,
-        barOneVerified: true,
-        correctionAnchors: anchors,
-      })
+      await commitManualAnalysisChange(
+        {
+          ...base,
+          version: 2,
+          barOneTime: mapped.sourceTime,
+          barOneVerified: true,
+          correctionAnchors: anchors,
+        },
+        'ADJUST_BEAT_GRID_PHASE',
+      )
       toast.success('Detected bar 1 aligned to playhead')
       return
     }
@@ -1235,48 +1210,57 @@ export function BeatvideoMusicPanel() {
       sourceTime: originalBeat.time,
       correctedTime: mapped.sourceTime,
     }
-    await persistAnalysis({
-      ...base,
-      version: 2,
-      correctionAnchors: upsertCorrectionAnchor(
-        base.correctionAnchors ?? [],
-        anchor,
-      ),
-    })
+    await commitManualAnalysisChange(
+      {
+        ...base,
+        version: 2,
+        correctionAnchors: upsertCorrectionAnchor(
+          base.correctionAnchors ?? [],
+          anchor,
+        ),
+      },
+      'ADD_BEAT_GRID_ANCHOR',
+    )
     toast.success('Beat anchor aligned to playhead')
-  }, [currentFrame, fps, persistAnalysis, requirePlacementAtPlayhead])
+  }, [commitManualAnalysisChange, currentFrame, fps, requirePlacementAtPlayhead])
 
-  const undoLastAnchor = useCallback(async () => {
+  const removeLastLocalAnchor = useCallback(async () => {
     if (!effectiveAnalysis) return
     const anchors = effectiveAnalysis.correctionAnchors ?? []
     if (anchors.length === 0) return
-    await persistAnalysis({
-      ...effectiveAnalysis,
-      version: 2,
-      correctionAnchors: anchors.slice(0, -1),
-    })
-  }, [effectiveAnalysis, persistAnalysis])
+    await commitManualAnalysisChange(
+      {
+        ...effectiveAnalysis,
+        version: 2,
+        correctionAnchors: anchors.slice(0, -1),
+      },
+      'REMOVE_BEAT_GRID_ANCHOR',
+    )
+  }, [commitManualAnalysisChange, effectiveAnalysis])
 
   const resetCorrections = useCallback(async () => {
     if (!effectiveAnalysis) return
     const hasDetectedTiming = effectiveAnalysis.musicMap.beats.length > 0
     const fixedBpm =
       effectiveAnalysis.bpmOverride ?? effectiveAnalysis.musicMap.bpm ?? null
-    await persistAnalysis({
-      ...effectiveAnalysis,
-      version: 2,
-      barOneTime: hasDetectedTiming ? effectiveAnalysis.detectedBarOneTime : 0,
-      barOneVerified: false,
-      bpmOverride: hasDetectedTiming ? null : fixedBpm,
-      gridMode: hasDetectedTiming ? 'detected' : 'fixed',
-      correctionAnchors: [],
-    })
+    await commitManualAnalysisChange(
+      {
+        ...effectiveAnalysis,
+        version: 2,
+        barOneTime: hasDetectedTiming ? effectiveAnalysis.detectedBarOneTime : 0,
+        barOneVerified: false,
+        bpmOverride: hasDetectedTiming ? null : fixedBpm,
+        gridMode: hasDetectedTiming ? 'detected' : 'fixed',
+        correctionAnchors: [],
+      },
+      'RESET_BEAT_GRID',
+    )
     toast.success(
       hasDetectedTiming
         ? 'Beat grid reset to detected timing'
         : 'Fixed BPM grid reset to bar 1',
     )
-  }, [effectiveAnalysis, persistAnalysis])
+  }, [commitManualAnalysisChange, effectiveAnalysis])
 
   return (
     <div className="h-full overflow-y-auto p-3">
@@ -1436,95 +1420,43 @@ export function BeatvideoMusicPanel() {
               )}
             </summary>
 
-            <div className="mt-3 space-y-2">
-              <p className="text-[10px] leading-relaxed text-muted-foreground">
-                {gridReviewState === 'recommended'
-                  ? 'Check Bar 1 against the waveform. Correct it only when the grid visibly misses the musical onset.'
-                  : 'These controls stay available because this grid has manual timing edits.'}
-              </p>
-
-              <div className="grid grid-cols-2 gap-1.5">
-                <Button
-                  type="button"
-                  size="sm"
-                  className="justify-start"
-                  disabled={!timelineGrid || timelineGrid.barOneTimelineTime === null}
-                  onClick={focusBarOneOnTimeline}
-                >
-                  <Focus className="h-3.5 w-3.5" />
-                  Bar 1
-                </Button>
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="outline"
-                  className="justify-start"
-                  disabled={!timelineGrid}
-                  onClick={focusCurrentBeatOnTimeline}
-                >
-                  <Crosshair className="h-3.5 w-3.5" />
-                  Nearest beat
-                </Button>
-              </div>
-
-              <Button
-                type="button"
-                size="sm"
-                className="w-full justify-start"
-                disabled={!timelineGrid}
-                onClick={() => void alignGridToPlayhead()}
-              >
-                <Crosshair className="h-3.5 w-3.5" />
-                Align nearest grid line to playhead
-              </Button>
-
-              <Button
-                type="button"
-                size="sm"
-                variant="outline"
-                className="w-full justify-start"
-                disabled={!timelineGrid}
-                onClick={() => void setBarOneAtPlayhead()}
-              >
-                Set Bar 1 at playhead
-              </Button>
-
-              {gridMode === 'detected' ? (
-                <details className="border-t border-border/70 pt-2">
-                  <summary className="cursor-pointer list-none text-[10px] font-medium text-muted-foreground marker:hidden [&::-webkit-details-marker]:hidden">
-                    Local drift correction
-                  </summary>
-                  <div className="mt-2 space-y-1.5">
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="outline"
-                      className="w-full justify-start"
-                      disabled={!timelineGrid}
-                      onClick={() => void alignNearestBeatToPlayhead()}
-                    >
-                      Pin this beat to playhead
-                    </Button>
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="ghost"
-                      className="w-full justify-start"
-                      disabled={(effectiveAnalysis.correctionAnchors?.length ?? 0) === 0}
-                      onClick={() => void undoLastAnchor()}
-                    >
-                      <Undo2 className="h-3.5 w-3.5" />
-                      Undo last local anchor
-                    </Button>
-                  </div>
-                </details>
-              ) : null}
+            <div className="mt-3 space-y-3">
+              <section className="space-y-1.5">
+                <div className="flex items-center justify-between gap-2 text-[10px]">
+                  <span className="font-medium text-foreground">Bar 1 / phase</span>
+                  <span className="font-mono text-muted-foreground">
+                    {effectiveAnalysis.barOneVerified ? 'verified' : 'detected'}
+                  </span>
+                </div>
+                <div className="grid grid-cols-2 gap-1.5">
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    disabled={!timelineGrid || timelineGrid.barOneTimelineTime === null}
+                    onClick={focusBarOneOnTimeline}
+                  >
+                    Show Bar 1
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    disabled={!timelineGrid}
+                    onClick={() => void setBarOneAtPlayhead()}
+                  >
+                    Set Bar 1 here
+                  </Button>
+                </div>
+              </section>
 
               <details className="border-t border-border/70 pt-2">
-                <summary className="cursor-pointer list-none text-[10px] font-medium text-muted-foreground marker:hidden [&::-webkit-details-marker]:hidden">
-                  Manual timing
+                <summary className="flex cursor-pointer list-none items-center justify-between gap-2 text-[10px] font-medium text-muted-foreground marker:hidden [&::-webkit-details-marker]:hidden">
+                  <span>Tempo / drift</span>
+                  <span className="font-mono font-normal">
+                    {gridMode === 'fixed' ? 'Fixed' : 'Detected'}
+                  </span>
                 </summary>
-                <div className="mt-2 space-y-3">
+                <div className="mt-2 space-y-2">
                   <div className="flex items-center gap-1.5">
                     <input
                       type="number"
@@ -1560,7 +1492,7 @@ export function BeatvideoMusicPanel() {
                       disabled={effectiveAnalysis.musicMap.beats.length === 0}
                       onClick={() => void setGridMode('detected')}
                     >
-                      Detected timing
+                      Detected
                     </Button>
                     <Button
                       type="button"
@@ -1571,18 +1503,61 @@ export function BeatvideoMusicPanel() {
                       Fixed BPM
                     </Button>
                   </div>
-
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="ghost"
-                    className="w-full justify-start"
-                    onClick={() => void resetCorrections()}
-                  >
-                    Reset grid to analysis
-                  </Button>
                 </div>
               </details>
+
+              {gridMode === 'detected' ? (
+                <details className="border-t border-border/70 pt-2">
+                  <summary className="flex cursor-pointer list-none items-center justify-between gap-2 text-[10px] font-medium text-muted-foreground marker:hidden [&::-webkit-details-marker]:hidden">
+                    <span>Advanced local correction</span>
+                    <span className="font-mono font-normal">
+                      {effectiveAnalysis.correctionAnchors?.length ?? 0}
+                    </span>
+                  </summary>
+                  <div className="mt-2 space-y-1.5">
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      className="w-full justify-start"
+                      disabled={!timelineGrid}
+                      onClick={focusCurrentBeatOnTimeline}
+                    >
+                      Focus nearest beat
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      className="w-full justify-start"
+                      disabled={!timelineGrid}
+                      onClick={() => void alignNearestBeatToPlayhead()}
+                    >
+                      Pin nearest beat here
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="ghost"
+                      className="w-full justify-start"
+                      disabled={(effectiveAnalysis.correctionAnchors?.length ?? 0) === 0}
+                      onClick={() => void removeLastLocalAnchor()}
+                    >
+                      Remove last local correction
+                    </Button>
+                  </div>
+                </details>
+              ) : null}
+
+              <Button
+                type="button"
+                size="sm"
+                variant="ghost"
+                className="w-full justify-start"
+                onClick={() => void resetCorrections()}
+              >
+                Reset to detected analysis
+              </Button>
             </div>
           </details>
         ) : null}

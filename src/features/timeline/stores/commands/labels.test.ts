@@ -72,6 +72,17 @@ describe('formatTimelineCommandLabel', () => {
     ).toBe('Update project settings')
   })
 
+  it('formats Beat grid history labels as producer actions', () => {
+    expect(formatTimelineCommandLabel({ type: 'ADJUST_BEAT_GRID_PHASE' }))
+      .toBe('Adjust Beat grid phase')
+    expect(formatTimelineCommandLabel({ type: 'SET_BEAT_GRID_TEMPO' }))
+      .toBe('Set Beat grid tempo')
+    expect(formatTimelineCommandLabel({ type: 'ADD_BEAT_GRID_ANCHOR' }))
+      .toBe('Add Beat grid correction')
+    expect(formatTimelineCommandLabel({ type: 'RESET_BEAT_GRID' }))
+      .toBe('Reset Beat grid')
+  })
+
   it('falls back to title-cased command type', () => {
     const label = formatTimelineCommandLabel({
       type: 'MOVE_ITEMS',

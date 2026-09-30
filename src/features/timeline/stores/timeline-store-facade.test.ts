@@ -551,6 +551,116 @@ describe('TimelineStoreFacade', () => {
       )
     })
 
+    it('undoes and redoes project Beatvideo timing corrections', async () => {
+      const originalAnalysis = {
+        version: 2 as const,
+        mediaId: 'beat-media',
+        analyzedAt: 1,
+        analysisRevision: 6,
+        musicMap: {
+          duration: 8,
+          bpm: 120,
+          beatsPerBar: 4,
+          beats: [
+            { time: 0.5, index: 0, downbeat: true, strength: 1 },
+            { time: 1, index: 1, downbeat: false, strength: 0.7 },
+          ],
+          sections: [],
+        },
+        detectedBarOneTime: 0.5,
+        barOneTime: 0.5,
+        barOneVerified: false,
+        bpmOverride: null,
+        gridMode: 'detected' as const,
+        correctionAnchors: [],
+      }
+      const correctedAnalysis = {
+        ...originalAnalysis,
+        barOneTime: 0.62,
+        barOneVerified: true,
+      }
+
+      useProjectStore.setState({
+        projects: [
+          {
+            id: 'project-1',
+            name: 'Test Project',
+            description: '',
+            createdAt: 1,
+            updatedAt: 1,
+            duration: 0,
+            metadata: {
+              width: 1920,
+              height: 1080,
+              fps: 30,
+              backgroundColor: '#000000',
+            },
+            beatvideoMusic: originalAnalysis,
+          },
+        ],
+        currentProject: {
+          id: 'project-1',
+          name: 'Test Project',
+          description: '',
+          createdAt: 1,
+          updatedAt: 1,
+          duration: 0,
+          metadata: {
+            width: 1920,
+            height: 1080,
+            fps: 30,
+            backgroundColor: '#000000',
+          },
+          beatvideoMusic: originalAnalysis,
+        },
+      })
+
+      const beforeSnapshot = captureSnapshot()
+      useProjectStore.setState((state) => ({
+        currentProject: state.currentProject
+          ? {
+              ...state.currentProject,
+              beatvideoMusic: correctedAnalysis,
+            }
+          : null,
+        projects: state.projects.map((project) =>
+          project.id === 'project-1'
+            ? {
+                ...project,
+                beatvideoMusic: correctedAnalysis,
+              }
+            : project,
+        ),
+      }))
+      useTimelineCommandStore
+        .getState()
+        .addUndoEntry(
+          { type: 'ADJUST_BEAT_GRID_PHASE' },
+          beforeSnapshot,
+        )
+
+      expect(useProjectStore.getState().currentProject?.beatvideoMusic?.barOneTime).toBe(0.62)
+
+      useTimelineCommandStore.getState().undo()
+      expect(useProjectStore.getState().currentProject?.beatvideoMusic?.barOneTime).toBe(0.5)
+      expect(useProjectStore.getState().currentProject?.beatvideoMusic?.barOneVerified).toBe(false)
+
+      useTimelineCommandStore.getState().redo()
+      expect(useProjectStore.getState().currentProject?.beatvideoMusic?.barOneTime).toBe(0.62)
+      expect(useProjectStore.getState().currentProject?.beatvideoMusic?.barOneVerified).toBe(true)
+
+      await Promise.resolve()
+      expect(indexedDbMocks.updateProject).toHaveBeenCalledWith(
+        'project-1',
+        expect.objectContaining({
+          beatvideoMusic: expect.objectContaining({
+            barOneTime: 0.62,
+            barOneVerified: true,
+          }),
+        }),
+      )
+    })
+
     it('collapses multiple rate-stretch preview steps into one undo entry when committed once', () => {
       useItemsStore.getState().setTracks([
         {
