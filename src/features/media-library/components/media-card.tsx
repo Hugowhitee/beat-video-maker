@@ -1628,8 +1628,8 @@ const MediaCardInternal = memo(function MediaCardInternal({
           ${CARD_LIST_BASE}
           ${
             selected
-              ? 'border-primary ring-1 ring-primary/20'
-              : 'border-border hover:border-primary/50'
+              ? 'border-primary bg-primary/[0.035]'
+              : 'border-border hover:border-foreground/30 hover:bg-secondary/15'
           }
           ${isPreparingMedia ? 'opacity-80 cursor-default' : 'cursor-grab active:cursor-grabbing'}
         `}
@@ -1726,16 +1726,9 @@ const MediaCardInternal = memo(function MediaCardInternal({
                   <span className="text-[10px] text-muted-foreground">{preparingLabel}</span>
                 ) : (
                   <>
-                    <div
-                      className={`flex flex-shrink-0 items-center gap-1 rounded px-1 py-0.5 ${mediaTypeBadgeClass}`}
-                      title="Drag to timeline"
-                    >
-                      {mediaType === 'video' && <Video className="h-2.5 w-2.5" />}
-                      {mediaType === 'audio' && <FileAudio className="h-2.5 w-2.5" />}
-                      {mediaType === 'image' && <ImageIcon className="h-2.5 w-2.5" />}
-                      {mediaType === 'lottie' && <FileJson className="h-2.5 w-2.5" />}
-                      <span className="text-[8px] font-semibold tracking-wide">{mediaTypeLabel}</span>
-                    </div>
+                    <span className="w-10 flex-shrink-0 font-mono text-[8px] font-medium tracking-wide text-muted-foreground">
+                      {mediaTypeLabel}
+                    </span>
                     <h3 className="text-xs font-medium text-foreground truncate">
                       {media.fileName}
                     </h3>
