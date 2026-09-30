@@ -833,6 +833,7 @@ const beatvideoMusicAnalysisSchema = z.object({
   mediaId: z.string().min(1),
   analyzedAt: z.number().int().min(0),
   analysisRevision: z.number().int().positive().optional(),
+  autoRefreshAttemptedRevision: z.number().int().positive().optional(),
   musicMap: beatvideoMusicMapSchema,
   detectedBarOneTime: z.number().min(0).nullable(),
   barOneTime: z.number().min(0).nullable(),

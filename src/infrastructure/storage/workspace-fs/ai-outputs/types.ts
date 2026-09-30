@@ -8,6 +8,7 @@
  */
 
 import type { MediaCaption } from '@/infrastructure/analysis/media-tagger'
+import type { MusicMap } from '@/types/beatvideo'
 import type {
   MediaTranscript,
   MediaTranscriptModel,
@@ -21,7 +22,7 @@ import type {
  * 3. (Optional) Add a thin wrapper in `workspace-fs/` that calls
  *    `readAiOutput/writeAiOutput` with that kind.
  */
-export type AiOutputKind = 'transcript' | 'captions' | 'scenes'
+export type AiOutputKind = 'transcript' | 'captions' | 'scenes' | 'music-analysis'
 
 /**
  * Typed payload per kind. Matches the `data` field on `AiOutput<T>`.
@@ -31,6 +32,7 @@ export interface AiOutputPayloads {
   transcript: TranscriptPayload
   captions: CaptionsPayload
   scenes: ScenesPayload
+  'music-analysis': MusicAnalysisPayload
 }
 
 /**
@@ -109,6 +111,21 @@ export interface ScenesPayload {
   sampleIntervalMs?: number
   verificationModel?: string
   cuts: SceneCutPayload[]
+}
+
+export interface MusicAnalysisSourceFingerprint {
+  contentHash?: string
+  fileSize: number
+  fileLastModified?: number
+  duration: number
+  mimeType: string
+}
+
+export interface MusicAnalysisPayload {
+  analysisRevision: number
+  sourceFingerprint: MusicAnalysisSourceFingerprint
+  musicMap: MusicMap
+  detectedBarOneTime: number | null
 }
 
 /* ───────────────── Conversions ───────────────── */

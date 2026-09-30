@@ -134,6 +134,12 @@ export {
 // Scene-detection results
 export { deleteScenes } from '@/infrastructure/storage/workspace-fs/scenes'
 
+// Source-level Beatvideo rhythm evidence
+export {
+  loadBeatvideoMusicEvidence,
+  saveBeatvideoMusicEvidence,
+} from '@/infrastructure/storage/workspace-fs/music-analysis'
+
 // Generic AI-output envelope (use these directly for new AI services)
 export { readAiOutput } from '@/infrastructure/storage/workspace-fs/ai-outputs'
 

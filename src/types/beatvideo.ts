@@ -162,6 +162,8 @@ export type BeatvideoMusicAnalysis = {
   analyzedAt: number
   /** Detector/reconciliation revision; independent from the correction-coordinate schema version. */
   analysisRevision?: number
+  /** Persisted one-shot guard for automatic stale-analysis migration. Manual Re-analyze ignores it. */
+  autoRefreshAttemptedRevision?: number
   musicMap: MusicMap
   /**
    * A detected downbeat is useful evidence but not treated as user-verified bar 1.

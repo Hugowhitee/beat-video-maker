@@ -3,6 +3,11 @@ export {
   type MusicAnalysisProgress,
 } from '@/features/auto-edit/musicAnalysis'
 export {
+  loadCachedBeatvideoMusicEvidence,
+  mergeBeatvideoMusicEvidenceIntoProject,
+  resolveBeatvideoMusicEvidence,
+} from '@/features/auto-edit/music-analysis-cache'
+export {
   getBeatvideoGridMode,
   resolveBeatvideoMusicGrid,
 } from '@/shared/beatvideo/music-grid'

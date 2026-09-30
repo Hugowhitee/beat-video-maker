@@ -11,6 +11,9 @@ import { Button } from '@/components/ui/button'
 import { BeatvideoFileMetadata } from './beatvideo-file-metadata'
 import {
   analyzeMusicMedia,
+  loadCachedBeatvideoMusicEvidence,
+  mergeBeatvideoMusicEvidenceIntoProject,
+  resolveBeatvideoMusicEvidence,
   getBeatvideoGridMode,
   resolveBeatvideoMusicGrid,
   resolveBeatvideoTimelineGrid,
@@ -163,6 +166,7 @@ export function BeatvideoMusicPanel() {
   const abortRef = useRef<AbortController | null>(null)
   const pendingAutoAnalyzeMediaIdRef = useRef<string | null>(null)
   const attemptedRevisionRefreshMediaIdRef = useRef<string | null>(null)
+  const attemptedCacheRestoreKeyRef = useRef<string | null>(null)
 
   const selectedAnalysis =
     analysis?.mediaId === selectedMediaId ? analysis : null
@@ -464,112 +468,148 @@ export function BeatvideoMusicPanel() {
     ],
   )
 
-  const analyze = useCallback(async () => {
-    if (!selectedMediaId || !currentProject || analyzing) return
+  const analyze = useCallback(
+    async (options: { force?: boolean; quietSuccess?: boolean } = {}) => {
+      if (!selectedMediaId || !selectedMedia || !currentProject || analyzing) return
 
-    abortRef.current?.abort()
-    const controller = new AbortController()
-    abortRef.current = controller
-    setAnalyzing(true)
-    setProgress({
-      phase: 'decode',
-      progress: 0,
-      overallProgress: 0,
-      detail: 'Starting',
-    })
-
-    try {
-      await ensureBeatPlacement(selectedMediaId)
-      const result = await analyzeMusicMedia(selectedMediaId, {
-        signal: controller.signal,
-        onProgress: setProgress,
+      abortRef.current?.abort()
+      const controller = new AbortController()
+      abortRef.current = controller
+      setAnalyzing(true)
+      setProgress({
+        phase: 'decode',
+        progress: 0,
+        overallProgress: 0,
+        detail: 'Starting',
       })
-      if (result.musicMap.beats.length === 0) {
-        throw new Error('No usable beats were detected. Try a clean music file or re-run analysis.')
-      }
 
-      const detectedBarOneTime =
-        result.musicMap.beats.find((beat) => beat.downbeat)?.time ??
-        result.musicMap.beats[0]?.time ??
-        null
-      const next: BeatvideoMusicAnalysis = {
-        version: 2,
-        mediaId: selectedMediaId,
-        analyzedAt: Date.now(),
-        analysisRevision: BEATVIDEO_ANALYSIS_REVISION,
-        musicMap: result.musicMap,
-        detectedBarOneTime,
-        barOneTime: detectedBarOneTime,
-        barOneVerified: false,
-        bpmOverride: null,
-        gridMode: 'detected',
-        correctionAnchors: [],
-      }
+      try {
+        await ensureBeatPlacement(selectedMediaId)
+        const resolved = await resolveBeatvideoMusicEvidence({
+          media: selectedMedia,
+          analysisRevision: BEATVIDEO_ANALYSIS_REVISION,
+          force: options.force,
+          analyze: () =>
+            analyzeMusicMedia(selectedMediaId, {
+              signal: controller.signal,
+              onProgress: setProgress,
+            }),
+        })
 
-      await persistAnalysis(next)
-
-      const timeline = useTimelineStore.getState()
-      const refreshedGrid = resolveBeatvideoTimelineGrid(next, timeline.items, timeline.fps)
-      if (refreshedGrid) {
-        const reactiveUpdates = timeline.items.flatMap((item) =>
-          item.audioReactive?.bindings.length
-            ? [{
-                itemId: item.id,
-                audioReactive: {
-                  ...item.audioReactive,
-                  beats: projectAudioReactiveBeatsToItem(
-                    refreshedGrid.grid,
-                    item,
-                    timeline.fps,
-                  ),
-                  transients: projectAudioReactiveTransientsToItem(
-                    refreshedGrid.grid,
-                    item,
-                    timeline.fps,
-                  ),
-                },
-              }]
-            : [],
+        const next = mergeBeatvideoMusicEvidenceIntoProject(
+          resolved.evidence,
+          selectedAnalysis,
         )
-        timeline.setAudioReactiveStates(reactiveUpdates)
-      }
+        await persistAnalysis(next)
 
-      if (currentProject.beatvideoMode === 'photo') {
-        const covers = timeline.items.filter((item) => item.type === 'image')
-        if (covers.length === 1) {
-          const cover = covers[0]!
-          const durationInFrames = Math.max(1, Math.round(result.musicMap.duration * timeline.fps))
-          if (cover.from !== 0 || cover.durationInFrames !== durationInFrames) {
-            timeline.updateItem(cover.id, { from: 0, durationInFrames })
+        const timeline = useTimelineStore.getState()
+        const refreshedGrid = resolveBeatvideoTimelineGrid(next, timeline.items, timeline.fps)
+        if (refreshedGrid) {
+          const reactiveUpdates = timeline.items.flatMap((item) =>
+            item.audioReactive?.bindings.length
+              ? [{
+                  itemId: item.id,
+                  audioReactive: {
+                    ...item.audioReactive,
+                    beats: projectAudioReactiveBeatsToItem(
+                      refreshedGrid.grid,
+                      item,
+                      timeline.fps,
+                    ),
+                    transients: projectAudioReactiveTransientsToItem(
+                      refreshedGrid.grid,
+                      item,
+                      timeline.fps,
+                    ),
+                  },
+                }]
+              : [],
+          )
+          timeline.setAudioReactiveStates(reactiveUpdates)
+        }
+
+        if (currentProject.beatvideoMode === 'photo') {
+          const covers = timeline.items.filter((item) => item.type === 'image')
+          if (covers.length === 1) {
+            const cover = covers[0]!
+            const durationInFrames = Math.max(
+              1,
+              Math.round(resolved.evidence.musicMap.duration * timeline.fps),
+            )
+            if (cover.from !== 0 || cover.durationInFrames !== durationInFrames) {
+              timeline.updateItem(cover.id, { from: 0, durationInFrames })
+            }
           }
         }
-      }
 
-      if (result.warnings.length > 0) {
-        toast.warning('Beat analysis finished with warnings', {
-          description: result.warnings[0],
-        })
-      } else {
-        toast.success('Beat grid ready')
+        if (!options.quietSuccess) {
+          if (resolved.warnings.length > 0) {
+            toast.warning('Beat analysis finished with warnings', {
+              description: resolved.warnings[0],
+            })
+          } else {
+            toast.success(
+              resolved.source === 'cache' ? 'Saved beat grid loaded' : 'Beat grid ready',
+            )
+          }
+        }
+      } catch (error) {
+        if (!(error instanceof DOMException && error.name === 'AbortError')) {
+          toast.error('Beat analysis failed', {
+            description: error instanceof Error ? error.message : String(error),
+          })
+        }
+      } finally {
+        if (abortRef.current === controller) abortRef.current = null
+        setAnalyzing(false)
+        setProgress(null)
       }
-    } catch (error) {
-      if (!(error instanceof DOMException && error.name === 'AbortError')) {
-        toast.error('Beat analysis failed', {
-          description: error instanceof Error ? error.message : String(error),
-        })
-      }
-    } finally {
-      if (abortRef.current === controller) abortRef.current = null
-      setAnalyzing(false)
-      setProgress(null)
+    },
+    [
+      analyzing,
+      currentProject,
+      ensureBeatPlacement,
+      persistAnalysis,
+      selectedAnalysis,
+      selectedMedia,
+      selectedMediaId,
+    ],
+  )
+
+  useEffect(() => {
+    if (
+      analyzing ||
+      selectedAnalysis ||
+      !selectedMedia ||
+      !currentProject ||
+      pendingAutoAnalyzeMediaIdRef.current === selectedMedia.id
+    ) {
+      return
     }
-  }, [
-    analyzing,
-    currentProject,
-    ensureBeatPlacement,
-    persistAnalysis,
-    selectedMediaId,
-  ])
+
+    const restoreKey = currentProject.id + ':' + selectedMedia.id
+    if (attemptedCacheRestoreKeyRef.current === restoreKey) return
+    attemptedCacheRestoreKeyRef.current = restoreKey
+    let cancelled = false
+
+    void (async () => {
+      const evidence = await loadCachedBeatvideoMusicEvidence(
+        selectedMedia,
+        BEATVIDEO_ANALYSIS_REVISION,
+      )
+      if (cancelled || !evidence) return
+      await persistAnalysis(mergeBeatvideoMusicEvidenceIntoProject(evidence, null))
+    })().catch((error) => {
+      if (cancelled) return
+      toast.error('Could not load saved beat analysis', {
+        description: error instanceof Error ? error.message : String(error),
+      })
+    })
+
+    return () => {
+      cancelled = true
+    }
+  }, [analyzing, currentProject, persistAnalysis, selectedAnalysis, selectedMedia])
 
   useEffect(() => {
     const pendingMediaId = pendingAutoAnalyzeMediaIdRef.current
@@ -583,7 +623,7 @@ export function BeatvideoMusicPanel() {
     }
 
     pendingAutoAnalyzeMediaIdRef.current = null
-    void analyze()
+    void analyze({ force: false })
   }, [analyze, analyzing, currentProject, selectedMediaId])
 
   useEffect(() => {
@@ -598,8 +638,18 @@ export function BeatvideoMusicPanel() {
     }
 
     attemptedRevisionRefreshMediaIdRef.current = selectedAnalysis.mediaId
-    void analyze()
-  }, [analyze, analyzing, currentProject, selectedAnalysis])
+    void (async () => {
+      await persistAnalysis({
+        ...selectedAnalysis,
+        autoRefreshAttemptedRevision: BEATVIDEO_ANALYSIS_REVISION,
+      })
+      await analyze({ force: false, quietSuccess: true })
+    })().catch((error) => {
+      toast.error('Beat analysis update could not start', {
+        description: error instanceof Error ? error.message : String(error),
+      })
+    })
+  }, [analyze, analyzing, currentProject, persistAnalysis, selectedAnalysis])
 
   const insertTagAudio = useCallback(
     async (kind: 'producer' | 'watermark') => {
@@ -1227,7 +1277,7 @@ export function BeatvideoMusicPanel() {
                 abortRef.current?.abort()
                 return
               }
-              void analyze()
+              void analyze({ force: true })
             }}
           >
             {!analyzing ? <AudioLines className="h-3.5 w-3.5" /> : null}

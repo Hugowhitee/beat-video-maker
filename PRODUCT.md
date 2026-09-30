@@ -69,6 +69,7 @@ The canonical rule is:
 
 - FreeCut owns the time axis, playhead, waveform and click/scrub behavior;
 - Beatvideo analysis is stored in **source-media time** and is mapped through the actual FreeCut timeline clip, including move, trim, speed and reverse;
+- raw detector evidence is cached per media source + detector revision + source fingerprint under the media workspace. Projects reference that evidence while keeping Bar 1/BPM/drift corrections as project state; opening/remounting Beat must reuse current source evidence and must not start inference merely because the panel mounted;
 - never draw raw analysis seconds as absolute timeline seconds;
 - Beat This beat/downbeat positions are timing **evidence**, not automatically the final grid. For stable programmed music, fit one global tempo + phase/anchor across the track and accept it only when residual error and local tempo drift stay within confidence bounds;
 - coherent source-audio onset evidence may refine the fitted phase so a detector that consistently fires slightly after a kick/transient does not leave the visible grid late. In stable programmed music, coherent low-end/kick evidence may also repair a half-beat phase error when it clearly out-scores the detector baseline. If phase is correct near the start but the grid drifts over time, recurring low-end onsets are a second tempo measurement: robustly fit their slope across multiple song regions and only refine the global BPM when those regions agree. Sparse bass fills, isolated 808 attacks or one local phrase must never retune the whole song;

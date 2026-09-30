@@ -55,6 +55,14 @@ describe('Beatvideo analysis revision', () => {
     ).toBe(false)
   })
 
+  it('does not retry a failed automatic migration on every remount', () => {
+    expect(
+      shouldRefreshBeatvideoAnalysis(
+        analysis({ autoRefreshAttemptedRevision: BEATVIDEO_ANALYSIS_REVISION }),
+      ),
+    ).toBe(false)
+  })
+
   it('never overwrites manual timing work', () => {
     expect(shouldRefreshBeatvideoAnalysis(analysis({ barOneVerified: true }))).toBe(false)
     expect(shouldRefreshBeatvideoAnalysis(analysis({ bpmOverride: 95, gridMode: 'fixed' }))).toBe(false)

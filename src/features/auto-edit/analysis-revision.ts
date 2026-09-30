@@ -11,6 +11,7 @@ export function shouldRefreshBeatvideoAnalysis(
 ): boolean {
   if (!analysis) return false
   if ((analysis.analysisRevision ?? 0) >= BEATVIDEO_ANALYSIS_REVISION) return false
+  if ((analysis.autoRefreshAttemptedRevision ?? 0) >= BEATVIDEO_ANALYSIS_REVISION) return false
 
   const mode =
     analysis.gridMode ?? (analysis.bpmOverride !== null ? 'fixed' : 'detected')
