@@ -5,6 +5,7 @@ import {
   useRef,
   useState,
   type DragEvent,
+  type PointerEvent,
 } from 'react'
 import { useEditorStore } from '@/shared/state/editor'
 import { usePlaybackStore } from '@/shared/state/playback'
@@ -538,6 +539,33 @@ export function BeatvideoVisualSourcePanel({
     )
   }, [])
 
+  const previewArrangementShotAtPointer = useCallback(
+    (
+      event: PointerEvent<HTMLDivElement>,
+      shot: { sourceId: string; start: number; end: number },
+    ) => {
+      if (draggingShotId) return
+      const media = mediaItems.find((candidate) => candidate.id === shot.sourceId)
+      if (!media || media.fps <= 0) return
+
+      const rect = event.currentTarget.getBoundingClientRect()
+      if (rect.width <= 0) return
+      const ratio = Math.max(0, Math.min(1, (event.clientX - rect.left) / rect.width))
+      const sourceTime = shot.start + (shot.end - shot.start) * ratio
+      const sourceFrame = Math.max(0, Math.round(sourceTime * media.fps))
+
+      const playback = usePlaybackStore.getState()
+      if (playback.isPlaying) playback.pause()
+      playback.setPreviewFrame(null)
+      useEditorStore.getState().setMediaSkimPreview(shot.sourceId, sourceFrame)
+    },
+    [draggingShotId, mediaItems],
+  )
+
+  const clearArrangementShotPreview = useCallback(() => {
+    useEditorStore.getState().setMediaSkimPreview(null)
+  }, [])
+
   const focusArrangementSegment = useCallback(
     (segment: EditPlan['segments'][number]) => {
       const itemId = lastItemIdBySegmentId[segment.id]
@@ -809,7 +837,7 @@ export function BeatvideoVisualSourcePanel({
                   onChange={(event) =>
                     setTransitionProfile(event.target.value as TransitionProfile)
                   }
-                  className="h-8 w-full rounded-md border border-input bg-secondary px-2 text-xs text-foreground"
+                  className="h-8 w-full rounded-sm border border-input bg-secondary px-2 text-xs text-foreground"
                 >
                   <option value="clean">Cuts only</option>
                   <option value="accent">Accent transitions</option>
@@ -911,7 +939,17 @@ export function BeatvideoVisualSourcePanel({
                         key={key}
                         role="button"
                         tabIndex={0}
-                        onClick={() => focusArrangementSegment(segment)}
+                        onPointerEnter={(event) => {
+                          if (shot) previewArrangementShotAtPointer(event, shot)
+                        }}
+                        onPointerMove={(event) => {
+                          if (shot) previewArrangementShotAtPointer(event, shot)
+                        }}
+                        onPointerLeave={clearArrangementShotPreview}
+                        onClick={() => {
+                          clearArrangementShotPreview()
+                          focusArrangementSegment(segment)
+                        }}
                         onKeyDown={(event) => {
                           if (event.key === 'Enter' || event.key === ' ') {
                             event.preventDefault()
@@ -933,7 +971,10 @@ export function BeatvideoVisualSourcePanel({
                             )
                           }
                         }}
-                        onDrop={(event) => handleArrangementSlotDrop(event, segment)}
+                        onDrop={(event) => {
+                          clearArrangementShotPreview()
+                          handleArrangementSlotDrop(event, segment)
+                        }}
                         className={`w-32 shrink-0 cursor-pointer border bg-background outline-none transition-colors focus-visible:border-primary ${
                           isDragTarget
                             ? 'border-primary ring-1 ring-primary/40'
@@ -1002,7 +1043,7 @@ export function BeatvideoVisualSourcePanel({
               <select
                 value={selectedLoopMediaId}
                 onChange={(event) => setSelectedLoopMediaId(event.target.value)}
-                className="h-8 w-full rounded-md border border-input bg-secondary px-2 text-xs text-foreground"
+                className="h-8 w-full rounded-sm border border-input bg-secondary px-2 text-xs text-foreground"
                 aria-label="Clip used to fill beat"
               >
                 {videoCandidates.map((media) => (
