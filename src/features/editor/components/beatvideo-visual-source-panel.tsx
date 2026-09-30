@@ -8,7 +8,7 @@ import {
 } from 'react'
 import { useEditorStore } from '@/shared/state/editor'
 import { usePlaybackStore } from '@/shared/state/playback'
-import { Film, ImagePlus, Repeat2, Sparkles } from 'lucide-react'
+import { ImagePlus } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import {
@@ -595,6 +595,28 @@ export function BeatvideoVisualSourcePanel({
     )
   }, [lastItemIdBySegmentId, lastPlan, loopBlocksGrouped])
 
+  const openGeneratedInspector = useCallback(
+    (tab: 'motion' | 'effects') => {
+      const timeline = useItemsStore.getState()
+      const existingIds = new Set(timeline.items.map((item) => item.id))
+      const generatedIds = lastAppliedItemIds.filter((itemId) => existingIds.has(itemId))
+      if (generatedIds.length === 0) {
+        toast.info('Build the sequence first')
+        return
+      }
+
+      const first = timeline.items.find((item) => item.id === generatedIds[0])
+      const selection = useSelectionStore.getState()
+      if (first) selection.setActiveTrack(first.trackId)
+      selection.selectItems(generatedIds)
+
+      const editor = useEditorStore.getState()
+      editor.setRightSidebarOpen(true)
+      editor.setClipInspectorTab(tab)
+    },
+    [lastAppliedItemIds],
+  )
+
   const loopVideoToBeat = useCallback(async () => {
     const media = videoCandidates.find((candidate) => candidate.id === selectedLoopMediaId)
     if (!media || media.duration <= 0) {
@@ -668,12 +690,11 @@ export function BeatvideoVisualSourcePanel({
   }
 
   return (
-    <section className="max-h-[62vh] shrink-0 space-y-3 overflow-y-auto border-b border-border bg-secondary/10 px-3 py-3">
+    <section className="max-h-[62vh] shrink-0 space-y-3 overflow-y-auto border-b border-border px-2.5 py-2">
       <div className="flex items-center justify-between gap-2">
-        <div className="flex min-w-0 items-center gap-2">
-          <Film className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+        <div className="min-w-0">
           <div className="min-w-0">
-            <div className="text-xs font-medium text-foreground">Footage</div>
+            <div className="text-[11px] font-medium text-foreground">Footage</div>
             <div className="font-mono text-[9px] text-muted-foreground">
               {videoCandidates.length === 0
                 ? 'No video added'
@@ -690,7 +711,6 @@ export function BeatvideoVisualSourcePanel({
         disabled={importingFootage || preparingFootage || autoArranging}
         onClick={() => void importFootage()}
       >
-        <Film className="h-3.5 w-3.5" />
         {importingFootage ? 'Importing footage…' : 'Add footage'}
       </Button>
 
@@ -774,7 +794,7 @@ export function BeatvideoVisualSourcePanel({
                 <select
                   value={arrangePace}
                   onChange={(event) => setArrangePace(event.target.value as EditPace)}
-                  className="h-8 w-full rounded-md border border-input bg-secondary px-2 text-xs text-foreground"
+                  className="h-8 w-full rounded-sm border border-input bg-secondary px-2 text-xs text-foreground"
                 >
                   <option value="relaxed">Relaxed</option>
                   <option value="balanced">Balanced</option>
@@ -803,7 +823,7 @@ export function BeatvideoVisualSourcePanel({
                 <select
                   value={loopBars}
                   onChange={(event) => setLoopBars(Number(event.target.value))}
-                  className="h-8 rounded-md border border-input bg-secondary px-2 text-xs text-foreground"
+                  className="h-8 rounded-sm border border-input bg-secondary px-2 text-xs text-foreground"
                 >
                   <option value={2}>2 bars</option>
                   <option value={4}>4 bars</option>
@@ -828,7 +848,6 @@ export function BeatvideoVisualSourcePanel({
               disabled={!timelineGrid || preparingFootage || autoArranging || loopBlocksGrouped}
               onClick={() => void autoArrangeFootage()}
             >
-              <Sparkles className="h-3.5 w-3.5" />
               {autoArranging
                 ? 'Building…'
                 : lastPlan
@@ -836,8 +855,27 @@ export function BeatvideoVisualSourcePanel({
                   : 'Build sequence'}
             </Button>
 
-            <div className="mt-2 text-[8px] leading-relaxed text-muted-foreground">
-              Generated cuts land on the corrected music grid. Footage audio stays muted.
+            {lastAppliedItemIds.length > 0 && !loopBlocksGrouped ? (
+              <div className="mt-2 flex items-center gap-3 border-t border-border/70 pt-2 text-[9px]">
+                <span className="text-muted-foreground">Generated clips</span>
+                <button
+                  type="button"
+                  className="text-foreground hover:text-primary"
+                  onClick={() => openGeneratedInspector('motion')}
+                >
+                  Motion for all
+                </button>
+                <button
+                  type="button"
+                  className="text-foreground hover:text-primary"
+                  onClick={() => openGeneratedInspector('effects')}
+                >
+                  Effects for all
+                </button>
+              </div>
+            ) : null}
+            <div className="mt-2 font-mono text-[8px] leading-relaxed text-muted-foreground">
+              Cuts: corrected beat grid · source audio: muted
             </div>
           </div>
 
@@ -944,7 +982,6 @@ export function BeatvideoVisualSourcePanel({
               className="w-full justify-start"
               onClick={groupLoopRepeats}
             >
-              <Repeat2 className="h-3.5 w-3.5" />
               Link repeats as Loop A
             </Button>
           ) : null}
@@ -982,7 +1019,6 @@ export function BeatvideoVisualSourcePanel({
                 disabled={preparingFootage || autoArranging}
                 onClick={() => void loopVideoToBeat()}
               >
-                <Repeat2 className="h-3.5 w-3.5" />
                 Fill beat with selected clip
               </Button>
             </div>
