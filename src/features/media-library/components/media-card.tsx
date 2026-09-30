@@ -1578,14 +1578,27 @@ const MediaCardInternal = memo(function MediaCardInternal({
           : mediaType === 'lottie'
             ? 'MOTION'
             : 'MEDIA'
-  const mediaTypeBadgeClass =
+  const mediaDetailsLabel =
     mediaType === 'video'
-      ? 'bg-sky-500/90 text-white'
-      : mediaType === 'audio'
-        ? 'bg-emerald-500/90 text-black'
-        : mediaType === 'image'
-          ? 'bg-violet-500/90 text-white'
-          : 'bg-fuchsia-500/90 text-white'
+      ? [
+          media.width && media.height ? String(media.width) + '×' + String(media.height) : null,
+          media.fps ? String(Number(media.fps.toFixed(2))) + ' fps' : null,
+        ]
+          .filter(Boolean)
+          .join(' · ')
+      : mediaType === 'image'
+        ? media.width && media.height
+          ? String(media.width) + '×' + String(media.height)
+          : ''
+        : mediaType === 'audio'
+          ? 'Audio'
+          : mediaType === 'lottie'
+            ? 'Motion graphic'
+            : ''
+  const skimTimeLabel =
+    canScrubPreview && skimProgress !== null && media.duration > 0
+      ? formatDuration(media.duration * skimProgress)
+      : null
 
   const getIcon = () => {
     switch (mediaType) {
