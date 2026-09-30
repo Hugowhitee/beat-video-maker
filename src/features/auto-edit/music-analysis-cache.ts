@@ -67,6 +67,37 @@ export function beatvideoMusicProjectAnalysisMatchesSource(
   return beatvideoMusicSourceFingerprintMatches(analysis.sourceFingerprint, media)
 }
 
+export async function adoptBeatvideoMusicProjectEvidence(
+  params: {
+    media: BeatvideoMusicSourceMedia
+    analysis: BeatvideoMusicAnalysis
+    analysisRevision: number
+  },
+  dependencies: EvidenceDependencies = defaultEvidenceDependencies,
+): Promise<SavedBeatvideoMusicEvidence | undefined> {
+  const { media, analysis, analysisRevision } = params
+  if (analysis.mediaId !== media.id) return undefined
+  if (analysis.sourceFingerprint) return undefined
+  if ((analysis.analysisRevision ?? 0) !== analysisRevision) return undefined
+
+  // Legacy project analysis predates source fingerprints. If the filesystem
+  // explicitly says the source changed after that analysis was created, do not
+  // bless stale project evidence as source truth.
+  if (
+    media.fileLastModified !== undefined &&
+    media.fileLastModified > analysis.analyzedAt
+  ) {
+    return undefined
+  }
+
+  return dependencies.save({
+    media,
+    analysisRevision,
+    musicMap: analysis.musicMap,
+    detectedBarOneTime: analysis.detectedBarOneTime,
+  })
+}
+
 export async function loadCachedBeatvideoMusicEvidence(
   media: BeatvideoMusicSourceMedia,
   analysisRevision: number,

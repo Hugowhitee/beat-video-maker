@@ -5,6 +5,7 @@ import type {
   SavedBeatvideoMusicEvidence,
 } from './deps/analysis-contract'
 import {
+  adoptBeatvideoMusicProjectEvidence,
   mergeBeatvideoMusicEvidenceIntoProject,
   resolveBeatvideoMusicEvidence,
 } from './music-analysis-cache'
@@ -55,6 +56,55 @@ function previous(overrides: Partial<BeatvideoMusicAnalysis> = {}): BeatvideoMus
 }
 
 describe('Beatvideo source music analysis cache', () => {
+  it('adopts current legacy project evidence into the source cache without inference', async () => {
+    const load = vi.fn()
+    const save = vi.fn().mockResolvedValue(evidence)
+    const legacy = previous({
+      analyzedAt: 20,
+      analysisRevision: 6,
+      barOneTime: 0.65,
+      barOneVerified: true,
+    })
+
+    const adopted = await adoptBeatvideoMusicProjectEvidence(
+      {
+        media,
+        analysis: legacy,
+        analysisRevision: 6,
+      },
+      { load, save },
+    )
+
+    expect(adopted).toBe(evidence)
+    expect(save).toHaveBeenCalledWith({
+      media,
+      analysisRevision: 6,
+      musicMap: legacy.musicMap,
+      detectedBarOneTime: legacy.detectedBarOneTime,
+    })
+  })
+
+  it('does not adopt legacy project evidence when the source was modified after analysis', async () => {
+    const load = vi.fn()
+    const save = vi.fn()
+    const legacy = previous({
+      analyzedAt: 5,
+      analysisRevision: 6,
+    })
+
+    const adopted = await adoptBeatvideoMusicProjectEvidence(
+      {
+        media,
+        analysis: legacy,
+        analysisRevision: 6,
+      },
+      { load, save },
+    )
+
+    expect(adopted).toBeUndefined()
+    expect(save).not.toHaveBeenCalled()
+  })
+
   it('reuses current cached source evidence without invoking the analyzer', async () => {
     const analyze = vi.fn()
     const load = vi.fn().mockResolvedValue(evidence)

@@ -10,6 +10,7 @@ import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { BeatvideoFileMetadata } from './beatvideo-file-metadata'
 import {
+  adoptBeatvideoMusicProjectEvidence,
   analyzeMusicMedia,
   beatvideoMusicProjectAnalysisMatchesSource,
   loadCachedBeatvideoMusicEvidence,
@@ -173,11 +174,22 @@ export function BeatvideoMusicPanel() {
     () => candidates.find((media) => media.id === selectedMediaId) ?? null,
     [candidates, selectedMediaId],
   )
+  const selectedProjectAnalysis =
+    analysis?.mediaId === selectedMediaId ? analysis : null
   const selectedAnalysis =
-    analysis?.mediaId === selectedMediaId &&
+    selectedProjectAnalysis &&
     selectedMedia &&
-    beatvideoMusicProjectAnalysisMatchesSource(analysis, selectedMedia)
-      ? analysis
+    beatvideoMusicProjectAnalysisMatchesSource(selectedProjectAnalysis, selectedMedia)
+      ? selectedProjectAnalysis
+      : null
+  const mergeableProjectAnalysis =
+    selectedProjectAnalysis &&
+    selectedMedia &&
+    (
+      !selectedProjectAnalysis.sourceFingerprint ||
+      beatvideoMusicProjectAnalysisMatchesSource(selectedProjectAnalysis, selectedMedia)
+    )
+      ? selectedProjectAnalysis
       : null
   const timelineGrid = useMemo(
     () =>
@@ -502,7 +514,7 @@ export function BeatvideoMusicPanel() {
 
         const next = mergeBeatvideoMusicEvidenceIntoProject(
           resolved.evidence,
-          analysis?.mediaId === selectedMediaId ? analysis : null,
+          mergeableProjectAnalysis,
         )
         await persistAnalysis(next)
 
@@ -574,7 +586,7 @@ export function BeatvideoMusicPanel() {
       currentProject,
       ensureBeatPlacement,
       persistAnalysis,
-      analysis,
+      mergeableProjectAnalysis,
       selectedMedia,
       selectedMediaId,
     ],
@@ -597,15 +609,26 @@ export function BeatvideoMusicPanel() {
     let cancelled = false
 
     void (async () => {
-      const evidence = await loadCachedBeatvideoMusicEvidence(
+      let evidence = await loadCachedBeatvideoMusicEvidence(
         selectedMedia,
         BEATVIDEO_ANALYSIS_REVISION,
       )
+      if (
+        !evidence &&
+        selectedProjectAnalysis &&
+        !selectedProjectAnalysis.sourceFingerprint
+      ) {
+        evidence = await adoptBeatvideoMusicProjectEvidence({
+          media: selectedMedia,
+          analysis: selectedProjectAnalysis,
+          analysisRevision: BEATVIDEO_ANALYSIS_REVISION,
+        })
+      }
       if (cancelled || !evidence) return
       await persistAnalysis(
         mergeBeatvideoMusicEvidenceIntoProject(
           evidence,
-          analysis?.mediaId === selectedMediaId ? analysis : null,
+          mergeableProjectAnalysis,
         ),
       )
     })().catch((error) => {
@@ -618,7 +641,15 @@ export function BeatvideoMusicPanel() {
     return () => {
       cancelled = true
     }
-  }, [analysis, analyzing, currentProject, persistAnalysis, selectedAnalysis, selectedMedia, selectedMediaId])
+  }, [
+    analyzing,
+    currentProject,
+    mergeableProjectAnalysis,
+    persistAnalysis,
+    selectedAnalysis,
+    selectedMedia,
+    selectedProjectAnalysis,
+  ])
 
   useEffect(() => {
     const pendingMediaId = pendingAutoAnalyzeMediaIdRef.current
@@ -636,20 +667,32 @@ export function BeatvideoMusicPanel() {
   }, [analyze, analyzing, currentProject, selectedMediaId])
 
   useEffect(() => {
+    const sourceCompatible =
+      !!selectedProjectAnalysis &&
+      !!selectedMedia &&
+      (
+        !selectedProjectAnalysis.sourceFingerprint ||
+        beatvideoMusicProjectAnalysisMatchesSource(
+          selectedProjectAnalysis,
+          selectedMedia,
+        )
+      )
+
     if (
       analyzing ||
-      !selectedAnalysis ||
+      !selectedProjectAnalysis ||
+      !sourceCompatible ||
       !currentProject ||
-      !shouldRefreshBeatvideoAnalysis(selectedAnalysis) ||
-      attemptedRevisionRefreshMediaIdRef.current === selectedAnalysis.mediaId
+      !shouldRefreshBeatvideoAnalysis(selectedProjectAnalysis) ||
+      attemptedRevisionRefreshMediaIdRef.current === selectedProjectAnalysis.mediaId
     ) {
       return
     }
 
-    attemptedRevisionRefreshMediaIdRef.current = selectedAnalysis.mediaId
+    attemptedRevisionRefreshMediaIdRef.current = selectedProjectAnalysis.mediaId
     void (async () => {
       await persistAnalysis({
-        ...selectedAnalysis,
+        ...selectedProjectAnalysis,
         autoRefreshAttemptedRevision: BEATVIDEO_ANALYSIS_REVISION,
       })
       await analyze({ force: false, quietSuccess: true })
@@ -658,7 +701,14 @@ export function BeatvideoMusicPanel() {
         description: error instanceof Error ? error.message : String(error),
       })
     })
-  }, [analyze, analyzing, currentProject, persistAnalysis, selectedAnalysis])
+  }, [
+    analyze,
+    analyzing,
+    currentProject,
+    persistAnalysis,
+    selectedMedia,
+    selectedProjectAnalysis,
+  ])
 
   const insertTagAudio = useCallback(
     async (kind: 'producer' | 'watermark') => {
