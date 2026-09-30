@@ -1887,20 +1887,18 @@ const MediaCardInternal = memo(function MediaCardInternal({
                 )}
             </div>
 
-            {/* Content footer - minimal */}
-            <div className="px-1.5 py-1 bg-panel-bg/50 flex-shrink-0">
-              <div className="flex items-center justify-between gap-1">
-                <div className="flex-1 min-w-0">
-                  <h3 className="text-[10px] font-medium text-foreground truncate group-hover:text-primary transition-colors">
-                    {media.fileName}
-                  </h3>
-                </div>
+            <div className="flex-shrink-0 border-t border-border/80 bg-background px-2 py-1.5">
+              <h3 className="truncate text-[10px] font-medium leading-4 text-foreground">
+                {media.fileName}
+              </h3>
+              <div className="mt-0.5 flex min-w-0 items-center justify-between gap-2 font-mono text-[8px] leading-3 text-muted-foreground">
+                <span className="truncate">
+                  {mediaTypeLabel}
+                  {mediaDetailsLabel ? ' · ' + mediaDetailsLabel : ''}
+                </span>
+                {hasCaptions ? <span className="shrink-0">CAPTIONS</span> : null}
               </div>
             </div>
-
-            {/* Film strip edge detail */}
-            <div className="absolute left-0 top-0 bottom-0 w-[2px] bg-gradient-to-b from-border via-muted to-border opacity-50" />
-            <div className="absolute right-0 top-0 bottom-0 w-[2px] bg-gradient-to-b from-border via-muted to-border opacity-50" />
           </div>
         </ContextMenuTrigger>
         <ContextMenuContent onClick={(e) => e.stopPropagation()}>
