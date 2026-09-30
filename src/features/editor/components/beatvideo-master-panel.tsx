@@ -122,22 +122,34 @@ function MasterRange({
   onGestureStart: () => void
   onGestureEnd: () => void
 }) {
+  const decimals = step < 0.1 ? 2 : step < 1 ? 1 : 0
+  const scaleMidpoint = min <= 0 && max >= 0 ? 0 : (min + max) / 2
+  const formatScale = (next: number) =>
+    `${next.toFixed(decimals)}${unit ?? ''}`
+
   return (
-    <label className="grid grid-cols-[82px_1fr_62px] items-center gap-2 text-[11px]">
-      <span className="text-muted-foreground">{label}</span>
-      <input
-        type="range"
-        min={min}
-        max={max}
-        step={step}
-        value={value}
-        onPointerDown={onGestureStart}
-        onPointerUp={onGestureEnd}
-        onPointerCancel={onGestureEnd}
-        onChange={(event) => onChange(Number(event.target.value))}
-        className="min-w-0 accent-foreground"
-      />
-      <span className="text-right font-mono text-xs tabular-nums text-foreground">
+    <label className="grid grid-cols-[82px_1fr_62px] items-start gap-2 text-[11px]">
+      <span className="pt-0.5 text-muted-foreground">{label}</span>
+      <span className="min-w-0">
+        <input
+          type="range"
+          min={min}
+          max={max}
+          step={step}
+          value={value}
+          onPointerDown={onGestureStart}
+          onPointerUp={onGestureEnd}
+          onPointerCancel={onGestureEnd}
+          onChange={(event) => onChange(Number(event.target.value))}
+          className="block h-4 w-full min-w-0 accent-foreground"
+        />
+        <span className="mt-0.5 grid grid-cols-3 font-mono text-[8px] leading-none text-muted-foreground/60">
+          <span>{formatScale(min)}</span>
+          <span className="text-center">{formatScale(scaleMidpoint)}</span>
+          <span className="text-right">{formatScale(max)}</span>
+        </span>
+      </span>
+      <span className="pt-0.5 text-right font-mono text-xs tabular-nums text-foreground">
         {value.toFixed(step < 0.1 ? 2 : 1)}
         {unit ?? ''}
       </span>
