@@ -709,7 +709,7 @@ export function TransitionPanel() {
           label={t('editor.transitionPanel.placement')}
           tooltip={t('editor.transitionPanel.placementTooltip')}
         >
-          <div className="flex items-center gap-0.5 p-0.5 bg-secondary rounded-md">
+          <div className="flex items-center gap-0 border-b border-border/70">
             {PLACEMENT_OPTIONS.map(({ value, labelKey, titleKey }) => {
               const maxForPlacement =
                 leftClip && rightClip
@@ -731,9 +731,9 @@ export function TransitionPanel() {
                   disabled={disabled}
                   onClick={() => handlePlacementChange(value)}
                   className={cn(
-                    'inline-flex h-7 min-w-[3.75rem] flex-1 items-center justify-center rounded px-2 text-xs transition-colors',
+                    'inline-flex h-7 min-w-[3.75rem] flex-1 items-center justify-center border-b-2 border-transparent px-2 text-[10px] transition-colors',
                     selected
-                      ? 'bg-background text-foreground shadow-sm'
+                      ? 'border-primary text-foreground'
                       : 'text-muted-foreground hover:text-foreground',
                     disabled && 'cursor-not-allowed opacity-40 hover:text-muted-foreground',
                   )}
@@ -750,16 +750,16 @@ export function TransitionPanel() {
             label={t('editor.transitionPanel.ease')}
             tooltip={t('editor.transitionPanel.easeTooltip')}
           >
-            <div className="flex items-center gap-0.5 p-0.5 bg-secondary rounded-md">
+            <div className="flex items-center gap-0 border-b border-border/70">
               {easeOptions.map((option) => (
                 <button
                   key={option.value}
                   type="button"
                   onClick={() => handleTimingChange(option.value)}
                   className={cn(
-                    'px-3 py-1 text-xs rounded transition-colors',
+                    'h-7 flex-1 border-b-2 border-transparent px-2 text-[10px] transition-colors',
                     selectedTransition.timing === option.value
-                      ? 'bg-background text-foreground shadow-sm'
+                      ? 'border-primary text-foreground'
                       : 'text-muted-foreground hover:text-foreground',
                   )}
                 >
@@ -775,7 +775,7 @@ export function TransitionPanel() {
             label={t('editor.transitionPanel.direction')}
             tooltip={t('editor.transitionPanel.directionTooltip')}
           >
-            <div className="flex items-center gap-0.5 p-0.5 bg-secondary rounded-md">
+            <div className="flex items-center gap-0 border-b border-border/70">
               {directionOptions.map((option) => (
                 <button
                   key={option.value}
@@ -783,9 +783,9 @@ export function TransitionPanel() {
                   aria-label={t(option.labelKey)}
                   onClick={() => handleDirectionChange(option.value)}
                   className={cn(
-                    'px-3 py-1 text-xs rounded transition-colors',
+                    'h-7 flex-1 border-b-2 border-transparent px-2 text-[10px] transition-colors',
                     selectedDirection === option.value
-                      ? 'bg-background text-foreground shadow-sm'
+                      ? 'border-primary text-foreground'
                       : 'text-muted-foreground hover:text-foreground',
                   )}
                 >
