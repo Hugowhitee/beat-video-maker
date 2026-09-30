@@ -3,6 +3,7 @@ export {
   type MusicAnalysisProgress,
 } from '@/features/auto-edit/musicAnalysis'
 export {
+  beatvideoMusicProjectAnalysisMatchesSource,
   loadCachedBeatvideoMusicEvidence,
   mergeBeatvideoMusicEvidenceIntoProject,
   resolveBeatvideoMusicEvidence,

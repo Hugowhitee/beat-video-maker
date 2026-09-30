@@ -1,6 +1,7 @@
 import type { BeatvideoMusicAnalysis } from '@/types/beatvideo'
 import type { MusicAnalysisResult } from './musicAnalysis'
 import {
+  beatvideoMusicSourceFingerprintMatches,
   loadBeatvideoMusicEvidence,
   saveBeatvideoMusicEvidence,
   type BeatvideoMusicSourceMedia,
@@ -47,6 +48,7 @@ export function mergeBeatvideoMusicEvidenceIntoProject(
     mediaId: evidence.mediaId,
     analyzedAt: evidence.analyzedAt,
     analysisRevision: evidence.analysisRevision,
+    sourceFingerprint: { ...evidence.sourceFingerprint },
     musicMap: evidence.musicMap,
     detectedBarOneTime: evidence.detectedBarOneTime,
     barOneTime: preserveManual ? previous.barOneTime : evidence.detectedBarOneTime,
@@ -55,6 +57,14 @@ export function mergeBeatvideoMusicEvidenceIntoProject(
     gridMode: preserveManual ? previous.gridMode ?? 'detected' : 'detected',
     correctionAnchors: preserveManual ? [...(previous.correctionAnchors ?? [])] : [],
   }
+}
+
+export function beatvideoMusicProjectAnalysisMatchesSource(
+  analysis: BeatvideoMusicAnalysis,
+  media: BeatvideoMusicSourceMedia,
+): boolean {
+  if (!analysis.sourceFingerprint) return false
+  return beatvideoMusicSourceFingerprintMatches(analysis.sourceFingerprint, media)
 }
 
 export async function loadCachedBeatvideoMusicEvidence(

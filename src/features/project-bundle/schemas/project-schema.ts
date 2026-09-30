@@ -828,12 +828,21 @@ const beatvideoGridCorrectionAnchorSchema = z.object({
   correctedTime: z.number().min(0),
 })
 
+const beatvideoAnalysisSourceFingerprintSchema = z.object({
+  contentHash: z.string().optional(),
+  fileSize: z.number().int().min(0),
+  fileLastModified: z.number().min(0).optional(),
+  duration: z.number().min(0),
+  mimeType: z.string().min(1),
+})
+
 const beatvideoMusicAnalysisSchema = z.object({
   version: z.union([z.literal(1), z.literal(2)]),
   mediaId: z.string().min(1),
   analyzedAt: z.number().int().min(0),
   analysisRevision: z.number().int().positive().optional(),
   autoRefreshAttemptedRevision: z.number().int().positive().optional(),
+  sourceFingerprint: beatvideoAnalysisSourceFingerprintSchema.optional(),
   musicMap: beatvideoMusicMapSchema,
   detectedBarOneTime: z.number().min(0).nullable(),
   barOneTime: z.number().min(0).nullable(),

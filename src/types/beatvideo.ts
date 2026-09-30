@@ -151,6 +151,14 @@ export type BeatvideoGridCorrectionAnchor = {
   correctedTime: number
 }
 
+export type BeatvideoAnalysisSourceFingerprint = {
+  contentHash?: string
+  fileSize: number
+  fileLastModified?: number
+  duration: number
+  mimeType: string
+}
+
 export type BeatvideoMusicAnalysis = {
   /**
    * v1 stored barOneTime on the absolute timeline after manual verification.
@@ -164,6 +172,8 @@ export type BeatvideoMusicAnalysis = {
   analysisRevision?: number
   /** Persisted one-shot guard for automatic stale-analysis migration. Manual Re-analyze ignores it. */
   autoRefreshAttemptedRevision?: number
+  /** Source identity for rejecting project evidence after source replacement/relink. */
+  sourceFingerprint?: BeatvideoAnalysisSourceFingerprint
   musicMap: MusicMap
   /**
    * A detected downbeat is useful evidence but not treated as user-verified bar 1.

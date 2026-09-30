@@ -8,6 +8,7 @@ export const importSceneDetection = () => import('@/infrastructure/analysis/scen
 export { readAiOutput } from '@/infrastructure/storage/workspace-fs/ai-outputs'
 export { saveScenes } from '@/infrastructure/storage/workspace-fs/scenes'
 export {
+  beatvideoMusicSourceFingerprintMatches,
   loadBeatvideoMusicEvidence,
   saveBeatvideoMusicEvidence,
   type BeatvideoMusicSourceMedia,

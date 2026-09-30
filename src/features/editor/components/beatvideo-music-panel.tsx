@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/button'
 import { BeatvideoFileMetadata } from './beatvideo-file-metadata'
 import {
   analyzeMusicMedia,
+  beatvideoMusicProjectAnalysisMatchesSource,
   loadCachedBeatvideoMusicEvidence,
   mergeBeatvideoMusicEvidenceIntoProject,
   resolveBeatvideoMusicEvidence,
@@ -168,8 +169,16 @@ export function BeatvideoMusicPanel() {
   const attemptedRevisionRefreshMediaIdRef = useRef<string | null>(null)
   const attemptedCacheRestoreKeyRef = useRef<string | null>(null)
 
+  const selectedMedia = useMemo(
+    () => candidates.find((media) => media.id === selectedMediaId) ?? null,
+    [candidates, selectedMediaId],
+  )
   const selectedAnalysis =
-    analysis?.mediaId === selectedMediaId ? analysis : null
+    analysis?.mediaId === selectedMediaId &&
+    selectedMedia &&
+    beatvideoMusicProjectAnalysisMatchesSource(analysis, selectedMedia)
+      ? analysis
+      : null
   const timelineGrid = useMemo(
     () =>
       selectedAnalysis
@@ -208,11 +217,6 @@ export function BeatvideoMusicPanel() {
         (media) => media.mimeType.startsWith('audio/') && media.id !== selectedMediaId,
       ),
     [mediaItems, selectedMediaId],
-  )
-
-  const selectedMedia = useMemo(
-    () => candidates.find((media) => media.id === selectedMediaId) ?? null,
-    [candidates, selectedMediaId],
   )
 
   useEffect(() => {
@@ -498,7 +502,7 @@ export function BeatvideoMusicPanel() {
 
         const next = mergeBeatvideoMusicEvidenceIntoProject(
           resolved.evidence,
-          selectedAnalysis,
+          analysis?.mediaId === selectedMediaId ? analysis : null,
         )
         await persistAnalysis(next)
 
@@ -570,7 +574,7 @@ export function BeatvideoMusicPanel() {
       currentProject,
       ensureBeatPlacement,
       persistAnalysis,
-      selectedAnalysis,
+      analysis,
       selectedMedia,
       selectedMediaId,
     ],
@@ -598,7 +602,12 @@ export function BeatvideoMusicPanel() {
         BEATVIDEO_ANALYSIS_REVISION,
       )
       if (cancelled || !evidence) return
-      await persistAnalysis(mergeBeatvideoMusicEvidenceIntoProject(evidence, null))
+      await persistAnalysis(
+        mergeBeatvideoMusicEvidenceIntoProject(
+          evidence,
+          analysis?.mediaId === selectedMediaId ? analysis : null,
+        ),
+      )
     })().catch((error) => {
       if (cancelled) return
       toast.error('Could not load saved beat analysis', {
@@ -609,7 +618,7 @@ export function BeatvideoMusicPanel() {
     return () => {
       cancelled = true
     }
-  }, [analyzing, currentProject, persistAnalysis, selectedAnalysis, selectedMedia])
+  }, [analysis, analyzing, currentProject, persistAnalysis, selectedAnalysis, selectedMedia, selectedMediaId])
 
   useEffect(() => {
     const pendingMediaId = pendingAutoAnalyzeMediaIdRef.current
