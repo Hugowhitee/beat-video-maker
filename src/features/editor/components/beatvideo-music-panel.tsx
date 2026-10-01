@@ -350,9 +350,15 @@ export function BeatvideoMusicPanel() {
         toast.error('Choose an audio file for the project beat')
         return
       }
-      pendingAutoAnalyzeMediaIdRef.current = beat.id
+      pendingAutoAnalyzeMediaIdRef.current =
+        beat.beatvideoMusicAnalysis?.mediaId === beat.id ? null : beat.id
       setSelectedMediaId(beat.id)
-      toast.success('Beat imported', { description: 'Analyzing rhythm automatically…' })
+      toast.success('Beat imported', {
+        description:
+          beat.beatvideoMusicAnalysis?.mediaId === beat.id
+            ? 'Using the analysis saved with this source.'
+            : 'Analyzing rhythm automatically…',
+      })
     } catch (error) {
       toast.error('Could not import beat', {
         description: error instanceof Error ? error.message : String(error),
