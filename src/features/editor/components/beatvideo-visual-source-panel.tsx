@@ -26,6 +26,7 @@ import {
   type ClipMapBuildProgress,
   type EditPace,
   type EditPlan,
+  type SourceMixMode,
   type TransitionProfile,
 } from '@/features/editor/deps/auto-edit-contract'
 import { resolveBeatvideoTimelineGrid } from '@/features/editor/deps/beatvideo-music'
@@ -80,6 +81,8 @@ export function BeatvideoVisualSourcePanel({
 
   const [arrangeMode, setArrangeMode] = useState<ArrangeMode>('auto')
   const [arrangePace, setArrangePace] = useState<EditPace>('balanced')
+  const [sourceMixMode, setSourceMixMode] = useState<SourceMixMode>('balanced')
+  const [sourceWeights, setSourceWeights] = useState<Record<string, number>>({})
   const [transitionProfile, setTransitionProfile] =
     useState<TransitionProfile>('clean')
   const [loopBars, setLoopBars] = useState(4)
@@ -126,6 +129,21 @@ export function BeatvideoVisualSourcePanel({
       return next.length === current.length ? current : next
     })
   }, [videoCandidates])
+
+  useEffect(() => {
+    const currentIds = new Set(videoCandidates.map((media) => media.id))
+    setSourceWeights((current) => {
+      const next = Object.fromEntries(
+        Object.entries(current).filter(([mediaId]) => currentIds.has(mediaId)),
+      )
+      return Object.keys(next).length === Object.keys(current).length ? current : next
+    })
+  }, [videoCandidates])
+
+  const setSourceWeight = useCallback((sourceId: string, value: number) => {
+    const nextValue = Math.max(0.25, Math.min(2, Number.isFinite(value) ? value : 1))
+    setSourceWeights((current) => ({ ...current, [sourceId]: nextValue }))
+  }, [])
 
   const shotById = useMemo(
     () =>
@@ -408,6 +426,8 @@ export function BeatvideoVisualSourcePanel({
       const relativePlan = createEditPlan(relative.music, plannerClipMap, {
         mode: arrangeMode,
         pace: arrangePace,
+        sourceMix: sourceMixMode,
+        sourceWeights,
         loopBars,
         transitionProfile,
         excludedShotIds,
@@ -448,6 +468,8 @@ export function BeatvideoVisualSourcePanel({
     loopBars,
     preparingFootage,
     resolveRelativeMusic,
+    sourceMixMode,
+    sourceWeights,
     transitionProfile,
     videoCandidates,
   ])
@@ -987,6 +1009,60 @@ export function BeatvideoVisualSourcePanel({
             </div>
 
             <div className="mt-2 space-y-2">
+              <div>
+                <div className="mb-1 text-[9px] text-muted-foreground">Source mix</div>
+                <div className="studio-segmented grid h-8 grid-cols-3">
+                  {([
+                    ['balanced', 'Balanced'],
+                    ['rotate', 'Rotate'],
+                    ['weighted', 'Weighted'],
+                  ] as const).map(([value, label]) => (
+                    <button
+                      key={value}
+                      type="button"
+                      aria-pressed={sourceMixMode === value}
+                      onClick={() => setSourceMixMode(value as SourceMixMode)}
+                      className="studio-segment h-7 px-1 text-[8px] font-medium"
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {sourceMixMode === 'weighted' ? (
+                <div className="space-y-1 border-y border-border/60 py-1.5">
+                  {videoCandidates
+                    .filter((media) => arrangeSourceIds.includes(media.id))
+                    .map((media) => {
+                      const weight = sourceWeights[media.id] ?? 1
+                      return (
+                        <label
+                          key={media.id}
+                          className="grid grid-cols-[minmax(0,1fr)_72px_30px] items-center gap-2 px-1 text-[8px]"
+                        >
+                          <span className="truncate text-muted-foreground">{media.fileName}</span>
+                          <input
+                            type="range"
+                            min={0.25}
+                            max={2}
+                            step={0.25}
+                            value={weight}
+                            onChange={(event) =>
+                              setSourceWeight(media.id, Number(event.currentTarget.value))
+                            }
+                            className="h-3 w-full accent-primary"
+                            aria-label={`Weight for ${media.fileName}`}
+                          />
+                          <span className="text-right font-mono tabular-nums text-foreground">
+                            {weight.toFixed(2)}×
+                          </span>
+                        </label>
+                      )
+                    })}
+                </div>
+              ) : null}
+
               <div>
                 <div className="mb-1 text-[9px] text-muted-foreground">Pace</div>
                 <div className="studio-segmented grid h-8 grid-cols-3">
