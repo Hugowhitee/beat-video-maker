@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from 'vite-plus/test'
 import type { TimelineItem, VideoItem } from '@/types/timeline'
 import { ColorGradePanel } from './index'
 
-const { VIDEO_ITEM, GLOBAL_GRADE } = vi.hoisted(() => ({
+const { VIDEO_ITEM, GLOBAL_GRADE, updateItem, markDirty } = vi.hoisted(() => ({
   VIDEO_ITEM: {
     id: 'clip-1',
     type: 'video',
@@ -23,20 +23,34 @@ const { VIDEO_ITEM, GLOBAL_GRADE } = vi.hoisted(() => ({
     label: 'Global grade',
     effects: [],
   } as TimelineItem,
+  updateItem: vi.fn(),
+  markDirty: vi.fn(),
 }))
 
-vi.mock('@/features/editor/deps/timeline-store', () => ({
-  useItemsStore: (
-    selector: (state: { items: TimelineItem[]; itemById: Record<string, TimelineItem> }) => unknown,
-  ) =>
-    selector({
-      items: [VIDEO_ITEM, GLOBAL_GRADE],
-      itemById: {
-        [VIDEO_ITEM.id]: VIDEO_ITEM,
-        [GLOBAL_GRADE.id]: GLOBAL_GRADE,
-      },
-    }),
-}))
+vi.mock('@/features/editor/deps/timeline-store', () => {
+  const state = {
+    items: [VIDEO_ITEM, GLOBAL_GRADE],
+    itemById: {
+      [VIDEO_ITEM.id]: VIDEO_ITEM,
+      [GLOBAL_GRADE.id]: GLOBAL_GRADE,
+    },
+  }
+  const useItemsStore = Object.assign(
+    (
+      selector: (value: typeof state) => unknown,
+    ) => selector(state),
+    {
+      getState: () => ({ ...state, _updateItem: updateItem }),
+    },
+  )
+
+  return {
+    useItemsStore,
+    useTimelineSettingsStore: {
+      getState: () => ({ markDirty }),
+    },
+  }
+})
 
 vi.mock('@/shared/state/selection', () => ({
   useSelectionStore: (selector: (state: { selectedItemIds: string[] }) => unknown) =>
@@ -135,6 +149,24 @@ describe('ColorGradePanel', () => {
       'aria-pressed',
       'false',
     )
+  })
+
+  it('keeps the global grade spanning the whole visual program', async () => {
+    GLOBAL_GRADE.durationInFrames = 60
+    updateItem.mockClear()
+    markDirty.mockClear()
+
+    render(<ColorGradePanel layout="dock" scope="global" />)
+
+    await waitFor(() =>
+      expect(updateItem).toHaveBeenCalledWith(GLOBAL_GRADE.id, {
+        from: 0,
+        durationInFrames: 90,
+      }),
+    )
+    expect(markDirty).toHaveBeenCalledTimes(1)
+
+    GLOBAL_GRADE.durationInFrames = 90
   })
 
   it('keeps the sidebar variant stacked without the dock graph lane', async () => {
