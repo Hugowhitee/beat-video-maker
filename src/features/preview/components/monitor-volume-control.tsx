@@ -39,7 +39,7 @@ export function MonitorVolumeControl({ buttonStyle }: MonitorVolumeControlProps)
       <Button
         variant="ghost"
         size="icon"
-        className={muted ? 'flex-shrink-0 text-primary' : 'flex-shrink-0'}
+        className="flex-shrink-0"
         style={buttonStyle}
         onClick={toggleMute}
         data-tooltip={muted ? t('preview.monitor.unmute') : t('preview.monitor.mute')}
