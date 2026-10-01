@@ -1,6 +1,6 @@
 import { memo, useCallback, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Blend, Info } from 'lucide-react'
+import { Blend } from 'lucide-react'
 import { TransitionPreview } from './transition-preview/transition-preview'
 import { useTimelineStore } from '@/features/editor/deps/timeline-store'
 import { useSelectionStore } from '@/shared/state/selection'
@@ -76,11 +76,10 @@ const TransitionCard = memo(function TransitionCard({
       onPointerLeave={showPreview ? () => setHovered(false) : undefined}
       aria-disabled={clickDisabled}
       className={cn(
-        'flex flex-col items-center gap-1 p-2 rounded-lg min-w-[60px]',
-        'border border-border bg-secondary/30',
-        'hover:bg-secondary/50 hover:border-primary/50',
-        'transition-colors group text-center cursor-grab active:cursor-grabbing',
-        clickDisabled && 'focus-visible:outline-muted-foreground/40',
+        'group flex min-w-[60px] flex-col items-center gap-1 border border-border bg-background/35 p-1.5 text-center',
+        'hover:border-primary/45 hover:bg-secondary/35',
+        'cursor-grab transition-colors active:cursor-grabbing',
+        clickDisabled && 'opacity-60 focus-visible:outline-muted-foreground/40',
       )}
       title={config.description}
     >
@@ -91,7 +90,7 @@ const TransitionCard = memo(function TransitionCard({
           active={hovered}
         />
       ) : (
-        <div className="flex aspect-video w-full items-center justify-center rounded-[3px] bg-black/40">
+        <div className="flex aspect-video w-full items-center justify-center border border-border/50 bg-black/35">
           <Icon className="w-4 h-4 text-muted-foreground group-hover:text-foreground" />
         </div>
       )}
@@ -131,11 +130,14 @@ const CategorySection = memo(function CategorySection({
   if (configs.length === 0) return null
 
   return (
-    <div className="space-y-2">
-      <div className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">
-        {title}
+    <section className="space-y-1.5">
+      <div className="flex items-center gap-2">
+        <h3 className="text-[10px] font-medium uppercase tracking-[0.12em] text-muted-foreground">
+          {title}
+        </h3>
+        <div className="h-px flex-1 bg-border/70" />
       </div>
-      <div className="grid grid-cols-3 gap-1.5">
+      <div className="grid grid-cols-3 gap-1">
         {configs.map((config, index) => (
           <TransitionCard
             key={`${config.id}-${config.direction || index}`}
@@ -148,7 +150,7 @@ const CategorySection = memo(function CategorySection({
           />
         ))}
       </div>
-    </div>
+    </section>
   )
 })
 
@@ -266,30 +268,24 @@ export const TransitionsPanel = memo(function TransitionsPanel() {
 
   return (
     <div className="h-full flex flex-col">
-      {/* Info banner */}
-      <div className="px-3 py-2 border-b border-border bg-secondary/30">
-        <div className="flex items-start gap-2 text-xs">
-          <Info className="w-3.5 h-3.5 text-muted-foreground flex-shrink-0 mt-0.5" />
-          <div className="text-muted-foreground leading-relaxed">
-            {hasValidClickTarget ? (
-              <span className="text-primary">Click a transition to apply it, or drag it directly onto the cut.</span>
-            ) : adjacentInfo?.reason ? (
-              <span>
-                {t('editor.transitions.hintUnavailable', { reason: adjacentInfo.reason })}
-              </span>
-            ) : selectionCount === 1 ? (
-              <span>{t('editor.transitions.hintSelectOne')}</span>
-            ) : selectionCount > 1 ? (
-              <span>{t('editor.transitions.hintSelectSingle')}</span>
-            ) : (
-              <span>{t('editor.transitions.hintSelectClip')}</span>
-            )}
-          </div>
-        </div>
+      <div className="flex min-h-9 items-center border-b border-border px-3 text-[10px] leading-snug text-muted-foreground">
+        {hasValidClickTarget ? (
+          <span>
+            Click to apply to the selected cut · drag a preview directly onto any valid cut
+          </span>
+        ) : adjacentInfo?.reason ? (
+          <span>{t('editor.transitions.hintUnavailable', { reason: adjacentInfo.reason })}</span>
+        ) : selectionCount === 1 ? (
+          <span>{t('editor.transitions.hintSelectOne')}</span>
+        ) : selectionCount > 1 ? (
+          <span>{t('editor.transitions.hintSelectSingle')}</span>
+        ) : (
+          <span>{t('editor.transitions.hintSelectClip')}</span>
+        )}
       </div>
 
       {/* Transitions grid by category */}
-      <div className="flex-1 overflow-y-auto p-3 space-y-4">
+      <div className="flex-1 space-y-3 overflow-y-auto p-2.5">
         {TRANSITION_CATEGORY_ORDER.map((category) => {
           const configs = getTransitionConfigsByCategory()[category]
           if (!configs || configs.length === 0) return null
