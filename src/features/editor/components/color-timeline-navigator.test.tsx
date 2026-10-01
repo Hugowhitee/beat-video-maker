@@ -210,6 +210,48 @@ describe('ColorTimelineNavigator', () => {
     expect(screen.getByTestId('color-timeline-grade-overlay')).toBeInTheDocument()
   })
 
+  it('previews the Full video global grade on ordinary media tiles', () => {
+    const gradeTrack: TimelineTrack = {
+      ...VIDEO_TRACK,
+      id: 'grade-track',
+      name: 'Global grade',
+      order: -1,
+    }
+    const globalGrade: AdjustmentItem = {
+      id: 'global-grade',
+      type: 'adjustment',
+      trackId: gradeTrack.id,
+      from: 0,
+      durationInFrames: 300,
+      label: 'Global grade',
+      effects: [
+        {
+          id: 'global-wheels',
+          enabled: true,
+          effect: {
+            type: 'gpu-effect',
+            gpuEffectType: 'gpu-color-wheels',
+            params: {
+              exposure: 0.45,
+              contrast: 1.2,
+              saturation: 35,
+              temperature: 30,
+            },
+          },
+        },
+      ],
+    }
+
+    useItemsStore.getState().setTracks([gradeTrack, VIDEO_TRACK, AUDIO_TRACK])
+    useItemsStore.getState().setItems([globalGrade, VIDEO_ITEM])
+
+    const { container } = render(<ColorTimelineNavigator />)
+
+    expect(screen.getAllByTestId('color-timeline-film-tile')).toHaveLength(1)
+    expect(container.querySelector('[data-graded-thumbnail="true"]')).not.toBeNull()
+    expect(screen.getByTestId('color-timeline-grade-overlay')).toBeInTheDocument()
+  })
+
   it('renders timeline markers and the in/out range in the color timeline view', () => {
     useTimelineStore.setState({
       inPoint: 60,
