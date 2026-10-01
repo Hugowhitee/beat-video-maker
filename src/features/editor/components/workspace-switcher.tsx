@@ -1,7 +1,6 @@
 import { memo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useEditorStore } from '@/shared/state/editor'
-import { cn } from '@/shared/ui/cn'
 import type { EditorWorkspaceId } from '@/config/editor-workspaces'
 import type { BeatvideoProjectMode } from '@/types/project'
 
@@ -37,7 +36,7 @@ export const WorkspaceSwitcher = memo(function WorkspaceSwitcher({
     <div
       role="tablist"
       aria-label={t('toolbar.workspaces.label')}
-      className="flex h-8 items-stretch gap-0 border-b border-border/80"
+      className="studio-segmented flex h-8 items-stretch"
     >
       {PRIMARY_WORKSPACES.map(({ id, label }) => {
         const isActive = workspace === id
@@ -49,12 +48,7 @@ export const WorkspaceSwitcher = memo(function WorkspaceSwitcher({
             aria-selected={isActive}
             title={id === 'edit' ? visualHint : undefined}
             onClick={() => setWorkspace(id)}
-            className={cn(
-              'relative flex h-8 items-center px-3 text-xs font-medium transition-colors',
-              isActive
-                ? 'text-foreground after:absolute after:inset-x-2 after:bottom-[-1px] after:h-[2px] after:bg-primary'
-                : 'text-muted-foreground hover:bg-secondary/40 hover:text-foreground',
-            )}
+            className="studio-segment flex h-7 min-w-[64px] items-center justify-center px-3 text-xs font-medium"
           >
             {label}
           </button>
