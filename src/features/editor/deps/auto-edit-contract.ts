@@ -7,7 +7,10 @@ export {
   buildClipMapForMedia,
   type ClipMapBuildProgress,
 } from '@/features/auto-edit/clip-map'
-export { applyEditPlanToFreeCutTimeline } from '@/features/auto-edit/freecutTimeline'
+export {
+  applyEditPlanSourceChangesToFreeCutTimeline,
+  applyEditPlanToFreeCutTimeline,
+} from '@/features/auto-edit/freecutTimeline'
 
 export type { EditPace, TransitionProfile } from '@/features/auto-edit/types'
 export {
