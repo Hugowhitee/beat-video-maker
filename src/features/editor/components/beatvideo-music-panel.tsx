@@ -265,9 +265,45 @@ export function BeatvideoMusicPanel() {
         beatvideoMusic: next,
       })
       useProjectStore.getState().setCurrentProject(updated)
+
+      // The project keeps the active beat pointer/state, while the media record
+      // owns the reusable source-domain analysis. Cache failure must not make an
+      // otherwise valid project correction fail.
+      try {
+        await useMediaLibraryStore
+          .getState()
+          .updateBeatvideoMusicAnalysis(next.mediaId, next)
+      } catch {
+        // Best-effort cache: project persistence above remains canonical for the
+        // currently open edit and will retry on the next committed correction.
+      }
     },
     [currentProject],
   )
+
+  useEffect(() => {
+    if (!currentProject || !selectedMedia) return
+    if (analysis?.mediaId === selectedMedia.id) return
+
+    const cached = selectedMedia.beatvideoMusicAnalysis
+    if (!cached || cached.mediaId !== selectedMedia.id) return
+
+    let active = true
+    void updateStoredProject(currentProject.id, {
+      beatvideoMusic: cached,
+    })
+      .then((updated) => {
+        if (active) useProjectStore.getState().setCurrentProject(updated)
+      })
+      .catch(() => {
+        // Cache activation is opportunistic; the Analyze action stays available.
+      })
+
+    return () => {
+      active = false
+    }
+  }, [analysis?.mediaId, currentProject, selectedMedia])
+
 
   const ensureTagTrack = useCallback((kind: 'producer' | 'watermark') => {
     const timeline = useTimelineStore.getState()
