@@ -76,11 +76,12 @@ export function useAudioPlaybackState({
   const previewMasterVolume = usePlaybackStore((state) => state.volume)
   const previewMasterMuted = usePlaybackStore((state) => state.muted)
   const masterBusDb = usePlaybackStore((state) => state.masterBusDb)
+  const busAudioEq = usePlaybackStore((state) => state.busAudioEq)
   const masterFx = usePlaybackStore((state) => state.masterFx)
   const effectiveMonitorVolume = previewMasterMuted ? 0 : previewMasterVolume
   useEffect(() => {
-    syncPreviewMasterAudioGraph(masterFx, masterBusDb, effectiveMonitorVolume)
-  }, [effectiveMonitorVolume, masterBusDb, masterFx])
+    syncPreviewMasterAudioGraph(masterFx, busAudioEq, masterBusDb, effectiveMonitorVolume)
+  }, [busAudioEq, effectiveMonitorVolume, masterBusDb, masterFx])
 
   const contextKeyframes = useItemKeyframesFromContext(itemId)
   const storeKeyframes = useTimelineStore(
