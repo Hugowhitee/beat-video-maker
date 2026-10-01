@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
-  AudioLines,
   CheckCircle2,
   Crosshair,
   Focus,
@@ -1206,12 +1205,9 @@ export function BeatvideoMusicPanel() {
     <div className="h-full overflow-y-auto p-3">
       <div className="space-y-4">
         <div className="border-b border-border pb-3">
-          <div className="flex items-center gap-2 text-xs font-medium text-foreground">
-            <AudioLines className="h-4 w-4" />
-            Beat
-          </div>
-          <p className="mt-1.5 text-[10px] leading-relaxed text-muted-foreground">
-            One project beat drives the musical grid, snapping and reactive timing.
+          <div className="text-xs font-medium text-foreground">Beat</div>
+          <p className="mt-1 text-[10px] leading-relaxed text-muted-foreground">
+            Source-bound analysis drives the grid, snapping and reactive timing.
           </p>
         </div>
 
@@ -1220,34 +1216,47 @@ export function BeatvideoMusicPanel() {
             Beat source
           </label>
           {candidates.length > 0 ? (
-            <select
-              value={selectedMediaId}
-              onChange={(event) => setSelectedMediaId(event.target.value)}
-              disabled={analyzing || importingBeat}
-              className="h-8 w-full rounded-md border border-input bg-secondary px-2 text-xs text-foreground"
-            >
-              {candidates.map((media) => (
-                <option key={media.id} value={media.id}>
-                  {media.fileName}
-                </option>
-              ))}
-            </select>
+            <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-1.5">
+              <select
+                value={selectedMediaId}
+                onChange={(event) => setSelectedMediaId(event.target.value)}
+                disabled={analyzing || importingBeat}
+                className="h-8 min-w-0 border border-input bg-secondary px-2 text-xs text-foreground"
+              >
+                {candidates.map((media) => (
+                  <option key={media.id} value={media.id}>
+                    {media.fileName}
+                  </option>
+                ))}
+              </select>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                className="h-8 px-2.5"
+                disabled={analyzing || importingBeat}
+                onClick={() => void importBeat()}
+              >
+                {importingBeat ? 'Importing…' : 'Import'}
+              </Button>
+            </div>
           ) : (
-            <div className="border-l-2 border-border pl-2 text-[10px] leading-relaxed text-muted-foreground">
-              Start here by importing the beat for this project.
+            <div className="space-y-2">
+              <div className="border-l-2 border-border pl-2 text-[10px] leading-relaxed text-muted-foreground">
+                Import the beat for this project to create its musical grid.
+              </div>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                className="w-full"
+                disabled={analyzing || importingBeat}
+                onClick={() => void importBeat()}
+              >
+                {importingBeat ? 'Importing beat…' : 'Import beat'}
+              </Button>
             </div>
           )}
-
-          <Button
-            type="button"
-            size="sm"
-            variant="outline"
-            className="w-full"
-            disabled={analyzing || importingBeat}
-            onClick={() => void importBeat()}
-          >
-            {importingBeat ? 'Importing beat…' : candidates.length > 0 ? 'Import another beat' : 'Import beat'}
-          </Button>
 
           <Button
             type="button"
@@ -1263,7 +1272,6 @@ export function BeatvideoMusicPanel() {
               void analyze()
             }}
           >
-            {!analyzing ? <AudioLines className="h-3.5 w-3.5" /> : null}
             {analyzing
               ? 'Cancel analysis'
               : effectiveAnalysis
@@ -1515,24 +1523,24 @@ export function BeatvideoMusicPanel() {
                     </Button>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-1">
-                    <Button
+                  <div className="studio-segmented grid h-8 grid-cols-2">
+                    <button
                       type="button"
-                      size="sm"
-                      variant={gridMode === 'detected' ? 'default' : 'outline'}
+                      className="studio-segment h-7 px-2 text-[10px] font-medium"
+                      aria-pressed={gridMode === 'detected'}
                       disabled={effectiveAnalysis.musicMap.beats.length === 0}
                       onClick={() => void setGridMode('detected')}
                     >
                       Detected timing
-                    </Button>
-                    <Button
+                    </button>
+                    <button
                       type="button"
-                      size="sm"
-                      variant={gridMode === 'fixed' ? 'default' : 'outline'}
+                      className="studio-segment h-7 px-2 text-[10px] font-medium"
+                      aria-pressed={gridMode === 'fixed'}
                       onClick={() => void setGridMode('fixed')}
                     >
                       Fixed BPM
-                    </Button>
+                    </button>
                   </div>
 
                   <Button
