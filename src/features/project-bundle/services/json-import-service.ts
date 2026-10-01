@@ -21,7 +21,12 @@ import {
   isVersionCompatible,
 } from '../schemas/project-schema'
 import { verifySnapshotChecksum } from './json-export-service'
-import { createProject, getAllMedia, associateMediaWithProject } from '@/infrastructure/storage'
+import {
+  createProject,
+  getAllMedia,
+  associateMediaWithProject,
+  updateMedia,
+} from '@/infrastructure/storage'
 import { migrateProject } from '@/shared/projects/migrations'
 
 /**
@@ -335,11 +340,19 @@ async function importProjectFromSnapshot(
       }
     }
 
-    // Remap media IDs in timeline items
-    if (project.timeline && matchedMedia.length > 0) {
+    // Remap media IDs in project/timeline state and restore reusable source analysis.
+    if (matchedMedia.length > 0) {
       const mediaIdMap = new Map(matchedMedia.map((m) => [m.snapshotMediaId, m.localMediaId]))
 
-      project.timeline.items = project.timeline.items.map((item) => {
+      if (project.beatvideoMusic && mediaIdMap.has(project.beatvideoMusic.mediaId)) {
+        project.beatvideoMusic = {
+          ...project.beatvideoMusic,
+          mediaId: mediaIdMap.get(project.beatvideoMusic.mediaId)!,
+        }
+      }
+
+      if (project.timeline) {
+        project.timeline.items = project.timeline.items.map((item) => {
         if (item.mediaId && mediaIdMap.has(item.mediaId)) {
           return {
             ...item,
@@ -349,8 +362,32 @@ async function importProjectFromSnapshot(
             thumbnailUrl: undefined,
           }
         }
-        return item
-      })
+          return item
+        })
+      }
+
+      for (const match of matchedMedia) {
+        const sourceRef = snapshot.mediaReferences.find(
+          (reference) => reference.id === match.snapshotMediaId,
+        )
+        const cachedAnalysis = sourceRef?.beatvideoMusicAnalysis
+        if (!cachedAnalysis) continue
+        try {
+          await updateMedia(match.localMediaId, {
+            beatvideoMusicAnalysis: {
+              ...cachedAnalysis,
+              mediaId: match.localMediaId,
+            },
+            updatedAt: Date.now(),
+          })
+        } catch (error) {
+          warnings.push(
+            `Could not restore cached beat analysis for ${sourceRef.fileName}: ${
+              error instanceof Error ? error.message : String(error)
+            }`,
+          )
+        }
+      }
     }
 
     // Add warnings for unmatched media
