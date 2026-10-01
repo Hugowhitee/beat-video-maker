@@ -1,3 +1,5 @@
+import type { BeatvideoMusicAnalysis } from './beatvideo'
+
 /**
  * Storage type for media files
  * - 'handle':    Uses FileSystemFileHandle — references the user's original
@@ -124,6 +126,12 @@ export interface MediaMetadata {
    * `lib/analysis/captioning/types.ts` for the full shape including optional
    * thumbnail paths, semantic embeddings, and color palettes.
    */
+  /**
+   * File-bound Beatvideo rhythm analysis cache. Source-domain timing and manual
+   * correction anchors live here so switching projects/beats does not require
+   * re-running the detector for the same media file.
+   */
+  beatvideoMusicAnalysis?: BeatvideoMusicAnalysis
   aiCaptions?: Array<{
     timeSec: number
     text: string
