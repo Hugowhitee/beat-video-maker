@@ -22,7 +22,6 @@ const openStateSubscribers = new Set<(open: boolean) => void>()
  */
 export function PropertySection({
   title,
-  icon: Icon,
   defaultOpen = true,
   children,
 }: PropertySectionProps) {
@@ -63,17 +62,16 @@ export function PropertySection({
       <CollapsibleTrigger
         onClick={handleTriggerClick}
         onKeyDown={handleTriggerKeyDown}
-        className="flex items-center gap-2 w-full py-2 hover:bg-secondary/50 rounded-md px-2 -mx-2 transition-colors"
+        className="flex h-7 w-full items-center gap-1.5 border-b border-border/70 px-0 text-left text-muted-foreground transition-colors hover:text-foreground"
       >
         <ChevronRight
-          className={cn('w-3 h-3 text-muted-foreground transition-transform', open && 'rotate-90')}
+          className={cn('h-3 w-3 transition-transform', open && 'rotate-90')}
         />
-        {Icon && <Icon className="w-3 h-3 text-muted-foreground" />}
-        <span className="text-xs font-semibold tracking-wide uppercase text-muted-foreground">
+        <span className="text-[9px] font-semibold tracking-wide">
           {title}
         </span>
       </CollapsibleTrigger>
-      <CollapsibleContent className="pt-1 pb-2 space-y-0">{children}</CollapsibleContent>
+      <CollapsibleContent className="space-y-0 pb-2 pt-1.5">{children}</CollapsibleContent>
     </Collapsible>
   )
 }

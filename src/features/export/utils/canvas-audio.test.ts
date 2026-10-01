@@ -571,7 +571,7 @@ describe('extractAudioSegments', () => {
     expect(mixed[overlapMidIndex]!).toBeLessThan(0.15)
   })
 
-  it('includes bus, track, and clip EQ stages in exported audio segments', () => {
+  it('keeps project master EQ out of per-clip export stages', () => {
     const clip = makeAudioItem({
       audioEqHighGainDb: 3,
       audioEqOutputGainDb: 2,
@@ -601,10 +601,6 @@ describe('extractAudioSegments', () => {
     const segments = extractAudioSegments(composition, composition.fps)
 
     expect(segments[0]?.audioEqStages).toEqual([
-      expect.objectContaining({
-        highCutEnabled: true,
-        highCutFrequencyHz: 8000,
-      }),
       expect.objectContaining({ lowGainDb: 4 }),
       expect.objectContaining({ highGainDb: 3, outputGainDb: 2 }),
     ])
@@ -757,6 +753,12 @@ describe('windowed audio processing', () => {
   it('retains full-segment processing for stateful DSP clips', () => {
     expect(supportsWindowedAudioProcessing(simpleComposition({ speed: 1.25 }))).toBe(false)
     expect(supportsWindowedAudioProcessing(simpleComposition({ audioEqHighGainDb: 3 }))).toBe(false)
+    expect(
+      supportsWindowedAudioProcessing({
+        ...simpleComposition(),
+        busAudioEq: { lowGainDb: 3 },
+      }),
+    ).toBe(false)
   })
 })
 
@@ -795,6 +797,12 @@ describe('audio packet passthrough eligibility', () => {
 
   it('rejects a modified master bus', () => {
     expect(getAudioPacketPassthroughPlan({ ...compositionWith(), masterBusDb: -2 })).toBeNull()
+    expect(
+      getAudioPacketPassthroughPlan({
+        ...compositionWith(),
+        busAudioEq: { highCutEnabled: true, highCutFrequencyHz: 8000 },
+      }),
+    ).toBeNull()
   })
 })
 

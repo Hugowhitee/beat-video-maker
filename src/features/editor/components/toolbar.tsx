@@ -1,12 +1,7 @@
-import { memo, useMemo, useState } from 'react'
+import { memo, useEffect, useState } from 'react'
 import { useNavigate } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
-import {
-  ArrowLeft,
-  Bug,
-  ChevronDown,
-  Settings2,
-} from 'lucide-react'
+import { ArrowLeft, Bug, ChevronDown, Pencil } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
@@ -15,7 +10,6 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
-import { Separator } from '@/components/ui/separator'
 import { ProjectDebugPanel } from './project-debug-panel'
 import { SettingsDialog } from './settings-dialog'
 import { ShortcutsDialog } from './shortcuts-dialog'
@@ -25,9 +19,10 @@ import { EDITOR_LAYOUT_CSS_VALUES } from '@/config/editor-layout'
 import { cn } from '@/shared/ui/cn'
 import { useDebugStore } from '@/features/editor/stores/debug-store'
 import { useEditorStore } from '@/shared/state/editor'
-import { useItemsStore, useTimelineStore } from '@/features/editor/deps/timeline-store'
-import { useMediaLibraryStore } from '@/features/editor/deps/media-library'
+import { useTimelineStore } from '@/features/editor/deps/timeline-store'
 import type { BeatvideoProjectMode } from '@/types/project'
+import { toast } from 'sonner'
+import { useProjectStore } from '@/features/editor/deps/projects-contract'
 
 const SaveDirtyIndicator = memo(function SaveDirtyIndicator() {
   const isDirty = useTimelineStore((state) => state.isDirty)
@@ -35,13 +30,6 @@ const SaveDirtyIndicator = memo(function SaveDirtyIndicator() {
     <span className="absolute -right-1 -top-1 h-2 w-2 rounded-full bg-primary" />
   ) : null
 })
-
-function formatProjectDuration(seconds: number): string {
-  if (seconds < 60) return `${Math.round(seconds)}s`
-  const minutes = Math.floor(seconds / 60)
-  const remainingSeconds = Math.round(seconds % 60)
-  return remainingSeconds > 0 ? `${minutes}m ${remainingSeconds}s` : `${minutes}m`
-}
 
 interface ToolbarProps {
   projectId: string
@@ -80,25 +68,41 @@ export const Toolbar = memo(function Toolbar({
   const [showUnsavedDialog, setShowUnsavedDialog] = useState(false)
   const [showShortcutsDialog, setShowShortcutsDialog] = useState(false)
   const [showSettingsDialog, setShowSettingsDialog] = useState(false)
-  const itemCount = useItemsStore((state) => state.items.length)
-  const maxItemEndFrame = useItemsStore((state) => state.maxItemEndFrame)
-  const mediaDependencyIds = useItemsStore((state) => state.mediaDependencyIds)
-  const brokenMediaIds = useMediaLibraryStore((state) => state.brokenMediaIds)
   const workspace = useEditorStore((state) => state.workspace)
   const rightSidebarOpen = useEditorStore((state) => state.rightSidebarOpen)
   const toggleRightSidebar = useEditorStore((state) => state.toggleRightSidebar)
-  const projectSummary = useMemo(
-    () => {
-      const projectMediaIds = new Set(mediaDependencyIds)
-      return {
-        durationSeconds: project.fps > 0 ? maxItemEndFrame / project.fps : 0,
-        clipCount: itemCount,
-        mediaCount: mediaDependencyIds.length,
-        brokenMediaCount: brokenMediaIds.filter((mediaId) => projectMediaIds.has(mediaId)).length,
-      }
-    },
-    [brokenMediaIds, itemCount, maxItemEndFrame, mediaDependencyIds, project.fps],
+  const storedProjectName = useProjectStore((state) =>
+    state.currentProject?.id === projectId ? state.currentProject.name : null,
   )
+  const updateProject = useProjectStore((state) => state.updateProject)
+  const projectName = storedProjectName ?? project?.name ?? t('common.untitledProject')
+  const [editingProjectName, setEditingProjectName] = useState(false)
+  const [projectNameDraft, setProjectNameDraft] = useState(projectName)
+
+  useEffect(() => {
+    if (!editingProjectName) setProjectNameDraft(projectName)
+  }, [editingProjectName, projectName])
+
+  const commitProjectName = async () => {
+    const nextName = projectNameDraft.trim()
+    if (!nextName) {
+      setProjectNameDraft(projectName)
+      setEditingProjectName(false)
+      return
+    }
+
+    try {
+      if (nextName !== projectName) {
+        await updateProject(projectId, { name: nextName })
+      }
+      setEditingProjectName(false)
+    } catch (error) {
+      setProjectNameDraft(projectName)
+      toast.error('Could not rename project', {
+        description: error instanceof Error ? error.message : String(error),
+      })
+    }
+  }
 
   const handleBackClick = () => {
     if (useTimelineStore.getState().isDirty) {
@@ -137,9 +141,35 @@ export const Toolbar = memo(function Toolbar({
             projectName={project?.name}
           />
 
-          <h1 className="min-w-0 flex-1 truncate px-1 text-sm font-medium">
-            {project?.name || t('common.untitledProject')}
-          </h1>
+          <div className="min-w-0 flex-1 px-1">
+            {editingProjectName ? (
+              <input
+                autoFocus
+                value={projectNameDraft}
+                onChange={(event) => setProjectNameDraft(event.target.value)}
+                onBlur={() => void commitProjectName()}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter') void commitProjectName()
+                  if (event.key === 'Escape') {
+                    setProjectNameDraft(projectName)
+                    setEditingProjectName(false)
+                  }
+                }}
+                className="h-8 w-full border-0 bg-transparent px-1 text-sm font-medium text-foreground outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                aria-label="Project title"
+              />
+            ) : (
+              <button
+                type="button"
+                className="flex h-8 max-w-full items-center gap-1.5 text-left text-sm font-medium text-foreground"
+                onClick={() => setEditingProjectName(true)}
+                aria-label="Rename project"
+              >
+                <span className="truncate">{projectName}</span>
+                <Pencil className="h-3 w-3 shrink-0 text-muted-foreground" />
+              </button>
+            )}
+          </div>
 
           <Button
             variant="ghost"
@@ -218,17 +248,17 @@ export const Toolbar = memo(function Toolbar({
       role="toolbar"
       aria-label={t('toolbar.ariaLabel')}
     >
-      <div className="flex items-center gap-2.5">
+      <div className="flex min-w-0 items-center gap-2">
         <Button
           variant="ghost"
           size="icon"
-          className="h-8 w-8"
+          className="h-7 w-7 shrink-0"
           onClick={handleBackClick}
           data-tooltip={t('toolbar.backToProjects')}
           data-tooltip-side="right"
           aria-label={t('toolbar.backToProjectsAria')}
         >
-          <ArrowLeft className="h-4 w-4" />
+          <ArrowLeft className="h-3.5 w-3.5" />
         </Button>
 
         <UnsavedChangesDialog
@@ -238,25 +268,38 @@ export const Toolbar = memo(function Toolbar({
           projectName={project?.name}
         />
 
-        <Separator orientation="vertical" className="h-5" />
-
-        <div className="flex flex-col -space-y-0.5">
-          <h1 className="text-sm font-medium leading-none">
-            {project?.name || t('common.untitledProject')}
-          </h1>
-          <span className="font-mono text-[11px] text-muted-foreground">
-            {t('toolbar.specsDetailed', {
-              width: project?.width,
-              height: project?.height,
-              fps: project?.fps,
-              duration: formatProjectDuration(projectSummary.durationSeconds),
-              clips: projectSummary.clipCount,
-              media: projectSummary.mediaCount,
-              missing: projectSummary.brokenMediaCount,
-            })}
+        <div className="min-w-0">
+          {editingProjectName ? (
+            <input
+              autoFocus
+              value={projectNameDraft}
+              onChange={(event) => setProjectNameDraft(event.target.value)}
+              onBlur={() => void commitProjectName()}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter') void commitProjectName()
+                if (event.key === 'Escape') {
+                  setProjectNameDraft(projectName)
+                  setEditingProjectName(false)
+                }
+              }}
+              className="h-5 max-w-64 border-0 bg-transparent px-0 text-[11px] font-medium leading-4 text-foreground outline-none focus-visible:ring-1 focus-visible:ring-ring"
+              aria-label="Project title"
+            />
+          ) : (
+            <button
+              type="button"
+              className="group flex h-5 max-w-64 items-center gap-1.5 text-left text-[11px] font-medium leading-4 text-foreground"
+              onClick={() => setEditingProjectName(true)}
+              aria-label="Rename project"
+            >
+              <span className="truncate">{projectName}</span>
+              <Pencil className="h-3 w-3 shrink-0 text-muted-foreground transition-colors group-hover:text-foreground" />
+            </button>
+          )}
+          <span className="block font-mono text-[9px] leading-3 text-muted-foreground">
+            {project.width}×{project.height} · {project.fps} fps
           </span>
         </div>
-
       </div>
 
       <div className="flex flex-1 items-center justify-center">
@@ -313,26 +356,22 @@ export const Toolbar = memo(function Toolbar({
           </DropdownMenuContent>
         </DropdownMenu>
 
-        {/* Actions */}
         {onProjectSettings ? (
           <Button
             type="button"
             variant="outline"
-            size="icon"
-            className="h-7 w-7"
+            size="sm"
+            className="h-7 px-2.5"
             onClick={onProjectSettings}
-            aria-label="Project settings"
-            data-tooltip="Project settings"
-            data-tooltip-side="bottom"
           >
-            <Settings2 className="h-3.5 w-3.5" />
+            Project settings
           </Button>
         ) : null}
 
         <Button
           variant="outline"
           size="sm"
-          className="relative h-7 px-3"
+          className="relative h-7 px-2.5"
           onClick={handleSave}
           aria-label={t('toolbar.saveAria')}
         >
@@ -340,19 +379,9 @@ export const Toolbar = memo(function Toolbar({
           <SaveDirtyIndicator />
         </Button>
 
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button size="sm" className="gap-1.5">
-              {t('toolbar.export')}
-              <ChevronDown className="h-3 w-3" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem onClick={onExport}>
-              {t('toolbar.exportVideo')}
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+        <Button size="sm" className="h-7 px-3" onClick={onExport}>
+          {t('toolbar.export')}
+        </Button>
       </div>
     </div>
   )

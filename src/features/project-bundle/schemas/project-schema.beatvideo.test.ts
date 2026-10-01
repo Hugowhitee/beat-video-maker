@@ -1,7 +1,7 @@
 // @vitest-environment node
 
 import { describe, expect, it } from 'vite-plus/test'
-import { validateProject } from './project-schema'
+import { validateProject, validateSnapshot } from './project-schema'
 
 function baseProject() {
   return {
@@ -78,6 +78,91 @@ describe('Beatvideo project bundle schema', () => {
     expect(result.data?.beatvideoMusic?.correctionAnchors).toEqual([
       { id: 'anchor-1', sourceTime: 32.1, correctedTime: 32.08 },
     ])
+  })
+
+  it('preserves the ordered Master rack instead of treating it as unknown passthrough data', () => {
+    const result = validateProject({
+      ...baseProject(),
+      timeline: {
+        tracks: [],
+        items: [],
+        masterBusDb: -1.5,
+        masterFx: {
+          enabled: true,
+          order: ['saturator', 'compressor', 'limiter'],
+          inputGainDb: 1.2,
+          saturator: { enabled: true, driveDb: 3, mix: 0.2 },
+          compressor: { enabled: true, thresholdDb: -16, ratio: 2.2 },
+          limiter: { enabled: true, thresholdDb: -1.8, ceilingDb: -0.8 },
+        },
+      },
+    })
+
+    expect(result.success).toBe(true)
+    expect(result.data?.timeline?.masterFx?.order).toEqual([
+      'saturator',
+      'compressor',
+      'limiter',
+    ])
+  })
+
+  it('preserves file-bound beat analysis in snapshot media references', () => {
+    const analysis = {
+      version: 2 as const,
+      mediaId: 'beat-1',
+      analyzedAt: 1234,
+      analysisRevision: 6,
+      musicMap: {
+        duration: 10,
+        bpm: 100,
+        beatsPerBar: 4,
+        beats: [{ time: 0.6, index: 0, downbeat: true, strength: 1 }],
+        sections: [
+          {
+            id: 'section-1',
+            start: 0,
+            end: 10,
+            kind: 'unknown' as const,
+            energy: 0.5,
+            confidence: 0.5,
+          },
+        ],
+      },
+      detectedBarOneTime: 0.6,
+      barOneTime: 0.6,
+      barOneVerified: false,
+      bpmOverride: null,
+      gridMode: 'detected' as const,
+      correctionAnchors: [],
+    }
+
+    const result = validateSnapshot({
+      version: '1.0',
+      exportedAt: '2026-10-01T12:00:00.000Z',
+      editorVersion: '1.0.0',
+      project: {
+        ...baseProject(),
+        beatvideoMusic: analysis,
+      },
+      mediaReferences: [
+        {
+          id: 'beat-1',
+          fileName: 'beat.mp3',
+          fileSize: 1000,
+          mimeType: 'audio/mpeg',
+          duration: 10,
+          width: 0,
+          height: 0,
+          fps: 0,
+          codec: 'mp3',
+          bitrate: 320000,
+          beatvideoMusicAnalysis: analysis,
+        },
+      ],
+    })
+
+    expect(result.success).toBe(true)
+    expect(result.data?.mediaReferences[0]?.beatvideoMusicAnalysis?.mediaId).toBe('beat-1')
   })
 
   it('keeps older projects without Beatvideo analysis valid', () => {

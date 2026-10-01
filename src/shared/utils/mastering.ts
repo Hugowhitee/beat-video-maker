@@ -1,11 +1,41 @@
 import type {
   MasterFxSettings,
   MasteringPresetId,
+  MasterProcessorId,
   ResolvedMasterFxSettings,
 } from '@/types/audio'
 
+export const DEFAULT_MASTER_PROCESSOR_ORDER = [
+  'eq',
+  'compressor',
+  'saturator',
+  'limiter',
+] as const satisfies readonly MasterProcessorId[]
+
+export function resolveMasterProcessorOrder(
+  order: readonly MasterProcessorId[] | undefined,
+): MasterProcessorId[] {
+  // Legacy projects predate rack membership and therefore inherit the original
+  // complete chain. Once an order is explicitly stored, omitted processors are
+  // real empty slots rather than silently reappearing on load.
+  if (order === undefined) return [...DEFAULT_MASTER_PROCESSOR_ORDER]
+
+  const valid = new Set<MasterProcessorId>(DEFAULT_MASTER_PROCESSOR_ORDER)
+  const seen = new Set<MasterProcessorId>()
+  const resolved: MasterProcessorId[] = []
+
+  for (const candidate of order) {
+    if (!valid.has(candidate) || seen.has(candidate)) continue
+    seen.add(candidate)
+    resolved.push(candidate)
+  }
+
+  return resolved
+}
+
 export const DEFAULT_MASTER_FX_SETTINGS: ResolvedMasterFxSettings = {
   enabled: false,
+  order: [...DEFAULT_MASTER_PROCESSOR_ORDER],
   inputGainDb: 0,
   compressor: {
     enabled: false,
@@ -45,6 +75,7 @@ export function resolveMasterFxSettings(
   const defaults = DEFAULT_MASTER_FX_SETTINGS
   return {
     enabled: value?.enabled ?? defaults.enabled,
+    order: resolveMasterProcessorOrder(value?.order),
     inputGainDb: clamp(finite(value?.inputGainDb, defaults.inputGainDb), -24, 24),
     compressor: {
       enabled: value?.compressor?.enabled ?? defaults.compressor.enabled,
@@ -105,12 +136,13 @@ export function resolveMasterFxSettings(
 
 export function isMasterFxActive(value: MasterFxSettings | undefined): boolean {
   const resolved = resolveMasterFxSettings(value)
+  const processors = new Set(resolved.order)
   return (
     resolved.enabled &&
     (Math.abs(resolved.inputGainDb) > 0.0001 ||
-      resolved.compressor.enabled ||
-      resolved.saturator.enabled ||
-      resolved.limiter.enabled)
+      (processors.has('compressor') && resolved.compressor.enabled) ||
+      (processors.has('saturator') && resolved.saturator.enabled) ||
+      (processors.has('limiter') && resolved.limiter.enabled))
   )
 }
 
@@ -125,6 +157,7 @@ export const MASTERING_PRESETS: ReadonlyArray<{
     label: 'Clean',
     description: 'Light glue and peak protection.',
     settings: {
+      order: ['compressor', 'limiter'],
       enabled: true,
       inputGainDb: 0,
       compressor: {
@@ -145,6 +178,7 @@ export const MASTERING_PRESETS: ReadonlyArray<{
     label: 'Punch',
     description: 'Keeps transients while tightening the stereo master.',
     settings: {
+      order: ['compressor', 'saturator', 'limiter'],
       enabled: true,
       inputGainDb: 0.8,
       compressor: {
@@ -165,6 +199,7 @@ export const MASTERING_PRESETS: ReadonlyArray<{
     label: 'Hard',
     description: 'Denser and louder without hiding the processing.',
     settings: {
+      order: ['compressor', 'saturator', 'limiter'],
       enabled: true,
       inputGainDb: 1.8,
       compressor: {
@@ -187,6 +222,7 @@ export const MASTERING_PRESETS: ReadonlyArray<{
     label: 'Dry Punch',
     description: 'Dry punch with fast recovery, restrained harmonics and safe peaks.',
     settings: {
+      order: ['compressor', 'saturator', 'limiter'],
       enabled: true,
       inputGainDb: 1.2,
       compressor: {
@@ -207,6 +243,7 @@ export const MASTERING_PRESETS: ReadonlyArray<{
     label: '808 Punch',
     description: 'Low-end-friendly dynamics on the full stereo beat, not stem remixing.',
     settings: {
+      order: ['compressor', 'saturator', 'limiter'],
       enabled: true,
       inputGainDb: 0.6,
       compressor: {
@@ -227,6 +264,7 @@ export const MASTERING_PRESETS: ReadonlyArray<{
     label: 'Warm',
     description: 'Gentle saturation with restrained glue.',
     settings: {
+      order: ['compressor', 'saturator', 'limiter'],
       enabled: true,
       inputGainDb: 0,
       compressor: {

@@ -232,6 +232,7 @@ export function PlaybackControls({
       {/* Transport Controls */}
       <div
         className="flex items-center gap-0.5 flex-shrink-0"
+        data-studio-player
         data-compact={compact ? 'true' : 'false'}
       >
         <Button
@@ -262,6 +263,7 @@ export function PlaybackControls({
         ) : null}
 
         <Button
+          variant="ghost"
           size="icon"
           className="flex-shrink-0"
           style={btnSize}
@@ -328,7 +330,7 @@ export function PlaybackControls({
       </div>
 
       {/* Save frame — hidden at narrow widths */}
-      <div className="hidden @min-[440px]:flex items-center gap-0.5 flex-shrink-0">
+      <div className="hidden @min-[440px]:flex items-center gap-0.5 flex-shrink-0" data-studio-player>
         <Separator orientation="vertical" className="h-4 flex-shrink-0" />
 
         <Button
@@ -358,19 +360,16 @@ export function PlaybackControls({
       </div>
 
       {/* Proxy toggle — hidden at narrow widths */}
-      <div className="hidden @min-[440px]:flex items-center gap-0.5 flex-shrink-0">
+      <div className="hidden @min-[440px]:flex items-center gap-0.5 flex-shrink-0" data-studio-player>
         <Separator orientation="vertical" className="h-4 flex-shrink-0" />
 
         <Button
           variant="ghost"
           size="icon"
           style={btnSize}
-          className={`flex-shrink-0 ${
-            useProxy
-              ? 'text-green-500 hover:text-green-400 hover:bg-green-500/10'
-              : 'text-muted-foreground hover:text-foreground'
-          }`}
+          className="flex-shrink-0"
           onClick={toggleUseProxy}
+          aria-pressed={useProxy}
           data-tooltip={
             useProxy
               ? t('preview.controls.proxyPlaybackOn')

@@ -1578,14 +1578,27 @@ const MediaCardInternal = memo(function MediaCardInternal({
           : mediaType === 'lottie'
             ? 'MOTION'
             : 'MEDIA'
-  const mediaTypeBadgeClass =
+  const mediaDetailsLabel =
     mediaType === 'video'
-      ? 'bg-sky-500/90 text-white'
-      : mediaType === 'audio'
-        ? 'bg-emerald-500/90 text-black'
-        : mediaType === 'image'
-          ? 'bg-violet-500/90 text-white'
-          : 'bg-fuchsia-500/90 text-white'
+      ? [
+          media.width && media.height ? String(media.width) + '×' + String(media.height) : null,
+          media.fps ? String(Number(media.fps.toFixed(2))) + ' fps' : null,
+        ]
+          .filter(Boolean)
+          .join(' · ')
+      : mediaType === 'image'
+        ? media.width && media.height
+          ? String(media.width) + '×' + String(media.height)
+          : ''
+        : mediaType === 'audio'
+          ? 'Audio'
+          : mediaType === 'lottie'
+            ? 'Motion graphic'
+            : ''
+  const skimTimeLabel =
+    canScrubPreview && skimProgress !== null && media.duration > 0
+      ? formatDuration(media.duration * skimProgress)
+      : null
 
   const getIcon = () => {
     switch (mediaType) {
@@ -1615,8 +1628,8 @@ const MediaCardInternal = memo(function MediaCardInternal({
           ${CARD_LIST_BASE}
           ${
             selected
-              ? 'border-primary ring-1 ring-primary/20'
-              : 'border-border hover:border-primary/50'
+              ? 'border-primary bg-primary/[0.035]'
+              : 'border-border hover:border-foreground/30 hover:bg-secondary/15'
           }
           ${isPreparingMedia ? 'opacity-80 cursor-default' : 'cursor-grab active:cursor-grabbing'}
         `}
@@ -1713,16 +1726,9 @@ const MediaCardInternal = memo(function MediaCardInternal({
                   <span className="text-[10px] text-muted-foreground">{preparingLabel}</span>
                 ) : (
                   <>
-                    <div
-                      className={`flex flex-shrink-0 items-center gap-1 rounded px-1 py-0.5 ${mediaTypeBadgeClass}`}
-                      title="Drag to timeline"
-                    >
-                      {mediaType === 'video' && <Video className="h-2.5 w-2.5" />}
-                      {mediaType === 'audio' && <FileAudio className="h-2.5 w-2.5" />}
-                      {mediaType === 'image' && <ImageIcon className="h-2.5 w-2.5" />}
-                      {mediaType === 'lottie' && <FileJson className="h-2.5 w-2.5" />}
-                      <span className="text-[8px] font-semibold tracking-wide">{mediaTypeLabel}</span>
-                    </div>
+                    <span className="w-10 flex-shrink-0 font-mono text-[8px] font-medium tracking-wide text-muted-foreground">
+                      {mediaTypeLabel}
+                    </span>
                     <h3 className="text-xs font-medium text-foreground truncate">
                       {media.fileName}
                     </h3>
@@ -1767,8 +1773,8 @@ const MediaCardInternal = memo(function MediaCardInternal({
         ${CARD_GRID_BASE}
         ${
           selected
-            ? 'border-primary ring-2 ring-primary/20'
-            : 'border-border hover:border-primary/50 hover:shadow-lg hover:shadow-primary/10'
+            ? 'border-primary bg-primary/[0.035]'
+            : 'border-border hover:border-foreground/35 hover:bg-secondary/10'
         }
         ${isPreparingMedia ? 'cursor-default' : 'cursor-grab active:cursor-grabbing'}
       `}
@@ -1785,14 +1791,10 @@ const MediaCardInternal = memo(function MediaCardInternal({
                   }
             }
           >
-            {/* Film strip perforations effect */}
-            <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-secondary via-muted to-secondary" />
-            <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-secondary via-muted to-secondary" />
-
-            {/* Thumbnail - takes most of square space */}
+            {/* Thumbnail — footage stays visually primary. */}
             <div
               ref={thumbnailContainerRef}
-              className="flex-1 bg-secondary relative overflow-hidden min-h-0"
+              className="aspect-video bg-black/45 relative overflow-hidden flex-shrink-0"
               onPointerEnter={handleThumbnailPointerEnter}
               onPointerMove={handleThumbnailPointerMove}
               onPointerLeave={handleThumbnailPointerLeave}
@@ -1802,7 +1804,7 @@ const MediaCardInternal = memo(function MediaCardInternal({
                   ref={thumbnailRef}
                   src={thumbnailUrl}
                   alt={media.fileName}
-                  className="w-full h-full object-contain transition-transform duration-500 group-hover:scale-105"
+                  className="w-full h-full object-cover"
                 />
               ) : (
                 <div className="w-full h-full flex items-center justify-center bg-gradient-to-br from-secondary to-panel-bg">
@@ -1810,10 +1812,7 @@ const MediaCardInternal = memo(function MediaCardInternal({
                 </div>
               )}
 
-              {/* Selection glow - subtle overlay only */}
-              {selected && !isPreparingMedia && (
-                <div className="absolute inset-0 bg-primary/10 pointer-events-none" />
-              )}
+              {/* Selection is carried by the card border so footage remains un-tinted. */}
 
               {/* Preparing overlay */}
               {isPreparingMedia && (
@@ -1825,67 +1824,51 @@ const MediaCardInternal = memo(function MediaCardInternal({
                 </div>
               )}
 
-              {/* Top-right badges & info */}
               {!isPreparingMedia && (
-                <div className="absolute top-1 right-1 z-10 flex flex-col items-end gap-0.5">
-                  {isBroken && (
-                    <div className="p-1 rounded bg-destructive/90 text-destructive-foreground">
-                      <Link2Off className="w-3 h-3" />
+                <>
+                  <div className="absolute top-1 right-1 z-10 flex items-center gap-1">
+                    {isBroken && (
+                      <div className="flex h-5 items-center gap-1 bg-destructive/90 px-1.5 text-[8px] font-medium text-destructive-foreground">
+                        <Link2Off className="h-2.5 w-2.5" />
+                        Offline
+                      </div>
+                    )}
+                    {!isBroken && proxyStatus === 'generating' && (
+                      <div className="flex h-5 items-center gap-1 bg-black/75 px-1.5 font-mono text-[8px] text-white/85 pointer-events-none">
+                        <Loader2 className="h-2.5 w-2.5 animate-spin" />
+                        PROXY
+                      </div>
+                    )}
+                    {!isBroken && hasProxy && (
+                      <div className="h-5 bg-black/75 px-1.5 py-1 font-mono text-[8px] text-white/80 pointer-events-none">
+                        PROXY
+                      </div>
+                    )}
+                    {!isBroken && isTagging && (
+                      <div
+                        className="flex h-5 items-center gap-1 bg-black/75 px-1.5 font-mono text-[8px] text-primary pointer-events-none"
+                        title={t('media.card.analyzingWithAI')}
+                      >
+                        <Loader2 className="h-2.5 w-2.5 animate-spin" />
+                        AI
+                      </div>
+                    )}
+                    <div className="opacity-0 transition-opacity group-hover:opacity-100">
+                      <MediaInfoPopover media={media} onSeekToCaption={handleSeekToCaption} />
                     </div>
-                  )}
-                  {!isBroken && proxyStatus === 'generating' && (
-                    <div className="p-0.5 rounded bg-green-500/90 text-black pointer-events-none">
-                      <Loader2 className="w-2.5 h-2.5 animate-spin" />
-                    </div>
-                  )}
-                  {!isBroken && isTagging && (
-                    <div
-                      className="p-0.5 rounded bg-purple-500/90 text-white pointer-events-none"
-                      title={t('media.card.analyzingWithAI')}
-                    >
-                      <Loader2 className="w-2.5 h-2.5 animate-spin" />
-                    </div>
-                  )}
-                  {!isBroken && hasProxy && (
-                    <div className="p-0.5 rounded bg-green-500/90 text-black pointer-events-none">
-                      <Zap className="w-2.5 h-2.5" />
-                    </div>
-                  )}
-                  {!isBroken && hasCaptions && (
-                    <div
-                      className="p-0.5 rounded bg-purple-500/90 text-white pointer-events-none"
-                      title={t('media.card.aiCaptionsCount', { count: media.aiCaptions!.length })}
-                    >
-                      <Sparkles className="w-2.5 h-2.5" />
-                    </div>
-                  )}
-                  <div className="opacity-0 group-hover:opacity-100 transition-opacity">
-                    <MediaInfoPopover media={media} onSeekToCaption={handleSeekToCaption} />
-                  </div>
-                </div>
-              )}
-
-              {/* Overlaid badges - hidden during preparation */}
-              {!isPreparingMedia && (
-                <div className="absolute inset-x-0 bottom-0 px-1.5 py-1 bg-gradient-to-t from-black/60 to-transparent flex items-center justify-between gap-1 pointer-events-none">
-                  <div
-                    className={`flex items-center gap-1 rounded px-1 py-0.5 ${mediaTypeBadgeClass}`}
-                    title="Drag to timeline"
-                  >
-                    {mediaType === 'video' && <Video className="h-2.5 w-2.5" />}
-                    {mediaType === 'audio' && <FileAudio className="h-2.5 w-2.5" />}
-                    {mediaType === 'image' && <ImageIcon className="h-2.5 w-2.5" />}
-                    {mediaType === 'lottie' && <FileJson className="h-2.5 w-2.5" />}
-                    <span className="text-[8px] font-semibold tracking-wide">{mediaTypeLabel}</span>
                   </div>
 
-                  {/* Duration badge */}
                   {(mediaType === 'video' || mediaType === 'audio') && media.duration > 0 && (
-                    <div className="px-1 py-0.5 bg-black/70 border border-white/20 rounded text-[8px] font-mono text-white">
+                    <div className="absolute bottom-1 right-1 bg-black/75 px-1.5 py-0.5 font-mono text-[8px] text-white/90 pointer-events-none">
                       {formatDuration(media.duration)}
                     </div>
                   )}
-                </div>
+                  {skimTimeLabel && (
+                    <div className="absolute bottom-1 left-1 bg-black/75 px-1.5 py-0.5 font-mono text-[8px] text-white pointer-events-none">
+                      {skimTimeLabel}
+                    </div>
+                  )}
+                </>
               )}
               {canScrubPreview && skimProgress !== null && (
                 <div
@@ -1913,20 +1896,18 @@ const MediaCardInternal = memo(function MediaCardInternal({
                 )}
             </div>
 
-            {/* Content footer - minimal */}
-            <div className="px-1.5 py-1 bg-panel-bg/50 flex-shrink-0">
-              <div className="flex items-center justify-between gap-1">
-                <div className="flex-1 min-w-0">
-                  <h3 className="text-[10px] font-medium text-foreground truncate group-hover:text-primary transition-colors">
-                    {media.fileName}
-                  </h3>
-                </div>
+            <div className="flex-shrink-0 border-t border-border/80 bg-background px-2 py-1.5">
+              <h3 className="truncate text-[10px] font-medium leading-4 text-foreground">
+                {media.fileName}
+              </h3>
+              <div className="mt-0.5 flex min-w-0 items-center justify-between gap-2 font-mono text-[8px] leading-3 text-muted-foreground">
+                <span className="truncate">
+                  {mediaTypeLabel}
+                  {mediaDetailsLabel ? ' · ' + mediaDetailsLabel : ''}
+                </span>
+                {hasCaptions ? <span className="shrink-0">CAPTIONS</span> : null}
               </div>
             </div>
-
-            {/* Film strip edge detail */}
-            <div className="absolute left-0 top-0 bottom-0 w-[2px] bg-gradient-to-b from-border via-muted to-border opacity-50" />
-            <div className="absolute right-0 top-0 bottom-0 w-[2px] bg-gradient-to-b from-border via-muted to-border opacity-50" />
           </div>
         </ContextMenuTrigger>
         <ContextMenuContent onClick={(e) => e.stopPropagation()}>

@@ -69,7 +69,7 @@ export function convertTimelineToComposition(
     outPoint > inPoint
 
   // Process items based on whether in/out points are set
-  let processedItems = items
+  let processedItems = items.filter((item) => item.enabled !== false)
   let durationInFrames: number
 
   // Track keyframe offsets for each item (how many frames were trimmed from start)
@@ -77,7 +77,7 @@ export function convertTimelineToComposition(
 
   if (hasInOutRange) {
     // Filter items that overlap with the in/out range
-    processedItems = items
+    processedItems = processedItems
       .filter((item) => {
         const itemStart = item.from
         const itemEnd = item.from + item.durationInFrames

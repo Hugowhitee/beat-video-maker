@@ -94,6 +94,28 @@ describe('resolveProducerTrackLayout', () => {
     expect(layout.extraTracks.map((entry) => entry.id)).toEqual(['overlay', 'aux'])
   })
 
+  it('does not let Color adjustment/controller utility lanes become Media or Extras', () => {
+    const grade = { ...track('grade', 'video'), name: 'Global grade', order: -2 }
+    const controller = { ...track('controller', 'video'), name: 'Color controller', order: -1 }
+    const media = { ...track('media', 'video'), name: 'V1', order: 0 }
+    const beat = { ...track('beat', 'audio'), name: 'Beat', order: 1 }
+
+    const layout = resolveProducerTrackLayout(
+      [grade, controller, media, beat],
+      {
+        grade: [{ type: 'adjustment' }],
+        controller: [{ type: 'controller' }],
+        media: [{ type: 'video' }],
+        beat: [{ type: 'audio' }],
+      },
+      true,
+    )
+
+    expect(layout.primaryMediaTrackId).toBe('media')
+    expect(layout.visibleTracks.map((entry) => entry.id)).toEqual(['media', 'beat'])
+    expect(layout.extraTracks).toEqual([])
+  })
+
   it('keeps only the primary Media drop lane when a new producer project is empty', () => {
     const tracks = [
       { ...track('video', 'video'), name: 'V1' },

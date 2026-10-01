@@ -5,7 +5,7 @@ import { useGizmoStore } from '@/features/editor/deps/preview'
 import { usePlaybackStore } from '@/shared/state/playback'
 import { usePreviewBridgeStore } from '@/shared/state/preview-bridge'
 import { useSelectionStore } from '@/shared/state/selection'
-import type { TimelineTrack, VideoItem } from '@/types/timeline'
+import type { AdjustmentItem, TimelineTrack, VideoItem } from '@/types/timeline'
 import { ColorTimelineNavigator } from './color-timeline-navigator'
 
 const VIDEO_TRACK: TimelineTrack = {
@@ -111,6 +111,34 @@ describe('ColorTimelineNavigator', () => {
     expect(tile).toHaveStyle({ height: '80px' })
   })
 
+  it('keeps the Global grade utility layer out of the media filmstrip and lanes', () => {
+    const gradeTrack: TimelineTrack = {
+      ...VIDEO_TRACK,
+      id: 'grade-track',
+      name: 'Global grade',
+      order: -1,
+    }
+    const globalGrade: AdjustmentItem = {
+      id: 'global-grade',
+      type: 'adjustment',
+      trackId: gradeTrack.id,
+      from: 0,
+      durationInFrames: 300,
+      label: 'Global grade',
+      effects: [],
+    }
+
+    useItemsStore.getState().setTracks([gradeTrack, VIDEO_TRACK, AUDIO_TRACK])
+    useItemsStore.getState().setItems([globalGrade, VIDEO_ITEM])
+
+    render(<ColorTimelineNavigator />)
+
+    expect(screen.queryByText('Global grade')).not.toBeInTheDocument()
+    expect(screen.getAllByTestId('color-timeline-film-tile')).toHaveLength(1)
+    expect(screen.getAllByTestId('color-timeline-mini-clip')).toHaveLength(1)
+    expect(screen.getByText('shot-01.mp4')).toBeInTheDocument()
+  })
+
   it('places mini timeline segments on their matching video track rows', () => {
     useItemsStore.getState().setTracks([VIDEO_TRACK_2, VIDEO_TRACK, AUDIO_TRACK])
     useItemsStore.getState().setItems([VIDEO_ITEM, VIDEO_ITEM_ON_V2])
@@ -179,6 +207,48 @@ describe('ColorTimelineNavigator', () => {
     const thumbnail = container.querySelector('[data-graded-thumbnail="true"]')
     expect(thumbnail).not.toBeNull()
     expect(thumbnail?.getAttribute('style')).toContain('filter:')
+    expect(screen.getByTestId('color-timeline-grade-overlay')).toBeInTheDocument()
+  })
+
+  it('previews the Full video global grade on ordinary media tiles', () => {
+    const gradeTrack: TimelineTrack = {
+      ...VIDEO_TRACK,
+      id: 'grade-track',
+      name: 'Global grade',
+      order: -1,
+    }
+    const globalGrade: AdjustmentItem = {
+      id: 'global-grade',
+      type: 'adjustment',
+      trackId: gradeTrack.id,
+      from: 0,
+      durationInFrames: 300,
+      label: 'Global grade',
+      effects: [
+        {
+          id: 'global-wheels',
+          enabled: true,
+          effect: {
+            type: 'gpu-effect',
+            gpuEffectType: 'gpu-color-wheels',
+            params: {
+              exposure: 0.45,
+              contrast: 1.2,
+              saturation: 35,
+              temperature: 30,
+            },
+          },
+        },
+      ],
+    }
+
+    useItemsStore.getState().setTracks([gradeTrack, VIDEO_TRACK, AUDIO_TRACK])
+    useItemsStore.getState().setItems([globalGrade, VIDEO_ITEM])
+
+    const { container } = render(<ColorTimelineNavigator />)
+
+    expect(screen.getAllByTestId('color-timeline-film-tile')).toHaveLength(1)
+    expect(container.querySelector('[data-graded-thumbnail="true"]')).not.toBeNull()
     expect(screen.getByTestId('color-timeline-grade-overlay')).toBeInTheDocument()
   })
 

@@ -127,6 +127,35 @@ describe('TrackHeader', () => {
     expect(screen.queryByRole('button', { name: 'Disable sync lock' })).not.toBeInTheDocument()
   })
 
+  it('exposes one real collapse control in the producer header when wired', () => {
+    const onToggleCollapsed = vi.fn()
+    render(
+      <TrackHeader
+        track={makeTrack({ name: 'Beat' })}
+        isActive={false}
+        isSelected={false}
+        canDeleteTrack
+        canDeleteEmptyTracks
+        simplified
+        collapsed={false}
+        onToggleCollapsed={onToggleCollapsed}
+        onToggleLock={() => undefined}
+        onToggleSyncLock={() => undefined}
+        onToggleDisabled={() => undefined}
+        onToggleSolo={() => undefined}
+        onSelect={() => undefined}
+        onCloseGaps={() => undefined}
+        onAddVideoTrack={() => undefined}
+        onAddAudioTrack={() => undefined}
+        onDeleteTrack={() => undefined}
+        onDeleteEmptyTracks={() => undefined}
+      />,
+    )
+
+    fireEvent.click(screen.getByRole('button', { name: 'Collapse Beat track' }))
+    expect(onToggleCollapsed).toHaveBeenCalledTimes(1)
+  })
+
   it('renders sync lock enabled by default and toggles the label when disabled', () => {
     const { rerender } = render(
       <TrackHeader

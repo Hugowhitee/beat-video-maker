@@ -3,6 +3,8 @@ import { resolveBeatGridDensity } from './beatvideo-grid-density'
 
 export type BeatGridResolution =
   | 'auto'
+  | 'quarter-beat'
+  | 'half-beat'
   | 'beat'
   | 'bar'
   | '2-bars'
@@ -15,6 +17,8 @@ export const BEAT_GRID_RESOLUTION_OPTIONS: readonly {
   label: string
 }[] = [
   { value: 'auto', label: 'Auto' },
+  { value: 'quarter-beat', label: '1/4 beat' },
+  { value: 'half-beat', label: '1/2 beat' },
   { value: 'beat', label: 'Beat' },
   { value: 'bar', label: '1 bar' },
   { value: '2-bars', label: '2 bars' },
@@ -24,6 +28,8 @@ export const BEAT_GRID_RESOLUTION_OPTIONS: readonly {
 ]
 
 const MANUAL_GRID_RESOLUTION_ORDER: readonly Exclude<BeatGridResolution, 'auto'>[] = [
+  'quarter-beat',
+  'half-beat',
   'beat',
   'bar',
   '2-bars',
@@ -47,10 +53,13 @@ export function stepBeatGridResolution(
   return MANUAL_GRID_RESOLUTION_ORDER[nextIndex] ?? resolution
 }
 
+export type BeatGridMarkerKind = 'subdivision' | 'beat' | 'bar'
+
 export interface BeatGridMarker {
   beat: MusicBeat
   isBarOne: boolean
   barNumber: number | null
+  kind: BeatGridMarkerKind
 }
 
 function median(values: number[]): number {
@@ -83,6 +92,42 @@ function manualBarStride(resolution: BeatGridResolution): number | null {
   return null
 }
 
+function subdivisionCount(resolution: BeatGridResolution): number {
+  if (resolution === 'quarter-beat') return 4
+  if (resolution === 'half-beat') return 2
+  return 1
+}
+
+function interpolateBeat(
+  left: MusicBeat,
+  right: MusicBeat,
+  step: number,
+  divisions: number,
+): MusicBeat {
+  const ratio = step / divisions
+  return {
+    time: left.time + (right.time - left.time) * ratio,
+    index: left.index + ratio,
+    downbeat: false,
+    strength: left.strength + (right.strength - left.strength) * ratio,
+  }
+}
+
+/**
+ * Temporarily thin the musical grid while dragging. Shift keeps snapping enabled,
+ * but lets the user bypass dense subdivisions without changing the saved view.
+ */
+export function coarsenBeatGridResolution(
+  resolution: BeatGridResolution,
+): BeatGridResolution {
+  if (resolution === 'quarter-beat' || resolution === 'half-beat') return 'beat'
+  if (resolution === 'auto' || resolution === 'beat') return 'bar'
+  if (resolution === 'bar') return '2-bars'
+  if (resolution === '2-bars') return '4-bars'
+  if (resolution === '4-bars') return '8-bars'
+  return '16-bars'
+}
+
 export function resolveBeatGridMarkers(params: {
   beats: readonly MusicBeat[]
   beatsPerBar: number
@@ -100,7 +145,8 @@ export function resolveBeatGridMarkers(params: {
     .slice(1)
     .map((beat, index) => beat.time - (beats[index]?.time ?? beat.time))
     .filter((interval) => interval > 0)
-  const beatSpacingPx = median(beatIntervals) * Math.max(0, params.pixelsPerSecond)
+  const medianBeatInterval = median(beatIntervals)
+  const beatSpacingPx = medianBeatInterval * Math.max(0, params.pixelsPerSecond)
 
   const downbeats = beats.filter((beat) => beat.downbeat)
   const downbeatTimes = downbeats.map((beat) => beat.time)
@@ -119,7 +165,9 @@ export function resolveBeatGridMarkers(params: {
     barOneTime === null ? -1 : closestIndex(downbeatTimes, barOneTime)
   const anchorIndex = Math.max(0, barOneDownbeatIndex)
 
+  const divisions = subdivisionCount(resolution)
   const showIndividualBeats =
+    divisions > 1 ||
     resolution === 'beat'
       ? true
       : resolution === 'auto'
@@ -127,7 +175,7 @@ export function resolveBeatGridMarkers(params: {
         : false
   const barStride =
     manualBarStride(resolution) ??
-    (resolution === 'beat' ? 1 : autoDensity.barStride)
+    (resolution === 'beat' || divisions > 1 ? 1 : autoDensity.barStride)
   const labelStride =
     resolution === 'auto'
       ? autoDensity.labelStride
@@ -136,10 +184,12 @@ export function resolveBeatGridMarkers(params: {
   const markers = beats.flatMap((beat): BeatGridMarker[] => {
     const isBarOne =
       barOneTime !== null &&
-      Math.abs(beat.time - barOneTime) <= Math.max(0.012, median(beatIntervals) * 0.12)
+      Math.abs(beat.time - barOneTime) <= Math.max(0.012, medianBeatInterval * 0.12)
 
     if (!beat.downbeat) {
-      return showIndividualBeats ? [{ beat, isBarOne: false, barNumber: null }] : []
+      return showIndividualBeats
+        ? [{ beat, isBarOne: false, barNumber: null, kind: 'beat' }]
+        : []
     }
 
     const downbeatIndex = downbeatTimes.findIndex(
@@ -154,8 +204,32 @@ export function resolveBeatGridMarkers(params: {
         ? downbeatIndex - barOneDownbeatIndex + 1
         : null
 
-    return [{ beat, isBarOne, barNumber }]
+    return [{ beat, isBarOne, barNumber, kind: 'bar' }]
   })
 
-  return { markers, labelStride }
+  if (divisions === 1 || beats.length < 2) {
+    return { markers, labelStride }
+  }
+
+  const subdivisionMarkers: BeatGridMarker[] = []
+  for (let index = 0; index < beats.length - 1; index += 1) {
+    const left = beats[index]
+    const right = beats[index + 1]
+    if (!left || !right || right.time <= left.time) continue
+    for (let step = 1; step < divisions; step += 1) {
+      subdivisionMarkers.push({
+        beat: interpolateBeat(left, right, step, divisions),
+        isBarOne: false,
+        barNumber: null,
+        kind: 'subdivision',
+      })
+    }
+  }
+
+  return {
+    markers: [...markers, ...subdivisionMarkers].sort(
+      (left, right) => left.beat.time - right.beat.time,
+    ),
+    labelStride,
+  }
 }

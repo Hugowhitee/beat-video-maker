@@ -709,7 +709,7 @@ export function TransitionPanel() {
           label={t('editor.transitionPanel.placement')}
           tooltip={t('editor.transitionPanel.placementTooltip')}
         >
-          <div className="flex items-center gap-0.5 p-0.5 bg-secondary rounded-md">
+          <div className="studio-segmented flex w-full items-stretch">
             {PLACEMENT_OPTIONS.map(({ value, labelKey, titleKey }) => {
               const maxForPlacement =
                 leftClip && rightClip
@@ -729,12 +729,10 @@ export function TransitionPanel() {
                     disabled ? t('editor.transitionPanel.placementDisabled', { title }) : title
                   }
                   disabled={disabled}
+                  aria-pressed={selected}
                   onClick={() => handlePlacementChange(value)}
                   className={cn(
-                    'inline-flex h-7 min-w-[3.75rem] flex-1 items-center justify-center rounded px-2 text-xs transition-colors',
-                    selected
-                      ? 'bg-background text-foreground shadow-sm'
-                      : 'text-muted-foreground hover:text-foreground',
+                    'studio-segment inline-flex h-7 min-w-[3.75rem] flex-1 items-center justify-center px-2 text-[10px]',
                     disabled && 'cursor-not-allowed opacity-40 hover:text-muted-foreground',
                   )}
                 >
@@ -750,17 +748,15 @@ export function TransitionPanel() {
             label={t('editor.transitionPanel.ease')}
             tooltip={t('editor.transitionPanel.easeTooltip')}
           >
-            <div className="flex items-center gap-0.5 p-0.5 bg-secondary rounded-md">
+            <div className="studio-segmented flex w-full items-stretch">
               {easeOptions.map((option) => (
                 <button
                   key={option.value}
                   type="button"
                   onClick={() => handleTimingChange(option.value)}
+                  aria-pressed={selectedTransition.timing === option.value}
                   className={cn(
-                    'px-3 py-1 text-xs rounded transition-colors',
-                    selectedTransition.timing === option.value
-                      ? 'bg-background text-foreground shadow-sm'
-                      : 'text-muted-foreground hover:text-foreground',
+                    'studio-segment h-7 flex-1 px-2 text-[10px]',
                   )}
                 >
                   {t(option.labelKey)}
@@ -775,18 +771,16 @@ export function TransitionPanel() {
             label={t('editor.transitionPanel.direction')}
             tooltip={t('editor.transitionPanel.directionTooltip')}
           >
-            <div className="flex items-center gap-0.5 p-0.5 bg-secondary rounded-md">
+            <div className="studio-segmented flex w-full items-stretch">
               {directionOptions.map((option) => (
                 <button
                   key={option.value}
                   type="button"
                   aria-label={t(option.labelKey)}
+                  aria-pressed={selectedDirection === option.value}
                   onClick={() => handleDirectionChange(option.value)}
                   className={cn(
-                    'px-3 py-1 text-xs rounded transition-colors',
-                    selectedDirection === option.value
-                      ? 'bg-background text-foreground shadow-sm'
-                      : 'text-muted-foreground hover:text-foreground',
+                    'studio-segment h-7 flex-1 px-2 text-[10px]',
                   )}
                 >
                   {t(option.labelKey)}

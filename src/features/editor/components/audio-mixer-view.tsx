@@ -531,8 +531,8 @@ const ChannelStrip = memo(function ChannelStrip({
             type="button"
             className={`min-w-[28px] rounded-[3px] px-2 py-0.5 text-[9px] font-semibold tracking-[0.14em] transition-colors ${
               eqActive
-                ? 'border border-sky-400/50 bg-sky-500/15 text-sky-300 shadow-[0_0_10px_rgba(56,189,248,0.22)]'
-                : 'border border-transparent bg-muted/30 text-muted-foreground/45 hover:bg-sky-500/10 hover:text-sky-300'
+                ? 'border border-primary/55 bg-primary/15 text-primary shadow-[0_0_10px_rgba(176,219,71,0.22)]'
+                : 'border border-transparent bg-muted/30 text-muted-foreground/45 hover:bg-primary/10 hover:text-primary'
             } ${!onEqToggle ? 'pointer-events-none opacity-50' : ''}`}
             onClick={handleEqClick}
             aria-label={`EQ ${track.name}`}
@@ -822,8 +822,8 @@ const BusMeter = memo(function BusMeter({
             type="button"
             className={`min-w-[28px] rounded-[3px] px-2 py-0.5 text-[9px] font-semibold tracking-[0.14em] transition-colors ${
               eqActive
-                ? 'border border-sky-400/50 bg-sky-500/15 text-sky-300 shadow-[0_0_10px_rgba(56,189,248,0.22)]'
-                : 'border border-transparent bg-muted/30 text-muted-foreground/45 hover:bg-sky-500/10 hover:text-sky-300'
+                ? 'border border-primary/55 bg-primary/15 text-primary shadow-[0_0_10px_rgba(176,219,71,0.22)]'
+                : 'border border-transparent bg-muted/30 text-muted-foreground/45 hover:bg-primary/10 hover:text-primary'
             } ${!onEqToggle ? 'pointer-events-none opacity-50' : ''}`}
             onClick={onEqToggle}
             aria-label="EQ Bus 1"
@@ -1200,7 +1200,7 @@ export const AudioMixerView = memo(function AudioMixerView({
           </span>
           {headerExtra ?? (
             <span
-              className={`h-2 w-2 rounded-full ${isPlaying ? 'bg-emerald-400 shadow-[0_0_8px_rgba(74,222,128,0.7)]' : 'bg-muted-foreground/30'}`}
+              className={`h-2 w-2 rounded-full ${isPlaying ? 'bg-primary shadow-[0_0_8px_rgba(176,219,71,0.65)]' : 'bg-muted-foreground/30'}`}
               aria-hidden="true"
             />
           )}

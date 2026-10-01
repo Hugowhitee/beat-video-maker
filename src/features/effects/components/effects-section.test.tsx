@@ -34,12 +34,16 @@ const mocks = vi.hoisted(() => {
     loadPresets: vi.fn(() => Promise.resolve()),
     removePreset: vi.fn(() => Promise.resolve()),
   }
+  const previewData = {
+    triggerPreviews: vi.fn(),
+  }
   return {
     timelineState,
     gizmoState,
     powerWindowEditorState,
     spatialEffectEditorState,
     presetsState,
+    previewData,
   }
 })
 
@@ -70,7 +74,7 @@ vi.mock('../hooks/use-keyframes-by-item-id', () => ({
 vi.mock('../hooks/use-gpu-effect-preview-data', () => ({
   useGpuEffectPreviewData: () => ({
     gpuCategories: [],
-    triggerPreviews: vi.fn(),
+    triggerPreviews: mocks.previewData.triggerPreviews,
   }),
 }))
 
@@ -153,6 +157,15 @@ describe('EffectsSection', () => {
         gpuEffectType: 'gpu-grain',
       }),
     )
+  })
+
+  it('keeps the real effect-preview host wired into Add Effect', () => {
+    render(<EffectsSection items={[makeItem('clip-a', [])]} />)
+
+    fireEvent.click(screen.getByRole('button', { name: /add effect/i }))
+
+    expect(mocks.previewData.triggerPreviews).toHaveBeenCalledTimes(1)
+    expect(screen.getAllByTestId('effect-thumbnail').length).toBeGreaterThan(0)
   })
 
   it('keeps reactive starters inside Add Effect instead of a separate permanent panel', () => {

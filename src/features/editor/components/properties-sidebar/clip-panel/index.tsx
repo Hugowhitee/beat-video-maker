@@ -10,17 +10,6 @@ import {
 } from 'react'
 import { flushSync } from 'react-dom'
 import { useTranslation } from 'react-i18next'
-import {
-  Crosshair,
-  Film,
-  Sparkles,
-  SlidersHorizontal,
-  Volume2,
-  Type,
-  WandSparkles,
-  Shapes,
-  type LucideIcon,
-} from 'lucide-react'
 import { cn } from '@/shared/ui/cn'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { Separator } from '@/components/ui/separator'
@@ -575,39 +564,27 @@ const ClipPanelCore = memo(function ClipPanelCore({
     [setClipInspectorTab],
   )
 
-  // Per-tab label + icon. Motion presents base properties, animation authoring,
-  // then effects; Edit retains its media-first inspector ordering.
-  const getTabMeta = (value: ClipInspectorTab): { label: string; icon: LucideIcon } => {
+  // Keep producer tabs text-first. The selected object already provides
+  // context in the inspector header; repeating icons in every tab adds noise.
+  const getTabLabel = (value: ClipInspectorTab): string => {
     if (value === 'video') {
       if (workspace === 'motion') {
-        return {
-          label: t('editor.clipPanel.tabProperties', { defaultValue: 'Properties' }),
-          icon: SlidersHorizontal,
-        }
+        return t('editor.clipPanel.tabProperties', { defaultValue: 'Properties' })
       }
-      if (isOnlyText) return { label: t('editor.clipPanel.tabText'), icon: Type }
-      if (isOnlyShape) return { label: t('editor.clipPanel.tabShape'), icon: Shapes }
+      if (isOnlyText) return t('editor.clipPanel.tabText')
+      if (isOnlyShape) return t('editor.clipPanel.tabShape')
       if (isOnlyController) {
-        return {
-          label: t('editor.clipPanel.tabController', { defaultValue: 'Null Object' }),
-          icon: Crosshair,
-        }
+        return t('editor.clipPanel.tabController', { defaultValue: 'Null Object' })
       }
-      return { label: t('editor.clipPanel.tabVideo'), icon: Film }
+      return t('editor.clipPanel.tabVideo', { defaultValue: 'Clip' })
     }
-    if (value === 'audio') {
-      return { label: t('editor.clipPanel.tabAudio'), icon: Volume2 }
-    }
+    if (value === 'audio') return t('editor.clipPanel.tabAudio')
     if (value === 'motion') {
-      return {
-        label:
-          workspace === 'motion'
-            ? t('editor.clipPanel.tabAnimate', { defaultValue: 'Animate' })
-            : 'Motion',
-        icon: WandSparkles,
-      }
+      return workspace === 'motion'
+        ? t('editor.clipPanel.tabAnimate', { defaultValue: 'Animate' })
+        : 'Motion'
     }
-    return { label: t('editor.clipPanel.tabEffects'), icon: Sparkles }
+    return t('editor.clipPanel.tabEffects')
   }
   const tabGridColsClass =
     availableTabs.length <= 1
@@ -632,20 +609,25 @@ const ClipPanelCore = memo(function ClipPanelCore({
         onValueChange={handleTabChange}
         className={cn('w-full', motionUsesFullHeight && 'flex h-full min-h-0 flex-col')}
       >
-        <TabsList className={cn('grid h-8 w-full shrink-0', tabGridColsClass)}>
-          {availableTabs.map((value) => {
-            const { label, icon: Icon } = getTabMeta(value)
-            return (
-              <TabsTrigger key={value} value={value} className="text-xs gap-1 px-2">
-                <Icon className="h-3 w-3" />
-                {label}
-              </TabsTrigger>
-            )
-          })}
+        <TabsList
+          className={cn(
+            'studio-segmented grid h-8 w-full shrink-0 p-0.5',
+            tabGridColsClass,
+          )}
+        >
+          {availableTabs.map((value) => (
+            <TabsTrigger
+              key={value}
+              value={value}
+              className="studio-segment h-7 rounded-sm px-2 py-0 text-[10px] font-medium shadow-none active:scale-100"
+            >
+              {getTabLabel(value)}
+            </TabsTrigger>
+          ))}
         </TabsList>
 
         {/* Video Tab - visual layout, content, and clip-specific controls */}
-        <TabsContent value="video" className="mt-3">
+        <TabsContent value="video" className="mt-2">
           {showVideoTab && (
             <div className="divide-y divide-border [&>*]:py-4 [&>*:first-child]:pt-0 [&>*:last-child]:pb-0">
               {showVideoTab && (
@@ -694,7 +676,7 @@ const ClipPanelCore = memo(function ClipPanelCore({
 
         {/* Motion Tab — the composition's single preset, procedural, text
             motion, bake, and saved-animation surface. */}
-        <TabsContent value="motion" className="mt-3 min-h-0 flex-1 data-[state=inactive]:hidden">
+        <TabsContent value="motion" className="mt-2 min-h-0 flex-1 data-[state=inactive]:hidden">
           {showMotionTab && activeTab === 'motion' ? (
             <div className="flex h-full min-h-0 flex-col">
               <div className="min-h-0 flex-1">
@@ -718,7 +700,7 @@ const ClipPanelCore = memo(function ClipPanelCore({
         </TabsContent>
 
         {/* Audio stays media-specific; text animation lives in Animation. */}
-        <TabsContent value="audio" className="space-y-4 mt-3">
+        <TabsContent value="audio" className="mt-2 space-y-3">
           {hasAudioItems && activeTab === 'audio' && (
             <Suspense fallback={null}>
               <LazyAudioSection items={audioPanelItems} />
@@ -727,7 +709,7 @@ const ClipPanelCore = memo(function ClipPanelCore({
         </TabsContent>
 
         {/* Effects Tab - clip effects plus text styling and animation */}
-        <TabsContent value="effects" className="space-y-4 mt-3">
+        <TabsContent value="effects" className="mt-2 space-y-3">
           {hasVisualItems && (
             <>
               {/* Explanatory text for adjustment layers */}

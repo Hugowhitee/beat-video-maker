@@ -9,6 +9,7 @@ import { usePlaybackStore } from '@/shared/state/playback'
 import { useSelectionStore } from '@/shared/state/selection'
 import { useGizmoStore } from '@/features/editor/deps/preview'
 import type { TimelineItem, TimelineTrack } from '@/types/timeline'
+import { GLOBAL_COLOR_GRADE_LABEL } from './properties-sidebar/color-grade-panel'
 import {
   buildTimelineAnnotationModel,
   type TimelineAnnotationMarker,
@@ -57,7 +58,7 @@ interface ColorTimelineClip extends MiniFilmTileClip {
 }
 
 function isVisualNavigatorItem(item: TimelineItem): boolean {
-  return item.type !== 'audio' && item.type !== 'subtitle'
+  return item.type === 'video' || item.type === 'image' || item.type === 'composition'
 }
 
 function isNavigatorVideoTrack(track: TimelineTrack): boolean {
@@ -277,9 +278,30 @@ export const ColorTimelineNavigator = memo(function ColorTimelineNavigator() {
   const suppressPlayheadPreviewRef = useRef(false)
 
   const selectedItemIdSet = useMemo(() => new Set(selectedItemIds), [selectedItemIds])
+  const globalGrade = useMemo(
+    () =>
+      items.find(
+        (item) =>
+          item.type === 'adjustment' &&
+          item.label === GLOBAL_COLOR_GRADE_LABEL &&
+          item.from === 0,
+      ) ?? null,
+    [items],
+  )
+  const globalGradeEffects =
+    (globalGrade && livePreviewEdits?.[globalGrade.id]?.effects) ??
+    globalGrade?.effects ??
+    []
+  const navigatorTrackIds = useMemo(
+    () => new Set(items.filter(isVisualNavigatorItem).map((item) => item.trackId)),
+    [items],
+  )
   const videoTrackRows = useMemo(
-    () => tracks.filter(isNavigatorVideoTrack).sort((a, b) => a.order - b.order),
-    [tracks],
+    () =>
+      tracks
+        .filter((track) => navigatorTrackIds.has(track.id) && isNavigatorVideoTrack(track))
+        .sort((a, b) => a.order - b.order),
+    [navigatorTrackIds, tracks],
   )
   const trackNameById = useMemo(
     () => new Map(tracks.map((track) => [track.id, track.name || track.id])),
@@ -289,29 +311,32 @@ export const ColorTimelineNavigator = memo(function ColorTimelineNavigator() {
     () =>
       items
         .filter(isVisualNavigatorItem)
-        .map((item) => ({
-          id: item.id,
-          type: item.type,
-          label: getNavigatorLabel(item),
-          trackName: trackNameById.get(item.trackId) ?? 'V1',
-          mediaId: item.mediaId,
-          from: item.from,
-          durationInFrames: item.durationInFrames,
-          sourceStartFrames: Math.max(0, item.sourceStart ?? 0),
-          sourceDurationFrames: Math.max(1, item.sourceDuration ?? item.durationInFrames),
-          sourceFps: item.sourceFps && item.sourceFps > 0 ? item.sourceFps : fps,
-          trimStartFrames: item.trimStart ?? 0,
-          thumbnailUrl: getThumbnailUrl(item),
-          // Mini-clip lanes key off trackId; films tiles don't, but carrying it
-          // keeps the two clip lists derived from one pass.
-          trackId: item.trackId,
-          effects: livePreviewEdits?.[item.id]?.effects ?? item.effects ?? [],
-          gradeThumbnail: resolveColorGradeThumbnailTreatment(
-            livePreviewEdits?.[item.id]?.effects ?? item.effects,
-          ),
-        }))
+        .map((item) => {
+          const itemEffects = livePreviewEdits?.[item.id]?.effects ?? item.effects ?? []
+          const effects = [...globalGradeEffects, ...itemEffects]
+
+          return {
+            id: item.id,
+            type: item.type,
+            label: getNavigatorLabel(item),
+            trackName: trackNameById.get(item.trackId) ?? 'V1',
+            mediaId: item.mediaId,
+            from: item.from,
+            durationInFrames: item.durationInFrames,
+            sourceStartFrames: Math.max(0, item.sourceStart ?? 0),
+            sourceDurationFrames: Math.max(1, item.sourceDuration ?? item.durationInFrames),
+            sourceFps: item.sourceFps && item.sourceFps > 0 ? item.sourceFps : fps,
+            trimStartFrames: item.trimStart ?? 0,
+            thumbnailUrl: getThumbnailUrl(item),
+            // Mini-clip lanes key off trackId; films tiles don't, but carrying it
+            // keeps the two clip lists derived from one pass.
+            trackId: item.trackId,
+            effects,
+            gradeThumbnail: resolveColorGradeThumbnailTreatment(effects),
+          }
+        })
         .sort((a, b) => a.from - b.from || a.trackId.localeCompare(b.trackId)),
-    [items, livePreviewEdits, trackNameById, fps],
+    [fps, globalGradeEffects, items, livePreviewEdits, trackNameById],
   )
   const miniClips = useMemo<MiniTimelineClip[]>(
     () =>

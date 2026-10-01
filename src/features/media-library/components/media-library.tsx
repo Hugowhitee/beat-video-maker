@@ -185,7 +185,7 @@ const MediaTypeGroupBase = memo(function MediaTypeGroupBase({
   const Icon = GROUP_ICONS[icon]
   return (
     <Collapsible open={isOpen} onOpenChange={(open) => onToggle(groupKey, open)}>
-      <CollapsibleTrigger className="flex items-center gap-2 w-full py-2 hover:bg-secondary/50 rounded-md px-2 -mx-2 transition-colors">
+      <CollapsibleTrigger className="flex h-7 w-full items-center gap-1.5 border-b border-border/70 px-1.5 text-left transition-colors hover:bg-secondary/25">
         <ChevronRight
           className={cn(
             'w-3 h-3 text-muted-foreground transition-transform',
@@ -193,7 +193,7 @@ const MediaTypeGroupBase = memo(function MediaTypeGroupBase({
           )}
         />
         <Icon className="w-3 h-3 text-muted-foreground" />
-        <span className="text-xs font-semibold tracking-wide uppercase text-muted-foreground">
+        <span className="text-[9px] font-semibold tracking-wide text-muted-foreground">
           {label}
         </span>
         <span className="text-[10px] tabular-nums text-muted-foreground">{items.length}</span>
@@ -983,7 +983,7 @@ export const MediaLibrary = memo(function MediaLibrary({ onMediaSelect }: MediaL
           <div
             role="group"
             aria-label={t('media.library.libraryView')}
-            className="inline-flex items-center h-7 rounded-md border border-border bg-secondary p-0.5 shrink-0"
+            className="inline-flex h-7 shrink-0 items-end border-b border-border"
           >
             <HeaderActionTooltip label={t('media.library.showMediaLibrary')}>
               <button
@@ -992,10 +992,10 @@ export const MediaLibrary = memo(function MediaLibrary({ onMediaSelect }: MediaL
                 }}
                 aria-pressed={!sceneBrowserOpen}
                 className={cn(
-                  'flex items-center gap-1 h-6 px-1.5 @[280px]:px-2 rounded-[3px] text-[11px] transition-colors duration-150',
+                  'flex h-7 items-center gap-1 border-b-2 px-1.5 text-[10px] transition-colors @[280px]:px-2',
                   !sceneBrowserOpen
-                    ? 'bg-primary text-primary-foreground'
-                    : 'text-muted-foreground hover:text-foreground',
+                    ? 'border-primary text-foreground'
+                    : 'border-transparent text-muted-foreground hover:text-foreground',
                 )}
               >
                 <Film className="w-3 h-3" />
@@ -1009,10 +1009,10 @@ export const MediaLibrary = memo(function MediaLibrary({ onMediaSelect }: MediaL
                 }}
                 aria-pressed={sceneBrowserOpen}
                 className={cn(
-                  'flex items-center gap-1 h-6 px-1.5 @[280px]:px-2 rounded-[3px] text-[11px] transition-colors duration-150',
+                  'flex h-7 items-center gap-1 border-b-2 px-1.5 text-[10px] transition-colors @[280px]:px-2',
                   sceneBrowserOpen
-                    ? 'bg-primary text-primary-foreground'
-                    : 'text-muted-foreground hover:text-foreground',
+                    ? 'border-primary text-foreground'
+                    : 'border-transparent text-muted-foreground hover:text-foreground',
                 )}
               >
                 <ScanSearch className="w-3 h-3" />
@@ -1235,31 +1235,15 @@ export const MediaLibrary = memo(function MediaLibrary({ onMediaSelect }: MediaL
 
         {/* Drag overlay — absolute sibling, always covers the visible viewport */}
         {isDragging && (
-          <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-transparent to-primary/5 border-2 border-dashed border-primary z-50 flex items-center justify-center pointer-events-none">
-            <div className="absolute top-2 left-2 w-6 h-6 border-l-2 border-t-2 border-primary" />
-            <div className="absolute top-2 right-2 w-6 h-6 border-r-2 border-t-2 border-primary" />
-            <div className="absolute bottom-2 left-2 w-6 h-6 border-l-2 border-b-2 border-primary" />
-            <div className="absolute bottom-2 right-2 w-6 h-6 border-r-2 border-b-2 border-primary" />
-            <div className="flex flex-col items-center gap-4">
-              <div className="w-16 h-16 rounded-full flex items-center justify-center bg-primary/20 border-2 border-primary">
-                <Upload className="w-7 h-7 text-primary animate-bounce" />
-              </div>
-              <p className="text-base font-bold tracking-wide text-primary">
+          <div className="pointer-events-none absolute inset-0 z-50 flex items-center justify-center border border-primary/70 bg-background/90">
+            <div className="border border-border bg-panel-bg px-5 py-3 text-center shadow-lg">
+              <div className="flex items-center justify-center gap-2 text-sm font-medium text-foreground">
+                <Upload className="h-4 w-4 text-primary" />
                 {t('media.library.dropFilesHere')}
-              </p>
-              <div className="flex flex-wrap justify-center gap-2 mt-2">
-                {getSupportedMediaFormatLabels().map((label) => (
-                  <span
-                    key={label}
-                    className="px-2 py-0.5 bg-secondary border border-border rounded text-xs font-mono text-muted-foreground"
-                  >
-                    {label}
-                  </span>
-                ))}
               </div>
-            </div>
-            <div className="absolute inset-0 overflow-hidden">
-              <div className="absolute inset-x-0 h-px bg-gradient-to-r from-transparent via-primary to-transparent animate-scan" />
+              <div className="mt-1 font-mono text-[9px] text-muted-foreground">
+                {getSupportedMediaFormatLabels().join(' · ')}
+              </div>
             </div>
           </div>
         )}

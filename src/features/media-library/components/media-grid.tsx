@@ -242,33 +242,23 @@ const MediaGridBase = memo(function MediaGridBase({
           </div>
         </div>
       ) : !items && filteredItems.length === 0 ? (
-        <div className="flex items-center justify-center py-24">
+        <div className="py-10">
           <button
             type="button"
-            className="text-center max-w-md rounded-xl border border-dashed border-border/80 p-6 transition-colors hover:border-primary/60 hover:bg-secondary/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+            className="w-full border border-dashed border-border/80 bg-background px-5 py-8 text-left transition-colors hover:border-primary/60 hover:bg-secondary/15 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary"
             onClick={handleEmptyStateClick}
           >
-            <div className="w-20 h-20 mx-auto mb-6 rounded-full border-2 border-dashed border-border flex items-center justify-center bg-secondary transition-colors">
-              <Upload className="w-10 h-10 text-muted-foreground" />
-            </div>
-            <p className="text-base font-bold text-foreground mb-2 tracking-wide">
-              {t('media.grid.emptyTitle')}
-            </p>
-            <p className="text-sm text-muted-foreground font-light mb-4">
-              {t('media.grid.emptyHint')}
-            </p>
-            <span className="inline-flex items-center justify-center rounded-md bg-primary px-3 py-1.5 text-sm font-medium text-primary-foreground mb-4">
-              {t('media.grid.importButton')}
-            </span>
-            <div className="flex flex-wrap justify-center gap-2">
-              {getSupportedMediaFormatLabels().map((label) => (
-                <span
-                  key={label}
-                  className="px-2 py-0.5 bg-secondary border border-border rounded text-xs font-mono text-muted-foreground"
-                >
-                  {label}
-                </span>
-              ))}
+            <div className="flex items-start gap-3">
+              <Upload className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+              <div className="min-w-0">
+                <p className="text-sm font-medium text-foreground">{t('media.grid.emptyTitle')}</p>
+                <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+                  {t('media.grid.emptyHint')}
+                </p>
+                <p className="mt-3 font-mono text-[9px] text-muted-foreground">
+                  {getSupportedMediaFormatLabels().join(' · ')}
+                </p>
+              </div>
             </div>
           </button>
         </div>

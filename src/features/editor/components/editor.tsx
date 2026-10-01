@@ -771,6 +771,7 @@ export const LoadedEditor = memo(function LoadedEditor({
       role="application"
       aria-label={t('editor.editor.appLabel')}
       data-beatvideo-mode={beatvideoMode}
+      data-studio-v2="true"
     >
       <AutoSaveController onSave={handleSave} />
       <TimelineShortcutsController />
@@ -891,7 +892,7 @@ export const LoadedEditor = memo(function LoadedEditor({
                   onClick={() => setMobileSurface(surface.id)}
                   className={
                     active
-                      ? 'relative min-h-11 px-1 text-[11px] font-medium text-foreground after:absolute after:inset-x-3 after:top-0 after:h-[2px] after:bg-primary'
+                      ? 'min-h-11 bg-secondary/65 px-1 text-[11px] font-medium text-foreground shadow-[inset_3px_0_0_var(--primary)]'
                       : 'min-h-11 px-1 text-[11px] font-medium text-muted-foreground active:bg-secondary/50'
                   }
                 >

@@ -8,7 +8,17 @@ import {
   ContextMenuSeparator,
   ContextMenuTrigger,
 } from '@/components/ui/context-menu'
-import { Power, PowerOff, Lock, GripVertical, Radio, FoldHorizontal, Link2 } from 'lucide-react'
+import {
+  Power,
+  PowerOff,
+  Lock,
+  GripVertical,
+  Radio,
+  FoldHorizontal,
+  Link2,
+  ChevronDown,
+  ChevronRight,
+} from 'lucide-react'
 import type { TimelineTrack } from '@/types/timeline'
 import { useTrackDrag } from '../hooks/use-track-drag'
 import { TIMELINE_SIDEBAR_WIDTH } from '../constants'
@@ -25,6 +35,8 @@ interface TrackHeaderProps {
   canDeleteEmptyTracks: boolean
   simplified?: boolean
   displayName?: string
+  collapsed?: boolean
+  onToggleCollapsed?: () => void
   onToggleLock: () => void
   onToggleSyncLock: () => void
   onToggleDisabled: () => void
@@ -48,7 +60,8 @@ function areTrackHeaderPropsEqual(prev: TrackHeaderProps, next: TrackHeaderProps
     prev.canDeleteTrack === next.canDeleteTrack &&
     prev.canDeleteEmptyTracks === next.canDeleteEmptyTracks &&
     prev.simplified === next.simplified &&
-    prev.displayName === next.displayName
+    prev.displayName === next.displayName &&
+    prev.collapsed === next.collapsed
   )
   // Callbacks (onToggleLock, etc.) are ignored - they're recreated each render but functionality is same
 }
@@ -70,6 +83,8 @@ export const TrackHeader = memo(function TrackHeader({
   canDeleteEmptyTracks,
   simplified = false,
   displayName,
+  collapsed = false,
+  onToggleCollapsed,
   onToggleLock,
   onToggleSyncLock,
   onToggleDisabled,
@@ -133,7 +148,26 @@ export const TrackHeader = memo(function TrackHeader({
             onMouseDown={simplified ? undefined : handleDragStart}
           >
             {simplified ? (
-              <div className="flex h-full min-h-0 items-center gap-1.5 px-1.5">
+              <div className="flex h-full min-h-0 items-center gap-1 px-1">
+                {onToggleCollapsed ? (
+                  <button
+                    type="button"
+                    className="studio-tool flex h-6 w-6 shrink-0 items-center justify-center p-0"
+                    onClick={(event) => {
+                      event.stopPropagation()
+                      onToggleCollapsed()
+                    }}
+                    aria-expanded={!collapsed}
+                    aria-label={`${collapsed ? 'Expand' : 'Collapse'} ${producerTrackLabel} track`}
+                    data-tooltip={collapsed ? 'Expand track' : 'Collapse track'}
+                  >
+                    {collapsed ? (
+                      <ChevronRight className="h-3 w-3" />
+                    ) : (
+                      <ChevronDown className="h-3 w-3" />
+                    )}
+                  </button>
+                ) : null}
                 {displayTrackColor ? (
                   <span
                     className="h-2 w-2 shrink-0 rounded-[2px]"
@@ -144,6 +178,11 @@ export const TrackHeader = memo(function TrackHeader({
                 <span className="min-w-0 flex-1 truncate font-mono text-xs font-semibold">
                   {producerTrackLabel}
                 </span>
+                {itemCount > 0 ? (
+                  <span className="shrink-0 font-mono text-[9px] tabular-nums text-muted-foreground">
+                    {itemCount}
+                  </span>
+                ) : null}
                 {track.solo ? (
                   <span className="shrink-0 text-[9px] font-semibold text-primary">S</span>
                 ) : null}

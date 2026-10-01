@@ -173,6 +173,7 @@ export async function exportProjectBundle(
         fps: media.fps,
         codec: media.codec,
         bitrate: media.bitrate,
+        beatvideoMusicAnalysis: media.beatvideoMusicAnalysis,
       },
     })
 
@@ -362,6 +363,7 @@ export async function exportProjectBundleStreaming(
           fps: media.fps,
           codec: media.codec,
           bitrate: media.bitrate,
+          beatvideoMusicAnalysis: media.beatvideoMusicAnalysis,
         },
       })
 

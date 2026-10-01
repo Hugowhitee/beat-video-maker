@@ -35,6 +35,20 @@ function isDedicatedProducerExtra(track: TimelineTrack): boolean {
   return track.name === 'Producer tags' || track.name === 'Watermarks'
 }
 
+function isProducerUtilityTrack(
+  itemsByTrackId: Record<string, readonly unknown[] | undefined>,
+  trackId: string,
+): boolean {
+  const items = itemsByTrackId[trackId] ?? []
+  if (items.length === 0) return false
+
+  return items.every((item) => {
+    if (!item || typeof item !== 'object' || !('type' in item)) return false
+    const type = (item as { type?: unknown }).type
+    return type === 'adjustment' || type === 'controller'
+  })
+}
+
 /**
  * Beatvideo's normal producer timeline is a task view over canonical track
  * state, not a second track model:
@@ -51,7 +65,9 @@ export function resolveProducerTrackLayout(
   itemsByTrackId: Record<string, readonly unknown[] | undefined>,
   showExtras = false,
 ): ProducerTrackLayout {
-  const usableTracks = tracks.filter((track) => !track.isGroup)
+  const usableTracks = tracks.filter(
+    (track) => !track.isGroup && !isProducerUtilityTrack(itemsByTrackId, track.id),
+  )
   const videoTracks = usableTracks.filter((track) => getTrackKind(track) === 'video')
   const populatedVideoTracks = videoTracks.filter(
     (track) => itemCount(itemsByTrackId, track.id) > 0,

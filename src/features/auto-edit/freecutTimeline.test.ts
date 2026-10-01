@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import type { TimelineItem, TimelineTrack } from '@/types/timeline'
 import type { EditPlan } from './types'
 import {
+  buildEditPlanSourcePatches,
   buildEditPlanTimelineDraft,
   type ResolvedEditSource,
 } from './freecutTimeline'
@@ -186,6 +187,92 @@ describe('buildEditPlanTimelineDraft', () => {
     expect(draft.targetVideoTrackId).not.toBe('track-v1')
     expect(draft.tracks).toHaveLength(2)
     expect(draft.items.every((item) => item.trackId === draft.targetVideoTrackId)).toBe(true)
+  })
+
+  it('repairs only source fields so generated styling and motion stay intact', () => {
+    const previousPlan = makePlan()
+    const nextPlan: EditPlan = {
+      ...previousPlan,
+      segments: previousPlan.segments.map((segment) =>
+        segment.id === 'segment-1'
+          ? {
+              ...segment,
+              sourceId: 'source-b',
+              shotId: 'shot-b',
+              sourceStart: 4,
+              sourceEnd: 5,
+              manualOverride: true,
+            }
+          : segment,
+      ),
+    }
+    const existing = {
+      id: 'generated-1',
+      type: 'video',
+      trackId: 'track-v1',
+      from: 0,
+      durationInFrames: 30,
+      label: 'old.mp4',
+      src: 'blob:old',
+      mediaId: 'media-old',
+      sourceStart: 30,
+      sourceEnd: 60,
+      sourceDuration: 300,
+      sourceFps: 30,
+      transform: { x: 42, y: 24, width: 1280, height: 720, rotation: 2, opacity: 0.8 },
+      effects: [
+        {
+          id: 'fx-1',
+          enabled: true,
+          effect: { type: 'gpu-effect', gpuEffectType: 'gpu-grain', params: {} },
+        },
+      ],
+      motionModifiers: [{ id: 'motion-1', type: 'drift', enabled: true, amplitude: 0.5 }],
+      embeddedAudioMuted: true,
+    } as unknown as TimelineItem
+
+    const patches = buildEditPlanSourcePatches(
+      previousPlan,
+      nextPlan,
+      [
+        makeSource({
+          sourceId: 'source-b',
+          mediaId: 'media-b',
+          blobUrl: 'blob:media-b',
+          media: {
+            duration: 20,
+            fps: 60,
+            width: 1280,
+            height: 720,
+            mimeType: 'video/mp4',
+            fileName: 'replacement.mp4',
+          },
+        }),
+      ],
+      { 'segment-1': existing.id },
+      [existing],
+    )
+
+    expect(patches).toHaveLength(1)
+    expect(patches[0]).toMatchObject({
+      itemId: existing.id,
+      segmentId: 'segment-1',
+      updates: {
+        mediaId: 'media-b',
+        src: 'blob:media-b',
+        label: 'replacement.mp4',
+        sourceStart: 240,
+        sourceEnd: 300,
+        sourceDuration: 1200,
+        sourceFps: 60,
+        embeddedAudioMuted: true,
+      },
+    })
+    expect(patches[0]?.updates).not.toHaveProperty('transform')
+    expect(patches[0]?.updates).not.toHaveProperty('effects')
+    expect(patches[0]?.updates).not.toHaveProperty('motionModifiers')
+    expect(patches[0]?.updates).not.toHaveProperty('durationInFrames')
+    expect(patches[0]?.updates).not.toHaveProperty('from')
   })
 
   it('fails clearly when a planner source has no FreeCut media binding', () => {

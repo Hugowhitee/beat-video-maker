@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
-  AudioLines,
   CheckCircle2,
   Crosshair,
   Focus,
@@ -160,9 +159,9 @@ export function BeatvideoMusicPanel() {
   const [importingTag, setImportingTag] = useState(false)
   const [analyzing, setAnalyzing] = useState(false)
   const [bpmDraft, setBpmDraft] = useState('')
+  const [wholeGridShiftArmed, setWholeGridShiftArmed] = useState(false)
   const abortRef = useRef<AbortController | null>(null)
   const pendingAutoAnalyzeMediaIdRef = useRef<string | null>(null)
-  const attemptedRevisionRefreshMediaIdRef = useRef<string | null>(null)
 
   const selectedAnalysis =
     analysis?.mediaId === selectedMediaId ? analysis : null
@@ -181,6 +180,10 @@ export function BeatvideoMusicPanel() {
     [currentFrame, fps, timelineGrid],
   )
 
+  useEffect(() => {
+    setWholeGridShiftArmed(false)
+  }, [playheadBeatOffsetMs, selectedMediaId])
+
   const effectiveAnalysis = timelineGrid?.analysis ?? selectedAnalysis
   const resolvedSourceGrid = effectiveAnalysis
     ? resolveBeatvideoMusicGrid(effectiveAnalysis)
@@ -191,6 +194,8 @@ export function BeatvideoMusicPanel() {
   const gridReviewState = effectiveAnalysis
     ? resolveBeatGridReviewState(effectiveAnalysis)
     : 'hidden'
+  const analysisUpdateAvailable =
+    selectedAnalysis !== null && shouldRefreshBeatvideoAnalysis(selectedAnalysis)
 
   useEffect(() => {
     if (gridReviewState === 'recommended') setPrecisionAlignOpen(true)
@@ -260,9 +265,45 @@ export function BeatvideoMusicPanel() {
         beatvideoMusic: next,
       })
       useProjectStore.getState().setCurrentProject(updated)
+
+      // The project keeps the active beat pointer/state, while the media record
+      // owns the reusable source-domain analysis. Cache failure must not make an
+      // otherwise valid project correction fail.
+      try {
+        await useMediaLibraryStore
+          .getState()
+          .updateBeatvideoMusicAnalysis(next.mediaId, next)
+      } catch {
+        // Best-effort cache: project persistence above remains canonical for the
+        // currently open edit and will retry on the next committed correction.
+      }
     },
     [currentProject],
   )
+
+  useEffect(() => {
+    if (!currentProject || !selectedMedia) return
+    if (analysis?.mediaId === selectedMedia.id) return
+
+    const cached = selectedMedia.beatvideoMusicAnalysis
+    if (!cached || cached.mediaId !== selectedMedia.id) return
+
+    let active = true
+    void updateStoredProject(currentProject.id, {
+      beatvideoMusic: cached,
+    })
+      .then((updated) => {
+        if (active) useProjectStore.getState().setCurrentProject(updated)
+      })
+      .catch(() => {
+        // Cache activation is opportunistic; the Analyze action stays available.
+      })
+
+    return () => {
+      active = false
+    }
+  }, [analysis?.mediaId, currentProject, selectedMedia])
+
 
   const ensureTagTrack = useCallback((kind: 'producer' | 'watermark') => {
     const timeline = useTimelineStore.getState()
@@ -308,9 +349,15 @@ export function BeatvideoMusicPanel() {
         toast.error('Choose an audio file for the project beat')
         return
       }
-      pendingAutoAnalyzeMediaIdRef.current = beat.id
+      pendingAutoAnalyzeMediaIdRef.current =
+        beat.beatvideoMusicAnalysis?.mediaId === beat.id ? null : beat.id
       setSelectedMediaId(beat.id)
-      toast.success('Beat imported', { description: 'Analyzing rhythm automatically…' })
+      toast.success('Beat imported', {
+        description:
+          beat.beatvideoMusicAnalysis?.mediaId === beat.id
+            ? 'Using the analysis saved with this source.'
+            : 'Analyzing rhythm automatically…',
+      })
     } catch (error) {
       toast.error('Could not import beat', {
         description: error instanceof Error ? error.message : String(error),
@@ -585,21 +632,6 @@ export function BeatvideoMusicPanel() {
     pendingAutoAnalyzeMediaIdRef.current = null
     void analyze()
   }, [analyze, analyzing, currentProject, selectedMediaId])
-
-  useEffect(() => {
-    if (
-      analyzing ||
-      !selectedAnalysis ||
-      !currentProject ||
-      !shouldRefreshBeatvideoAnalysis(selectedAnalysis) ||
-      attemptedRevisionRefreshMediaIdRef.current === selectedAnalysis.mediaId
-    ) {
-      return
-    }
-
-    attemptedRevisionRefreshMediaIdRef.current = selectedAnalysis.mediaId
-    void analyze()
-  }, [analyze, analyzing, currentProject, selectedAnalysis])
 
   const insertTagAudio = useCallback(
     async (kind: 'producer' | 'watermark') => {
@@ -1173,12 +1205,9 @@ export function BeatvideoMusicPanel() {
     <div className="h-full overflow-y-auto p-3">
       <div className="space-y-4">
         <div className="border-b border-border pb-3">
-          <div className="flex items-center gap-2 text-xs font-medium text-foreground">
-            <AudioLines className="h-4 w-4" />
-            Beat
-          </div>
-          <p className="mt-1.5 text-[10px] leading-relaxed text-muted-foreground">
-            One project beat drives the musical grid, snapping and reactive timing.
+          <div className="text-xs font-medium text-foreground">Beat</div>
+          <p className="mt-1 text-[10px] leading-relaxed text-muted-foreground">
+            Source-bound analysis drives the grid, snapping and reactive timing.
           </p>
         </div>
 
@@ -1187,34 +1216,47 @@ export function BeatvideoMusicPanel() {
             Beat source
           </label>
           {candidates.length > 0 ? (
-            <select
-              value={selectedMediaId}
-              onChange={(event) => setSelectedMediaId(event.target.value)}
-              disabled={analyzing || importingBeat}
-              className="h-8 w-full rounded-md border border-input bg-secondary px-2 text-xs text-foreground"
-            >
-              {candidates.map((media) => (
-                <option key={media.id} value={media.id}>
-                  {media.fileName}
-                </option>
-              ))}
-            </select>
+            <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-1.5">
+              <select
+                value={selectedMediaId}
+                onChange={(event) => setSelectedMediaId(event.target.value)}
+                disabled={analyzing || importingBeat}
+                className="h-8 min-w-0 border border-input bg-secondary px-2 text-xs text-foreground"
+              >
+                {candidates.map((media) => (
+                  <option key={media.id} value={media.id}>
+                    {media.fileName}
+                  </option>
+                ))}
+              </select>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                className="h-8 px-2.5"
+                disabled={analyzing || importingBeat}
+                onClick={() => void importBeat()}
+              >
+                {importingBeat ? 'Importing…' : 'Import'}
+              </Button>
+            </div>
           ) : (
-            <div className="border-l-2 border-border pl-2 text-[10px] leading-relaxed text-muted-foreground">
-              Start here by importing the beat for this project.
+            <div className="space-y-2">
+              <div className="border-l-2 border-border pl-2 text-[10px] leading-relaxed text-muted-foreground">
+                Import the beat for this project to create its musical grid.
+              </div>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                className="w-full"
+                disabled={analyzing || importingBeat}
+                onClick={() => void importBeat()}
+              >
+                {importingBeat ? 'Importing beat…' : 'Import beat'}
+              </Button>
             </div>
           )}
-
-          <Button
-            type="button"
-            size="sm"
-            variant="outline"
-            className="w-full"
-            disabled={analyzing || importingBeat}
-            onClick={() => void importBeat()}
-          >
-            {importingBeat ? 'Importing beat…' : candidates.length > 0 ? 'Import another beat' : 'Import beat'}
-          </Button>
 
           <Button
             type="button"
@@ -1230,11 +1272,12 @@ export function BeatvideoMusicPanel() {
               void analyze()
             }}
           >
-            {!analyzing ? <AudioLines className="h-3.5 w-3.5" /> : null}
             {analyzing
               ? 'Cancel analysis'
               : effectiveAnalysis
-                ? 'Re-analyze'
+                ? analysisUpdateAvailable
+                  ? 'Update analysis'
+                  : 'Re-analyze'
                 : 'Analyze beat'}
           </Button>
 
@@ -1282,30 +1325,18 @@ export function BeatvideoMusicPanel() {
                   </div>
                 </div>
                 <span className="shrink-0 text-[10px] text-muted-foreground">
-                  {gridReviewState === 'recommended'
-                    ? 'Check waveform'
-                    : effectiveAnalysis.barOneVerified
-                      ? 'Bar 1 verified'
-                      : 'Bar 1 detected'}
+                  {analysisUpdateAvailable
+                    ? 'Cached · update available'
+                    : gridReviewState === 'recommended'
+                      ? 'Check waveform'
+                      : effectiveAnalysis.barOneVerified
+                        ? 'Bar 1 verified'
+                        : 'Bar 1 detected'}
                 </span>
               </div>
             </div>
           ) : null}
         </section>
-
-        {selectedMedia ? (
-          <BeatvideoFileMetadata
-            mediaId={selectedMedia.id}
-            fileName={selectedMedia.fileName}
-            mimeType={selectedMedia.mimeType}
-            projectName={currentProject?.name ?? ''}
-            beatBpm={
-              effectiveAnalysis?.bpmOverride ??
-              effectiveAnalysis?.musicMap.bpm ??
-              null
-            }
-          />
-        ) : null}
 
         {effectiveAnalysis && resolvedSourceGrid && gridReviewState !== 'hidden' ? (
           <details
@@ -1358,16 +1389,23 @@ export function BeatvideoMusicPanel() {
                 </Button>
               </div>
 
-              <Button
-                type="button"
-                size="sm"
-                className="w-full justify-start"
-                disabled={!timelineGrid}
-                onClick={() => void alignGridToPlayhead()}
-              >
-                <Crosshair className="h-3.5 w-3.5" />
-                Align nearest grid line to playhead
-              </Button>
+              {gridMode === 'detected' ? (
+                <Button
+                  type="button"
+                  size="sm"
+                  className="w-full justify-start"
+                  disabled={!timelineGrid}
+                  onClick={() => void alignNearestBeatToPlayhead()}
+                >
+                  Align this beat locally
+                  {playheadBeatOffsetMs !== null ? (
+                    <span className="ml-auto font-mono text-[10px] opacity-70">
+                      {playheadBeatOffsetMs >= 0 ? '+' : ''}
+                      {playheadBeatOffsetMs.toFixed(1)} ms
+                    </span>
+                  ) : null}
+                </Button>
+              ) : null}
 
               <Button
                 type="button"
@@ -1380,36 +1418,78 @@ export function BeatvideoMusicPanel() {
                 Set Bar 1 at playhead
               </Button>
 
-              {gridMode === 'detected' ? (
-                <details className="border-t border-border/70 pt-2">
-                  <summary className="cursor-pointer list-none text-[10px] font-medium text-muted-foreground marker:hidden [&::-webkit-details-marker]:hidden">
-                    Local drift correction
-                  </summary>
-                  <div className="mt-2 space-y-1.5">
+              {gridMode === 'detected' &&
+              (effectiveAnalysis.correctionAnchors?.length ?? 0) > 0 ? (
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="ghost"
+                  className="w-full justify-start"
+                  onClick={() => void undoLastAnchor()}
+                >
+                  <Undo2 className="h-3.5 w-3.5" />
+                  Undo last local anchor
+                </Button>
+              ) : null}
+
+              <details className="border-t border-border/70 pt-2">
+                <summary className="cursor-pointer list-none text-[10px] font-medium text-muted-foreground marker:hidden [&::-webkit-details-marker]:hidden">
+                  Shift entire grid
+                </summary>
+                <div className="mt-2 space-y-2">
+                  <p className="text-[10px] leading-relaxed text-muted-foreground">
+                    Advanced: this moves every beat and every existing correction anchor. Use a local
+                    beat anchor above unless the complete grid has the same offset.
+                  </p>
+                  {!wholeGridShiftArmed ? (
                     <Button
                       type="button"
                       size="sm"
                       variant="outline"
                       className="w-full justify-start"
-                      disabled={!timelineGrid}
-                      onClick={() => void alignNearestBeatToPlayhead()}
+                      disabled={!timelineGrid || playheadBeatOffsetMs === null}
+                      onClick={() => setWholeGridShiftArmed(true)}
                     >
-                      Pin this beat to playhead
+                      Prepare whole-grid shift
+                      {playheadBeatOffsetMs !== null ? (
+                        <span className="ml-auto font-mono text-[10px]">
+                          {playheadBeatOffsetMs >= 0 ? '+' : ''}
+                          {playheadBeatOffsetMs.toFixed(1)} ms
+                        </span>
+                      ) : null}
                     </Button>
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="ghost"
-                      className="w-full justify-start"
-                      disabled={(effectiveAnalysis.correctionAnchors?.length ?? 0) === 0}
-                      onClick={() => void undoLastAnchor()}
-                    >
-                      <Undo2 className="h-3.5 w-3.5" />
-                      Undo last local anchor
-                    </Button>
-                  </div>
-                </details>
-              ) : null}
+                  ) : (
+                    <div className="border-l-2 border-amber-500/60 pl-2">
+                      <p className="font-mono text-[10px] text-foreground">
+                        Entire grid: {playheadBeatOffsetMs !== null && playheadBeatOffsetMs >= 0 ? '+' : ''}
+                        {playheadBeatOffsetMs?.toFixed(1) ?? '—'} ms
+                      </p>
+                      <div className="mt-2 flex gap-1.5">
+                        <Button
+                          type="button"
+                          size="sm"
+                          className="flex-1"
+                          disabled={!timelineGrid}
+                          onClick={() => {
+                            setWholeGridShiftArmed(false)
+                            void alignGridToPlayhead()
+                          }}
+                        >
+                          Apply to entire grid
+                        </Button>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => setWholeGridShiftArmed(false)}
+                        >
+                          Cancel
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </details>
 
               <details className="border-t border-border/70 pt-2">
                 <summary className="cursor-pointer list-none text-[10px] font-medium text-muted-foreground marker:hidden [&::-webkit-details-marker]:hidden">
@@ -1443,24 +1523,24 @@ export function BeatvideoMusicPanel() {
                     </Button>
                   </div>
 
-                  <div className="grid grid-cols-2 gap-1">
-                    <Button
+                  <div className="studio-segmented grid h-8 grid-cols-2">
+                    <button
                       type="button"
-                      size="sm"
-                      variant={gridMode === 'detected' ? 'default' : 'outline'}
+                      className="studio-segment h-7 px-2 text-[10px] font-medium"
+                      aria-pressed={gridMode === 'detected'}
                       disabled={effectiveAnalysis.musicMap.beats.length === 0}
                       onClick={() => void setGridMode('detected')}
                     >
                       Detected timing
-                    </Button>
-                    <Button
+                    </button>
+                    <button
                       type="button"
-                      size="sm"
-                      variant={gridMode === 'fixed' ? 'default' : 'outline'}
+                      className="studio-segment h-7 px-2 text-[10px] font-medium"
+                      aria-pressed={gridMode === 'fixed'}
                       onClick={() => void setGridMode('fixed')}
                     >
                       Fixed BPM
-                    </Button>
+                    </button>
                   </div>
 
                   <Button
@@ -1474,6 +1554,30 @@ export function BeatvideoMusicPanel() {
                   </Button>
                 </div>
               </details>
+            </div>
+          </details>
+        ) : null}
+
+        {selectedMedia ? (
+          <details className="border-t border-border pt-3">
+            <summary className="flex cursor-pointer list-none items-center justify-between gap-2 text-xs font-medium text-foreground marker:hidden [&::-webkit-details-marker]:hidden">
+              <span>File metadata</span>
+              <span className="max-w-36 truncate font-mono text-[9px] font-normal text-muted-foreground">
+                {selectedMedia.fileName}
+              </span>
+            </summary>
+            <div className="mt-3">
+              <BeatvideoFileMetadata
+                mediaId={selectedMedia.id}
+                fileName={selectedMedia.fileName}
+                mimeType={selectedMedia.mimeType}
+                projectName={currentProject?.name ?? ''}
+                beatBpm={
+                  effectiveAnalysis?.bpmOverride ??
+                  effectiveAnalysis?.musicMap.bpm ??
+                  null
+                }
+              />
             </div>
           </details>
         ) : null}

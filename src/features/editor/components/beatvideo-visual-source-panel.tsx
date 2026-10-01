@@ -5,23 +5,28 @@ import {
   useRef,
   useState,
   type DragEvent,
+  type PointerEvent,
 } from 'react'
 import { useEditorStore } from '@/shared/state/editor'
 import { usePlaybackStore } from '@/shared/state/playback'
-import { Film, ImagePlus, Repeat2, Sparkles } from 'lucide-react'
+import { ImagePlus } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
+import { Switch } from '@/components/ui/switch'
 import {
+  applyEditPlanSourceChangesToFreeCutTimeline,
   applyEditPlanToFreeCutTimeline,
   buildClipMapForMedia,
   createEditPlan,
   createSingleClipLoopPlan,
   offsetEditPlanTimeline,
   replaceSegmentSource,
+  slipSegmentSource,
   type ClipMap,
   type ClipMapBuildProgress,
   type EditPace,
   type EditPlan,
+  type SourceMixMode,
   type TransitionProfile,
 } from '@/features/editor/deps/auto-edit-contract'
 import { resolveBeatvideoTimelineGrid } from '@/features/editor/deps/beatvideo-music'
@@ -29,6 +34,7 @@ import { useMediaLibraryStore } from '@/features/editor/deps/media-library'
 import { useProjectStore } from '@/features/editor/deps/projects'
 import {
   createLinkedPreCompPattern,
+  executeTimelineCommand,
   useItemsStore,
   useTimelineSettingsStore,
   useTimelineStore,
@@ -75,12 +81,16 @@ export function BeatvideoVisualSourcePanel({
 
   const [arrangeMode, setArrangeMode] = useState<ArrangeMode>('auto')
   const [arrangePace, setArrangePace] = useState<EditPace>('balanced')
+  const [sourceMixMode, setSourceMixMode] = useState<SourceMixMode>('balanced')
+  const [sourceWeights, setSourceWeights] = useState<Record<string, number>>({})
   const [transitionProfile, setTransitionProfile] =
     useState<TransitionProfile>('clean')
   const [loopBars, setLoopBars] = useState(4)
   const [excludedShotIds, setExcludedShotIds] = useState<string[]>([])
+  const [disabledArrangeSourceIds, setDisabledArrangeSourceIds] = useState<string[]>([])
   const [draggingShotId, setDraggingShotId] = useState<string | null>(null)
   const [dragOverSlotKey, setDragOverSlotKey] = useState<string | null>(null)
+  const [sourceStartDrafts, setSourceStartDrafts] = useState<Record<string, number>>({})
 
   const [lastClipMap, setLastClipMap] = useState<ClipMap | null>(null)
   const [lastPlan, setLastPlan] = useState<EditPlan | null>(null)
@@ -104,6 +114,36 @@ export function BeatvideoVisualSourcePanel({
     () => mediaItems.filter((media) => media.mimeType.startsWith('video/')),
     [mediaItems],
   )
+  const arrangeSourceIds = useMemo(
+    () =>
+      videoCandidates
+        .map((media) => media.id)
+        .filter((mediaId) => !disabledArrangeSourceIds.includes(mediaId)),
+    [disabledArrangeSourceIds, videoCandidates],
+  )
+
+  useEffect(() => {
+    const currentIds = new Set(videoCandidates.map((media) => media.id))
+    setDisabledArrangeSourceIds((current) => {
+      const next = current.filter((mediaId) => currentIds.has(mediaId))
+      return next.length === current.length ? current : next
+    })
+  }, [videoCandidates])
+
+  useEffect(() => {
+    const currentIds = new Set(videoCandidates.map((media) => media.id))
+    setSourceWeights((current) => {
+      const next = Object.fromEntries(
+        Object.entries(current).filter(([mediaId]) => currentIds.has(mediaId)),
+      )
+      return Object.keys(next).length === Object.keys(current).length ? current : next
+    })
+  }, [videoCandidates])
+
+  const setSourceWeight = useCallback((sourceId: string, value: number) => {
+    const nextValue = Math.max(0.25, Math.min(2, Number.isFinite(value) ? value : 1))
+    setSourceWeights((current) => ({ ...current, [sourceId]: nextValue }))
+  }, [])
 
   const shotById = useMemo(
     () =>
@@ -376,9 +416,18 @@ export function BeatvideoVisualSourcePanel({
         signal: controller.signal,
         onProgress: describeProgress,
       })
-      const relativePlan = createEditPlan(relative.music, clipMap, {
+      const plannerClipMap: ClipMap = {
+        sources: clipMap.sources.filter((source) => arrangeSourceIds.includes(source.id)),
+      }
+      if (plannerClipMap.sources.length === 0) {
+        toast.warning('Enable at least one footage source for this build')
+        return
+      }
+      const relativePlan = createEditPlan(relative.music, plannerClipMap, {
         mode: arrangeMode,
         pace: arrangePace,
+        sourceMix: sourceMixMode,
+        sourceWeights,
         loopBars,
         transitionProfile,
         excludedShotIds,
@@ -412,28 +461,47 @@ export function BeatvideoVisualSourcePanel({
     applyArrangement,
     arrangeMode,
     arrangePace,
+    arrangeSourceIds,
     autoArranging,
     describeProgress,
     excludedShotIds,
     loopBars,
     preparingFootage,
     resolveRelativeMusic,
+    sourceMixMode,
+    sourceWeights,
     transitionProfile,
     videoCandidates,
   ])
+
+  const applyArrangementSourceRepair = useCallback(
+    async (nextPlan: EditPlan) => {
+      if (!lastPlan) return null
+      const result = await applyEditPlanSourceChangesToFreeCutTimeline(
+        lastPlan,
+        nextPlan,
+        lastItemIdBySegmentId,
+      )
+      setLastPlan(nextPlan)
+      return result
+    },
+    [lastItemIdBySegmentId, lastPlan],
+  )
 
   const replaceArrangementShot = useCallback(
     async (segmentId: string, shotId: string) => {
       if (!lastPlan || !lastClipMap || loopBlocksGrouped) return
       try {
         const nextPlan = replaceSegmentSource(lastPlan, lastClipMap, segmentId, shotId)
-        const result = await applyArrangement(nextPlan, lastClipMap)
+        const result = await applyArrangementSourceRepair(nextPlan)
+        if (!result) return
+        setSourceStartDrafts({})
         toast.success(
           lastPlan.mode === 'loop'
             ? 'Loop slot replaced in every repeat'
             : 'Arrangement shot replaced',
           {
-            description: `Updated ${result.itemIds.length} generated clip${result.itemIds.length === 1 ? '' : 's'} in place.`,
+            description: `Updated ${result.changedItemIds.length} source range${result.changedItemIds.length === 1 ? '' : 's'} without touching Motion or Effects.`,
           },
         )
       } catch (error) {
@@ -442,7 +510,102 @@ export function BeatvideoVisualSourcePanel({
         })
       }
     },
-    [applyArrangement, lastClipMap, lastPlan, loopBlocksGrouped],
+    [
+      applyArrangementSourceRepair,
+      lastClipMap,
+      lastPlan,
+      loopBlocksGrouped,
+    ],
+  )
+
+  const setGeneratedSlotEnabled = useCallback(
+    (segment: EditPlan['segments'][number], enabled: boolean) => {
+      if (!lastPlan || loopBlocksGrouped) return
+
+      const targetSegments =
+        segment.motifId && segment.motifSlot
+          ? lastPlan.segments.filter(
+              (candidate) =>
+                candidate.motifId === segment.motifId &&
+                candidate.motifSlot === segment.motifSlot,
+            )
+          : [segment]
+      const itemIds = targetSegments.flatMap((candidate) => {
+        const itemId = lastItemIdBySegmentId[candidate.id]
+        return itemId ? [itemId] : []
+      })
+      if (itemIds.length === 0) return
+
+      executeTimelineCommand(
+        'SET_BEATVIDEO_GENERATED_ENABLED',
+        () => {
+          const store = useItemsStore.getState()
+          for (const itemId of itemIds) {
+            store._updateItem(itemId, { enabled })
+          }
+          useTimelineSettingsStore.getState().markDirty()
+        },
+        { itemIds, enabled },
+      )
+    },
+    [
+      lastItemIdBySegmentId,
+      lastPlan,
+      loopBlocksGrouped,
+    ],
+  )
+
+  const commitArrangementSourceStart = useCallback(
+    async (
+      segmentId: string,
+      slotKey: string,
+      requestedSourceStart: number,
+    ) => {
+      if (!lastPlan || !lastClipMap || loopBlocksGrouped) return
+      const segment = lastPlan.segments.find((candidate) => candidate.id === segmentId)
+      if (!segment) return
+
+      try {
+        const delta = requestedSourceStart - segment.sourceStart
+        if (Math.abs(delta) <= 1e-6) {
+          setSourceStartDrafts((current) => {
+            const next = { ...current }
+            delete next[slotKey]
+            return next
+          })
+          return
+        }
+
+        const nextPlan = slipSegmentSource(
+          lastPlan,
+          lastClipMap,
+          segmentId,
+          delta,
+        )
+        const result = await applyArrangementSourceRepair(nextPlan)
+        if (!result) return
+        setSourceStartDrafts((current) => {
+          const next = { ...current }
+          delete next[slotKey]
+          return next
+        })
+      } catch (error) {
+        setSourceStartDrafts((current) => {
+          const next = { ...current }
+          delete next[slotKey]
+          return next
+        })
+        toast.error('Could not adjust this source range', {
+          description: error instanceof Error ? error.message : String(error),
+        })
+      }
+    },
+    [
+      applyArrangementSourceRepair,
+      lastClipMap,
+      lastPlan,
+      loopBlocksGrouped,
+    ],
   )
 
   const beginArrangementShotDrag = useCallback(
@@ -538,6 +701,43 @@ export function BeatvideoVisualSourcePanel({
     )
   }, [])
 
+  const setArrangeSourceEnabled = useCallback((sourceId: string, enabled: boolean) => {
+    setDisabledArrangeSourceIds((current) =>
+      enabled
+        ? current.filter((candidate) => candidate !== sourceId)
+        : current.includes(sourceId)
+          ? current
+          : [...current, sourceId],
+    )
+  }, [])
+
+  const previewArrangementShotAtPointer = useCallback(
+    (
+      event: PointerEvent<HTMLElement>,
+      shot: { sourceId: string; start: number; end: number },
+    ) => {
+      if (draggingShotId) return
+      const media = mediaItems.find((candidate) => candidate.id === shot.sourceId)
+      if (!media || media.fps <= 0) return
+
+      const rect = event.currentTarget.getBoundingClientRect()
+      if (rect.width <= 0) return
+      const ratio = Math.max(0, Math.min(1, (event.clientX - rect.left) / rect.width))
+      const sourceTime = shot.start + (shot.end - shot.start) * ratio
+      const sourceFrame = Math.max(0, Math.round(sourceTime * media.fps))
+
+      const playback = usePlaybackStore.getState()
+      if (playback.isPlaying) playback.pause()
+      playback.setPreviewFrame(null)
+      useEditorStore.getState().setMediaSkimPreview(shot.sourceId, sourceFrame)
+    },
+    [draggingShotId, mediaItems],
+  )
+
+  const clearArrangementShotPreview = useCallback(() => {
+    useEditorStore.getState().setMediaSkimPreview(null)
+  }, [])
+
   const focusArrangementSegment = useCallback(
     (segment: EditPlan['segments'][number]) => {
       const itemId = lastItemIdBySegmentId[segment.id]
@@ -594,6 +794,28 @@ export function BeatvideoVisualSourcePanel({
       },
     )
   }, [lastItemIdBySegmentId, lastPlan, loopBlocksGrouped])
+
+  const openGeneratedInspector = useCallback(
+    (tab: 'motion' | 'effects') => {
+      const timeline = useItemsStore.getState()
+      const existingIds = new Set(timeline.items.map((item) => item.id))
+      const generatedIds = lastAppliedItemIds.filter((itemId) => existingIds.has(itemId))
+      if (generatedIds.length === 0) {
+        toast.info('Build the sequence first')
+        return
+      }
+
+      const first = timeline.items.find((item) => item.id === generatedIds[0])
+      const selection = useSelectionStore.getState()
+      if (first) selection.setActiveTrack(first.trackId)
+      selection.selectItems(generatedIds)
+
+      const editor = useEditorStore.getState()
+      editor.setRightSidebarOpen(true)
+      editor.setClipInspectorTab(tab)
+    },
+    [lastAppliedItemIds],
+  )
 
   const loopVideoToBeat = useCallback(async () => {
     const media = videoCandidates.find((candidate) => candidate.id === selectedLoopMediaId)
@@ -668,12 +890,11 @@ export function BeatvideoVisualSourcePanel({
   }
 
   return (
-    <section className="max-h-[62vh] shrink-0 space-y-3 overflow-y-auto border-b border-border bg-secondary/10 px-3 py-3">
+    <section className="max-h-[62vh] shrink-0 space-y-3 overflow-y-auto border-b border-border px-2.5 py-2">
       <div className="flex items-center justify-between gap-2">
-        <div className="flex min-w-0 items-center gap-2">
-          <Film className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+        <div className="min-w-0">
           <div className="min-w-0">
-            <div className="text-xs font-medium text-foreground">Footage</div>
+            <div className="text-[11px] font-medium text-foreground">Footage</div>
             <div className="font-mono text-[9px] text-muted-foreground">
               {videoCandidates.length === 0
                 ? 'No video added'
@@ -690,7 +911,6 @@ export function BeatvideoVisualSourcePanel({
         disabled={importingFootage || preparingFootage || autoArranging}
         onClick={() => void importFootage()}
       >
-        <Film className="h-3.5 w-3.5" />
         {importingFootage ? 'Importing footage…' : 'Add footage'}
       </Button>
 
@@ -741,16 +961,12 @@ export function BeatvideoVisualSourcePanel({
               </span>
             </div>
 
-            <div className="grid h-8 grid-cols-2 border-b border-border">
+            <div className="studio-segmented grid h-8 grid-cols-2">
               <button
                 type="button"
                 aria-pressed={arrangeMode === 'auto'}
                 onClick={() => setArrangeMode('auto')}
-                className={`relative h-8 text-[10px] font-medium transition-colors ${
-                  arrangeMode === 'auto'
-                    ? 'text-foreground after:absolute after:inset-x-3 after:bottom-[-1px] after:h-[2px] after:bg-primary'
-                    : 'text-muted-foreground hover:bg-secondary/30 hover:text-foreground'
-                }`}
+                className="studio-segment h-7 text-[10px] font-medium"
               >
                 Auto arrange
               </button>
@@ -758,59 +974,154 @@ export function BeatvideoVisualSourcePanel({
                 type="button"
                 aria-pressed={arrangeMode === 'loop'}
                 onClick={() => setArrangeMode('loop')}
-                className={`relative h-8 text-[10px] font-medium transition-colors ${
-                  arrangeMode === 'loop'
-                    ? 'text-foreground after:absolute after:inset-x-3 after:bottom-[-1px] after:h-[2px] after:bg-primary'
-                    : 'text-muted-foreground hover:bg-secondary/30 hover:text-foreground'
-                }`}
+                className="studio-segment h-7 text-[10px] font-medium"
               >
                 Repeat motif
               </button>
             </div>
 
-            <div className="mt-2 grid grid-cols-2 gap-1.5">
-              <label className="space-y-1 text-[9px] text-muted-foreground">
-                <span>Pace</span>
-                <select
-                  value={arrangePace}
-                  onChange={(event) => setArrangePace(event.target.value as EditPace)}
-                  className="h-8 w-full rounded-md border border-input bg-secondary px-2 text-xs text-foreground"
-                >
-                  <option value="relaxed">Relaxed</option>
-                  <option value="balanced">Balanced</option>
-                  <option value="energetic">Energetic</option>
-                </select>
-              </label>
+            <div className="mt-2 border-y border-border/70 py-2">
+              <div className="mb-1.5 flex items-center justify-between gap-2">
+                <span className="text-[9px] font-medium text-foreground">Sources for this build</span>
+                <span className="font-mono text-[8px] tabular-nums text-muted-foreground">
+                  {arrangeSourceIds.length}/{videoCandidates.length} on
+                </span>
+              </div>
+              <div className="max-h-28 space-y-0.5 overflow-y-auto">
+                {videoCandidates.map((media) => {
+                  const enabled = arrangeSourceIds.includes(media.id)
+                  return (
+                    <label
+                      key={media.id}
+                      className="flex h-7 min-w-0 items-center gap-2 px-1 text-[9px] text-foreground hover:bg-secondary/35"
+                    >
+                      <Switch
+                        checked={enabled}
+                        onCheckedChange={(checked) => setArrangeSourceEnabled(media.id, checked)}
+                        className="h-4 w-7 border border-border data-[state=checked]:bg-primary data-[state=unchecked]:bg-muted [&>span]:h-3 [&>span]:w-3 [&>span]:data-[state=checked]:translate-x-3"
+                        aria-label={`${enabled ? 'Exclude' : 'Include'} ${media.fileName} from build`}
+                      />
+                      <span className="min-w-0 flex-1 truncate">{media.fileName}</span>
+                    </label>
+                  )
+                })}
+              </div>
+            </div>
 
-              <label className="space-y-1 text-[9px] text-muted-foreground">
-                <span>Transitions</span>
-                <select
-                  value={transitionProfile}
-                  onChange={(event) =>
-                    setTransitionProfile(event.target.value as TransitionProfile)
-                  }
-                  className="h-8 w-full rounded-md border border-input bg-secondary px-2 text-xs text-foreground"
-                >
-                  <option value="clean">Cuts only</option>
-                  <option value="accent">Accent transitions</option>
-                </select>
-              </label>
+            <div className="mt-2 space-y-2">
+              <div>
+                <div className="mb-1 text-[9px] text-muted-foreground">Source mix</div>
+                <div className="studio-segmented grid h-8 grid-cols-3">
+                  {([
+                    ['balanced', 'Balanced'],
+                    ['rotate', 'Rotate'],
+                    ['weighted', 'Weighted'],
+                  ] as const).map(([value, label]) => (
+                    <button
+                      key={value}
+                      type="button"
+                      aria-pressed={sourceMixMode === value}
+                      onClick={() => setSourceMixMode(value as SourceMixMode)}
+                      className="studio-segment h-7 px-1 text-[8px] font-medium"
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {sourceMixMode === 'weighted' ? (
+                <div className="space-y-1 border-y border-border/60 py-1.5">
+                  {videoCandidates
+                    .filter((media) => arrangeSourceIds.includes(media.id))
+                    .map((media) => {
+                      const weight = sourceWeights[media.id] ?? 1
+                      return (
+                        <label
+                          key={media.id}
+                          className="grid grid-cols-[minmax(0,1fr)_72px_30px] items-center gap-2 px-1 text-[8px]"
+                        >
+                          <span className="truncate text-muted-foreground">{media.fileName}</span>
+                          <input
+                            type="range"
+                            min={0.25}
+                            max={2}
+                            step={0.25}
+                            value={weight}
+                            onChange={(event) =>
+                              setSourceWeight(media.id, Number(event.currentTarget.value))
+                            }
+                            className="h-3 w-full accent-primary"
+                            aria-label={`Weight for ${media.fileName}`}
+                          />
+                          <span className="text-right font-mono tabular-nums text-foreground">
+                            {weight.toFixed(2)}×
+                          </span>
+                        </label>
+                      )
+                    })}
+                </div>
+              ) : null}
+
+              <div>
+                <div className="mb-1 text-[9px] text-muted-foreground">Pace</div>
+                <div className="studio-segmented grid h-8 grid-cols-3">
+                  {([
+                    ['relaxed', 'Relaxed'],
+                    ['balanced', 'Balanced'],
+                    ['energetic', 'Energetic'],
+                  ] as const).map(([value, label]) => (
+                    <button
+                      key={value}
+                      type="button"
+                      aria-pressed={arrangePace === value}
+                      onClick={() => setArrangePace(value as EditPace)}
+                      className="studio-segment h-7 px-1 text-[8px] font-medium"
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <div className="mb-1 text-[9px] text-muted-foreground">Transitions</div>
+                <div className="studio-segmented grid h-8 grid-cols-2">
+                  {([
+                    ['clean', 'Cuts only'],
+                    ['accent', 'Accent'],
+                  ] as const).map(([value, label]) => (
+                    <button
+                      key={value}
+                      type="button"
+                      aria-pressed={transitionProfile === value}
+                      onClick={() => setTransitionProfile(value as TransitionProfile)}
+                      className="studio-segment h-7 px-1 text-[8px] font-medium"
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              </div>
             </div>
 
             {arrangeMode === 'loop' ? (
-              <label className="mt-2 grid grid-cols-[72px_1fr] items-center gap-2 text-[9px] text-muted-foreground">
-                <span>Loop length</span>
-                <select
-                  value={loopBars}
-                  onChange={(event) => setLoopBars(Number(event.target.value))}
-                  className="h-8 rounded-md border border-input bg-secondary px-2 text-xs text-foreground"
-                >
-                  <option value={2}>2 bars</option>
-                  <option value={4}>4 bars</option>
-                  <option value={8}>8 bars</option>
-                  <option value={16}>16 bars</option>
-                </select>
-              </label>
+              <div className="mt-2">
+                <div className="mb-1 text-[9px] text-muted-foreground">Loop length</div>
+                <div className="studio-segmented grid h-8 grid-cols-4">
+                  {[2, 4, 8, 16].map((bars) => (
+                    <button
+                      key={bars}
+                      type="button"
+                      aria-pressed={loopBars === bars}
+                      onClick={() => setLoopBars(bars)}
+                      className="studio-segment h-7 px-1 text-[8px] font-medium"
+                    >
+                      {bars} bars
+                    </button>
+                  ))}
+                </div>
+              </div>
             ) : null}
 
             <button
@@ -825,10 +1136,15 @@ export function BeatvideoVisualSourcePanel({
               type="button"
               size="sm"
               className="mt-2 w-full justify-center"
-              disabled={!timelineGrid || preparingFootage || autoArranging || loopBlocksGrouped}
+              disabled={
+                !timelineGrid ||
+                arrangeSourceIds.length === 0 ||
+                preparingFootage ||
+                autoArranging ||
+                loopBlocksGrouped
+              }
               onClick={() => void autoArrangeFootage()}
             >
-              <Sparkles className="h-3.5 w-3.5" />
               {autoArranging
                 ? 'Building…'
                 : lastPlan
@@ -836,8 +1152,27 @@ export function BeatvideoVisualSourcePanel({
                   : 'Build sequence'}
             </Button>
 
-            <div className="mt-2 text-[8px] leading-relaxed text-muted-foreground">
-              Generated cuts land on the corrected music grid. Footage audio stays muted.
+            {lastAppliedItemIds.length > 0 && !loopBlocksGrouped ? (
+              <div className="mt-2 flex items-center gap-3 border-t border-border/70 pt-2 text-[9px]">
+                <span className="text-muted-foreground">Generated clips</span>
+                <button
+                  type="button"
+                  className="text-foreground hover:text-primary"
+                  onClick={() => openGeneratedInspector('motion')}
+                >
+                  Motion for all
+                </button>
+                <button
+                  type="button"
+                  className="text-foreground hover:text-primary"
+                  onClick={() => openGeneratedInspector('effects')}
+                >
+                  Effects for all
+                </button>
+              </div>
+            ) : null}
+            <div className="mt-2 font-mono text-[8px] leading-relaxed text-muted-foreground">
+              Cuts: corrected beat grid · source audio: muted
             </div>
           </div>
 
@@ -847,7 +1182,7 @@ export function BeatvideoVisualSourcePanel({
                 <div>
                   <div className="text-[10px] font-medium text-foreground">Sequence</div>
                   <div className="text-[8px] text-muted-foreground">
-                    Drag shot → slot · click slot → timeline cut
+                    Drag to replace · Source slider slips footage · click preview selects cut
                   </div>
                 </div>
                 <span className="font-mono text-[9px] text-muted-foreground">
@@ -867,19 +1202,47 @@ export function BeatvideoVisualSourcePanel({
                     const sourceDuration = shot
                       ? (lastClipMap.sources.find((source) => source.id === shot.sourceId)?.duration ?? shot.end)
                       : duration
+                    const sourceMedia = shot
+                      ? mediaItems.find((candidate) => candidate.id === shot.sourceId)
+                      : null
+                    const sourceStep = 1 / Math.max(1, sourceMedia?.fps || 30)
+                    const sourceStartMin = shot?.start ?? segment.sourceStart
+                    const sourceStartMax = shot
+                      ? Math.max(shot.start, shot.end - duration)
+                      : segment.sourceStart
+                    const sourceStartValue = Math.max(
+                      sourceStartMin,
+                      Math.min(
+                        sourceStartMax,
+                        sourceStartDrafts[key] ?? segment.sourceStart,
+                      ),
+                    )
+                    const sourceOffset = sourceStartValue - sourceStartMin
+                    const slotItemIds =
+                      segment.motifId && segment.motifSlot && lastPlan
+                        ? lastPlan.segments
+                            .filter(
+                              (candidate) =>
+                                candidate.motifId === segment.motifId &&
+                                candidate.motifSlot === segment.motifSlot,
+                            )
+                            .flatMap((candidate) => {
+                              const itemId = lastItemIdBySegmentId[candidate.id]
+                              return itemId ? [itemId] : []
+                            })
+                        : [lastItemIdBySegmentId[segment.id]].filter(
+                            (itemId): itemId is string => Boolean(itemId),
+                          )
+                    const slotEnabled =
+                      slotItemIds.length === 0 ||
+                      slotItemIds.every(
+                        (itemId) =>
+                          items.find((item) => item.id === itemId)?.enabled !== false,
+                      )
 
                     return (
                       <div
                         key={key}
-                        role="button"
-                        tabIndex={0}
-                        onClick={() => focusArrangementSegment(segment)}
-                        onKeyDown={(event) => {
-                          if (event.key === 'Enter' || event.key === ' ') {
-                            event.preventDefault()
-                            focusArrangementSegment(segment)
-                          }
-                        }}
                         onDragOver={(event) =>
                           handleArrangementSlotDragOver(event, key, segment)
                         }
@@ -895,8 +1258,11 @@ export function BeatvideoVisualSourcePanel({
                             )
                           }
                         }}
-                        onDrop={(event) => handleArrangementSlotDrop(event, segment)}
-                        className={`w-32 shrink-0 cursor-pointer border bg-background outline-none transition-colors focus-visible:border-primary ${
+                        onDrop={(event) => {
+                          clearArrangementShotPreview()
+                          handleArrangementSlotDrop(event, segment)
+                        }}
+                        className={`w-36 shrink-0 border bg-background outline-none transition-colors ${
                           isDragTarget
                             ? 'border-primary ring-1 ring-primary/40'
                             : currentShotIsManual
@@ -904,7 +1270,25 @@ export function BeatvideoVisualSourcePanel({
                               : 'border-border/80'
                         }`}
                       >
-                        <div className="relative aspect-video w-full overflow-hidden">
+                        <button
+                          type="button"
+                          className={`block w-full text-left outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-primary ${
+                            slotEnabled ? '' : 'opacity-45'
+                          }`}
+                          onPointerEnter={(event) => {
+                            if (shot) previewArrangementShotAtPointer(event, shot)
+                          }}
+                          onPointerMove={(event) => {
+                            if (shot) previewArrangementShotAtPointer(event, shot)
+                          }}
+                          onPointerLeave={clearArrangementShotPreview}
+                          onClick={() => {
+                            clearArrangementShotPreview()
+                            focusArrangementSegment(segment)
+                          }}
+                          aria-label={`Select generated clip ${index + 1}`}
+                        >
+                          <div className="relative aspect-video w-full overflow-hidden">
                           {shot ? (
                             <BeatvideoShotFrame
                               shot={shot}
@@ -921,12 +1305,98 @@ export function BeatvideoVisualSourcePanel({
                             {duration.toFixed(2)}s
                             {linkedRepeats > 1 ? ` ×${linkedRepeats}` : ''}
                           </span>
+                          </div>
+
+                          <div className="truncate border-t border-border/70 px-1.5 py-1 text-[8px] text-foreground/80">
+                            {shot?.sourceName ?? 'Footage'}
+                            {currentShotIsManual ? ' · edited' : ''}
+                          </div>
+                        </button>
+
+                        <div className="flex h-7 items-center justify-between gap-2 border-t border-border/70 px-1.5">
+                          <span className="text-[7px] text-muted-foreground">
+                            {linkedRepeats > 1 ? `All ${linkedRepeats} repeats` : 'Clip'}
+                          </span>
+                          <div className="flex items-center gap-1.5">
+                            <span className="font-mono text-[7px] text-muted-foreground">
+                              {slotEnabled ? 'ON' : 'OFF'}
+                            </span>
+                            <Switch
+                              checked={slotEnabled}
+                              onCheckedChange={(checked) =>
+                                setGeneratedSlotEnabled(segment, checked)
+                              }
+                              className="h-4 w-7 border border-border data-[state=checked]:bg-primary data-[state=unchecked]:bg-muted [&>span]:h-3 [&>span]:w-3 [&>span]:data-[state=checked]:translate-x-3"
+                              aria-label={`${slotEnabled ? 'Disable' : 'Enable'} generated clip ${index + 1}`}
+                            />
+                          </div>
                         </div>
 
-                        <div className="truncate border-t border-border/70 px-1.5 py-1 text-[8px] text-foreground/80">
-                          {shot?.sourceName ?? 'Footage'}
-                          {currentShotIsManual ? ' · replaced' : ''}
-                        </div>
+                        {shot && sourceStartMax > sourceStartMin + 1e-6 ? (
+                          <label
+                            className="block border-t border-border/70 px-1.5 py-1"
+                            onPointerDown={(event) => event.stopPropagation()}
+                          >
+                            <span className="mb-0.5 flex items-center justify-between gap-1 text-[7px] text-muted-foreground">
+                              <span>Source</span>
+                              <span className="font-mono tabular-nums text-foreground/75">
+                                +{sourceOffset.toFixed(2)}s
+                              </span>
+                            </span>
+                            <input
+                              type="range"
+                              min={sourceStartMin}
+                              max={sourceStartMax}
+                              step={sourceStep}
+                              value={sourceStartValue}
+                              className="block h-3 w-full accent-foreground"
+                              aria-label={`Source position for generated clip ${index + 1}`}
+                              onChange={(event) => {
+                                const nextStart = Number(event.currentTarget.value)
+                                setSourceStartDrafts((current) => ({
+                                  ...current,
+                                  [key]: nextStart,
+                                }))
+                                if (sourceMedia && sourceMedia.fps > 0) {
+                                  const previewTime = nextStart + duration / 2
+                                  const playback = usePlaybackStore.getState()
+                                  if (playback.isPlaying) playback.pause()
+                                  playback.setPreviewFrame(null)
+                                  useEditorStore
+                                    .getState()
+                                    .setMediaSkimPreview(
+                                      shot.sourceId,
+                                      Math.max(0, Math.round(previewTime * sourceMedia.fps)),
+                                    )
+                                }
+                              }}
+                              onPointerUp={(event) => {
+                                event.stopPropagation()
+                                clearArrangementShotPreview()
+                                void commitArrangementSourceStart(
+                                  segment.id,
+                                  key,
+                                  Number(event.currentTarget.value),
+                                )
+                              }}
+                              onKeyUp={(event) => {
+                                if (
+                                  event.key === 'ArrowLeft' ||
+                                  event.key === 'ArrowRight' ||
+                                  event.key === 'Home' ||
+                                  event.key === 'End'
+                                ) {
+                                  clearArrangementShotPreview()
+                                  void commitArrangementSourceStart(
+                                    segment.id,
+                                    key,
+                                    Number(event.currentTarget.value),
+                                  )
+                                }
+                              }}
+                            />
+                          </label>
+                        ) : null}
                       </div>
                     )
                   },
@@ -944,7 +1414,6 @@ export function BeatvideoVisualSourcePanel({
               className="w-full justify-start"
               onClick={groupLoopRepeats}
             >
-              <Repeat2 className="h-3.5 w-3.5" />
               Link repeats as Loop A
             </Button>
           ) : null}
@@ -965,7 +1434,7 @@ export function BeatvideoVisualSourcePanel({
               <select
                 value={selectedLoopMediaId}
                 onChange={(event) => setSelectedLoopMediaId(event.target.value)}
-                className="h-8 w-full rounded-md border border-input bg-secondary px-2 text-xs text-foreground"
+                className="h-8 w-full rounded-sm border border-input bg-secondary px-2 text-xs text-foreground"
                 aria-label="Clip used to fill beat"
               >
                 {videoCandidates.map((media) => (
@@ -982,7 +1451,6 @@ export function BeatvideoVisualSourcePanel({
                 disabled={preparingFootage || autoArranging}
                 onClick={() => void loopVideoToBeat()}
               >
-                <Repeat2 className="h-3.5 w-3.5" />
                 Fill beat with selected clip
               </Button>
             </div>

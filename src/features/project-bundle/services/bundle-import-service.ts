@@ -149,6 +149,12 @@ export async function importProjectBundle(
         fps: entry.metadata.fps,
         codec: entry.metadata.codec,
         bitrate: entry.metadata.bitrate,
+        beatvideoMusicAnalysis: entry.metadata.beatvideoMusicAnalysis
+          ? {
+              ...entry.metadata.beatvideoMusicAnalysis,
+              mediaId: newMediaId,
+            }
+          : undefined,
         thumbnailId,
         tags: [],
         createdAt: Date.now(),
@@ -183,6 +189,16 @@ export async function importProjectBundle(
     createdAt: Date.now(),
     updatedAt: Date.now(),
     duration: bundleProject.duration,
+    schemaVersion: bundleProject.schemaVersion,
+    beatvideoMode: bundleProject.beatvideoMode,
+    beatvideoMusic: bundleProject.beatvideoMusic
+      ? {
+          ...bundleProject.beatvideoMusic,
+          mediaId:
+            mediaIdMap.get(bundleProject.beatvideoMusic.mediaId) ??
+            bundleProject.beatvideoMusic.mediaId,
+        }
+      : undefined,
     thumbnail: bundleProject.thumbnail,
     metadata: bundleProject.metadata,
     // Store the project folder handle for smarter relinking and path display

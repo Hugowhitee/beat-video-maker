@@ -8,6 +8,7 @@ import {
   getMasteringPreset,
   resolveAutoLevelInputGainDb,
   resolveAutoLevelPlan,
+  resolveMasterFxSettings,
 } from './mastering'
 
 function sampleCurve(curve: Float32Array, x: number): number {
@@ -41,6 +42,25 @@ describe('createSaturationMixCurve', () => {
   })
 })
 
+
+describe('master rack order', () => {
+  it('keeps legacy projects on the canonical processor order', () => {
+    expect(resolveMasterFxSettings(undefined).order).toEqual([
+      'eq',
+      'compressor',
+      'saturator',
+      'limiter',
+    ])
+  })
+
+  it('keeps a valid custom rack and treats omitted processors as empty slots', () => {
+    expect(
+      resolveMasterFxSettings({
+        order: ['limiter', 'eq', 'limiter'],
+      }).order,
+    ).toEqual(['limiter', 'eq'])
+  })
+})
 
 describe('mastering presets', () => {
   it('keeps the legacy preset id compatible while exposing a genre-neutral recipe', () => {

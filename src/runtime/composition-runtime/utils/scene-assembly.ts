@@ -213,6 +213,7 @@ export function collectVisibleShapeMasks(
 
   for (const track of visibleTracks) {
     for (const item of track.items) {
+      if (item.enabled === false) continue
       if (item.type === 'shape' && item.isMask) {
         masks.push({ mask: item, trackOrder: track.order ?? 0 })
       }
@@ -229,6 +230,7 @@ export function collectVisibleAdjustmentLayers(
 
   for (const track of visibleTracks) {
     for (const item of track.items) {
+      if (item.enabled === false) continue
       if (item.type === 'adjustment') {
         layers.push({ layer: item, trackOrder: track.order ?? 0 })
       }
@@ -250,7 +252,8 @@ export function collectVisualTrackItems({
   return tracks.flatMap((track) =>
     track.items
       .filter(
-        (item): item is VideoItem | ImageItem => item.type === 'video' || item.type === 'image',
+        (item): item is VideoItem | ImageItem =>
+          item.enabled !== false && (item.type === 'video' || item.type === 'image'),
       )
       .map((item) => ({
         ...item,
@@ -273,7 +276,7 @@ export function collectAudioTrackItems({
 }): AudioTrackItem[] {
   return tracks.flatMap((track) =>
     track.items
-      .filter((item): item is AudioItem => item.type === 'audio')
+      .filter((item): item is AudioItem => item.enabled !== false && item.type === 'audio')
       .map((item) => ({
         ...item,
         muted: track.muted,
@@ -386,6 +389,7 @@ export function buildStableDomTracks({
         TimelineItem,
         VideoItem | AudioItem | AdjustmentItem | ControllerItem
       > => {
+        if (item.enabled === false) return false
         if (
           item.type === 'video' ||
           item.type === 'audio' ||
@@ -408,6 +412,7 @@ export function collectVisibleTextFontFamilies(visibleTracks: TimelineTrack[]): 
 
   for (const track of visibleTracks) {
     for (const item of track.items) {
+      if (item.enabled === false) continue
       if (item.type !== 'text' && item.type !== 'subtitle') continue
       const textItem = item as TextItem
       fontFamilies.add(textItem.fontFamily ?? 'Inter')
@@ -424,7 +429,8 @@ export function collectTransitionClipItems(tracks: TimelineTrack[]): TransitionC
   return tracks.flatMap((track) =>
     track.items.filter(
       (item): item is TransitionClipItem =>
-        item.type === 'video' || item.type === 'image' || item.type === 'composition',
+        item.enabled !== false &&
+        (item.type === 'video' || item.type === 'image' || item.type === 'composition'),
     ),
   )
 }
@@ -585,7 +591,7 @@ export function collectFrameVideoCandidates({
     if (!visibleTrackIds.has(track.id)) continue
 
     for (const item of track.items ?? []) {
-      if (item.type !== 'video') continue
+      if (item.enabled === false || item.type !== 'video') continue
       if (item.from > maxFrame || item.from + item.durationInFrames <= minFrame) continue
       candidates.push(item)
       if (candidates.length >= maxItems) return candidates

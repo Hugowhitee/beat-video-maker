@@ -48,7 +48,7 @@ import { useTrackHeightResize } from '../hooks/use-track-height-resize'
 import { resizeTracksOfKindByDelta } from '../utils/track-resize'
 import { applyTrackSizePreset, commitTrackHeights } from '../stores/actions/track-height-actions'
 import { useZoomStore } from '../stores/zoom-store'
-import { computeWheelZoomStep } from '../constants'
+import { computeWheelZoomStep, DEFAULT_TRACK_HEIGHT, MIN_TRACK_HEIGHT } from '../constants'
 import {
   clampSectionDividerPosition,
   getBottomAnchoredSectionScrollTop,
@@ -131,6 +131,7 @@ export const Timeline = memo(function Timeline({
 
   const itemsByTrackId = useItemsStore((s) => s.itemsByTrackId)
   const [producerExtrasExpanded, setProducerExtrasExpanded] = useState(false)
+  const producerExpandedTrackHeightsRef = useRef(new Map<string, number>())
   const workspaceTracks = useMemo(
     () => resolveWorkspaceVisibleTracks(tracks, workspace),
     [tracks, workspace],
@@ -330,6 +331,26 @@ export const Timeline = memo(function Timeline({
   )
   const { clampedSectionDividerPosition, videoPaneHeight, audioPaneHeight } = trackSectionLayout
   const { handleTrackResizeStart, handleTrackResizeReset } = useTrackHeightResize()
+  const handleToggleProducerTrackCollapsed = useCallback((trackId: string) => {
+    const currentTracks = useItemsStore.getState().tracks
+    const currentTrack = currentTracks.find((track) => track.id === trackId)
+    if (!currentTrack) return
+
+    const collapsed = currentTrack.height <= MIN_TRACK_HEIGHT + 1
+    const nextHeight = collapsed
+      ? (producerExpandedTrackHeightsRef.current.get(trackId) ?? DEFAULT_TRACK_HEIGHT)
+      : MIN_TRACK_HEIGHT
+
+    if (!collapsed) {
+      producerExpandedTrackHeightsRef.current.set(trackId, currentTrack.height)
+    }
+
+    commitTrackHeights(
+      currentTracks.map((track) =>
+        track.id === trackId ? { ...track, height: nextHeight } : track,
+      ),
+    )
+  }, [])
   const videoDisplayHeight = useMemo(
     () => videoTracks.reduce((sum, track) => sum + track.height, 0),
     [videoTracks],
@@ -978,6 +999,12 @@ export const Timeline = memo(function Timeline({
                   canDeleteEmptyTracks={canDeleteEmptyTracks}
                   simplified={simplifiedBeatvideoTimeline}
                   displayName={producerTrackDisplayNameById.get(track.id)}
+                  collapsed={simplifiedBeatvideoTimeline && track.height <= MIN_TRACK_HEIGHT + 1}
+                  onToggleCollapsed={
+                    simplifiedBeatvideoTimeline
+                      ? () => handleToggleProducerTrackCollapsed(track.id)
+                      : undefined
+                  }
                   onToggleLock={() => toggleTrackLock(track.id)}
                   onToggleSyncLock={() => toggleTrackSyncLock(track.id)}
                   onToggleDisabled={() => toggleTrackDisabled(track.id)}

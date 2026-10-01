@@ -109,10 +109,15 @@ export const BeatvideoGridOverlay = memo(function BeatvideoGridOverlay({
           </div>
         )
       })}
-            {markers.map(({ beat, isBarOne, barNumber }) => {
+      {markers.map(({ beat, isBarOne, barNumber, kind }) => {
+        const isPhraseBar =
+          kind === 'bar' &&
+          barNumber !== null &&
+          barNumber >= 1 &&
+          (barNumber === 1 || (barNumber - 1) % 4 === 0)
         const showBarLabel =
           variant === 'ruler' &&
-          beat.downbeat &&
+          kind === 'bar' &&
           barNumber !== null &&
           barNumber >= 1 &&
           (barNumber === 1 || (barNumber - 1) % labelStride === 0)
@@ -126,9 +131,13 @@ export const BeatvideoGridOverlay = memo(function BeatvideoGridOverlay({
               className={
                 isBarOne
                   ? 'h-full w-[2px] bg-primary/95'
-                  : beat.downbeat
-                    ? 'h-full w-px bg-primary/45'
-                    : 'h-full w-px bg-foreground/16'
+                  : kind === 'subdivision'
+                    ? 'h-full w-px bg-foreground/[0.055]'
+                    : isPhraseBar
+                      ? 'h-full w-[2px] bg-primary/55'
+                      : kind === 'bar'
+                        ? 'h-full w-px bg-primary/35'
+                        : 'h-full w-px bg-foreground/16'
               }
             />
             {showBarLabel ? (
