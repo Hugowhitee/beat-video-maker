@@ -1,11 +1,42 @@
 import type {
   MasterFxSettings,
   MasteringPresetId,
+  MasterProcessorId,
   ResolvedMasterFxSettings,
 } from '@/types/audio'
 
+export const DEFAULT_MASTER_PROCESSOR_ORDER = [
+  'eq',
+  'compressor',
+  'saturator',
+  'limiter',
+] as const satisfies readonly MasterProcessorId[]
+
+export function resolveMasterProcessorOrder(
+  order: readonly MasterProcessorId[] | undefined,
+): MasterProcessorId[] {
+  const valid = new Set<MasterProcessorId>(DEFAULT_MASTER_PROCESSOR_ORDER)
+  const seen = new Set<MasterProcessorId>()
+  const resolved: MasterProcessorId[] = []
+
+  for (const candidate of order ?? []) {
+    if (!valid.has(candidate) || seen.has(candidate)) continue
+    seen.add(candidate)
+    resolved.push(candidate)
+  }
+
+  for (const processor of DEFAULT_MASTER_PROCESSOR_ORDER) {
+    if (seen.has(processor)) continue
+    seen.add(processor)
+    resolved.push(processor)
+  }
+
+  return resolved
+}
+
 export const DEFAULT_MASTER_FX_SETTINGS: ResolvedMasterFxSettings = {
   enabled: false,
+  order: [...DEFAULT_MASTER_PROCESSOR_ORDER],
   inputGainDb: 0,
   compressor: {
     enabled: false,
@@ -45,6 +76,7 @@ export function resolveMasterFxSettings(
   const defaults = DEFAULT_MASTER_FX_SETTINGS
   return {
     enabled: value?.enabled ?? defaults.enabled,
+    order: resolveMasterProcessorOrder(value?.order),
     inputGainDb: clamp(finite(value?.inputGainDb, defaults.inputGainDb), -24, 24),
     compressor: {
       enabled: value?.compressor?.enabled ?? defaults.compressor.enabled,
