@@ -986,49 +986,66 @@ export function BeatvideoVisualSourcePanel({
               </div>
             </div>
 
-            <div className="mt-2 grid grid-cols-2 gap-1.5">
-              <label className="space-y-1 text-[9px] text-muted-foreground">
-                <span>Pace</span>
-                <select
-                  value={arrangePace}
-                  onChange={(event) => setArrangePace(event.target.value as EditPace)}
-                  className="h-8 w-full rounded-sm border border-input bg-secondary px-2 text-xs text-foreground"
-                >
-                  <option value="relaxed">Relaxed</option>
-                  <option value="balanced">Balanced</option>
-                  <option value="energetic">Energetic</option>
-                </select>
-              </label>
+            <div className="mt-2 space-y-2">
+              <div>
+                <div className="mb-1 text-[9px] text-muted-foreground">Pace</div>
+                <div className="studio-segmented grid h-8 grid-cols-3">
+                  {([
+                    ['relaxed', 'Relaxed'],
+                    ['balanced', 'Balanced'],
+                    ['energetic', 'Energetic'],
+                  ] as const).map(([value, label]) => (
+                    <button
+                      key={value}
+                      type="button"
+                      aria-pressed={arrangePace === value}
+                      onClick={() => setArrangePace(value as EditPace)}
+                      className="studio-segment h-7 px-1 text-[8px] font-medium"
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              </div>
 
-              <label className="space-y-1 text-[9px] text-muted-foreground">
-                <span>Transitions</span>
-                <select
-                  value={transitionProfile}
-                  onChange={(event) =>
-                    setTransitionProfile(event.target.value as TransitionProfile)
-                  }
-                  className="h-8 w-full rounded-sm border border-input bg-secondary px-2 text-xs text-foreground"
-                >
-                  <option value="clean">Cuts only</option>
-                  <option value="accent">Accent transitions</option>
-                </select>
-              </label>
+              <div>
+                <div className="mb-1 text-[9px] text-muted-foreground">Transitions</div>
+                <div className="studio-segmented grid h-8 grid-cols-2">
+                  {([
+                    ['clean', 'Cuts only'],
+                    ['accent', 'Accent'],
+                  ] as const).map(([value, label]) => (
+                    <button
+                      key={value}
+                      type="button"
+                      aria-pressed={transitionProfile === value}
+                      onClick={() => setTransitionProfile(value as TransitionProfile)}
+                      className="studio-segment h-7 px-1 text-[8px] font-medium"
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+              </div>
             </div>
 
             {arrangeMode === 'loop' ? (
-              <label className="mt-2 grid grid-cols-[72px_1fr] items-center gap-2 text-[9px] text-muted-foreground">
-                <span>Loop length</span>
-                <select
-                  value={loopBars}
-                  onChange={(event) => setLoopBars(Number(event.target.value))}
-                  className="h-8 rounded-sm border border-input bg-secondary px-2 text-xs text-foreground"
-                >
-                  <option value={2}>2 bars</option>
-                  <option value={4}>4 bars</option>
-                  <option value={8}>8 bars</option>
-                  <option value={16}>16 bars</option>
-                </select>
-              </label>
+              <div className="mt-2">
+                <div className="mb-1 text-[9px] text-muted-foreground">Loop length</div>
+                <div className="studio-segmented grid h-8 grid-cols-4">
+                  {[2, 4, 8, 16].map((bars) => (
+                    <button
+                      key={bars}
+                      type="button"
+                      aria-pressed={loopBars === bars}
+                      onClick={() => setLoopBars(bars)}
+                      className="studio-segment h-7 px-1 text-[8px] font-medium"
+                    >
+                      {bars} bars
+                    </button>
+                  ))}
+                </div>
+              </div>
             ) : null}
 
             <button
