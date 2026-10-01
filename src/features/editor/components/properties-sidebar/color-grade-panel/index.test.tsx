@@ -126,7 +126,7 @@ describe('ColorGradePanel', () => {
 
     const gradeSection = await screen.findByTestId('color-grade-section', {}, { timeout: 5000 })
     expect(gradeSection).toHaveAttribute('data-items', GLOBAL_GRADE.id)
-    expect(screen.getByTestId('effects-section')).toHaveAttribute('data-items', GLOBAL_GRADE.id)
+    expect(screen.getByTestId('effects-section-dock')).toHaveAttribute('data-items', GLOBAL_GRADE.id)
     expect(screen.getByRole('button', { name: 'Full video' })).toHaveAttribute(
       'aria-pressed',
       'true',
