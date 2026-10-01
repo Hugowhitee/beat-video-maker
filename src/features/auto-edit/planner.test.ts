@@ -430,6 +430,93 @@ test('planned source ranges stay inside detected shots and avoid immediate reuse
 });
 
 
+test('balanced source mix keeps enabled footage sources in rotation', () => {
+  const music = musicMap([
+    {
+      id: 'verse',
+      start: 0,
+      end: 16,
+      kind: 'verse',
+      energy: 0.55,
+      confidence: 0.9,
+    },
+  ], 16)
+
+  const plan = createEditPlan(music, clipMap(), {
+    mode: 'auto',
+    sourceMix: 'balanced',
+    transitionProfile: 'clean',
+    seed: 3,
+  })
+
+  const counts = plan.segments.reduce<Record<string, number>>((result, segment) => {
+    result[segment.sourceId] = (result[segment.sourceId] ?? 0) + 1
+    return result
+  }, {})
+
+  expect(new Set(plan.segments.map((segment) => segment.sourceId)).size).toBe(2)
+  expect(Math.abs((counts['video-a'] ?? 0) - (counts['video-b'] ?? 0))).toBeLessThanOrEqual(1)
+  for (let index = 1; index < plan.segments.length; index += 1) {
+    expect(plan.segments[index]?.sourceId).not.toBe(plan.segments[index - 1]?.sourceId)
+  }
+})
+
+test('rotate source mix follows source order when eligible shots fit', () => {
+  const music = musicMap([
+    {
+      id: 'drop',
+      start: 0,
+      end: 8,
+      kind: 'drop',
+      energy: 0.9,
+      confidence: 0.95,
+    },
+  ], 8)
+
+  const plan = createEditPlan(music, clipMap(), {
+    mode: 'auto',
+    sourceMix: 'rotate',
+    pace: 'energetic',
+    transitionProfile: 'clean',
+    seed: 1,
+  })
+
+  expect(plan.segments.slice(0, 4).map((segment) => segment.sourceId)).toEqual([
+    'video-a',
+    'video-b',
+    'video-a',
+    'video-b',
+  ])
+})
+
+test('weighted source mix respects explicit source preference', () => {
+  const music = musicMap([
+    {
+      id: 'verse',
+      start: 0,
+      end: 16,
+      kind: 'verse',
+      energy: 0.55,
+      confidence: 0.9,
+    },
+  ], 16)
+
+  const plan = createEditPlan(music, clipMap(), {
+    mode: 'auto',
+    sourceMix: 'weighted',
+    sourceWeights: {
+      'video-a': 0.25,
+      'video-b': 2,
+    },
+    transitionProfile: 'clean',
+    seed: 5,
+  })
+
+  const sourceIds = plan.segments.map((segment) => segment.sourceId)
+  expect(sourceIds.filter((sourceId) => sourceId === 'video-b').length)
+    .toBeGreaterThan(sourceIds.filter((sourceId) => sourceId === 'video-a').length)
+})
+
 test('clean transition profile never inserts an effect transition', () => {
   const music = musicMap([
     {
