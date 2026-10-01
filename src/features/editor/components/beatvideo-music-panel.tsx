@@ -163,7 +163,6 @@ export function BeatvideoMusicPanel() {
   const [wholeGridShiftArmed, setWholeGridShiftArmed] = useState(false)
   const abortRef = useRef<AbortController | null>(null)
   const pendingAutoAnalyzeMediaIdRef = useRef<string | null>(null)
-  const attemptedRevisionRefreshMediaIdRef = useRef<string | null>(null)
 
   const selectedAnalysis =
     analysis?.mediaId === selectedMediaId ? analysis : null
@@ -196,6 +195,8 @@ export function BeatvideoMusicPanel() {
   const gridReviewState = effectiveAnalysis
     ? resolveBeatGridReviewState(effectiveAnalysis)
     : 'hidden'
+  const analysisUpdateAvailable =
+    selectedAnalysis !== null && shouldRefreshBeatvideoAnalysis(selectedAnalysis)
 
   useEffect(() => {
     if (gridReviewState === 'recommended') setPrecisionAlignOpen(true)
@@ -626,21 +627,6 @@ export function BeatvideoMusicPanel() {
     pendingAutoAnalyzeMediaIdRef.current = null
     void analyze()
   }, [analyze, analyzing, currentProject, selectedMediaId])
-
-  useEffect(() => {
-    if (
-      analyzing ||
-      !selectedAnalysis ||
-      !currentProject ||
-      !shouldRefreshBeatvideoAnalysis(selectedAnalysis) ||
-      attemptedRevisionRefreshMediaIdRef.current === selectedAnalysis.mediaId
-    ) {
-      return
-    }
-
-    attemptedRevisionRefreshMediaIdRef.current = selectedAnalysis.mediaId
-    void analyze()
-  }, [analyze, analyzing, currentProject, selectedAnalysis])
 
   const insertTagAudio = useCallback(
     async (kind: 'producer' | 'watermark') => {
@@ -1275,7 +1261,9 @@ export function BeatvideoMusicPanel() {
             {analyzing
               ? 'Cancel analysis'
               : effectiveAnalysis
-                ? 'Re-analyze'
+                ? analysisUpdateAvailable
+                  ? 'Update analysis'
+                  : 'Re-analyze'
                 : 'Analyze beat'}
           </Button>
 
@@ -1323,11 +1311,13 @@ export function BeatvideoMusicPanel() {
                   </div>
                 </div>
                 <span className="shrink-0 text-[10px] text-muted-foreground">
-                  {gridReviewState === 'recommended'
-                    ? 'Check waveform'
-                    : effectiveAnalysis.barOneVerified
-                      ? 'Bar 1 verified'
-                      : 'Bar 1 detected'}
+                  {analysisUpdateAvailable
+                    ? 'Cached · update available'
+                    : gridReviewState === 'recommended'
+                      ? 'Check waveform'
+                      : effectiveAnalysis.barOneVerified
+                        ? 'Bar 1 verified'
+                        : 'Bar 1 detected'}
                 </span>
               </div>
             </div>
