@@ -21,6 +21,7 @@ import { useDebugStore } from '@/features/editor/stores/debug-store'
 import { useEditorStore } from '@/shared/state/editor'
 import { useTimelineStore } from '@/features/editor/deps/timeline-store'
 import type { BeatvideoProjectMode } from '@/types/project'
+import { toast } from 'sonner'
 import { useProjectStore } from '@/features/editor/deps/projects-contract'
 
 const SaveDirtyIndicator = memo(function SaveDirtyIndicator() {
@@ -89,10 +90,18 @@ export const Toolbar = memo(function Toolbar({
       setEditingProjectName(false)
       return
     }
-    if (nextName !== projectName) {
-      await updateProject(projectId, { name: nextName })
+
+    try {
+      if (nextName !== projectName) {
+        await updateProject(projectId, { name: nextName })
+      }
+      setEditingProjectName(false)
+    } catch (error) {
+      setProjectNameDraft(projectName)
+      toast.error('Could not rename project', {
+        description: error instanceof Error ? error.message : String(error),
+      })
     }
-    setEditingProjectName(false)
   }
 
   const handleBackClick = () => {
@@ -355,7 +364,7 @@ export const Toolbar = memo(function Toolbar({
             className="h-7 px-2.5"
             onClick={onProjectSettings}
           >
-            Project
+            Project settings
           </Button>
         ) : null}
 
