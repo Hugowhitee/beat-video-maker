@@ -73,12 +73,7 @@ vi.mock('../hooks/use-keyframes-by-item-id', () => ({
 
 vi.mock('../hooks/use-gpu-effect-preview-data', () => ({
   useGpuEffectPreviewData: () => ({
-    gpuCategories: [
-      {
-        category: 'Stylize',
-        effects: [{ id: 'gpu-grain', name: 'Film Grain' }],
-      },
-    ],
+    gpuCategories: [],
     triggerPreviews: mocks.previewData.triggerPreviews,
   }),
 }))
