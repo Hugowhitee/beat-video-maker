@@ -1,9 +1,9 @@
 import { render, screen, waitFor } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vite-plus/test'
-import type { VideoItem } from '@/types/timeline'
+import type { TimelineItem, VideoItem } from '@/types/timeline'
 import { ColorGradePanel } from './index'
 
-const { VIDEO_ITEM } = vi.hoisted(() => ({
+const { VIDEO_ITEM, GLOBAL_GRADE } = vi.hoisted(() => ({
   VIDEO_ITEM: {
     id: 'clip-1',
     type: 'video',
@@ -14,15 +14,27 @@ const { VIDEO_ITEM } = vi.hoisted(() => ({
     src: 'blob:clip',
     mediaId: 'media-1',
   } satisfies VideoItem,
+  GLOBAL_GRADE: {
+    id: 'global-grade',
+    type: 'adjustment',
+    trackId: 'grade-track',
+    from: 0,
+    durationInFrames: 90,
+    label: 'Global grade',
+    effects: [],
+  } as TimelineItem,
 }))
 
 vi.mock('@/features/editor/deps/timeline-store', () => ({
   useItemsStore: (
-    selector: (state: { items: VideoItem[]; itemById: Record<string, VideoItem> }) => unknown,
+    selector: (state: { items: TimelineItem[]; itemById: Record<string, TimelineItem> }) => unknown,
   ) =>
     selector({
-      items: [VIDEO_ITEM],
-      itemById: { [VIDEO_ITEM.id]: VIDEO_ITEM },
+      items: [VIDEO_ITEM, GLOBAL_GRADE],
+      itemById: {
+        [VIDEO_ITEM.id]: VIDEO_ITEM,
+        [GLOBAL_GRADE.id]: GLOBAL_GRADE,
+      },
     }),
 }))
 
@@ -35,16 +47,32 @@ vi.mock('@/features/editor/deps/effects-contract', () => ({
   ColorGradeSection: ({
     layout,
     onCreateAdjustmentLayer,
+    items,
   }: {
     layout?: string
     onCreateAdjustmentLayer?: () => void
+    items?: TimelineItem[]
   }) => (
-    <div data-testid="color-grade-section" data-layout={layout}>
+    <div
+      data-testid="color-grade-section"
+      data-layout={layout}
+      data-items={items?.map((item) => item.id).join(',')}
+    >
       {onCreateAdjustmentLayer ? 'has adjustment action' : null}
     </div>
   ),
-  EffectsSection: ({ layout }: { layout?: string }) => (
-    <div data-testid="effects-section" data-layout={layout}>
+  EffectsSection: ({
+    layout,
+    items,
+  }: {
+    layout?: string
+    items?: TimelineItem[]
+  }) => (
+    <div
+      data-testid="effects-section"
+      data-layout={layout}
+      data-items={items?.map((item) => item.id).join(',')}
+    >
       Add Effect
     </div>
   ),
@@ -91,6 +119,22 @@ describe('ColorGradePanel', () => {
     expect(keyframePanel).toHaveAttribute('data-show-close', 'false')
     expect(keyframePanel).toHaveAttribute('data-initial-groups', 'effects')
     expect(keyframePanel).toHaveAttribute('data-property-column-width', '336')
+  })
+
+  it('targets the global adjustment item when Full video scope is active', async () => {
+    render(<ColorGradePanel layout="dock" scope="global" />)
+
+    const gradeSection = await screen.findByTestId('color-grade-section', {}, { timeout: 5000 })
+    expect(gradeSection).toHaveAttribute('data-items', GLOBAL_GRADE.id)
+    expect(screen.getByTestId('effects-section')).toHaveAttribute('data-items', GLOBAL_GRADE.id)
+    expect(screen.getByRole('button', { name: 'Full video' })).toHaveAttribute(
+      'aria-pressed',
+      'true',
+    )
+    expect(screen.getByRole('button', { name: 'Current clip' })).toHaveAttribute(
+      'aria-pressed',
+      'false',
+    )
   })
 
   it('keeps the sidebar variant stacked without the dock graph lane', async () => {
