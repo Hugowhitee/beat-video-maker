@@ -250,4 +250,4 @@ export function BeatvideoShotBin({
       )}
     </div>
   )
-
+}
