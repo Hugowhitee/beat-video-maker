@@ -1,9 +1,12 @@
-import { lazy, memo, Suspense, useCallback, useMemo } from 'react'
+import { lazy, memo, Suspense, useCallback, useEffect, useMemo } from 'react'
 import { useTranslation } from 'react-i18next'
 import { Palette } from 'lucide-react'
 import { useShallow } from 'zustand/react/shallow'
 import { useSelectionStore } from '@/shared/state/selection'
-import { useItemsStore } from '@/features/editor/deps/timeline-store'
+import {
+  useItemsStore,
+  useTimelineSettingsStore,
+} from '@/features/editor/deps/timeline-store'
 import { KeyframeGraphPanel } from '@/features/editor/deps/timeline-keyframe-ui'
 import { addAdjustmentLayer } from '@/features/editor/utils/add-adjustment-layer'
 import type { TimelineItem } from '@/types/timeline'
@@ -96,6 +99,18 @@ export const ColorGradePanel = memo(function ColorGradePanel({
     () => selectedVisualItems.some((item) => item.id === globalGrade?.id),
     [globalGrade?.id, selectedVisualItems],
   )
+
+  useEffect(() => {
+    if (!globalGrade || globalGrade.durationInFrames === globalGradeDuration) return
+
+    // Global grade is a project-level contract, not a manually trimmed clip.
+    // Keep it spanning the whole visual program as edits extend or shorten it.
+    useItemsStore.getState()._updateItem(globalGrade.id, {
+      from: 0,
+      durationInFrames: globalGradeDuration,
+    })
+    useTimelineSettingsStore.getState().markDirty()
+  }, [globalGrade, globalGradeDuration])
   const effectiveScope: ColorGradeScope = scope ?? (inferredGlobalSelected ? 'global' : 'clip')
   const visualItems = useMemo(
     () =>
