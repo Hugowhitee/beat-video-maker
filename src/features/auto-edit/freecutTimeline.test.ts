@@ -229,7 +229,7 @@ describe('buildEditPlanTimelineDraft', () => {
       ],
       motionModifiers: [{ id: 'motion-1', type: 'drift', enabled: true, amplitude: 0.5 }],
       embeddedAudioMuted: true,
-    } as TimelineItem
+    } as unknown as TimelineItem
 
     const patches = buildEditPlanSourcePatches(
       previousPlan,
