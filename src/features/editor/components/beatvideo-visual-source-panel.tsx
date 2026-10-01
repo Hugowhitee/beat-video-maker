@@ -691,7 +691,7 @@ export function BeatvideoVisualSourcePanel({
 
   const previewArrangementShotAtPointer = useCallback(
     (
-      event: PointerEvent<HTMLDivElement>,
+      event: PointerEvent<HTMLElement>,
       shot: { sourceId: string; start: number; end: number },
     ) => {
       if (draggingShotId) return
