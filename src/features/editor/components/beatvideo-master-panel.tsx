@@ -480,6 +480,9 @@ export function BeatvideoMasterPanel() {
       setMasterFx({
         ...resolved,
         enabled: true,
+        order: resolved.order.includes('limiter')
+          ? resolved.order
+          : [...resolved.order, 'limiter'],
         inputGainDb: plan.inputGainDb,
         limiter: {
           ...resolved.limiter,
@@ -646,8 +649,8 @@ export function BeatvideoMasterPanel() {
                 'TOGGLE_MASTER_BYPASS',
               )
             }
-            aria-label={resolved.enabled ? 'Bypass master FX' : 'Enable master FX'}
-            data-tooltip={resolved.enabled ? 'Bypass master FX' : 'Enable master FX'}
+            aria-label={resolved.enabled ? 'Bypass dynamics FX' : 'Enable dynamics FX'}
+            data-tooltip={resolved.enabled ? 'Bypass dynamics FX' : 'Enable dynamics FX'}
           >
             <Power className="h-3.5 w-3.5" />
           </Button>
@@ -894,9 +897,7 @@ export function BeatvideoMasterPanel() {
                       Add effect
                     </button>
                   ) : (
-                    <span className="text-xs text-muted-foreground/55">
-                      {availableProcessors.length === 0 ? 'Empty slot' : 'Empty slot'}
-                    </span>
+                    <span className="text-xs text-muted-foreground/55">Empty slot</span>
                   )}
                 </div>
               )
