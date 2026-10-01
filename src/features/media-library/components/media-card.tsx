@@ -1844,6 +1844,15 @@ const MediaCardInternal = memo(function MediaCardInternal({
                         PROXY
                       </div>
                     )}
+                    {!isBroken && isTagging && (
+                      <div
+                        className="flex h-5 items-center gap-1 bg-black/75 px-1.5 font-mono text-[8px] text-primary pointer-events-none"
+                        title={t('media.card.analyzingWithAI')}
+                      >
+                        <Loader2 className="h-2.5 w-2.5 animate-spin" />
+                        AI
+                      </div>
+                    )}
                     <div className="opacity-0 transition-opacity group-hover:opacity-100">
                       <MediaInfoPopover media={media} onSeekToCaption={handleSeekToCaption} />
                     </div>
