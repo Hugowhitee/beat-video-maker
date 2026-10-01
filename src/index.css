@@ -402,7 +402,6 @@ body.canvas-translate-cursor-not-allowed * {
 }
 
 [data-studio-v2='true'] .studio-segmented {
-  display: inline-flex;
   align-items: stretch;
   gap: 0;
   padding: 2px;
