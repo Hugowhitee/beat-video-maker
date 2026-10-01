@@ -937,6 +937,7 @@ const mediaReferenceSchema = z.object({
   codec: z.string(),
   bitrate: z.number().min(0),
   contentHash: z.string().optional(),
+  beatvideoMusicAnalysis: beatvideoMusicAnalysisSchema.optional(),
 })
 
 // ============================================================================
