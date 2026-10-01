@@ -932,6 +932,7 @@ export const TimelineItem = memo(function TimelineItem({
           data-timeline-content-inset-end-px={1}
           data-selected={isSelected ? 'true' : undefined}
           data-compact-clip={useCompactClipShell ? 'true' : undefined}
+          data-item-enabled={item.enabled === false ? 'false' : 'true'}
           className={cn(
             'timeline-item @container absolute inset-y-px rounded overflow-visible group/timeline-item',
             itemColorClasses,
@@ -946,7 +947,16 @@ export const TimelineItem = memo(function TimelineItem({
                 isBeingDragged && !isAltDrag
                   ? `translate(${(isDragging ? dragOffset : (dragPreviewOffsetByItemRef.current[item.id] ?? dragOffsetRef.current)).x}px, ${(isDragging ? dragOffset : (dragPreviewOffsetByItemRef.current[item.id] ?? dragOffsetRef.current)).y}px)`
                   : undefined,
-              opacity: shouldDimForDrag ? DRAG_OPACITY : trackHidden ? 0.3 : trackLocked ? 0.6 : 1,
+              opacity:
+                item.enabled === false
+                  ? 0.34
+                  : shouldDimForDrag
+                    ? DRAG_OPACITY
+                    : trackHidden
+                      ? 0.3
+                      : trackLocked
+                        ? 0.6
+                        : 1,
               pointerEvents: isBeingDragged ? 'none' : 'auto',
               zIndex: isBeingDragged ? 50 : undefined,
               transition: isBeingDragged ? 'none' : undefined,
