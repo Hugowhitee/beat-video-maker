@@ -59,6 +59,51 @@ describe('convertTimelineToComposition IO marker conversion', () => {
     })
   })
 
+  it('omits disabled clips from export without collapsing the sequence duration', () => {
+    const track: TimelineTrack = {
+      id: 'track-1',
+      name: 'Track 1',
+      height: 72,
+      locked: false,
+      visible: true,
+      muted: false,
+      solo: false,
+      order: 0,
+      items: [],
+    }
+    const enabled: VideoItem = {
+      id: 'video-on',
+      type: 'video',
+      trackId: track.id,
+      from: 0,
+      durationInFrames: 30,
+      label: 'On',
+      src: 'blob:on',
+    }
+    const disabled: VideoItem = {
+      id: 'video-off',
+      type: 'video',
+      enabled: false,
+      trackId: track.id,
+      from: 90,
+      durationInFrames: 30,
+      label: 'Off',
+      src: 'blob:off',
+    }
+
+    const composition = convertTimelineToComposition(
+      [track],
+      [enabled, disabled],
+      [],
+      30,
+      1920,
+      1080,
+    )
+
+    expect(composition.tracks[0]?.items.map((item) => item.id)).toEqual(['video-on'])
+    expect(composition.durationInFrames).toBe(120)
+  })
+
   it('converts IO trims from timeline frames to source frames using source FPS', () => {
     const fps = 30
     const sourceFps = 24
