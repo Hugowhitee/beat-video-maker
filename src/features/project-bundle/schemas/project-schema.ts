@@ -732,6 +732,46 @@ const transitionSchema = z.object({
 })
 
 // ============================================================================
+// Master Audio Schema
+// ============================================================================
+
+const masterProcessorIdSchema = z.enum(['eq', 'compressor', 'saturator', 'limiter'])
+
+const masterFxSchema = z.object({
+  enabled: z.boolean().optional(),
+  order: z.array(masterProcessorIdSchema).max(4).optional(),
+  inputGainDb: z.number().min(-24).max(24).optional(),
+  compressor: z
+    .object({
+      enabled: z.boolean().optional(),
+      thresholdDb: z.number().min(-60).max(0).optional(),
+      ratio: z.number().min(1).max(20).optional(),
+      kneeDb: z.number().min(0).max(40).optional(),
+      attackSec: z.number().min(0).max(1).optional(),
+      releaseSec: z.number().min(0.01).max(2).optional(),
+      makeupGainDb: z.number().min(-12).max(18).optional(),
+    })
+    .optional(),
+  saturator: z
+    .object({
+      enabled: z.boolean().optional(),
+      driveDb: z.number().min(0).max(24).optional(),
+      mix: z.number().min(0).max(1).optional(),
+      outputGainDb: z.number().min(-18).max(12).optional(),
+      oversample: z.enum(['none', '2x', '4x']).optional(),
+    })
+    .optional(),
+  limiter: z
+    .object({
+      enabled: z.boolean().optional(),
+      thresholdDb: z.number().min(-18).max(0).optional(),
+      releaseSec: z.number().min(0.01).max(1).optional(),
+      ceilingDb: z.number().min(-12).max(0).optional(),
+    })
+    .optional(),
+})
+
+// ============================================================================
 // Timeline Schema
 // ============================================================================
 
@@ -758,6 +798,8 @@ const compositionSchema = z
 
 const timelineSchema = z
   .object({
+    masterBusDb: z.number().min(-60).max(12).optional(),
+    masterFx: masterFxSchema.optional(),
     tracks: z.array(trackSchema),
     items: z.array(timelineItemSchema),
     currentFrame: z.number().int().min(0).optional(),
