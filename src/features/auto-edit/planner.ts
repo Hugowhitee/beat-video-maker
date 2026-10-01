@@ -7,6 +7,7 @@ import type {
   EditSegment,
   EditTransition,
   MusicMap,
+  SourceMixMode,
   MusicSection,
 } from './types';
 
@@ -24,6 +25,7 @@ type TimelineSlot = {
 type PlannerContext = {
   music: MusicMap;
   shots: ClipShot[];
+  sourceIds: string[];
   maxShotDuration: number;
   options: Required<EditPlannerOptions>;
 };
@@ -193,37 +195,78 @@ function hash01(value: string) {
   return (hash >>> 0) / 0xffffffff;
 }
 
+function sourceWeight(
+  weights: Record<string, number>,
+  sourceId: string,
+) {
+  const value = weights[sourceId] ?? 1;
+  return Math.max(0.25, Math.min(2, Number.isFinite(value) ? value : 1));
+}
+
 function chooseShot(
-  shots: ClipShot[],
+  context: PlannerContext,
   slot: TimelineSlot,
   segmentIndex: number,
-  seed: number,
   recentShotIds: string[],
+  recentSourceIds: string[],
+  sourceUseCounts: Map<string, number>,
 ) {
+  const { shots, sourceIds, options } = context;
   const duration = slot.end - slot.start;
   const eligible = shots.filter(
     (shot) => shot.end - shot.start >= duration - EPSILON,
   );
-  const candidates = eligible.length > 0 ? eligible : shots;
+  let candidates = eligible.length > 0 ? eligible : shots;
 
   if (candidates.length === 0) {
     throw new Error('Auto edit requires at least one analyzed footage shot.');
   }
 
+  if (options.sourceMix === 'rotate' && sourceIds.length > 1) {
+    const targetSourceId = sourceIds[segmentIndex % sourceIds.length];
+    const targetCandidates = candidates.filter(
+      (shot) => shot.sourceId === targetSourceId,
+    );
+    if (targetCandidates.length > 0) candidates = targetCandidates;
+  }
+
   const targetMotion = clamp01(sectionIntensity(slot.section));
+  const minimumUseCount =
+    sourceIds.length > 0
+      ? Math.min(...sourceIds.map((sourceId) => sourceUseCounts.get(sourceId) ?? 0))
+      : 0;
 
   return [...candidates].sort((left, right) => {
     const score = (shot: ClipShot) => {
       const durationFit = Math.min(1, (shot.end - shot.start) / Math.max(duration, 0.05));
       const motionFit = 1 - Math.abs(clamp01(shot.motion) - targetMotion);
       const reusePenalty = recentShotIds.includes(shot.id) ? 0.8 : 0;
-      const tieBreak = hash01(`${seed}:${segmentIndex}:${shot.id}`) * 0.02;
+      const immediateSourcePenalty = recentSourceIds[0] === shot.sourceId ? 0.24 : 0;
+      const recentSourcePenalty =
+        recentSourceIds.slice(1).includes(shot.sourceId) ? 0.06 : 0;
+      const useCount = sourceUseCounts.get(shot.sourceId) ?? 0;
+      const balancedPenalty =
+        options.sourceMix === 'balanced'
+          ? Math.max(0, useCount - minimumUseCount) * 0.18
+          : 0;
+      const weightedBoost =
+        options.sourceMix === 'weighted'
+          ? (sourceWeight(options.sourceWeights, shot.sourceId) - 1) * 0.22
+          : 0;
+      const sourcePenalty =
+        options.sourceMix === 'rotate'
+          ? 0
+          : immediateSourcePenalty + recentSourcePenalty + balancedPenalty;
+      const tieBreak = hash01(`${options.seed}:${segmentIndex}:${shot.id}`) * 0.02;
+
       return (
         clamp01(shot.quality) * 0.42
         + motionFit * 0.38
         + durationFit * 0.18
+        + weightedBoost
         + tieBreak
         - reusePenalty
+        - sourcePenalty
       );
     };
 
@@ -365,14 +408,17 @@ function slotsToSegments(
 ) {
   const segments: EditSegment[] = [];
   const recentShotIds: string[] = [];
+  const recentSourceIds: string[] = [];
+  const sourceUseCounts = new Map<string, number>();
 
   slots.forEach((slot, segmentIndex) => {
     const shot = chooseShot(
-      context.shots,
+      context,
       slot,
       segmentIndex,
-      context.options.seed,
       recentShotIds,
+      recentSourceIds,
+      sourceUseCounts,
     );
     const duration = slot.end - slot.start;
     const range = chooseSourceRange(
@@ -397,6 +443,12 @@ function slotsToSegments(
     segments.push(segment);
     recentShotIds.unshift(shot.id);
     if (recentShotIds.length > 2) recentShotIds.pop();
+    recentSourceIds.unshift(shot.sourceId);
+    if (recentSourceIds.length > 2) recentSourceIds.pop();
+    sourceUseCounts.set(
+      shot.sourceId,
+      (sourceUseCounts.get(shot.sourceId) ?? 0) + 1,
+    );
   });
 
   return segments;
@@ -759,8 +811,11 @@ export function createEditPlan(
   validateInputs(music, clips);
 
   const excludedShotIds = new Set(options.excludedShotIds ?? []);
-  const shots = clips.sources
-    .filter((source) => (source.role ?? 'footage') === 'footage')
+  const footageSources = clips.sources.filter(
+    (source) => (source.role ?? 'footage') === 'footage',
+  );
+  const sourceIds = footageSources.map((source) => source.id);
+  const shots = footageSources
     .flatMap((source) => source.shots)
     .filter((shot) => !excludedShotIds.has(shot.id));
   if (shots.length === 0) {
@@ -780,6 +835,8 @@ export function createEditPlan(
     loopBars: Math.max(1, Math.round(options.loopBars ?? 8)),
     transitionProfile: options.transitionProfile ?? 'clean',
     pace: options.pace ?? 'balanced',
+    sourceMix: options.sourceMix ?? 'balanced',
+    sourceWeights: { ...(options.sourceWeights ?? {}) },
     excludedShotIds: [...excludedShotIds],
     seed: Math.round(options.seed ?? 1),
   };
@@ -787,6 +844,7 @@ export function createEditPlan(
   const context: PlannerContext = {
     music,
     shots,
+    sourceIds,
     maxShotDuration,
     options: normalizedOptions,
   };
