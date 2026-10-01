@@ -81,20 +81,23 @@ export const ColorGradePanel = memo(function ColorGradePanel({
       ) ?? null,
     [allItems],
   )
+  const visualProgramItems = useMemo(
+    () =>
+      allItems.filter(
+        (item) =>
+          item.type !== 'audio' &&
+          item.type !== 'adjustment' &&
+          item.type !== 'controller',
+      ),
+    [allItems],
+  )
   const globalGradeDuration = useMemo(
     () =>
       Math.max(
         1,
-        ...allItems
-          .filter(
-            (item) =>
-              item.type !== 'audio' &&
-              item.type !== 'adjustment' &&
-              item.type !== 'controller',
-          )
-          .map((item) => item.from + item.durationInFrames),
+        ...visualProgramItems.map((item) => item.from + item.durationInFrames),
       ),
-    [allItems],
+    [visualProgramItems],
   )
   const inferredGlobalSelected = useMemo(
     () => selectedVisualItems.some((item) => item.id === globalGrade?.id),
