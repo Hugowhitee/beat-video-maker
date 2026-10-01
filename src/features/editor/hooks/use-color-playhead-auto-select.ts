@@ -51,8 +51,9 @@ function findGradeTargetAtFrame(frame: number): TimelineItem | null {
  * another clip at the same frame are left alone, and the last selection is
  * kept while the playhead sits in a gap.
  */
-export function useColorPlayheadAutoSelect(): void {
+export function useColorPlayheadAutoSelect(enabled = true): void {
   useEffect(() => {
+    if (!enabled) return
     const apply = () => {
       const playback = usePlaybackStore.getState()
       // Defer while a scrub preview is in flight — re-selecting per scrub frame
@@ -94,5 +95,5 @@ export function useColorPlayheadAutoSelect(): void {
       unsubscribeSelection()
       unsubscribeItems()
     }
-  }, [])
+  }, [enabled])
 }
