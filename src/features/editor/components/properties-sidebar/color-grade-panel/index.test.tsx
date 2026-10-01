@@ -1,9 +1,9 @@
 import { render, screen, waitFor } from '@testing-library/react'
 import { describe, expect, it, vi } from 'vite-plus/test'
-import type { TimelineItem, VideoItem } from '@/types/timeline'
+import type { TimelineItem, TimelineTrack, VideoItem } from '@/types/timeline'
 import { ColorGradePanel } from './index'
 
-const { VIDEO_ITEM, GLOBAL_GRADE, updateItem, markDirty } = vi.hoisted(() => ({
+const { VIDEO_ITEM, GLOBAL_GRADE, TRACKS, updateItem, setTracks, markDirty } = vi.hoisted(() => ({
   VIDEO_ITEM: {
     id: 'clip-1',
     type: 'video',
@@ -23,13 +23,39 @@ const { VIDEO_ITEM, GLOBAL_GRADE, updateItem, markDirty } = vi.hoisted(() => ({
     label: 'Global grade',
     effects: [],
   } as TimelineItem,
+  TRACKS: [
+    {
+      id: 'grade-track',
+      name: 'Global grade',
+      height: 60,
+      locked: false,
+      visible: true,
+      muted: false,
+      solo: false,
+      order: 0,
+      items: [],
+    },
+    {
+      id: 'track-1',
+      name: 'Media',
+      height: 60,
+      locked: false,
+      visible: true,
+      muted: false,
+      solo: false,
+      order: 1,
+      items: [],
+    },
+  ] satisfies TimelineTrack[],
   updateItem: vi.fn(),
+  setTracks: vi.fn(),
   markDirty: vi.fn(),
 }))
 
 vi.mock('@/features/editor/deps/timeline-store', () => {
   const state = {
     items: [VIDEO_ITEM, GLOBAL_GRADE],
+    tracks: TRACKS,
     itemById: {
       [VIDEO_ITEM.id]: VIDEO_ITEM,
       [GLOBAL_GRADE.id]: GLOBAL_GRADE,
@@ -40,7 +66,11 @@ vi.mock('@/features/editor/deps/timeline-store', () => {
       selector: (value: typeof state) => unknown,
     ) => selector(state),
     {
-      getState: () => ({ ...state, _updateItem: updateItem }),
+      getState: () => ({
+        ...state,
+        _updateItem: updateItem,
+        setTracks,
+      }),
     },
   )
 
@@ -167,6 +197,25 @@ describe('ColorGradePanel', () => {
     expect(markDirty).toHaveBeenCalledTimes(1)
 
     GLOBAL_GRADE.durationInFrames = 90
+  })
+
+  it('keeps the global grade above footage lanes created later', async () => {
+    const originalOrders = TRACKS.map((track) => track.order)
+    TRACKS[0]!.order = 2
+    TRACKS[1]!.order = 1
+    setTracks.mockClear()
+    markDirty.mockClear()
+
+    render(<ColorGradePanel layout="dock" scope="global" />)
+
+    await waitFor(() => expect(setTracks).toHaveBeenCalledTimes(1))
+    const nextTracks = setTracks.mock.calls[0]?.[0] as TimelineTrack[]
+    expect(nextTracks.find((track) => track.id === 'grade-track')?.order).toBe(0)
+    expect(markDirty).toHaveBeenCalledTimes(1)
+
+    TRACKS.forEach((track, index) => {
+      track.order = originalOrders[index] ?? track.order
+    })
   })
 
   it('keeps the sidebar variant stacked without the dock graph lane', async () => {
