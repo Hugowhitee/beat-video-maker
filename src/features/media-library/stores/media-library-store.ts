@@ -26,6 +26,7 @@ import {
 } from '@/infrastructure/storage'
 import { scanWorkspaceMediaHealth } from '../utils/workspace-health'
 import { mergeTranscriptionProgress } from '@/shared/utils/transcription-progress'
+import { updateMedia } from '../deps/storage'
 
 const logger = createLogger('MediaLibraryStore')
 
@@ -580,6 +581,16 @@ const newStore: MediaLibraryStoreApi =
             )
             return { mediaItems }
           })
+        },
+
+        updateBeatvideoMusicAnalysis: async (mediaId, analysis) => {
+          const updated = await updateMedia(mediaId, {
+            beatvideoMusicAnalysis: analysis,
+            updatedAt: Date.now(),
+          })
+          set((state) => ({
+            mediaItems: state.mediaItems.map((item) => (item.id === mediaId ? updated : item)),
+          }))
         },
 
         beginAnalysisRun: (count) => {
