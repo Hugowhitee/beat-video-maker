@@ -63,7 +63,6 @@ import {
 import {
   appendResolvedAudioEqSources,
   getAudioEqSettings,
-  prependResolvedAudioEqSources,
 } from '@/shared/utils/audio-eq'
 import { getAudioPitchShiftSemitones } from '@/shared/utils/audio-pitch'
 
@@ -211,7 +210,6 @@ export const MainComposition: React.FC<MainCompositionProps> = ({
   transitions = [],
   backgroundColor = '#000000',
   keyframes,
-  busAudioEq,
   width: compositionWidth,
   height: compositionHeight,
   useProxyMedia = false,
@@ -339,22 +337,10 @@ export const MainComposition: React.FC<MainCompositionProps> = ({
     () => [...videoAudioSegments, ...linkedAudioTransitionSegments],
     [videoAudioSegments, linkedAudioTransitionSegments],
   )
-  const previewTransitionAudioSegments = useMemo(
-    () =>
-      transitionAudioSegments.map((segment) => ({
-        ...segment,
-        audioEqStages: prependResolvedAudioEqSources(segment.audioEqStages, busAudioEq),
-      })),
-    [busAudioEq, transitionAudioSegments],
-  )
-  const previewAudioSegments = useMemo(
-    () =>
-      audioSegments.map((segment) => ({
-        ...segment,
-        audioEqStages: prependResolvedAudioEqSources(segment.audioEqStages, busAudioEq),
-      })),
-    [audioSegments, busAudioEq],
-  )
+  // Project master EQ now lives on the shared master bus so it can be
+  // reordered with compressor/saturator/limiter. Clip/track EQ remains local.
+  const previewTransitionAudioSegments = transitionAudioSegments
+  const previewAudioSegments = audioSegments
 
   // Look up which video audio segments need custom decoding (AC-3/E-AC-3)
   const mediaItems = useMediaLibraryStore((s) => s.mediaItems)
@@ -644,7 +630,6 @@ export const MainComposition: React.FC<MainCompositionProps> = ({
                     audioGainMultiplier={Math.pow(10, segment.volumeDb / 20)}
                     audioEqStages={appendResolvedAudioEqSources(
                       undefined,
-                      busAudioEq,
                       compoundItem.trackAudioEq,
                       getAudioEqSettings(compoundItem),
                     )}
@@ -673,7 +658,6 @@ export const MainComposition: React.FC<MainCompositionProps> = ({
                   )}
                   audioEqStages={appendResolvedAudioEqSources(
                     undefined,
-                    busAudioEq,
                     item.trackAudioEq,
                     getAudioEqSettings(item),
                   )}
