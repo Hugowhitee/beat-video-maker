@@ -7,7 +7,6 @@ import type {
   EditSegment,
   EditTransition,
   MusicMap,
-  SourceMixMode,
   MusicSection,
 } from './types';
 
