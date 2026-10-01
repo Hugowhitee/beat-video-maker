@@ -56,7 +56,7 @@ function TrackRowFrameBase({
           type="button"
           tabIndex={-1}
           className={cn(
-            'absolute inset-x-0 z-30 h-[6px] cursor-row-resize bg-transparent focus-visible:outline-none',
+            'absolute inset-x-0 z-30 h-[6px] cursor-row-resize bg-transparent transition-colors hover:bg-primary/20 focus-visible:bg-primary/25 focus-visible:outline-none',
             resizeHandlePositionClass,
           )}
           aria-label={resizeHandleLabel ?? t('timeline.trackRow.resizeTrackHeight')}
