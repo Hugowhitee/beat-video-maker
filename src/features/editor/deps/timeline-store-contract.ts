@@ -18,7 +18,6 @@ export {
 export { useTimelineCommandStore } from '@/features/timeline/stores/timeline-command-store'
 export { execute as executeTimelineCommand } from '@/features/timeline/stores/actions/shared'
 export { captureSnapshot } from '@/features/timeline/stores/commands/snapshot'
-export { updateItem } from '@/features/timeline/stores/actions/item-actions'
 export { rateStretchItemWithoutHistory } from '@/features/timeline/stores/actions/item-edit-actions'
 export {
   addCompositionControl,
