@@ -53,12 +53,12 @@ describe('master rack order', () => {
     ])
   })
 
-  it('keeps a valid custom order and repairs duplicate or missing slots', () => {
+  it('keeps a valid custom rack and treats omitted processors as empty slots', () => {
     expect(
       resolveMasterFxSettings({
         order: ['limiter', 'eq', 'limiter'],
       }).order,
-    ).toEqual(['limiter', 'eq', 'compressor', 'saturator'])
+    ).toEqual(['limiter', 'eq'])
   })
 })
 
