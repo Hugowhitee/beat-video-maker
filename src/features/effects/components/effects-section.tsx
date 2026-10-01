@@ -1467,6 +1467,7 @@ export const EffectsSection = memo(function EffectsSection({
         ? 'flex h-full min-h-0 flex-col overflow-hidden'
         : 'min-w-0 border-y border-border/70'}
       data-testid={isDock ? 'effects-section-dock' : 'effects-section'}
+      data-items={itemIds.join(',')}
     >
       <div className="flex min-h-9 shrink-0 items-center gap-2 border-b border-border/70 px-2">
         <h3 className="min-w-[5.5rem] truncate text-[11px] font-medium text-foreground">
