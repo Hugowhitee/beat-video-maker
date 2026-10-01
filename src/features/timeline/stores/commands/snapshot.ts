@@ -188,6 +188,7 @@ export function snapshotsEqual(a: TimelineSnapshot, b: TimelineSnapshot): boolea
     a.currentFrame === b.currentFrame &&
     JSON.stringify(a.busAudioEq ?? null) === JSON.stringify(b.busAudioEq ?? null) &&
     a.masterBusDb === b.masterBusDb &&
+    JSON.stringify(a.masterFx ?? null) === JSON.stringify(b.masterFx ?? null) &&
     a.projectId === b.projectId &&
     projectMetadataEqual(a.projectMetadata, b.projectMetadata)
   )
