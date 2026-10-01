@@ -49,6 +49,18 @@ describe('useColorPlayheadAutoSelect', () => {
     usePlaybackStore.setState({ currentFrame: 0, previewFrame: null })
   })
 
+  it('does not steal selection while full-video Color scope disables the follower', () => {
+    seed([makeClip('a', 't1', 0, 90)], [makeTrack('t1', 0)])
+
+    renderHook(() => useColorPlayheadAutoSelect(false))
+
+    expect(useSelectionStore.getState().selectedItemIds).toEqual([])
+    act(() => {
+      usePlaybackStore.setState({ currentFrame: 30 })
+    })
+    expect(useSelectionStore.getState().selectedItemIds).toEqual([])
+  })
+
   it('selects the clip under the playhead when nothing is selected', () => {
     seed([makeClip('a', 't1', 0, 90), makeClip('b', 't1', 90, 90)], [makeTrack('t1', 0)])
 
