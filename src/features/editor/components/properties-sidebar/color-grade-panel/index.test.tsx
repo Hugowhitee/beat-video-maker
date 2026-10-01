@@ -17,8 +17,13 @@ const { VIDEO_ITEM } = vi.hoisted(() => ({
 }))
 
 vi.mock('@/features/editor/deps/timeline-store', () => ({
-  useItemsStore: (selector: (state: { itemById: Record<string, VideoItem> }) => unknown) =>
-    selector({ itemById: { [VIDEO_ITEM.id]: VIDEO_ITEM } }),
+  useItemsStore: (
+    selector: (state: { items: VideoItem[]; itemById: Record<string, VideoItem> }) => unknown,
+  ) =>
+    selector({
+      items: [VIDEO_ITEM],
+      itemById: { [VIDEO_ITEM.id]: VIDEO_ITEM },
+    }),
 }))
 
 vi.mock('@/shared/state/selection', () => ({
