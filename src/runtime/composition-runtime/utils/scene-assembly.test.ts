@@ -473,6 +473,96 @@ describe('scene assembly', () => {
     ])
   })
 
+  it('keeps disabled timeline items out of every render-facing collection', () => {
+    const state = resolveTrackRenderState([
+      {
+        id: 'track-enabled-state',
+        name: 'Enabled state',
+        height: 60,
+        locked: false,
+        visible: true,
+        muted: false,
+        solo: false,
+        order: 0,
+        items: [
+          {
+            id: 'video-on',
+            type: 'video',
+            trackId: 'track-enabled-state',
+            from: 0,
+            durationInFrames: 30,
+            src: 'on.mp4',
+            label: 'On',
+          },
+          {
+            id: 'video-off',
+            type: 'video',
+            enabled: false,
+            trackId: 'track-enabled-state',
+            from: 30,
+            durationInFrames: 30,
+            src: 'off.mp4',
+            label: 'Off',
+          },
+          {
+            id: 'audio-off',
+            type: 'audio',
+            enabled: false,
+            trackId: 'track-enabled-state',
+            from: 0,
+            durationInFrames: 30,
+            src: 'off.wav',
+            label: 'Off audio',
+          },
+          {
+            id: 'text-off',
+            type: 'text',
+            enabled: false,
+            trackId: 'track-enabled-state',
+            from: 0,
+            durationInFrames: 30,
+            label: 'Off text',
+            text: 'Hidden',
+            color: '#fff',
+            fontFamily: 'Anton',
+          },
+          {
+            id: 'mask-off',
+            type: 'shape',
+            enabled: false,
+            trackId: 'track-enabled-state',
+            from: 0,
+            durationInFrames: 30,
+            label: 'Off mask',
+            shapeType: 'rectangle',
+            fillColor: '#fff',
+            isMask: true,
+          },
+          {
+            id: 'grade-off',
+            type: 'adjustment',
+            enabled: false,
+            trackId: 'track-enabled-state',
+            from: 0,
+            durationInFrames: 30,
+            label: 'Off grade',
+            effects: [],
+          },
+        ],
+      } as TimelineTrack,
+    ])
+
+    const plan = resolveCompositionRenderPlan({ tracks: state.allTracksByOrderDesc })
+
+    expect(plan.visualItems.map((item) => item.id)).toEqual(['video-on'])
+    expect(plan.audioItems).toEqual([])
+    expect(plan.transitionClipItems.map((item) => item.id)).toEqual(['video-on'])
+    expect(plan.stableDomTracks[0]?.items).toEqual([])
+    expect(plan.visibleShapeMasks).toEqual([])
+    expect(plan.visibleAdjustmentLayers).toEqual([])
+    expect(plan.visibleTextFontFamilies).toEqual([])
+  })
+
   it('collects transition clips and resolves transition windows from shared items', () => {
     const transitionTracks: TimelineTrack[] = [
       {
