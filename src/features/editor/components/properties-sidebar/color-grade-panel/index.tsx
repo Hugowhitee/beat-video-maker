@@ -48,6 +48,7 @@ export const ColorGradePanel = memo(function ColorGradePanel({
   const { t } = useTranslation()
   const selectedItemIds = useSelectionStore((s) => s.selectedItemIds)
   const allItems = useItemsStore((s) => s.items)
+  const tracks = useItemsStore((s) => s.tracks)
   const selectedVisualItems = useItemsStore(
     useShallow(
       useCallback(
@@ -111,6 +112,32 @@ export const ColorGradePanel = memo(function ColorGradePanel({
     })
     useTimelineSettingsStore.getState().markDirty()
   }, [globalGrade, globalGradeDuration])
+
+  useEffect(() => {
+    if (!globalGrade) return
+    const gradeTrack = tracks.find((track) => track.id === globalGrade.trackId)
+    if (!gradeTrack) return
+
+    const otherOrders = tracks
+      .filter((track) => track.id !== gradeTrack.id && !track.isGroup)
+      .map((track) => track.order ?? 0)
+    if (otherOrders.length === 0) return
+
+    const topOtherOrder = Math.min(...otherOrders)
+    if ((gradeTrack.order ?? 0) < topOtherOrder) return
+
+    // Full-video color must remain above footage created after the grade layer.
+    // Track order is therefore derived from the scope contract, just like its
+    // duration is derived from program length.
+    useItemsStore.getState().setTracks(
+      tracks.map((track) =>
+        track.id === gradeTrack.id
+          ? { ...track, order: topOtherOrder - 1 }
+          : track,
+      ),
+    )
+    useTimelineSettingsStore.getState().markDirty()
+  }, [globalGrade, tracks])
   const effectiveScope: ColorGradeScope = scope ?? (inferredGlobalSelected ? 'global' : 'clip')
   const visualItems = useMemo(
     () =>
