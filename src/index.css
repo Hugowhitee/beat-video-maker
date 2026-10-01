@@ -384,3 +384,108 @@ body.canvas-translate-cursor-not-allowed * {
     animation: none;
   }
 }
+
+
+/* Beatvideo Studio V2 -------------------------------------------------------
+   Scoped to the editor so project/library surfaces can migrate independently.
+   One shell signal owns selected/enabled/focus state; authored media, meters,
+   warnings and destructive actions keep their own meaning-bearing colors. */
+[data-studio-v2='true'] {
+  --primary: #b0db47;
+  --primary-foreground: #17200d;
+  --ring: #b0db47;
+  --sidebar-primary: #b0db47;
+  --sidebar-primary-foreground: #17200d;
+  --sidebar-ring: #b0db47;
+  --studio-positive: #b0db47;
+  --studio-warning: #d6a04b;
+}
+
+[data-studio-v2='true'] .studio-segmented {
+  display: inline-flex;
+  align-items: stretch;
+  gap: 0;
+  padding: 2px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--panel-header);
+}
+
+[data-studio-v2='true'] .studio-segment {
+  position: relative;
+  border: 0;
+  border-radius: 2px;
+  background: transparent;
+  color: var(--muted-foreground);
+  box-shadow: none;
+  transition: color 120ms ease, background-color 120ms ease, box-shadow 120ms ease;
+}
+
+[data-studio-v2='true'] .studio-segment:hover {
+  background: color-mix(in oklab, var(--card) 76%, transparent);
+  color: var(--foreground);
+}
+
+[data-studio-v2='true'] .studio-segment[aria-selected='true'],
+[data-studio-v2='true'] .studio-segment[data-state='active'],
+[data-studio-v2='true'] .studio-segment[aria-pressed='true'] {
+  background: var(--timeline-bg);
+  color: var(--foreground);
+  box-shadow: inset 3px 0 0 var(--primary);
+}
+
+[data-studio-v2='true'] [data-studio-timeline-toolbar] button,
+[data-studio-v2='true'] .studio-tool {
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: color-mix(in oklab, var(--card) 88%, var(--background));
+  color: var(--foreground);
+  box-shadow:
+    inset 0 1px 0 color-mix(in oklab, var(--foreground) 8%, transparent),
+    inset 0 -1px 0 color-mix(in oklab, black 24%, transparent);
+}
+
+[data-studio-v2='true'] [data-studio-timeline-toolbar] button:hover,
+[data-studio-v2='true'] .studio-tool:hover {
+  background: var(--secondary);
+  color: var(--foreground);
+}
+
+[data-studio-v2='true'] [data-studio-timeline-toolbar] button[aria-pressed='true'],
+[data-studio-v2='true'] .studio-tool[aria-pressed='true'],
+[data-studio-v2='true'] .studio-tool-active {
+  border-color: color-mix(in oklab, var(--primary) 46%, var(--border));
+  background: var(--timeline-bg);
+  color: var(--foreground);
+  box-shadow:
+    inset 3px 0 0 var(--primary),
+    inset 0 1px 0 color-mix(in oklab, var(--foreground) 5%, transparent);
+}
+
+[data-studio-v2='true'] [data-studio-player] > button,
+[data-studio-v2='true'] [data-studio-player] > div > button:first-child {
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: color-mix(in oklab, var(--card) 88%, var(--background));
+  color: var(--foreground);
+  box-shadow:
+    inset 0 1px 0 color-mix(in oklab, var(--foreground) 8%, transparent),
+    inset 0 -1px 0 color-mix(in oklab, black 24%, transparent);
+}
+
+[data-studio-v2='true'] [data-studio-player] > button:hover,
+[data-studio-v2='true'] [data-studio-player] > div > button:first-child:hover {
+  background: var(--secondary);
+  color: var(--foreground);
+}
+
+[data-studio-v2='true'] [data-studio-player] button[aria-pressed='true'] {
+  border-color: color-mix(in oklab, var(--primary) 46%, var(--border));
+  background: var(--timeline-bg);
+  color: var(--primary);
+  box-shadow: inset 3px 0 0 var(--primary);
+}
+
+[data-studio-v2='true'] .studio-positive {
+  color: var(--studio-positive);
+}
