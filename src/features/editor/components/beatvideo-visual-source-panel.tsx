@@ -1151,8 +1151,6 @@ export function BeatvideoVisualSourcePanel({
                             {duration.toFixed(2)}s
                             {linkedRepeats > 1 ? ` ×${linkedRepeats}` : ''}
                           </span>
-                        </div>
-
                           </div>
 
                           <div className="truncate border-t border-border/70 px-1.5 py-1 text-[8px] text-foreground/80">
