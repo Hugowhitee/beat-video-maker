@@ -1,7 +1,7 @@
 import { memo, useEffect, useMemo, useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useColorPlayheadAutoSelect } from '../hooks/use-color-playhead-auto-select'
-import { useItemsStore } from '@/features/editor/deps/timeline-store'
+import { updateItem, useItemsStore } from '@/features/editor/deps/timeline-store'
 import { useSelectionStore } from '@/shared/state/selection'
 import { addAdjustmentLayer } from '../utils/add-adjustment-layer'
 import {
@@ -52,6 +52,17 @@ export const ColorGradingDock = memo(function ColorGradingDock() {
 
     if (!globalGrade) {
       addAdjustmentLayer(undefined, GLOBAL_COLOR_GRADE_LABEL, {
+        from: 0,
+        durationInFrames: globalGradeDuration,
+      })
+      return
+    }
+
+    if (
+      globalGrade.from !== 0 ||
+      globalGrade.durationInFrames !== globalGradeDuration
+    ) {
+      updateItem(globalGrade.id, {
         from: 0,
         durationInFrames: globalGradeDuration,
       })
