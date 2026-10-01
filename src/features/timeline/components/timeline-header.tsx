@@ -88,7 +88,6 @@ const InlineKeyframesToggle = memo(function InlineKeyframesToggle({
         width: EDITOR_LAYOUT_CSS_VALUES.toolbarButtonSize,
         height: EDITOR_LAYOUT_CSS_VALUES.toolbarButtonSize,
       }}
-      className={isOpen ? 'bg-primary text-primary-foreground hover:bg-primary/90' : ''}
       onClick={onToggle}
       aria-label={label}
       aria-pressed={isOpen}
@@ -581,11 +580,6 @@ export const TimelineHeader = memo(function TimelineHeader({
               variant="ghost"
               size="icon"
               style={btnSize}
-              className={
-                activeTool === 'select'
-                  ? 'bg-primary text-primary-foreground hover:bg-primary/90'
-                  : ''
-              }
               onClick={() => setActiveTool('select')}
               aria-pressed={activeTool === 'select'}
               aria-label={t('timeline.header.selectTool')}
@@ -601,11 +595,6 @@ export const TimelineHeader = memo(function TimelineHeader({
                     variant="ghost"
                     size="icon"
                     style={btnSize}
-                    className={
-                      activeTool === 'trim-edit'
-                        ? 'bg-primary text-primary-foreground hover:bg-primary/90'
-                        : ''
-                    }
                     onClick={() =>
                       setActiveTool(activeTool === 'trim-edit' ? 'select' : 'trim-edit')
                     }
@@ -621,11 +610,6 @@ export const TimelineHeader = memo(function TimelineHeader({
                   variant="ghost"
                   size="icon"
                   style={btnSize}
-                  className={
-                    activeTool === 'razor'
-                      ? 'bg-primary text-primary-foreground hover:bg-primary/90'
-                      : ''
-                  }
                   onClick={() => setActiveTool(activeTool === 'razor' ? 'select' : 'razor')}
                   aria-pressed={activeTool === 'razor'}
                   aria-label={t('timeline.header.razorTool')}
@@ -640,11 +624,6 @@ export const TimelineHeader = memo(function TimelineHeader({
                       variant="ghost"
                       size="icon"
                       style={btnSize}
-                      className={
-                        activeTool === 'rate-stretch'
-                          ? 'bg-primary text-primary-foreground hover:bg-primary/90'
-                          : ''
-                      }
                       onClick={() =>
                         setActiveTool(activeTool === 'rate-stretch' ? 'select' : 'rate-stretch')
                       }
@@ -661,11 +640,7 @@ export const TimelineHeader = memo(function TimelineHeader({
                           <Button
                             variant="ghost"
                             style={{ height: EDITOR_LAYOUT_CSS_VALUES.toolbarButtonSize }}
-                            className={`gap-1 px-2 ${
-                              activeTool === 'slip' || activeTool === 'slide'
-                                ? 'bg-primary text-primary-foreground hover:bg-primary/90'
-                                : ''
-                            }`}
+                            className="gap-1 px-2"
                             aria-pressed={activeTool === 'slip' || activeTool === 'slide'}
                             aria-label={t('timeline.header.slipSlideTools')}
                             data-tooltip={t('timeline.header.slipSlideToolsTooltip')}
@@ -863,11 +838,6 @@ export const TimelineHeader = memo(function TimelineHeader({
                 variant="ghost"
                 size="icon"
                 style={btnSize}
-                className={
-                  musicalSnapEnabled
-                    ? 'bg-primary text-primary-foreground hover:bg-primary/90'
-                    : ''
-                }
                 onClick={toggleMusicalSnap}
                 aria-label={musicalSnapEnabled ? 'Disable beat snap' : 'Enable beat snap'}
                 aria-pressed={musicalSnapEnabled}
@@ -918,7 +888,6 @@ export const TimelineHeader = memo(function TimelineHeader({
               variant="ghost"
               size="icon"
               style={btnSize}
-              className={snapEnabled ? 'bg-primary text-primary-foreground hover:bg-primary/90' : ''}
               onClick={toggleSnap}
               aria-pressed={snapEnabled}
               aria-label={
@@ -940,9 +909,6 @@ export const TimelineHeader = memo(function TimelineHeader({
               variant="ghost"
               size="icon"
               style={btnSize}
-              className={
-                audioSkimmingEnabled ? 'bg-primary text-primary-foreground hover:bg-primary/90' : ''
-              }
               onClick={toggleAudioSkimming}
               aria-label={
                 audioSkimmingEnabled
@@ -967,9 +933,6 @@ export const TimelineHeader = memo(function TimelineHeader({
               variant="ghost"
               size="icon"
               style={btnSize}
-              className={
-                linkedSelectionEnabled ? 'bg-primary text-primary-foreground hover:bg-primary/90' : ''
-              }
               onClick={() => setLinkedSelectionEnabled(!linkedSelectionEnabled)}
               aria-label={
                 linkedSelectionEnabled
