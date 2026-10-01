@@ -7,6 +7,7 @@
 
 import type { Project } from '@/types/project'
 import type { MediaMetadata } from '@/types/storage'
+import type { BeatvideoMusicAnalysis } from '@/types/beatvideo'
 
 // Snapshot format version
 export const SNAPSHOT_VERSION = '1.0'
@@ -27,6 +28,8 @@ export interface SnapshotMediaReference {
   bitrate: number
   /** Content hash for deduplication matching on import */
   contentHash?: string
+  /** Reusable source-domain Beatvideo analysis for this media file. */
+  beatvideoMusicAnalysis?: BeatvideoMusicAnalysis
 }
 
 /**
@@ -131,5 +134,6 @@ export function mediaToSnapshotReference(media: MediaMetadata): SnapshotMediaRef
     codec: media.codec,
     bitrate: media.bitrate,
     contentHash: media.contentHash,
+    beatvideoMusicAnalysis: media.beatvideoMusicAnalysis,
   }
 }
