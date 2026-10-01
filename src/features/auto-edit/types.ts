@@ -1,6 +1,7 @@
 export type EditMode = 'loop' | 'guided' | 'auto';
 export type TransitionProfile = 'clean' | 'accent';
 export type EditPace = 'relaxed' | 'balanced' | 'energetic';
+export type SourceMixMode = 'balanced' | 'rotate' | 'weighted';
 export type EditTransitionKind = 'film-burn' | 'film-gate';
 
 export type {
@@ -86,6 +87,10 @@ export type EditPlannerOptions = {
   loopBars?: number;
   transitionProfile?: TransitionProfile;
   pace?: EditPace;
+  /** How Auto Arrange distributes eligible shots across the enabled footage sources. */
+  sourceMix?: SourceMixMode;
+  /** Per-source multipliers used only by weighted source mixing. */
+  sourceWeights?: Record<string, number>;
   /** Stable scene-shot ids the producer explicitly does not want reused. */
   excludedShotIds?: string[];
   seed?: number;
