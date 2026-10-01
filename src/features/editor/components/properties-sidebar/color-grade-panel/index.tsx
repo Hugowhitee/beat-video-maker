@@ -118,8 +118,14 @@ export const ColorGradePanel = memo(function ColorGradePanel({
     const gradeTrack = tracks.find((track) => track.id === globalGrade.trackId)
     if (!gradeTrack) return
 
+    const visualTrackIds = new Set(visualProgramItems.map((item) => item.trackId))
     const otherOrders = tracks
-      .filter((track) => track.id !== gradeTrack.id && !track.isGroup)
+      .filter(
+        (track) =>
+          track.id !== gradeTrack.id &&
+          !track.isGroup &&
+          visualTrackIds.has(track.id),
+      )
       .map((track) => track.order ?? 0)
     if (otherOrders.length === 0) return
 
@@ -137,7 +143,7 @@ export const ColorGradePanel = memo(function ColorGradePanel({
       ),
     )
     useTimelineSettingsStore.getState().markDirty()
-  }, [globalGrade, tracks])
+  }, [globalGrade, tracks, visualProgramItems])
   const effectiveScope: ColorGradeScope = scope ?? (inferredGlobalSelected ? 'global' : 'clip')
   const visualItems = useMemo(
     () =>
