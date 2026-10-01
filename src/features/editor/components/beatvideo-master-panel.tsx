@@ -5,6 +5,8 @@ import {
   BookmarkPlus,
   Flame,
   Gauge,
+  GripVertical,
+  Plus,
   Power,
   RotateCcw,
   Shield,
@@ -28,7 +30,12 @@ import {
   resolveMasterFxSettings,
 } from '@/shared/utils/mastering'
 import { getSparseAudioEqSettings } from '@/shared/utils/audio-eq'
-import type { AudioEqSettings, MasterFxSettings, MasteringPresetId } from '@/types/audio'
+import type {
+  AudioEqSettings,
+  MasterFxSettings,
+  MasteringPresetId,
+  MasterProcessorId,
+} from '@/types/audio'
 import { AudioEqPanelContent } from './properties-sidebar/clip-panel/audio-eq-panel-content'
 import type { AudioEqPatch } from './properties-sidebar/clip-panel/audio-eq-curve-editor'
 import { getOrDecodeAudio, getPreviewMasterReduction } from '@/features/editor/deps/composition-runtime'
@@ -36,7 +43,9 @@ import { resolveMediaUrl } from '@/features/editor/deps/media-library'
 import { useProjectStore } from '@/features/editor/deps/projects'
 import { cn } from '@/shared/ui/cn'
 
-type MasterSlot = 'eq' | 'compressor' | 'saturator' | 'limiter'
+type MasterSlot = MasterProcessorId
+
+const MAX_MASTER_SLOTS = 6
 
 const SLOT_META: ReadonlyArray<{
   id: MasterSlot
@@ -47,8 +56,10 @@ const SLOT_META: ReadonlyArray<{
   { id: 'eq', label: 'EQ', hint: 'Tone and cleanup', icon: SlidersHorizontal },
   { id: 'compressor', label: 'Compressor', hint: 'Glue and punch', icon: Activity },
   { id: 'saturator', label: 'Saturator', hint: 'Harmonics and density', icon: Flame },
-  { id: 'limiter', label: 'Peak limiter', hint: 'Final peak control', icon: Shield },
+  { id: 'limiter', label: 'Peak limiter', hint: 'Peak control', icon: Shield },
 ]
+
+const SLOT_META_BY_ID = new Map(SLOT_META.map((meta) => [meta.id, meta]))
 
 const SAVED_MASTER_PRESETS_KEY = 'beatvideo:master-presets:v1'
 
@@ -250,7 +261,10 @@ export function BeatvideoMasterPanel() {
   const mixerFloating = useEditorStore((state) => state.mixerFloating)
   const toggleMixerFloating = useEditorStore((state) => state.toggleMixerFloating)
   const resolved = useMemo(() => resolveMasterFxSettings(masterFx), [masterFx])
-  const [selectedSlot, setSelectedSlot] = useState<MasterSlot>('eq')
+  const [selectedSlot, setSelectedSlot] = useState<MasterSlot | null>('eq')
+  const [draggingSlot, setDraggingSlot] = useState<MasterSlot | null>(null)
+  const [dragOverSlot, setDragOverSlot] = useState<MasterSlot | null>(null)
+  const [addEffectOpen, setAddEffectOpen] = useState(false)
   const [reduction, setReduction] = useState({ compressorDb: 0, limiterDb: 0 })
   const gestureSnapshotRef = useRef<ReturnType<typeof captureSnapshot> | null>(null)
   const [savedPresets, setSavedPresets] = useState<SavedMasterPreset[]>(loadSavedMasterPresets)
@@ -278,6 +292,16 @@ export function BeatvideoMasterPanel() {
       )?.id ?? null
     )
   }, [busAudioEq, resolved])
+
+  const availableProcessors = useMemo(
+    () => SLOT_META.filter((meta) => !resolved.order.includes(meta.id)),
+    [resolved.order],
+  )
+
+  useEffect(() => {
+    if (selectedSlot && resolved.order.includes(selectedSlot)) return
+    setSelectedSlot(resolved.order[0] ?? null)
+  }, [resolved.order, selectedSlot])
 
   useEffect(() => {
     let frame = 0
@@ -533,6 +557,61 @@ export function BeatvideoMasterPanel() {
     [busAudioEq, commitMasterFx, handleBusEqEnabled, resolved],
   )
 
+  const reorderSlot = useCallback(
+    (source: MasterSlot, target: MasterSlot) => {
+      if (source === target) return
+      const order = [...resolved.order]
+      const sourceIndex = order.indexOf(source)
+      const targetIndex = order.indexOf(target)
+      if (sourceIndex < 0 || targetIndex < 0) return
+      order.splice(sourceIndex, 1)
+      order.splice(targetIndex, 0, source)
+      commitMasterFx({ ...resolved, order }, 'REORDER_MASTER_CHAIN')
+    },
+    [commitMasterFx, resolved],
+  )
+
+  const addProcessor = useCallback(
+    (slot: MasterSlot) => {
+      if (resolved.order.includes(slot)) return
+      const before = captureSnapshot()
+      const order = [...resolved.order, slot]
+      const next: MasterFxSettings = { ...resolved, enabled: true, order }
+
+      if (slot === 'eq') {
+        setBusAudioEq({ ...(busAudioEq ?? {}), enabled: true })
+      } else if (slot === 'compressor') {
+        next.compressor = { ...resolved.compressor, enabled: true }
+      } else if (slot === 'saturator') {
+        next.saturator = { ...resolved.saturator, enabled: true }
+      } else {
+        next.limiter = { ...resolved.limiter, enabled: true }
+      }
+
+      setMasterFx(next)
+      markChanged()
+      useTimelineCommandStore
+        .getState()
+        .addUndoEntry({ type: 'ADD_MASTER_PLUGIN', payload: { slot } }, before)
+      setSelectedSlot(slot)
+      setAddEffectOpen(false)
+    },
+    [busAudioEq, markChanged, resolved, setBusAudioEq, setMasterFx],
+  )
+
+  const removeProcessor = useCallback(
+    (slot: MasterSlot) => {
+      const nextOrder = resolved.order.filter((candidate) => candidate !== slot)
+      if (nextOrder.length === resolved.order.length) return
+      commitMasterFx({ ...resolved, order: nextOrder }, 'REMOVE_MASTER_PLUGIN')
+      if (selectedSlot === slot) {
+        setSelectedSlot(nextOrder[0] ?? null)
+      }
+      setAddEffectOpen(false)
+    },
+    [commitMasterFx, resolved, selectedSlot],
+  )
+
   return (
     <div className="flex h-full min-h-0 flex-col bg-background">
       <div className="shrink-0 border-b border-border px-3 py-3">
@@ -782,24 +861,100 @@ export function BeatvideoMasterPanel() {
       <div className="shrink-0 border-b border-border p-2">
         <div className="mb-1.5 flex items-center justify-between gap-2 px-1">
           <span className="text-xs font-medium text-foreground">Master chain</span>
-          <span className="text-[11px] text-muted-foreground">top → bottom</span>
+          <div className="flex items-center gap-2">
+            <span className="font-mono text-[10px] text-muted-foreground">
+              {activeBuiltInPresetId
+                ? MASTERING_PRESETS.find((preset) => preset.id === activeBuiltInPresetId)?.label
+                : 'Custom'}
+            </span>
+            <span className="text-[11px] text-muted-foreground">top → bottom</span>
+          </div>
         </div>
         <div className="divide-y divide-border border-y border-border">
-          {SLOT_META.map(({ id, label, hint, icon: Icon }, index) => {
+          {Array.from({ length: MAX_MASTER_SLOTS }, (_, index) => {
+            const id = resolved.order[index]
+            if (!id) {
+              const canAdd = availableProcessors.length > 0 && index === resolved.order.length
+              return (
+                <div
+                  key={`empty-${index}`}
+                  className="flex h-[49px] min-w-0 items-center gap-2 px-2 text-muted-foreground"
+                >
+                  <span className="w-5 shrink-0 font-mono text-[11px] tabular-nums">
+                    {String(index + 1).padStart(2, '0')}
+                  </span>
+                  {canAdd ? (
+                    <button
+                      type="button"
+                      onClick={() => setAddEffectOpen((open) => !open)}
+                      className="flex min-w-0 flex-1 items-center gap-2 text-left text-xs hover:text-foreground"
+                      aria-expanded={addEffectOpen}
+                    >
+                      <Plus className="h-3.5 w-3.5" />
+                      Add effect
+                    </button>
+                  ) : (
+                    <span className="text-xs text-muted-foreground/55">
+                      {availableProcessors.length === 0 ? 'Empty slot' : 'Empty slot'}
+                    </span>
+                  )}
+                </div>
+              )
+            }
+
+            const meta = SLOT_META_BY_ID.get(id)
+            if (!meta) return null
+            const { label, hint, icon: Icon } = meta
             const enabled = slotEnabled(id)
             const selected = selectedSlot === id
+            const dragTarget = dragOverSlot === id && draggingSlot !== id
+
             return (
               <div
                 key={id}
+                onDragOver={(event) => {
+                  if (!draggingSlot || draggingSlot === id) return
+                  event.preventDefault()
+                  event.dataTransfer.dropEffect = 'move'
+                  setDragOverSlot(id)
+                }}
+                onDragLeave={() => {
+                  setDragOverSlot((current) => (current === id ? null : current))
+                }}
+                onDrop={(event) => {
+                  event.preventDefault()
+                  if (draggingSlot) reorderSlot(draggingSlot, id)
+                  setDraggingSlot(null)
+                  setDragOverSlot(null)
+                }}
                 className={cn(
-                  'flex min-w-0 items-stretch',
+                  'group flex min-w-0 items-stretch',
                   selected && 'bg-secondary/55 shadow-[inset_2px_0_0_hsl(var(--primary))]',
+                  dragTarget && 'bg-primary/10 shadow-[inset_0_2px_0_hsl(var(--primary))]',
                 )}
               >
                 <button
                   type="button"
+                  draggable
+                  onDragStart={(event) => {
+                    setDraggingSlot(id)
+                    event.dataTransfer.effectAllowed = 'move'
+                    event.dataTransfer.setData('text/plain', id)
+                  }}
+                  onDragEnd={() => {
+                    setDraggingSlot(null)
+                    setDragOverSlot(null)
+                  }}
+                  className="flex w-7 shrink-0 cursor-grab items-center justify-center text-muted-foreground hover:text-foreground active:cursor-grabbing"
+                  aria-label={`Move ${label}`}
+                  title="Drag to reorder"
+                >
+                  <GripVertical className="h-3.5 w-3.5" />
+                </button>
+                <button
+                  type="button"
                   onClick={() => setSelectedSlot(id)}
-                  className="flex min-w-0 flex-1 items-center gap-2 px-2 py-2 text-left"
+                  className="flex min-w-0 flex-1 items-center gap-2 py-2 pr-2 text-left"
                   title={hint}
                 >
                   <span className="w-5 shrink-0 font-mono text-[11px] tabular-nums text-muted-foreground">
@@ -822,6 +977,15 @@ export function BeatvideoMasterPanel() {
                 </button>
                 <button
                   type="button"
+                  onClick={() => removeProcessor(id)}
+                  className="flex w-8 shrink-0 items-center justify-center border-l border-border text-muted-foreground opacity-0 transition-opacity hover:bg-secondary/60 hover:text-foreground focus:opacity-100 group-hover:opacity-100"
+                  aria-label={`Remove ${label}`}
+                  title={`Remove ${label}`}
+                >
+                  <X className="h-3 w-3" />
+                </button>
+                <button
+                  type="button"
                   onClick={() => toggleSlot(id)}
                   className={cn(
                     'flex w-10 shrink-0 items-center justify-center border-l border-border',
@@ -839,6 +1003,33 @@ export function BeatvideoMasterPanel() {
             )
           })}
         </div>
+
+        {addEffectOpen ? (
+          <div className="border-x border-b border-border bg-background p-1.5">
+            <div className="mb-1 px-1 text-[9px] uppercase tracking-[0.12em] text-muted-foreground">
+              Available effects
+            </div>
+            {availableProcessors.length > 0 ? (
+              <div className="grid grid-cols-2 gap-1">
+                {availableProcessors.map(({ id, label, icon: Icon }) => (
+                  <button
+                    key={id}
+                    type="button"
+                    onClick={() => addProcessor(id)}
+                    className="flex h-8 items-center gap-2 border border-border px-2 text-left text-[10px] text-foreground hover:bg-secondary/55"
+                  >
+                    <Icon className="h-3.5 w-3.5 text-muted-foreground" />
+                    <span className="truncate">{label}</span>
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <div className="px-1 py-2 text-[10px] text-muted-foreground">
+                All available master effects are already loaded.
+              </div>
+            )}
+          </div>
+        ) : null}
       </div>
 
       <div className="min-h-0 flex-1 overflow-y-auto p-3">
@@ -846,7 +1037,7 @@ export function BeatvideoMasterPanel() {
           <AudioEqPanelContent
             targetLabel="Master"
             trackEq={busAudioEq}
-            enabled={busAudioEq?.enabled !== false}
+            enabled={busAudioEq !== undefined && busAudioEq.enabled !== false}
             onTrackEqChange={handleBusEqChange}
             onEnabledChange={handleBusEqEnabled}
             layoutMode="compact"
@@ -889,6 +1080,12 @@ export function BeatvideoMasterPanel() {
           </div>
         ) : null}
 
+        {selectedSlot === null ? (
+          <div className="flex min-h-40 items-center justify-center border border-dashed border-border text-center text-xs text-muted-foreground">
+            Add an effect to the Master chain to start processing.
+          </div>
+        ) : null}
+
         {selectedSlot === 'limiter' ? (
           <div className="space-y-3">
             <TransferGraph thresholdDb={resolved.limiter.thresholdDb} ratio={20} ceilingDb={resolved.limiter.ceilingDb} reductionDb={reduction.limiterDb} mode="limiter" />
@@ -896,7 +1093,7 @@ export function BeatvideoMasterPanel() {
             <MasterRange label="Ceiling" value={resolved.limiter.ceilingDb} min={-6} max={0} step={0.1} unit=" dB" onGestureStart={beginGesture} onGestureEnd={endGesture} onChange={(ceilingDb) => patchMaster({ enabled: true, limiter: { ...resolved.limiter, enabled: true, ceilingDb } })} />
             <MasterRange label="Release" value={resolved.limiter.releaseSec * 1000} min={20} max={500} step={5} unit=" ms" onGestureStart={beginGesture} onGestureEnd={endGesture} onChange={(ms) => patchMaster({ enabled: true, limiter: { ...resolved.limiter, enabled: true, releaseSec: ms / 1000 } })} />
             <p className="border-l-2 border-border pl-2 text-xs leading-relaxed text-muted-foreground">
-              Last in the chain. Ceiling caps the final output peaks.
+              Slot {resolved.order.indexOf('limiter') + 1}. Ceiling caps peaks at this point in the rack.
             </p>
           </div>
         ) : null}
