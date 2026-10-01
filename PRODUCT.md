@@ -18,7 +18,7 @@ The app is project-first globally and **beat-first inside a project**.
 2. **New project** — keep setup minimal: name, Photo/Video type and only output settings that must be known up front. Photo/Video is project configuration: change it from project settings when needed, not from a persistent editor-toolbar toggle.
 3. **Beat** — import/select the beat, enter a known BPM or analyze it, verify the musical grid and place producer tags/watermarks.
 4. **Visual** — add the hero cover or footage. Photo sources can fill the beat automatically; video sources may be analyzed on import, Auto Arranged against the verified grid, looped to the beat or dragged manually onto the normal timeline. Text, overlays, motion/camera movement and one canonical effects inspector live with the visual work instead of being split across unrelated product pages.
-5. **Color** — focused grading/correction over the same selected visual/timeline state. Color stays separate because grading is a distinct finishing task; motion does not get a separate top-level Beatvideo page.
+5. **Color** — focused grading/correction with **Full video** as the default Beatvideo scope. The full-video grade is one real adjustment layer over the composed visual program, automatically kept at the full program duration; **Selected clip** remains an explicit local correction mode. Color stays separate because grading is a distinct finishing task; motion does not get a separate top-level Beatvideo page.
 6. **Master** — finish the stereo beat through the project master rack plus the existing real track mixer. Dedicated Beat, Producer tags and Watermarks tracks automatically become mixer channels; preview and export use the same processing model.
 7. **Publish** — render locally, review publication metadata and optionally continue to YouTube.
 
@@ -113,7 +113,7 @@ Beatvideo Maker should be able to finish an already-produced stereo beat for pub
 
 The canonical implementation must build on the existing project-scoped master bus, bus EQ, preview pipeline and export mixer so preview and render remain equivalent.
 
-The default Master surface is a small ordered insert rack rather than a generic settings card:
+The default Master surface is a small ordered insert rack rather than a generic settings card. Rack membership and order are persisted processing state: drag-reordering changes the real preview/export DSP order, removed processors become real empty slots, and Add effect may only expose processors with real implementations.
 
 1. **EQ** — reuse the canonical visual parametric bus EQ.
 2. **Compressor** — threshold/ratio/attack/release/makeup with a transfer graph and gain-reduction feedback.
@@ -124,7 +124,7 @@ A separate **pre-FX Trim** sits above the rack for level staging. **Auto level**
 
 Each processor is selectable, bypassable and visibly editable. The mental model may borrow the useful part of a DAW insert rack—ordered slots and one focused plugin editor—without importing a full channel rack, patch graph or arbitrary plugin-host complexity into the common workflow.
 
-Presets such as **Clean, Punch, Hard, 808 Punch and Warm** are complete deterministic recipes over this same canonical chain, never deltas over hidden leftover EQ/FX state and never separate engines or hidden magic. Presets do not move the Mixer bus fader. A preset must expose the resulting real parameters so it stays understandable and editable. Users may save/load their own local presets from the same visible mastering parameters.
+Presets such as **Clean, Punch, Hard, 808 Punch and Warm** are complete deterministic recipes over this same canonical chain, including rack membership/order and explicit master-EQ state; they are never deltas over hidden leftover EQ/FX state and never separate engines or hidden magic. Any manual rack reorder/add/remove or processor edit leaves the built-in preset state and becomes **Custom**. Presets do not move the Mixer bus fader. A preset must expose the resulting real parameters so it stays understandable and editable. Users may save/load their own local presets from the same visible mastering parameters.
 
 Saturation dry/wet must remain phase-safe. Do not mix an oversampled waveshaper wet path in parallel with an uncompensated dry path; fold the dry/wet blend into one transfer path (or explicitly compensate latency) so preview and export cannot produce comb-filtered “hollow” tone.
 
