@@ -1,7 +1,7 @@
-import { memo, useState } from 'react'
+import { memo, useEffect, useState } from 'react'
 import { useNavigate } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
-import { ArrowLeft, Bug, ChevronDown } from 'lucide-react'
+import { ArrowLeft, Bug, ChevronDown, Pencil } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
@@ -21,6 +21,7 @@ import { useDebugStore } from '@/features/editor/stores/debug-store'
 import { useEditorStore } from '@/shared/state/editor'
 import { useTimelineStore } from '@/features/editor/deps/timeline-store'
 import type { BeatvideoProjectMode } from '@/types/project'
+import { useProjectStore } from '@/features/editor/deps/projects-contract'
 
 const SaveDirtyIndicator = memo(function SaveDirtyIndicator() {
   const isDirty = useTimelineStore((state) => state.isDirty)
@@ -69,6 +70,30 @@ export const Toolbar = memo(function Toolbar({
   const workspace = useEditorStore((state) => state.workspace)
   const rightSidebarOpen = useEditorStore((state) => state.rightSidebarOpen)
   const toggleRightSidebar = useEditorStore((state) => state.toggleRightSidebar)
+  const storedProjectName = useProjectStore((state) =>
+    state.currentProject?.id === projectId ? state.currentProject.name : null,
+  )
+  const updateProject = useProjectStore((state) => state.updateProject)
+  const projectName = storedProjectName ?? project?.name ?? t('common.untitledProject')
+  const [editingProjectName, setEditingProjectName] = useState(false)
+  const [projectNameDraft, setProjectNameDraft] = useState(projectName)
+
+  useEffect(() => {
+    if (!editingProjectName) setProjectNameDraft(projectName)
+  }, [editingProjectName, projectName])
+
+  const commitProjectName = async () => {
+    const nextName = projectNameDraft.trim()
+    if (!nextName) {
+      setProjectNameDraft(projectName)
+      setEditingProjectName(false)
+      return
+    }
+    if (nextName !== projectName) {
+      await updateProject(projectId, { name: nextName })
+    }
+    setEditingProjectName(false)
+  }
 
   const handleBackClick = () => {
     if (useTimelineStore.getState().isDirty) {
@@ -107,9 +132,35 @@ export const Toolbar = memo(function Toolbar({
             projectName={project?.name}
           />
 
-          <h1 className="min-w-0 flex-1 truncate px-1 text-sm font-medium">
-            {project?.name || t('common.untitledProject')}
-          </h1>
+          <div className="min-w-0 flex-1 px-1">
+            {editingProjectName ? (
+              <input
+                autoFocus
+                value={projectNameDraft}
+                onChange={(event) => setProjectNameDraft(event.target.value)}
+                onBlur={() => void commitProjectName()}
+                onKeyDown={(event) => {
+                  if (event.key === 'Enter') void commitProjectName()
+                  if (event.key === 'Escape') {
+                    setProjectNameDraft(projectName)
+                    setEditingProjectName(false)
+                  }
+                }}
+                className="h-8 w-full border-0 bg-transparent px-1 text-sm font-medium text-foreground outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                aria-label="Project title"
+              />
+            ) : (
+              <button
+                type="button"
+                className="flex h-8 max-w-full items-center gap-1.5 text-left text-sm font-medium text-foreground"
+                onClick={() => setEditingProjectName(true)}
+                aria-label="Rename project"
+              >
+                <span className="truncate">{projectName}</span>
+                <Pencil className="h-3 w-3 shrink-0 text-muted-foreground" />
+              </button>
+            )}
+          </div>
 
           <Button
             variant="ghost"
@@ -209,9 +260,33 @@ export const Toolbar = memo(function Toolbar({
         />
 
         <div className="min-w-0">
-          <h1 className="max-w-56 truncate text-[11px] font-medium leading-4 text-foreground">
-            {project?.name || t('common.untitledProject')}
-          </h1>
+          {editingProjectName ? (
+            <input
+              autoFocus
+              value={projectNameDraft}
+              onChange={(event) => setProjectNameDraft(event.target.value)}
+              onBlur={() => void commitProjectName()}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter') void commitProjectName()
+                if (event.key === 'Escape') {
+                  setProjectNameDraft(projectName)
+                  setEditingProjectName(false)
+                }
+              }}
+              className="h-5 max-w-64 border-0 bg-transparent px-0 text-[11px] font-medium leading-4 text-foreground outline-none focus-visible:ring-1 focus-visible:ring-ring"
+              aria-label="Project title"
+            />
+          ) : (
+            <button
+              type="button"
+              className="group flex h-5 max-w-64 items-center gap-1.5 text-left text-[11px] font-medium leading-4 text-foreground"
+              onClick={() => setEditingProjectName(true)}
+              aria-label="Rename project"
+            >
+              <span className="truncate">{projectName}</span>
+              <Pencil className="h-3 w-3 shrink-0 text-muted-foreground transition-colors group-hover:text-foreground" />
+            </button>
+          )}
           <span className="block font-mono text-[9px] leading-3 text-muted-foreground">
             {project.width}×{project.height} · {project.fps} fps
           </span>
