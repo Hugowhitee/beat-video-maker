@@ -139,7 +139,7 @@ export const ColorGradePanel = memo(function ColorGradePanel({
         <button
           type="button"
           className="studio-segment h-7 min-w-[92px] px-3 text-[10px] font-medium"
-          aria-pressed={!effectiveScope === 'global'}
+          aria-pressed={effectiveScope === 'clip'}
           onClick={handleSelectClipScope}
         >
           {clipScopeLabel}
