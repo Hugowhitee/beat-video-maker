@@ -771,6 +771,7 @@ export const LoadedEditor = memo(function LoadedEditor({
       role="application"
       aria-label={t('editor.editor.appLabel')}
       data-beatvideo-mode={beatvideoMode}
+      data-studio-v2="true"
     >
       <AutoSaveController onSave={handleSave} />
       <TimelineShortcutsController />
