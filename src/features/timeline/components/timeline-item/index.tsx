@@ -1007,9 +1007,9 @@ export const TimelineItem = memo(function TimelineItem({
           )}
 
           {isEffectDropTarget && (
-            <div className="absolute inset-0 rounded pointer-events-none z-20 border border-dashed border-sky-300/90 bg-sky-400/15 shadow-[inset_0_0_0_1px_rgba(125,211,252,0.35)]">
+            <div className="absolute inset-0 z-20 rounded border border-dashed border-primary/90 bg-primary/10 shadow-[inset_0_0_0_1px_color-mix(in_oklab,var(--primary)_28%,transparent)] pointer-events-none">
               {multiEffectDropTargetCount > 1 && (
-                <div className="absolute top-1 right-1 rounded-full bg-sky-300/90 px-1.5 py-0.5 text-[9px] font-medium uppercase tracking-wide text-slate-950">
+                <div className="absolute right-1 top-1 border border-primary/60 bg-background/90 px-1.5 py-0.5 text-[9px] font-medium uppercase tracking-wide text-primary">
                   {multiEffectDropTargetCount} clips
                 </div>
               )}
