@@ -559,7 +559,7 @@ export function BeatvideoMasterPanel() {
             className={cn(
               'h-7 w-7',
               resolved.enabled &&
-                'border border-emerald-500/60 bg-emerald-500/15 text-emerald-300 hover:bg-emerald-500/20 hover:text-emerald-200',
+                'studio-tool-active',
             )}
             onClick={() =>
               commitMasterFx(
@@ -585,7 +585,7 @@ export function BeatvideoMasterPanel() {
           </Button>
         </div>
 
-        <div className="mt-3 flex gap-1 overflow-x-auto pb-1">
+        <div className="studio-segmented mt-3 flex max-w-full overflow-x-auto">
           {MASTERING_PRESETS.map((preset) => (
             <button
               key={preset.id}
@@ -593,10 +593,7 @@ export function BeatvideoMasterPanel() {
               onClick={() => applyPreset(preset.id)}
               aria-pressed={activeBuiltInPresetId === preset.id}
               className={cn(
-                'shrink-0 rounded-md border px-2 py-1.5 text-xs font-medium transition-colors',
-                activeBuiltInPresetId === preset.id
-                  ? 'border-primary/70 bg-primary/15 text-foreground ring-1 ring-primary/25'
-                  : 'border-border bg-secondary/30 text-muted-foreground hover:bg-secondary/70 hover:text-foreground',
+                'studio-segment h-7 shrink-0 px-2.5 text-xs font-medium',
               )}
               title={preset.description}
             >
@@ -811,7 +808,7 @@ export function BeatvideoMasterPanel() {
                   <Icon
                     className={cn(
                       'h-4 w-4 shrink-0',
-                      enabled ? 'text-emerald-300' : 'text-muted-foreground',
+                      enabled ? 'text-primary' : 'text-muted-foreground',
                     )}
                   />
                   <span className="min-w-0 flex-1">
@@ -829,7 +826,7 @@ export function BeatvideoMasterPanel() {
                   className={cn(
                     'flex w-10 shrink-0 items-center justify-center border-l border-border',
                     enabled
-                      ? 'text-emerald-300 hover:bg-emerald-500/10'
+                      ? 'text-primary hover:bg-primary/10'
                       : 'text-muted-foreground hover:bg-secondary/60 hover:text-foreground',
                   )}
                   aria-label={`${enabled ? 'Bypass' : 'Enable'} ${label}`}
