@@ -4,8 +4,14 @@ import {
   DEFAULT_AUDIO_EQ_SETTINGS,
   buildAudioEqPassIirCoefficients,
   clampAudioEqFrequencyForSampleRate,
+  resolveAudioEqSettings,
 } from '@/shared/utils/audio-eq'
-import type { MasterFxSettings, ResolvedAudioEqSettings } from '@/types/audio'
+import type {
+  AudioEqSettings,
+  MasterFxSettings,
+  MasterProcessorId,
+  ResolvedAudioEqSettings,
+} from '@/types/audio'
 import {
   createCeilingCurve,
   createSaturationMixCurve,
@@ -491,6 +497,7 @@ function ensurePreviewClipEqStage(
 interface PreviewMasterAudioGraph {
   context: AudioContext
   inputGainNode: GainNode
+  eqStageNodes: PreviewClipAudioEqStageNodes
   compressorNode: DynamicsCompressorNode
   compressorMakeupNode: GainNode
   saturatorDryNode: GainNode
@@ -500,6 +507,7 @@ interface PreviewMasterAudioGraph {
   limiterNode: DynamicsCompressorNode
   ceilingNode: WaveShaperNode
   outputGainNode: GainNode
+  order: MasterProcessorId[]
 }
 
 let sharedPreviewMasterGraph: PreviewMasterAudioGraph | null = null
@@ -508,12 +516,65 @@ function dbToGain(db: number): number {
   return Math.pow(10, db / 20)
 }
 
+function masterOrderKey(order: readonly MasterProcessorId[]): string {
+  return order.join('>')
+}
+
+function reconnectPreviewMasterAudioGraph(
+  graph: PreviewMasterAudioGraph,
+  order: readonly MasterProcessorId[],
+): void {
+  graph.inputGainNode.disconnect()
+  graph.eqStageNodes.outputGainNode.disconnect()
+  graph.compressorNode.disconnect()
+  graph.compressorMakeupNode.disconnect()
+  graph.saturatorDryNode.disconnect()
+  graph.saturatorNode.disconnect()
+  graph.saturatorWetNode.disconnect()
+  graph.saturatorSumNode.disconnect()
+  graph.limiterNode.disconnect()
+  graph.ceilingNode.disconnect()
+
+  // Rebuild each processor's internal connection without changing parameters.
+  graph.compressorNode.connect(graph.compressorMakeupNode)
+  graph.saturatorNode.connect(graph.saturatorWetNode)
+  graph.saturatorWetNode.connect(graph.saturatorSumNode)
+  graph.limiterNode.connect(graph.ceilingNode)
+
+  let previousNode: AudioNode = graph.inputGainNode
+
+  const connectProcessor = (processor: MasterProcessorId) => {
+    if (processor === 'eq') {
+      previousNode.connect(getBand1EntryNode(graph.eqStageNodes))
+      previousNode = graph.eqStageNodes.outputGainNode
+      return
+    }
+    if (processor === 'compressor') {
+      previousNode.connect(graph.compressorNode)
+      previousNode = graph.compressorMakeupNode
+      return
+    }
+    if (processor === 'saturator') {
+      previousNode.connect(graph.saturatorNode)
+      previousNode = graph.saturatorSumNode
+      return
+    }
+    previousNode.connect(graph.limiterNode)
+    previousNode = graph.ceilingNode
+  }
+
+  for (const processor of order) connectProcessor(processor)
+  previousNode.connect(graph.outputGainNode)
+  graph.order = [...order]
+}
+
 function getOrCreatePreviewMasterAudioGraph(context: AudioContext): PreviewMasterAudioGraph {
   if (sharedPreviewMasterGraph?.context === context) {
     return sharedPreviewMasterGraph
   }
 
   const inputGainNode = context.createGain()
+  const eqStageNodes = createPreviewClipAudioEqStage(context, DEFAULT_AUDIO_EQ_SETTINGS)
   const compressorNode = context.createDynamicsCompressor()
   const compressorMakeupNode = context.createGain()
   const saturatorDryNode = context.createGain()
@@ -524,21 +585,12 @@ function getOrCreatePreviewMasterAudioGraph(context: AudioContext): PreviewMaste
   const ceilingNode = context.createWaveShaper()
   const outputGainNode = context.createGain()
 
-  inputGainNode.connect(compressorNode)
-  compressorNode.connect(compressorMakeupNode)
-  compressorMakeupNode.connect(saturatorDryNode)
-  compressorMakeupNode.connect(saturatorNode)
-  saturatorDryNode.connect(saturatorSumNode)
-  saturatorNode.connect(saturatorWetNode)
-  saturatorWetNode.connect(saturatorSumNode)
-  saturatorSumNode.connect(limiterNode)
-  limiterNode.connect(ceilingNode)
-  ceilingNode.connect(outputGainNode)
   outputGainNode.connect(context.destination)
 
   sharedPreviewMasterGraph = {
     context,
     inputGainNode,
+    eqStageNodes,
     compressorNode,
     compressorMakeupNode,
     saturatorDryNode,
@@ -548,14 +600,16 @@ function getOrCreatePreviewMasterAudioGraph(context: AudioContext): PreviewMaste
     limiterNode,
     ceilingNode,
     outputGainNode,
+    order: [],
   }
 
-  syncPreviewMasterAudioGraph(undefined, 0, 1, false)
+  syncPreviewMasterAudioGraph(undefined, undefined, 0, 1, false)
   return sharedPreviewMasterGraph
 }
 
 export function syncPreviewMasterAudioGraph(
   value: MasterFxSettings | undefined,
+  busAudioEq: AudioEqSettings | undefined,
   masterBusDb: number,
   monitorGain = 1,
   ramp = true,
@@ -567,6 +621,27 @@ export function syncPreviewMasterAudioGraph(
   const resolved = resolveMasterFxSettings(value)
   const active = resolved.enabled
   const now = context.currentTime
+
+  const eqEnabled = busAudioEq !== undefined && busAudioEq.enabled !== false
+  const targetEq = eqEnabled ? resolveAudioEqSettings(busAudioEq) : DEFAULT_AUDIO_EQ_SETTINGS
+  let eqTopologyChanged = false
+  if (shouldRebuildStageTopology(graph.eqStageNodes.resolvedStage, targetEq)) {
+    disconnectStageInternals(graph.eqStageNodes)
+    graph.eqStageNodes = createPreviewClipAudioEqStage(context, targetEq)
+    eqTopologyChanged = true
+  } else {
+    applyStageParams(
+      graph.eqStageNodes,
+      targetEq,
+      context.sampleRate,
+      ramp ? now : undefined,
+      ramp ? PREVIEW_AUDIO_EQ_RAMP_SECONDS : undefined,
+    )
+  }
+
+  if (eqTopologyChanged || masterOrderKey(graph.order) !== masterOrderKey(resolved.order)) {
+    reconnectPreviewMasterAudioGraph(graph, resolved.order)
+  }
   const write = (param: AudioParam, target: number) => {
     if (ramp) {
       rampAudioParam(param, target, now, PREVIEW_AUDIO_GAIN_RAMP_SECONDS)
@@ -590,8 +665,8 @@ export function syncPreviewMasterAudioGraph(
 
   const saturatorEnabled = active && resolved.saturator.enabled
   const wet = saturatorEnabled ? resolved.saturator.mix : 0
-  // Keep saturation on one time path. The old parallel dry/wet topology could
-  // comb-filter when WaveShaper oversampling added group delay to only the wet path.
+  // The rack keeps saturation on one time path. The legacy dry node stays
+  // disconnected so oversampling can never create a parallel comb-filter path.
   write(graph.saturatorDryNode.gain, 0)
   write(graph.saturatorWetNode.gain, 1)
   graph.saturatorNode.curve = createSaturationMixCurve(
