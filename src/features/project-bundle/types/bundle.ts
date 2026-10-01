@@ -5,6 +5,7 @@
  */
 
 import type { Project, ProjectTimeline } from '@/types/project'
+import type { BeatvideoMusicAnalysis } from '@/types/beatvideo'
 
 type BundleTimelineItem = Omit<ProjectTimeline['items'][number], 'mediaId'> & {
   mediaRef?: string
@@ -77,6 +78,8 @@ export interface BundleMediaEntry {
     fps: number
     codec: string
     bitrate: number
+    /** Reusable source-domain beat analysis, remapped to the imported media id. */
+    beatvideoMusicAnalysis?: BeatvideoMusicAnalysis
   }
 }
 
