@@ -555,6 +555,7 @@ export const TimelineHeader = memo(function TimelineHeader({
       style={{ height: EDITOR_LAYOUT_CSS_VALUES.timelineHeaderHeight }}
       role="toolbar"
       aria-label={t('timeline.header.controls')}
+      data-studio-timeline-toolbar
     >
       {/* The phone surface is already named Timeline in the persistent dock. */}
       {!compact ? (
@@ -586,6 +587,7 @@ export const TimelineHeader = memo(function TimelineHeader({
                   : ''
               }
               onClick={() => setActiveTool('select')}
+              aria-pressed={activeTool === 'select'}
               aria-label={t('timeline.header.selectTool')}
               data-tooltip={t('timeline.header.selectToolTooltip')}
             >
@@ -607,6 +609,7 @@ export const TimelineHeader = memo(function TimelineHeader({
                     onClick={() =>
                       setActiveTool(activeTool === 'trim-edit' ? 'select' : 'trim-edit')
                     }
+                    aria-pressed={activeTool === 'trim-edit'}
                     aria-label={t('timeline.header.trimEditTool')}
                     data-tooltip={t('timeline.header.trimEditToolTooltip')}
                   >
@@ -624,6 +627,7 @@ export const TimelineHeader = memo(function TimelineHeader({
                       : ''
                   }
                   onClick={() => setActiveTool(activeTool === 'razor' ? 'select' : 'razor')}
+                  aria-pressed={activeTool === 'razor'}
                   aria-label={t('timeline.header.razorTool')}
                   data-tooltip={t('timeline.header.razorToolTooltip')}
                 >
@@ -644,6 +648,7 @@ export const TimelineHeader = memo(function TimelineHeader({
                       onClick={() =>
                         setActiveTool(activeTool === 'rate-stretch' ? 'select' : 'rate-stretch')
                       }
+                      aria-pressed={activeTool === 'rate-stretch'}
                       aria-label={t('timeline.header.rateStretchTool')}
                       data-tooltip={t('timeline.header.rateStretchToolTooltip')}
                     >
@@ -661,6 +666,7 @@ export const TimelineHeader = memo(function TimelineHeader({
                                 ? 'bg-primary text-primary-foreground hover:bg-primary/90'
                                 : ''
                             }`}
+                            aria-pressed={activeTool === 'slip' || activeTool === 'slide'}
                             aria-label={t('timeline.header.slipSlideTools')}
                             data-tooltip={t('timeline.header.slipSlideToolsTooltip')}
                           >
@@ -914,6 +920,7 @@ export const TimelineHeader = memo(function TimelineHeader({
               style={btnSize}
               className={snapEnabled ? 'bg-primary text-primary-foreground hover:bg-primary/90' : ''}
               onClick={toggleSnap}
+              aria-pressed={snapEnabled}
               aria-label={
                 snapEnabled
                   ? t('timeline.header.disableSnapping')
