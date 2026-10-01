@@ -316,19 +316,22 @@ export const PropertiesSidebar = memo(function PropertiesSidebar({
                     )}
                   </Button>
                 ) : null}
-                <div className="min-w-0 leading-none">
-                  <div className="text-[9px] font-medium text-muted-foreground">
+                <h2
+                  className="min-w-0 leading-none"
+                  aria-label={headerContext ? `${headerLabel}-${headerContext}` : headerLabel}
+                >
+                  <span className="block text-[9px] font-medium text-muted-foreground">
                     {headerLabel}
-                  </div>
+                  </span>
                   {headerContext ? (
-                    <div
-                      className="mt-1 truncate text-[11px] font-medium text-foreground"
+                    <span
+                      className="mt-1 block truncate text-[11px] font-medium text-foreground"
                       title={headerTitle}
                     >
                       {headerContext}
-                    </div>
+                    </span>
                   ) : null}
-                </div>
+                </h2>
               </div>
               {!mobile && !producerWorkspace ? (
                 <Button
