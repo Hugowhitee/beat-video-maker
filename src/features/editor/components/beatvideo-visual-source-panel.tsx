@@ -12,6 +12,7 @@ import { usePlaybackStore } from '@/shared/state/playback'
 import { ImagePlus } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
+import { Switch } from '@/components/ui/switch'
 import {
   applyEditPlanToFreeCutTimeline,
   buildClipMapForMedia,
@@ -80,6 +81,7 @@ export function BeatvideoVisualSourcePanel({
     useState<TransitionProfile>('clean')
   const [loopBars, setLoopBars] = useState(4)
   const [excludedShotIds, setExcludedShotIds] = useState<string[]>([])
+  const [disabledArrangeSourceIds, setDisabledArrangeSourceIds] = useState<string[]>([])
   const [draggingShotId, setDraggingShotId] = useState<string | null>(null)
   const [dragOverSlotKey, setDragOverSlotKey] = useState<string | null>(null)
 
@@ -105,6 +107,21 @@ export function BeatvideoVisualSourcePanel({
     () => mediaItems.filter((media) => media.mimeType.startsWith('video/')),
     [mediaItems],
   )
+  const arrangeSourceIds = useMemo(
+    () =>
+      videoCandidates
+        .map((media) => media.id)
+        .filter((mediaId) => !disabledArrangeSourceIds.includes(mediaId)),
+    [disabledArrangeSourceIds, videoCandidates],
+  )
+
+  useEffect(() => {
+    const currentIds = new Set(videoCandidates.map((media) => media.id))
+    setDisabledArrangeSourceIds((current) => {
+      const next = current.filter((mediaId) => currentIds.has(mediaId))
+      return next.length === current.length ? current : next
+    })
+  }, [videoCandidates])
 
   const shotById = useMemo(
     () =>
@@ -377,7 +394,14 @@ export function BeatvideoVisualSourcePanel({
         signal: controller.signal,
         onProgress: describeProgress,
       })
-      const relativePlan = createEditPlan(relative.music, clipMap, {
+      const plannerClipMap: ClipMap = {
+        sources: clipMap.sources.filter((source) => arrangeSourceIds.includes(source.id)),
+      }
+      if (plannerClipMap.sources.length === 0) {
+        toast.warning('Enable at least one footage source for this build')
+        return
+      }
+      const relativePlan = createEditPlan(relative.music, plannerClipMap, {
         mode: arrangeMode,
         pace: arrangePace,
         loopBars,
@@ -413,6 +437,7 @@ export function BeatvideoVisualSourcePanel({
     applyArrangement,
     arrangeMode,
     arrangePace,
+    arrangeSourceIds,
     autoArranging,
     describeProgress,
     excludedShotIds,
@@ -536,6 +561,16 @@ export function BeatvideoVisualSourcePanel({
       current.includes(shotId)
         ? current.filter((candidate) => candidate !== shotId)
         : [...current, shotId],
+    )
+  }, [])
+
+  const setArrangeSourceEnabled = useCallback((sourceId: string, enabled: boolean) => {
+    setDisabledArrangeSourceIds((current) =>
+      enabled
+        ? current.filter((candidate) => candidate !== sourceId)
+        : current.includes(sourceId)
+          ? current
+          : [...current, sourceId],
     )
   }, [])
 
@@ -789,16 +824,12 @@ export function BeatvideoVisualSourcePanel({
               </span>
             </div>
 
-            <div className="grid h-8 grid-cols-2 border-b border-border">
+            <div className="studio-segmented grid h-8 grid-cols-2">
               <button
                 type="button"
                 aria-pressed={arrangeMode === 'auto'}
                 onClick={() => setArrangeMode('auto')}
-                className={`relative h-8 text-[10px] font-medium transition-colors ${
-                  arrangeMode === 'auto'
-                    ? 'text-foreground after:absolute after:inset-x-3 after:bottom-[-1px] after:h-[2px] after:bg-primary'
-                    : 'text-muted-foreground hover:bg-secondary/30 hover:text-foreground'
-                }`}
+                className="studio-segment h-7 text-[10px] font-medium"
               >
                 Auto arrange
               </button>
@@ -806,14 +837,38 @@ export function BeatvideoVisualSourcePanel({
                 type="button"
                 aria-pressed={arrangeMode === 'loop'}
                 onClick={() => setArrangeMode('loop')}
-                className={`relative h-8 text-[10px] font-medium transition-colors ${
-                  arrangeMode === 'loop'
-                    ? 'text-foreground after:absolute after:inset-x-3 after:bottom-[-1px] after:h-[2px] after:bg-primary'
-                    : 'text-muted-foreground hover:bg-secondary/30 hover:text-foreground'
-                }`}
+                className="studio-segment h-7 text-[10px] font-medium"
               >
                 Repeat motif
               </button>
+            </div>
+
+            <div className="mt-2 border-y border-border/70 py-2">
+              <div className="mb-1.5 flex items-center justify-between gap-2">
+                <span className="text-[9px] font-medium text-foreground">Sources for this build</span>
+                <span className="font-mono text-[8px] tabular-nums text-muted-foreground">
+                  {arrangeSourceIds.length}/{videoCandidates.length} on
+                </span>
+              </div>
+              <div className="max-h-28 space-y-0.5 overflow-y-auto">
+                {videoCandidates.map((media) => {
+                  const enabled = arrangeSourceIds.includes(media.id)
+                  return (
+                    <label
+                      key={media.id}
+                      className="flex h-7 min-w-0 items-center gap-2 px-1 text-[9px] text-foreground hover:bg-secondary/35"
+                    >
+                      <Switch
+                        checked={enabled}
+                        onCheckedChange={(checked) => setArrangeSourceEnabled(media.id, checked)}
+                        className="h-4 w-7 border border-border data-[state=checked]:bg-primary data-[state=unchecked]:bg-muted [&>span]:h-3 [&>span]:w-3 [&>span]:data-[state=checked]:translate-x-3"
+                        aria-label={`${enabled ? 'Exclude' : 'Include'} ${media.fileName} from build`}
+                      />
+                      <span className="min-w-0 flex-1 truncate">{media.fileName}</span>
+                    </label>
+                  )
+                })}
+              </div>
             </div>
 
             <div className="mt-2 grid grid-cols-2 gap-1.5">
@@ -873,7 +928,13 @@ export function BeatvideoVisualSourcePanel({
               type="button"
               size="sm"
               className="mt-2 w-full justify-center"
-              disabled={!timelineGrid || preparingFootage || autoArranging || loopBlocksGrouped}
+              disabled={
+                !timelineGrid ||
+                arrangeSourceIds.length === 0 ||
+                preparingFootage ||
+                autoArranging ||
+                loopBlocksGrouped
+              }
               onClick={() => void autoArrangeFootage()}
             >
               {autoArranging
