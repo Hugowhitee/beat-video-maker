@@ -27,19 +27,25 @@ const LazyEffectsSection = lazy(() =>
 const COLOR_PANEL_EFFECT_TYPES = ['gpu-color-wheels', 'gpu-curves'] as const
 const COLOR_KEYFRAME_VISIBLE_GROUPS = ['effects'] as const
 const COLOR_KEYFRAME_PROPERTY_COLUMN_WIDTH = 336
-const GLOBAL_COLOR_GRADE_LABEL = 'Global grade'
+export const GLOBAL_COLOR_GRADE_LABEL = 'Global grade'
+
+export type ColorGradeScope = 'global' | 'clip'
 
 interface ColorGradePanelProps {
   layout?: 'sidebar' | 'dock'
+  scope?: ColorGradeScope
+  onScopeChange?: (scope: ColorGradeScope) => void
 }
 
 export const ColorGradePanel = memo(function ColorGradePanel({
   layout = 'sidebar',
+  scope,
+  onScopeChange,
 }: ColorGradePanelProps) {
   const { t } = useTranslation()
   const selectedItemIds = useSelectionStore((s) => s.selectedItemIds)
   const allItems = useItemsStore((s) => s.items)
-  const visualItems = useItemsStore(
+  const selectedVisualItems = useItemsStore(
     useShallow(
       useCallback(
         (s) => {
@@ -86,16 +92,27 @@ export const ColorGradePanel = memo(function ColorGradePanel({
       ),
     [allItems],
   )
-  const globalGradeSelected = useMemo(
-    () => visualItems.some((item) => item.id === globalGrade?.id),
-    [globalGrade?.id, visualItems],
+  const inferredGlobalSelected = useMemo(
+    () => selectedVisualItems.some((item) => item.id === globalGrade?.id),
+    [globalGrade?.id, selectedVisualItems],
+  )
+  const effectiveScope: ColorGradeScope = scope ?? (inferredGlobalSelected ? 'global' : 'clip')
+  const visualItems = useMemo(
+    () =>
+      effectiveScope === 'global'
+        ? globalGrade
+          ? [globalGrade]
+          : []
+        : selectedVisualItems.filter((item) => item.id !== globalGrade?.id),
+    [effectiveScope, globalGrade, selectedVisualItems],
   )
   const handleSelectClipScope = useCallback(() => {
-    // Clearing selection lets the existing color playhead follower immediately
-    // pick the best visual clip under the playhead (video before overlays).
+    onScopeChange?.('clip')
+    // Clearing selection lets the playhead follower choose the best footage clip.
     useSelectionStore.getState().selectItems([])
-  }, [])
+  }, [onScopeChange])
   const handleSelectGlobalScope = useCallback(() => {
+    onScopeChange?.('global')
     if (globalGrade) {
       useSelectionStore.getState().selectItems([globalGrade.id])
       return
@@ -104,7 +121,7 @@ export const ColorGradePanel = memo(function ColorGradePanel({
       from: 0,
       durationInFrames: globalGradeDuration,
     })
-  }, [globalGrade, globalGradeDuration])
+  }, [globalGrade, globalGradeDuration, onScopeChange])
 
   const handleKeepKeyframesOpen = useCallback(() => {
     // The Color page owns this dock; the shared keyframe editor needs a close
@@ -113,14 +130,16 @@ export const ColorGradePanel = memo(function ColorGradePanel({
 
   const hasVisualSelection = useMemo(() => visualItems.length > 0, [visualItems])
   const clipScopeLabel =
-    visualItems.length > 1 ? `${visualItems.length} selected clips` : 'Current clip'
+    selectedVisualItems.filter((item) => item.id !== globalGrade?.id).length > 1
+      ? `${selectedVisualItems.filter((item) => item.id !== globalGrade?.id).length} selected clips`
+      : 'Current clip'
   const scopeBar = (
     <div className="flex shrink-0 items-center justify-between gap-2">
       <div className="studio-segmented flex h-8 min-w-0" role="group" aria-label="Color grade scope">
         <button
           type="button"
           className="studio-segment h-7 min-w-[92px] px-3 text-[10px] font-medium"
-          aria-pressed={!globalGradeSelected}
+          aria-pressed={!effectiveScope === 'global'}
           onClick={handleSelectClipScope}
         >
           {clipScopeLabel}
@@ -128,14 +147,14 @@ export const ColorGradePanel = memo(function ColorGradePanel({
         <button
           type="button"
           className="studio-segment h-7 min-w-[88px] px-3 text-[10px] font-medium"
-          aria-pressed={globalGradeSelected}
+          aria-pressed={effectiveScope === 'global'}
           onClick={handleSelectGlobalScope}
         >
           Full video
         </button>
       </div>
       <span className="min-w-0 truncate font-mono text-[9px] text-muted-foreground">
-        {globalGradeSelected
+        {effectiveScope === 'global'
           ? 'Adjustment layer · whole timeline'
           : hasVisualSelection
             ? visualItems[0]?.label
