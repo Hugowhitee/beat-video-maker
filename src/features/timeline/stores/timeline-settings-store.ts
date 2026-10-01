@@ -27,6 +27,8 @@ function loadBeatGridResolution(): BeatGridResolution {
     const stored = localStorage.getItem(BEAT_GRID_RESOLUTION_KEY)
     if (
       stored === 'auto' ||
+      stored === 'quarter-beat' ||
+      stored === 'half-beat' ||
       stored === 'beat' ||
       stored === 'bar' ||
       stored === '2-bars' ||
