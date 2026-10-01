@@ -611,7 +611,7 @@ const ClipPanelCore = memo(function ClipPanelCore({
       >
         <TabsList
           className={cn(
-            'grid h-8 w-full shrink-0 rounded-none border-b border-border bg-transparent p-0',
+            'studio-segmented grid h-8 w-full shrink-0 p-0.5',
             tabGridColsClass,
           )}
         >
@@ -619,7 +619,7 @@ const ClipPanelCore = memo(function ClipPanelCore({
             <TabsTrigger
               key={value}
               value={value}
-              className="h-8 rounded-none border-b-2 border-transparent bg-transparent px-2 py-0 text-[10px] font-medium shadow-none active:scale-100 data-[state=active]:border-primary data-[state=active]:bg-transparent data-[state=active]:text-foreground data-[state=active]:shadow-none"
+              className="studio-segment h-7 rounded-sm px-2 py-0 text-[10px] font-medium shadow-none active:scale-100"
             >
               {getTabLabel(value)}
             </TabsTrigger>
