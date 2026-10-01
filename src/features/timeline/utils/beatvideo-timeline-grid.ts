@@ -268,13 +268,16 @@ export function resolveBeatvideoTimelineSnapFrames(
   // Calls that do not opt into a view resolution preserve the historical
   // all-beat behavior. The interactive timeline always supplies its current
   // resolution + zoom so visible musical lines and snap targets stay identical.
-  const resolution = options.resolution ?? 'beat'
+  const requestedResolution = options.resolution ?? 'beat'
+  // Auto controls visual density only. Snap timing must not change when the
+  // user zooms, so Auto always exposes beat-level snap targets.
+  const snapResolution = requestedResolution === 'auto' ? 'beat' : requestedResolution
   const pixelsPerSecond = options.pixelsPerSecond ?? Number.MAX_SAFE_INTEGER
   const { markers } = resolveBeatGridMarkers({
     beats: timelineGrid.grid.beats,
     beatsPerBar: timelineGrid.grid.beatsPerBar,
     barOneTime: timelineGrid.barOneTimelineTime,
-    resolution,
+    resolution: snapResolution,
     pixelsPerSecond,
   })
 
