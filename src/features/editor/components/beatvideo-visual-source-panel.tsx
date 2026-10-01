@@ -33,6 +33,7 @@ import { useMediaLibraryStore } from '@/features/editor/deps/media-library'
 import { useProjectStore } from '@/features/editor/deps/projects'
 import {
   createLinkedPreCompPattern,
+  executeTimelineCommand,
   useItemsStore,
   useTimelineSettingsStore,
   useTimelineStore,
@@ -490,6 +491,43 @@ export function BeatvideoVisualSourcePanel({
     [
       applyArrangementSourceRepair,
       lastClipMap,
+      lastPlan,
+      loopBlocksGrouped,
+    ],
+  )
+
+  const setGeneratedSlotEnabled = useCallback(
+    (segment: EditPlan['segments'][number], enabled: boolean) => {
+      if (!lastPlan || loopBlocksGrouped) return
+
+      const targetSegments =
+        segment.motifId && segment.motifSlot
+          ? lastPlan.segments.filter(
+              (candidate) =>
+                candidate.motifId === segment.motifId &&
+                candidate.motifSlot === segment.motifSlot,
+            )
+          : [segment]
+      const itemIds = targetSegments.flatMap((candidate) => {
+        const itemId = lastItemIdBySegmentId[candidate.id]
+        return itemId ? [itemId] : []
+      })
+      if (itemIds.length === 0) return
+
+      executeTimelineCommand(
+        'SET_BEATVIDEO_GENERATED_ENABLED',
+        () => {
+          const store = useItemsStore.getState()
+          for (const itemId of itemIds) {
+            store._updateItem(itemId, { enabled })
+          }
+          useTimelineSettingsStore.getState().markDirty()
+        },
+        { itemIds, enabled },
+      )
+    },
+    [
+      lastItemIdBySegmentId,
       lastPlan,
       loopBlocksGrouped,
     ],
@@ -1087,6 +1125,27 @@ export function BeatvideoVisualSourcePanel({
                       ),
                     )
                     const sourceOffset = sourceStartValue - sourceStartMin
+                    const slotItemIds =
+                      segment.motifId && segment.motifSlot && lastPlan
+                        ? lastPlan.segments
+                            .filter(
+                              (candidate) =>
+                                candidate.motifId === segment.motifId &&
+                                candidate.motifSlot === segment.motifSlot,
+                            )
+                            .flatMap((candidate) => {
+                              const itemId = lastItemIdBySegmentId[candidate.id]
+                              return itemId ? [itemId] : []
+                            })
+                        : [lastItemIdBySegmentId[segment.id]].filter(
+                            (itemId): itemId is string => Boolean(itemId),
+                          )
+                    const slotEnabled =
+                      slotItemIds.length === 0 ||
+                      slotItemIds.every(
+                        (itemId) =>
+                          items.find((item) => item.id === itemId)?.enabled !== false,
+                      )
 
                     return (
                       <div
@@ -1120,7 +1179,9 @@ export function BeatvideoVisualSourcePanel({
                       >
                         <button
                           type="button"
-                          className="block w-full text-left outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-primary"
+                          className={`block w-full text-left outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-primary ${
+                            slotEnabled ? '' : 'opacity-45'
+                          }`}
                           onPointerEnter={(event) => {
                             if (shot) previewArrangementShotAtPointer(event, shot)
                           }}
@@ -1158,6 +1219,25 @@ export function BeatvideoVisualSourcePanel({
                             {currentShotIsManual ? ' · edited' : ''}
                           </div>
                         </button>
+
+                        <div className="flex h-7 items-center justify-between gap-2 border-t border-border/70 px-1.5">
+                          <span className="text-[7px] text-muted-foreground">
+                            {linkedRepeats > 1 ? `All ${linkedRepeats} repeats` : 'Clip'}
+                          </span>
+                          <div className="flex items-center gap-1.5">
+                            <span className="font-mono text-[7px] text-muted-foreground">
+                              {slotEnabled ? 'ON' : 'OFF'}
+                            </span>
+                            <Switch
+                              checked={slotEnabled}
+                              onCheckedChange={(checked) =>
+                                setGeneratedSlotEnabled(segment, checked)
+                              }
+                              className="h-4 w-7 border border-border data-[state=checked]:bg-primary data-[state=unchecked]:bg-muted [&>span]:h-3 [&>span]:w-3 [&>span]:data-[state=checked]:translate-x-3"
+                              aria-label={`${slotEnabled ? 'Disable' : 'Enable'} generated clip ${index + 1}`}
+                            />
+                          </div>
+                        </div>
 
                         {shot && sourceStartMax > sourceStartMin + 1e-6 ? (
                           <label
