@@ -57,7 +57,7 @@ interface ColorTimelineClip extends MiniFilmTileClip {
 }
 
 function isVisualNavigatorItem(item: TimelineItem): boolean {
-  return item.type !== 'audio' && item.type !== 'subtitle'
+  return item.type === 'video' || item.type === 'image' || item.type === 'composition'
 }
 
 function isNavigatorVideoTrack(track: TimelineTrack): boolean {
@@ -277,9 +277,16 @@ export const ColorTimelineNavigator = memo(function ColorTimelineNavigator() {
   const suppressPlayheadPreviewRef = useRef(false)
 
   const selectedItemIdSet = useMemo(() => new Set(selectedItemIds), [selectedItemIds])
+  const navigatorTrackIds = useMemo(
+    () => new Set(items.filter(isVisualNavigatorItem).map((item) => item.trackId)),
+    [items],
+  )
   const videoTrackRows = useMemo(
-    () => tracks.filter(isNavigatorVideoTrack).sort((a, b) => a.order - b.order),
-    [tracks],
+    () =>
+      tracks
+        .filter((track) => navigatorTrackIds.has(track.id) && isNavigatorVideoTrack(track))
+        .sort((a, b) => a.order - b.order),
+    [navigatorTrackIds, tracks],
   )
   const trackNameById = useMemo(
     () => new Map(tracks.map((track) => [track.id, track.name || track.id])),
