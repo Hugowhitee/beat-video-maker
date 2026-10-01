@@ -1,0 +1,41 @@
+name: Cleanup superseded branches
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - .github/workflows/cleanup-superseded-branches.yml
+
+permissions:
+  contents: write
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Delete superseded branches
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const branches = [
+              'feat/photo-publishing-path',
+              'fix/fl-playlist-grid-snap',
+            ]
+
+            for (const branch of branches) {
+              try {
+                await github.rest.git.deleteRef({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  ref: `heads/${branch}`,
+                })
+                core.notice(`Deleted ${branch}`)
+              } catch (error) {
+                if (error.status === 404) {
+                  core.notice(`${branch} already absent`)
+                  continue
+                }
+                throw error
+              }
+            }
