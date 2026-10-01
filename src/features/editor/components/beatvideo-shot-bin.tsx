@@ -163,18 +163,19 @@ export function BeatvideoShotBin({
   return (
     <div data-beatvideo-shot-bin>
       {clipMap.sources.length > 1 ? (
-        <div className="mb-1.5 flex gap-1 overflow-x-auto border-b border-border/70">
+        <div
+          className="studio-segmented mb-1.5 flex max-w-full overflow-x-auto"
+          role="tablist"
+          aria-label="Footage sources"
+        >
           {clipMap.sources.map((source) => (
             <button
               key={source.id}
               type="button"
-              aria-pressed={source.id === activeSource?.id}
+              role="tab"
+              aria-selected={source.id === activeSource?.id}
               onClick={() => setActiveSourceId(source.id)}
-              className={
-                source.id === activeSource?.id
-                  ? 'shrink-0 border-b-2 border-primary px-1.5 py-1 text-[9px] font-medium text-foreground'
-                  : 'shrink-0 border-b-2 border-transparent px-1.5 py-1 text-[9px] text-muted-foreground hover:text-foreground'
-              }
+              className="studio-segment h-7 shrink-0 px-2 text-[9px] font-medium"
             >
               {source.name} · {source.shots.length}
             </button>
