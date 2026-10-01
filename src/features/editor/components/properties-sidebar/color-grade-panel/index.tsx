@@ -27,6 +27,7 @@ const LazyEffectsSection = lazy(() =>
 const COLOR_PANEL_EFFECT_TYPES = ['gpu-color-wheels', 'gpu-curves'] as const
 const COLOR_KEYFRAME_VISIBLE_GROUPS = ['effects'] as const
 const COLOR_KEYFRAME_PROPERTY_COLUMN_WIDTH = 336
+const GLOBAL_COLOR_GRADE_LABEL = 'Global grade'
 
 interface ColorGradePanelProps {
   layout?: 'sidebar' | 'dock'
@@ -37,6 +38,7 @@ export const ColorGradePanel = memo(function ColorGradePanel({
 }: ColorGradePanelProps) {
   const { t } = useTranslation()
   const selectedItemIds = useSelectionStore((s) => s.selectedItemIds)
+  const allItems = useItemsStore((s) => s.items)
   const visualItems = useItemsStore(
     useShallow(
       useCallback(
@@ -58,18 +60,98 @@ export const ColorGradePanel = memo(function ColorGradePanel({
   const handleCreateAdjustmentLayer = useCallback(() => {
     addAdjustmentLayer(undefined, t('editor.colorPanel.adjustmentLayerLabel'))
   }, [t])
+
+  const globalGrade = useMemo(
+    () =>
+      allItems.find(
+        (item) =>
+          item.type === 'adjustment' &&
+          item.label === GLOBAL_COLOR_GRADE_LABEL &&
+          item.from === 0,
+      ) ?? null,
+    [allItems],
+  )
+  const globalGradeDuration = useMemo(
+    () =>
+      Math.max(
+        1,
+        ...allItems
+          .filter(
+            (item) =>
+              item.type !== 'audio' &&
+              item.type !== 'adjustment' &&
+              item.type !== 'controller',
+          )
+          .map((item) => item.from + item.durationInFrames),
+      ),
+    [allItems],
+  )
+  const globalGradeSelected = useMemo(
+    () => visualItems.some((item) => item.id === globalGrade?.id),
+    [globalGrade?.id, visualItems],
+  )
+  const handleSelectClipScope = useCallback(() => {
+    // Clearing selection lets the existing color playhead follower immediately
+    // pick the best visual clip under the playhead (video before overlays).
+    useSelectionStore.getState().selectItems([])
+  }, [])
+  const handleSelectGlobalScope = useCallback(() => {
+    if (globalGrade) {
+      useSelectionStore.getState().selectItems([globalGrade.id])
+      return
+    }
+    addAdjustmentLayer(undefined, GLOBAL_COLOR_GRADE_LABEL, {
+      from: 0,
+      durationInFrames: globalGradeDuration,
+    })
+  }, [globalGrade, globalGradeDuration])
+
   const handleKeepKeyframesOpen = useCallback(() => {
     // The Color page owns this dock; the shared keyframe editor needs a close
     // callback for its sidebar placement but the color lane is intentionally fixed.
   }, [])
 
   const hasVisualSelection = useMemo(() => visualItems.length > 0, [visualItems])
+  const clipScopeLabel =
+    visualItems.length > 1 ? `${visualItems.length} selected clips` : 'Current clip'
+  const scopeBar = (
+    <div className="flex shrink-0 items-center justify-between gap-2">
+      <div className="studio-segmented flex h-8 min-w-0" role="group" aria-label="Color grade scope">
+        <button
+          type="button"
+          className="studio-segment h-7 min-w-[92px] px-3 text-[10px] font-medium"
+          aria-pressed={!globalGradeSelected}
+          onClick={handleSelectClipScope}
+        >
+          {clipScopeLabel}
+        </button>
+        <button
+          type="button"
+          className="studio-segment h-7 min-w-[88px] px-3 text-[10px] font-medium"
+          aria-pressed={globalGradeSelected}
+          onClick={handleSelectGlobalScope}
+        >
+          Full video
+        </button>
+      </div>
+      <span className="min-w-0 truncate font-mono text-[9px] text-muted-foreground">
+        {globalGradeSelected
+          ? 'Adjustment layer · whole timeline'
+          : hasVisualSelection
+            ? visualItems[0]?.label
+            : 'Move playhead onto a clip'}
+      </span>
+    </div>
+  )
 
   if (!hasVisualSelection) {
     return (
-      <div className="flex h-full min-h-[12rem] flex-col items-center justify-center gap-2 px-4 py-10 text-center">
-        <Palette className="h-6 w-6 text-muted-foreground" aria-hidden="true" />
-        <p className="text-xs text-muted-foreground">{t('editor.colorPanel.emptyState')}</p>
+      <div className="flex h-full min-h-[12rem] flex-col gap-2">
+        {scopeBar}
+        <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-2 px-4 py-10 text-center">
+          <Palette className="h-6 w-6 text-muted-foreground" aria-hidden="true" />
+          <p className="text-xs text-muted-foreground">{t('editor.colorPanel.emptyState')}</p>
+        </div>
       </div>
     )
   }
@@ -78,8 +160,10 @@ export const ColorGradePanel = memo(function ColorGradePanel({
 
   if (layout === 'dock') {
     return (
-      <div className="grid h-full min-h-0 grid-cols-[minmax(0,10fr)_minmax(0,3fr)_minmax(0,7fr)] gap-3">
-        <Suspense fallback={null}>
+      <div className="flex h-full min-h-0 flex-col gap-2">
+        {scopeBar}
+        <div className="grid min-h-0 flex-1 grid-cols-[minmax(0,10fr)_minmax(0,3fr)_minmax(0,7fr)] gap-3">
+          <Suspense fallback={null}>
           <div className={sectionClassName}>
             <LazyColorGradeSection
               items={visualItems}
@@ -107,13 +191,15 @@ export const ColorGradePanel = memo(function ColorGradePanel({
               propertyColumnWidth={COLOR_KEYFRAME_PROPERTY_COLUMN_WIDTH}
             />
           </div>
-        </Suspense>
+          </Suspense>
+        </div>
       </div>
     )
   }
 
   return (
     <div className="space-y-3">
+      {scopeBar}
       <Suspense fallback={null}>
         <div className={sectionClassName}>
           <LazyColorGradeSection
