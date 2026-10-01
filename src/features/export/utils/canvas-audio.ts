@@ -49,6 +49,7 @@ import {
   areAudioEqStagesEqual,
   getAudioEqSettings,
   isAudioEqStageActive,
+  resolveAudioEqSettings,
 } from '@/shared/utils/audio-eq'
 import {
   createCeilingCurve,
@@ -923,7 +924,9 @@ export function extractAudioSegments(
       trackId: leftAudio.trackId,
     }),
   )
-  const busAudioEqStages = appendResolvedAudioEqSources(undefined, composition.busAudioEq)
+  // Project master EQ is applied once after the full mix so it can participate
+  // in the ordered Master rack. Segment chains contain only track/item EQ.
+  const rootAudioEqStages: ResolvedAudioEqSettings[] = []
   const audioTransitionItemIds = new Set<string>()
   const audioTransitionDefs: Transition[] = transitions.filter((transition) => {
     const leftItem = timelineItems.find((item) => item.id === transition.leftClipId)
@@ -954,7 +957,7 @@ export function extractAudioSegments(
           muted: track.muted ?? false,
           trackVolume: track.volume ?? 0,
           trackAudioEq: track.audioEq,
-          audioEqStages: busAudioEqStages,
+          audioEqStages: rootAudioEqStages,
           type: 'video',
           audioCodec: getMediaAudioCodecById(videoItem.mediaId),
           volumeKeyframes: (() => {
@@ -975,7 +978,7 @@ export function extractAudioSegments(
             compositionItem: audioItem,
             subComp,
             fps,
-            audioEqStages: appendResolvedAudioEqSources(busAudioEqStages, track.audioEq),
+            audioEqStages: appendResolvedAudioEqSources(rootAudioEqStages, track.audioEq),
           })
           continue
         }
@@ -991,7 +994,7 @@ export function extractAudioSegments(
           muted: track.muted ?? false,
           trackVolume: track.volume ?? 0,
           trackAudioEq: track.audioEq,
-          audioEqStages: busAudioEqStages,
+          audioEqStages: rootAudioEqStages,
           type: 'audio',
           audioCodec: getMediaAudioCodecById(item.mediaId),
           volumeKeyframes: audioVolumeKfs.length > 0 ? audioVolumeKfs : undefined,
@@ -1025,7 +1028,7 @@ export function extractAudioSegments(
           fadeOutCurveX: item.audioFadeOutCurveX ?? 0.52,
           pitchShiftSemitones: getAudioPitchShiftSemitones(item),
           audioEqStages: appendResolvedAudioEqSources(
-            busAudioEqStages,
+            rootAudioEqStages,
             track.audioEq,
             getAudioEqSettings(item),
           ),
@@ -1093,7 +1096,7 @@ export function extractAudioSegments(
         compositionItem: compItem,
         subComp,
         fps,
-        audioEqStages: appendResolvedAudioEqSources(busAudioEqStages, track.audioEq),
+        audioEqStages: appendResolvedAudioEqSources(rootAudioEqStages, track.audioEq),
       })
     }
   }
@@ -2255,6 +2258,11 @@ async function resolveSubCompMediaUrls(composition: CompositionInputProps): Prom
 
 const STREAMING_AUDIO_CHUNK_SECONDS = 30
 
+function isMasterBusEqActive(settings: AudioEqSettings | undefined): boolean {
+  if (!settings || settings.enabled === false) return false
+  return isAudioEqStageActive(resolveAudioEqSettings(settings))
+}
+
 function supportsWindowedAudioSegment(segment: AudioSegment): boolean {
   return (
     Math.abs(segment.speed - 1) <= 0.0001 &&
@@ -2270,7 +2278,9 @@ function supportsWindowedAudioSegment(segment: AudioSegment): boolean {
  * identical to preview.
  */
 export function supportsWindowedAudioProcessing(composition: CompositionInputProps): boolean {
-  if (isMasterFxActive(composition.masterFx)) return false
+  if (isMasterFxActive(composition.masterFx) || isMasterBusEqActive(composition.busAudioEq)) {
+    return false
+  }
   const segments = extractAudioSegments(composition, composition.fps).filter(
     (segment) => !segment.muted,
   )
@@ -2340,7 +2350,8 @@ export function getAudioPacketPassthroughPlan(
     durationInFrames <= 0 ||
     composition.fps <= 0 ||
     (composition.masterBusDb ?? 0) !== 0 ||
-    isMasterFxActive(composition.masterFx)
+    isMasterFxActive(composition.masterFx) ||
+    isMasterBusEqActive(composition.busAudioEq)
   ) {
     return null
   }
