@@ -1,11 +1,12 @@
 import type { MediaMetadata } from '@/types/storage'
-import type { TimelineItem, TimelineTrack } from '@/types/timeline'
+import type { TimelineItem, TimelineTrack, VideoItem } from '@/types/timeline'
 import type { TransitionPresentation } from '@/types/transition'
 import { DEFAULT_PROJECT_HEIGHT, DEFAULT_PROJECT_WIDTH } from '@/shared/projects/defaults'
 import type { EditPlan, EditTransition } from './types'
 import {
   DEFAULT_TRACK_HEIGHT,
   buildMediaTimelineItems,
+  applyTransitionRepairs,
   canAddTransition,
   createClassicTrack,
   execute,
@@ -74,6 +75,17 @@ export interface ApplyEditPlanResult {
   transitionIds: string[]
   itemIdBySegmentId: Record<string, string>
   warnings: string[]
+}
+
+export interface EditPlanSourcePatch {
+  itemId: string
+  segmentId: string
+  updates: Partial<VideoItem>
+}
+
+export interface ApplyEditPlanSourceChangesResult {
+  changedItemIds: string[]
+  patches: EditPlanSourcePatch[]
 }
 
 function secondsToFrame(seconds: number, fps: number) {
@@ -301,6 +313,85 @@ export function buildEditPlanTimelineDraft(
   }
 }
 
+function segmentSourceChanged(
+  previous: EditPlan['segments'][number] | undefined,
+  next: EditPlan['segments'][number],
+): boolean {
+  if (!previous) return true
+  return (
+    previous.sourceId !== next.sourceId ||
+    previous.sourceStart !== next.sourceStart ||
+    previous.sourceEnd !== next.sourceEnd
+  )
+}
+
+export function buildEditPlanSourcePatches(
+  previousPlan: EditPlan,
+  nextPlan: EditPlan,
+  sources: ResolvedEditSource[],
+  itemIdBySegmentId: Record<string, string>,
+  existingItems: TimelineItem[],
+): EditPlanSourcePatch[] {
+  const previousById = new Map(previousPlan.segments.map((segment) => [segment.id, segment]))
+  const sourceById = new Map(sources.map((source) => [source.sourceId, source]))
+  const itemById = new Map(existingItems.map((item) => [item.id, item]))
+  const patches: EditPlanSourcePatch[] = []
+
+  for (const segment of nextPlan.segments) {
+    if (!segmentSourceChanged(previousById.get(segment.id), segment)) continue
+
+    const itemId = itemIdBySegmentId[segment.id]
+    if (!itemId) continue
+    const item = itemById.get(itemId)
+    if (!item || item.type !== 'video') continue
+
+    const source = sourceById.get(segment.sourceId)
+    if (!source) {
+      throw new Error(`No editor media binding exists for source "${segment.sourceId}".`)
+    }
+
+    const sourceFps = source.media.fps || FALLBACK_SOURCE_FPS
+    const sourceRange = sourceFrameRange(segment, sourceFps)
+    const sourceDuration = Math.max(1, Math.round(source.media.duration * sourceFps))
+
+    patches.push({
+      itemId,
+      segmentId: segment.id,
+      updates: {
+        mediaId: source.mediaId,
+        src: source.blobUrl,
+        thumbnailUrl: source.thumbnailUrl,
+        label: source.media.fileName,
+        sourceStart: sourceRange.sourceStart,
+        sourceEnd: sourceRange.sourceEnd,
+        sourceDuration,
+        sourceFps,
+        sourceWidth: source.media.width || undefined,
+        sourceHeight: source.media.height || undefined,
+        trimStart: 0,
+        trimEnd: 0,
+        offset: undefined,
+        audioSrc: undefined,
+        embeddedAudioMuted: true,
+        reverseConformSrc: undefined,
+        reverseConformPath: undefined,
+        reverseConformKey: undefined,
+        reverseConformPreviewSrc: undefined,
+        reverseConformPreviewPath: undefined,
+        reverseConformPreviewKey: undefined,
+        reverseConformPreviewUsesProxy: undefined,
+        reverseConformPreviewIsSourceLevel: undefined,
+        reverseConformPreviewSourceDuration: undefined,
+        reverseConformPreviewFps: undefined,
+        reverseConformStatus: undefined,
+        reverseConformLocalStart: undefined,
+      },
+    })
+  }
+
+  return patches
+}
+
 async function resolveEditSources(
   plan: EditPlan,
   sourceMediaIds: Record<string, string> | undefined,
@@ -339,6 +430,45 @@ async function resolveEditSources(
       }
     }),
   )
+}
+
+export async function applyEditPlanSourceChangesToFreeCutTimeline(
+  previousPlan: EditPlan,
+  nextPlan: EditPlan,
+  itemIdBySegmentId: Record<string, string>,
+  options: Pick<ApplyEditPlanOptions, 'sourceMediaIds'> = {},
+): Promise<ApplyEditPlanSourceChangesResult> {
+  const sources = await resolveEditSources(nextPlan, options.sourceMediaIds)
+  const itemState = useItemsStore.getState()
+  const patches = buildEditPlanSourcePatches(
+    previousPlan,
+    nextPlan,
+    sources,
+    itemIdBySegmentId,
+    itemState.items,
+  )
+  if (patches.length === 0) {
+    return { changedItemIds: [], patches: [] }
+  }
+
+  const changedItemIds = patches.map((patch) => patch.itemId)
+  execute(
+    'UPDATE_BEATVIDEO_EDIT_SOURCES',
+    () => {
+      const store = useItemsStore.getState()
+      for (const patch of patches) {
+        store._updateItem(patch.itemId, patch.updates)
+      }
+      applyTransitionRepairs(changedItemIds)
+      useTimelineSettingsStore.getState().markDirty()
+    },
+    {
+      changedItemIds,
+      segmentIds: patches.map((patch) => patch.segmentId),
+    },
+  )
+
+  return { changedItemIds, patches }
 }
 
 export async function applyEditPlanToFreeCutTimeline(
