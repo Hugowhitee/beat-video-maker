@@ -1,7 +1,7 @@
 import { useCallback, useMemo, memo, useRef, useState, useEffect, type CSSProperties } from 'react'
 import { useTranslation } from 'react-i18next'
 import { createPortal } from 'react-dom'
-import { AudioLines, Sparkles, Plus, Eye, EyeOff, Search, X } from 'lucide-react'
+import { AudioLines, Plus, Eye, EyeOff, Search, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import type { TimelineItem } from '@/types/timeline'
 import type { ItemEffect, GpuEffect, VisualEffect } from '@/types/effects'
@@ -15,7 +15,6 @@ import {
   useSpatialEffectEditorStore,
   useThrottledFrame,
 } from '@/features/effects/deps/preview-contract'
-import { PropertySection } from '@/shared/ui/property-controls'
 import {
   GpuEffectPanel,
   GpuWheelsPanel,
@@ -980,7 +979,7 @@ export const EffectsSection = memo(function EffectsSection({
     filteredUserPresets.length > 0
 
   const addEffectControls = (
-    <div className={isDock ? 'flex min-w-0 flex-1 gap-1' : 'px-2 pb-2 flex gap-1'}>
+    <div className="flex min-w-0 flex-1 gap-1">
       <Button
         ref={triggerRef}
         variant="outline"
@@ -1462,37 +1461,31 @@ export const EffectsSection = memo(function EffectsSection({
 
   if (visualItems.length === 0) return null
 
-  if (isDock) {
-    return (
-      <section
-        className="flex h-full min-h-0 flex-col overflow-hidden"
-        data-testid="effects-section-dock"
-      >
-        <div className="flex h-8 shrink-0 items-center gap-2 border-b border-border/70 px-2">
-          <Sparkles className="h-3.5 w-3.5 shrink-0 text-muted-foreground" aria-hidden="true" />
-          <h3 className="min-w-[4rem] truncate text-[11px] font-semibold text-muted-foreground">
-            {t('effects.section.appliedTitle', { defaultValue: 'Applied effects' })}
-          </h3>
-          {addEffectControls}
-        </div>
-        <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden py-1">
-          {effectList}
-          {emptyState}
-        </div>
-      </section>
-    )
-  }
-
   return (
-    <PropertySection title={t('effects.section.appliedTitle', { defaultValue: 'Applied effects' })} icon={Sparkles} defaultOpen={true}>
-      {/* Add Effect Picker + Toggle All */}
-      {addEffectControls}
-
-      {/* Active Effects List - wrapped to prevent space-y-3 from PropertySection */}
-      {effectList}
-
-      {/* Empty state */}
-      {emptyState}
-    </PropertySection>
+    <section
+      className={isDock
+        ? 'flex h-full min-h-0 flex-col overflow-hidden'
+        : 'min-w-0 border-y border-border/70'}
+      data-testid={isDock ? 'effects-section-dock' : 'effects-section'}
+    >
+      <div className="flex min-h-9 shrink-0 items-center gap-2 border-b border-border/70 px-2">
+        <h3 className="min-w-[5.5rem] truncate text-[11px] font-medium text-foreground">
+          {t('effects.section.appliedTitle', { defaultValue: 'Applied effects' })}
+        </h3>
+        {effects.length > 0 ? (
+          <span className="font-mono text-[9px] tabular-nums text-muted-foreground">
+            {effects.length}
+          </span>
+        ) : null}
+        {addEffectControls}
+      </div>
+      <div className={isDock
+        ? 'min-h-0 flex-1 overflow-y-auto overflow-x-hidden py-1'
+        : 'min-w-0 py-1'}
+      >
+        {effectList}
+        {emptyState}
+      </div>
+    </section>
   )
 })
