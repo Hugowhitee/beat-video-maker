@@ -2,6 +2,7 @@ import type { MediaAttribution, MediaMetadata } from '@/types/storage'
 import type { TranscriptionProgressSnapshot } from '@/shared/utils/transcription-progress'
 import type { InterpolationStage } from './frame-interpolation-constants'
 import type { UpscaleStage } from './upscale-constants'
+import type { BeatvideoMusicAnalysis } from '@/types/beatvideo'
 
 export interface MediaLibraryNotification {
   type: 'info' | 'success' | 'warning' | 'error'
@@ -265,6 +266,11 @@ export interface MediaLibraryActions {
   // AI captioning
   setTaggingMedia: (mediaId: string, active: boolean) => void
   updateMediaCaptions: (mediaId: string, captions: NonNullable<MediaMetadata['aiCaptions']>) => void
+  /** Persist and mirror the file-bound Beatvideo rhythm-analysis cache. */
+  updateBeatvideoMusicAnalysis: (
+    mediaId: string,
+    analysis: BeatvideoMusicAnalysis,
+  ) => Promise<void>
 
   /** Start (or merge into) an analysis run — adds `count` to `total`. */
   beginAnalysisRun: (count: number) => void
