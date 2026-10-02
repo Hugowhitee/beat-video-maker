@@ -58,6 +58,7 @@ interface BeatvideoVisualSourcePanelProps {
 }
 
 type ArrangeMode = 'auto' | 'loop'
+type VisualStage = 'footage' | 'shots' | 'arrange' | 'sequence'
 
 function segmentDuration(segment: EditPlan['segments'][number]) {
   return segment.timelineEnd - segment.timelineStart
@@ -78,6 +79,7 @@ export function BeatvideoVisualSourcePanel({
   const [preparingFootage, setPreparingFootage] = useState(false)
   const [autoArranging, setAutoArranging] = useState(false)
   const [progressLabel, setProgressLabel] = useState<string | null>(null)
+  const [visualStage, setVisualStage] = useState<VisualStage>('footage')
 
   const [arrangeMode, setArrangeMode] = useState<ArrangeMode>('auto')
   const [arrangePace, setArrangePace] = useState<EditPace>('balanced')
@@ -253,6 +255,7 @@ export function BeatvideoVisualSourcePanel({
         onProgress: describeProgress,
       })
       setLastClipMap(clipMap)
+      setVisualStage('shots')
       toast.success(
         videos.length === 1
           ? 'Footage ready'
@@ -297,6 +300,7 @@ export function BeatvideoVisualSourcePanel({
         onProgress: describeProgress,
       })
       setLastClipMap(clipMap)
+      setVisualStage('shots')
       const validShotIds = new Set(
         clipMap.sources.flatMap((source) => source.shots.map((shot) => shot.id)),
       )
@@ -435,6 +439,7 @@ export function BeatvideoVisualSourcePanel({
       })
       const plan = offsetEditPlanTimeline(relativePlan, relative.timelineStart)
       const result = await applyArrangement(plan, clipMap)
+      setVisualStage('sequence')
 
       toast.success(
         arrangeMode === 'loop'
@@ -890,32 +895,106 @@ export function BeatvideoVisualSourcePanel({
   }
 
   return (
-    <section className="max-h-[62vh] shrink-0 space-y-3 overflow-y-auto border-b border-border px-2.5 py-2">
-      <div className="flex items-center justify-between gap-2">
-        <div className="min-w-0">
-          <div className="min-w-0">
-            <div className="text-[11px] font-medium text-foreground">Footage</div>
-            <div className="font-mono text-[9px] text-muted-foreground">
-              {videoCandidates.length === 0
-                ? 'No video added'
-                : `${videoCandidates.length} source${videoCandidates.length === 1 ? '' : 's'}`}
-            </div>
-          </div>
+    <section className="max-h-[62vh] shrink-0 space-y-4 overflow-y-auto border-b border-border px-5 py-4">
+      <div>
+        <div className="text-[9px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+          Workflow
+        </div>
+        <div className="studio-segmented mt-2 grid h-8 grid-cols-4">
+          {([
+            ['footage', 'Footage'],
+            ['shots', 'Shots'],
+            ['arrange', 'Arrange'],
+            ['sequence', 'Sequence'],
+          ] as const).map(([stage, label]) => {
+            const disabled =
+              (stage === 'shots' && videoCandidates.length === 0) ||
+              (stage === 'arrange' && (!lastClipMap || !timelineGrid)) ||
+              (stage === 'sequence' && lastAppliedItemIds.length === 0 && !loopBlocksGrouped)
+            return (
+              <button
+                key={stage}
+                type="button"
+                className="studio-segment h-7 px-1 text-[8px] font-medium disabled:cursor-not-allowed disabled:opacity-35"
+                aria-pressed={visualStage === stage}
+                disabled={disabled}
+                onClick={() => setVisualStage(stage)}
+              >
+                {label}
+              </button>
+            )
+          })}
         </div>
       </div>
 
-      <Button
-        type="button"
-        size="sm"
-        className="w-full justify-start"
-        disabled={importingFootage || preparingFootage || autoArranging}
-        onClick={() => void importFootage()}
-      >
-        {importingFootage ? 'Importing footage…' : 'Add footage'}
-      </Button>
+      {visualStage === 'footage' ? (
+        <div className="space-y-3">
+          <div className="flex items-end justify-between gap-3">
+            <div>
+              <div className="text-[11px] font-semibold text-foreground">Footage</div>
+              <div className="mt-1 font-mono text-[9px] text-muted-foreground">
+                {videoCandidates.length === 0
+                  ? 'No video added'
+                  : `${videoCandidates.length} source${videoCandidates.length === 1 ? '' : 's'}`}
+              </div>
+            </div>
+            <button
+              type="button"
+              className="studio-primary-action h-8 px-3"
+              disabled={importingFootage || preparingFootage || autoArranging}
+              onClick={() => void importFootage()}
+            >
+              {importingFootage ? 'Adding…' : '+ Add footage'}
+            </button>
+          </div>
 
-      {videoCandidates.length > 0 ? (
-        <div className="border-t border-border pt-2.5">
+          {videoCandidates.length > 0 ? (
+            <div className="space-y-1.5">
+              {videoCandidates.map((media) => {
+                const enabled = arrangeSourceIds.includes(media.id)
+                return (
+                  <div
+                    key={media.id}
+                    className="flex min-h-10 items-center gap-2 rounded-[3px] bg-[#d1d4ce] px-3"
+                  >
+                    <div className="min-w-0 flex-1">
+                      <div className="truncate text-[10px] font-semibold text-foreground">
+                        {media.fileName}
+                      </div>
+                      <div className="mt-0.5 font-mono text-[8px] text-muted-foreground">
+                        {Math.max(0, media.duration).toFixed(1)} s
+                      </div>
+                    </div>
+                    <span className="font-mono text-[8px] text-muted-foreground">
+                      {enabled ? 'ON' : 'OFF'}
+                    </span>
+                    <Switch
+                      checked={enabled}
+                      onCheckedChange={(checked) => setArrangeSourceEnabled(media.id, checked)}
+                      className="h-4 w-7 border border-border data-[state=checked]:bg-primary data-[state=unchecked]:bg-muted [&>span]:h-3 [&>span]:w-3 [&>span]:data-[state=checked]:translate-x-3"
+                      aria-label={`${enabled ? 'Exclude' : 'Include'} ${media.fileName} from build`}
+                    />
+                  </div>
+                )
+              })}
+              <button
+                type="button"
+                className="studio-primary-action mt-2 h-9 w-full"
+                onClick={() => setVisualStage('shots')}
+              >
+                Continue to Shots
+              </button>
+            </div>
+          ) : (
+            <p className="text-[10px] leading-relaxed text-muted-foreground">
+              Add the source videos you want to cut. Scene analysis stays attached to each source.
+            </p>
+          )}
+        </div>
+      ) : null}
+
+      {videoCandidates.length > 0 && visualStage === 'shots' ? (
+        <div className="space-y-3">
           <div className="mb-2 flex items-start justify-between gap-2">
             <div>
               <div className="text-[11px] font-medium text-foreground">Shots</div>
@@ -944,16 +1023,26 @@ export function BeatvideoVisualSourcePanel({
               onDragEnd={endArrangementShotDrag}
             />
           ) : (
-            <div className="text-[9px] text-muted-foreground">
+            <div className="rounded-[3px] bg-[#d9dbd6] p-3 text-[9px] text-muted-foreground">
               Detect shots to inspect the automatic split before building an edit.
             </div>
           )}
+          {lastClipMap ? (
+            <button
+              type="button"
+              className="studio-primary-action h-9 w-full"
+              disabled={!timelineGrid}
+              onClick={() => setVisualStage('arrange')}
+            >
+              {timelineGrid ? 'Continue to Arrange' : 'Analyze the beat first'}
+            </button>
+          ) : null}
         </div>
       ) : null}
 
       {videoCandidates.length > 0 ? (
         <>
-          <div className="border-t border-border pt-3">
+          <div className={visualStage === 'arrange' ? 'space-y-3' : 'hidden'}>
             <div className="mb-2 flex items-center justify-between gap-2">
               <span className="text-[11px] font-medium text-foreground">Place on beat</span>
               <span className="font-mono text-[9px] text-muted-foreground">
@@ -1176,7 +1265,7 @@ export function BeatvideoVisualSourcePanel({
             </div>
           </div>
 
-          {editableArrangementSlots.length > 0 && lastClipMap ? (
+          {visualStage === 'sequence' && editableArrangementSlots.length > 0 && lastClipMap ? (
             <div className="border-t border-border pt-2">
               <div className="mb-1.5 flex items-end justify-between gap-2">
                 <div>
@@ -1406,7 +1495,7 @@ export function BeatvideoVisualSourcePanel({
             </div>
           ) : null}
 
-          {lastPlan?.mode === 'loop' && !loopBlocksGrouped ? (
+          {visualStage === 'sequence' && lastPlan?.mode === 'loop' && !loopBlocksGrouped ? (
             <Button
               type="button"
               size="sm"
@@ -1418,7 +1507,7 @@ export function BeatvideoVisualSourcePanel({
             </Button>
           ) : null}
 
-          {loopBlocksGrouped ? (
+          {visualStage === 'sequence' && loopBlocksGrouped ? (
             <div className="border-l border-primary/50 pl-2 text-[9px] leading-relaxed text-muted-foreground">
               Every block is an instance of Loop A. Double-click any block to edit the
               underlying cuts once; all repeats update together. Undo once to return to
@@ -1426,7 +1515,7 @@ export function BeatvideoVisualSourcePanel({
             </div>
           ) : null}
 
-          <details className="border-t border-border pt-2">
+          <details className={visualStage === 'arrange' ? 'border-t border-border pt-2' : 'hidden'}>
             <summary className="cursor-pointer list-none text-[10px] font-medium text-muted-foreground marker:hidden [&::-webkit-details-marker]:hidden">
               Single-clip fill
             </summary>
@@ -1461,9 +1550,11 @@ export function BeatvideoVisualSourcePanel({
       {progressLabel ? (
         <div className="font-mono text-[9px] text-muted-foreground">{progressLabel}</div>
       ) : null}
-      <p className="text-[9px] leading-relaxed text-muted-foreground">
-        Manual placement: drag any full video from the Media library below directly onto the Media lane in the timeline.
-      </p>
+      {visualStage === 'footage' ? (
+        <p className="text-[9px] leading-relaxed text-muted-foreground">
+          Manual placement stays available: drag any source from the Media library onto the Media lane.
+        </p>
+      ) : null}
     </section>
   )
 }
