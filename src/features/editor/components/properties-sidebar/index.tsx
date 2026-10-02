@@ -24,6 +24,7 @@ import { useSelectionStore } from '@/shared/state/selection'
 import type { TimelineItem } from '@/types/timeline'
 import { CanvasPanel } from './canvas-panel'
 import { useSettingsStore } from '@/features/editor/deps/settings'
+import { useProjectStore } from '@/features/editor/deps/projects'
 import {
   EDITOR_LAYOUT_CSS_VALUES,
   clampRightEditorSidebarWidth,
@@ -144,6 +145,7 @@ export const PropertiesSidebar = memo(function PropertiesSidebar({
   const selectedItemIds = useSelectionStore((s) => s.selectedItemIds)
   const selectedMarkerId = useSelectionStore((s) => s.selectedMarkerId)
   const selectedTransitionId = useSelectionStore((s) => s.selectedTransitionId)
+  const beatMediaId = useProjectStore((s) => s.currentProject?.beatvideoMusic?.mediaId ?? null)
   const activeCompositionId = useCompositionNavigationStore((s) => s.activeCompositionId)
   const activeCompositionName = useCompositionsStore((s) =>
     activeCompositionId ? s.compositionById[activeCompositionId]?.name : undefined,
@@ -174,8 +176,24 @@ export const PropertiesSidebar = memo(function PropertiesSidebar({
     () => JSON.parse(selectedItemHeaderSignature) as HeaderItem[],
     [selectedItemHeaderSignature],
   )
+  const selectedBeatOnly = useItemsStore(
+    useCallback(
+      (state) =>
+        workspace === 'edit' &&
+        beatMediaId !== null &&
+        selectedItemIds.length > 0 &&
+        selectedItemIds.every((itemId) => {
+          const item = state.itemById[itemId]
+          return item?.type === 'audio' && item.mediaId === beatMediaId
+        }),
+      [beatMediaId, selectedItemIds, workspace],
+    ),
+  )
 
-  const hasClipSelection = selectedItemIds.length > 0
+  // The canonical beat is project source material, not a generic Visual clip.
+  // Visual therefore must not surface clip fade/volume controls just because
+  // the user clicked the beat lane; Beat and Master own those workflows.
+  const hasClipSelection = selectedItemIds.length > 0 && !selectedBeatOnly
   const clipHeader = useMemo(() => getClipHeader(selectedItems), [selectedItems])
   const activeClipHeader = !selectedTransitionId && !selectedMarkerId ? clipHeader : null
   const motionCompositionHeader =
