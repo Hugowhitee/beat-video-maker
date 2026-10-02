@@ -1,6 +1,18 @@
+# Third-party notices
+
+Beat Video Maker includes and modifies open-source software. The following
+notices are retained to satisfy the licenses of incorporated code. These notices
+describe provenance only; the current Beat Video Maker repository is the product
+and implementation source of truth.
+
+## FreeCut-derived code
+
+Portions of the editor/runtime were originally derived from the FreeCut project
+(snapshot lineage beginning from commit `4d62e8082c5eb387a96275bcbd323d28f6e41a62`).
+
 MIT License
 
-Copyright (c) 2026 Beat Video Maker contributors
+Copyright (c) 2025 FreeCut
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -17,3 +29,6 @@ IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
 FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
 AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE.
+
+Other bundled dependencies retain their own licenses and notices in their
+respective packages/files.

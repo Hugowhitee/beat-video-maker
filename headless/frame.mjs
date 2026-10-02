@@ -1,4 +1,4 @@
-// FreeCut headless single-frame grab CLI.
+// Beat Video Maker headless single-frame grab CLI.
 //
 // Renders ONE frame of a project straight to an image (default: full-res PNG)
 // by driving the real render engine inside headless Chrome. Much faster than
@@ -91,7 +91,7 @@ async function grabFrame(page, { args, workspace, mediaUrlOf, outPath, mime, fra
   const started = Date.now()
   const downloadPromise = page.waitForEvent('download', { timeout: 5 * 60_000 })
   downloadPromise.catch(() => {})
-  const summary = await page.evaluate((payload) => window.freecut.renderFrame(payload), {
+  const summary = await page.evaluate((payload) => window.beatVideoMaker.renderFrame(payload), {
     project,
     media,
     frame,

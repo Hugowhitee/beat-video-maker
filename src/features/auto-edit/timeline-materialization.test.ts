@@ -5,7 +5,7 @@ import {
   buildEditPlanSourcePatches,
   buildEditPlanTimelineDraft,
   type ResolvedEditSource,
-} from './freecutTimeline'
+} from './timeline-materialization'
 
 function makeTrack(overrides: Partial<TimelineTrack> = {}): TimelineTrack {
   return {
@@ -85,7 +85,7 @@ function makePlan(): EditPlan {
 }
 
 describe('buildEditPlanTimelineDraft', () => {
-  it('maps Beatvideo seconds onto canonical FreeCut timeline/source frames', () => {
+  it('maps Beatvideo seconds onto canonical editor timeline/source frames', () => {
     const draft = buildEditPlanTimelineDraft(makePlan(), [makeSource()], {
       projectFps: 30,
       canvasWidth: 1920,

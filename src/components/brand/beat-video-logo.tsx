@@ -1,6 +1,6 @@
 import { cn } from '@/shared/ui/cn'
 
-interface FreeCutLogoProps {
+interface BeatVideoLogoProps {
   variant?: 'full' | 'icon'
   size?: 'sm' | 'md' | 'lg'
   className?: string
@@ -26,11 +26,7 @@ function BeatvideoMark({ className }: { className?: string }) {
   )
 }
 
-/**
- * Kept under the donor export name while the migration is isolated so upstream
- * call sites stay small. The visible product identity is Beatvideo Maker.
- */
-export function FreeCutLogo({ variant = 'full', size = 'md', className }: FreeCutLogoProps) {
+export function BeatVideoLogo({ variant = 'full', size = 'md', className }: BeatVideoLogoProps) {
   const config = sizeConfig[size]
 
   if (variant === 'icon') {

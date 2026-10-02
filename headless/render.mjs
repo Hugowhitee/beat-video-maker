@@ -1,7 +1,7 @@
-// FreeCut headless render CLI.
+// Beat Video Maker headless render CLI.
 //
 // Renders a project from a workspace folder to a video file, driving the real
-// render engine inside headless Chrome via the window.freecut harness.
+// render engine inside headless Chrome via the window.beatVideoMaker harness.
 //
 // Usage:
 //   node headless/render.mjs --workspace <dir> --project <id|project.json> [options]
@@ -147,7 +147,7 @@ async function main() {
       progressLabel = label
       lastPct = -1
     }
-    await page.exposeBinding('__freecutProgress', (_src, progress) => {
+    await page.exposeBinding('__beatVideoMakerProgress', (_src, progress) => {
       if (args.json) return
       const pct = Math.floor(progress?.progress ?? 0)
       if (pct !== lastPct) {
@@ -159,7 +159,7 @@ async function main() {
     })
 
     await page.goto(harnessUrl, { waitUntil: 'load', timeout: 60_000 })
-    await page.waitForFunction(() => Boolean(window.freecut?.ready), { timeout: 30_000 })
+    await page.waitForFunction(() => Boolean(window.beatVideoMaker?.ready), { timeout: 30_000 })
 
     const jsonResults = []
     for (let i = 0; i < jobArgsList.length; i++) {

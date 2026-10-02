@@ -28,7 +28,7 @@ export async function withHarnessPage(options, operation) {
       }
     })
     await page.goto(harnessUrl, { waitUntil: 'load', timeout: 60_000 })
-    await page.waitForFunction(() => Boolean(window.freecut?.ready), { timeout: 30_000 })
+    await page.waitForFunction(() => Boolean(window.beatVideoMaker?.ready), { timeout: 30_000 })
     return await operation(page)
   } finally {
     await browser.close().catch(() => {})
@@ -73,9 +73,9 @@ export class PageSession {
     try {
       const page = await context.newPage()
       page.on('pageerror', this.onPageError)
-      await page.exposeBinding('__freecutProgress', () => {})
+      await page.exposeBinding('__beatVideoMakerProgress', () => {})
       await page.goto(this.harnessUrl, { waitUntil: 'load', timeout: 60_000 })
-      await page.waitForFunction(() => Boolean(window.freecut?.ready), { timeout: 30_000 })
+      await page.waitForFunction(() => Boolean(window.beatVideoMaker?.ready), { timeout: 30_000 })
       this.#context = context
       this.#page = page
       return page

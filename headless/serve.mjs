@@ -1,4 +1,4 @@
-// FreeCut headless render service.
+// Beat Video Maker headless render service.
 //
 // Launches one warm headless Chrome + harness over a workspace and exposes a
 // small HTTP API, so renders/edits avoid the per-call browser cold start.
@@ -105,12 +105,12 @@ const SERVE_OPTIONS = new Set([
 export function resolveHost(args = {}, env = process.env) {
   const host = Object.prototype.hasOwnProperty.call(args, 'host')
     ? args.host
-    : Object.prototype.hasOwnProperty.call(env, 'FREECUT_HOST')
-      ? env.FREECUT_HOST
+    : Object.prototype.hasOwnProperty.call(env, 'BEAT_VIDEO_MAKER_HOST')
+      ? env.BEAT_VIDEO_MAKER_HOST
       : '127.0.0.1'
 
   if (typeof host !== 'string' || host.trim() === '') {
-    throw new Error('Host must be a non-empty string (--host or FREECUT_HOST)')
+    throw new Error('Host must be a non-empty string (--host or BEAT_VIDEO_MAKER_HOST)')
   }
   return host.trim()
 }
@@ -220,7 +220,7 @@ async function main() {
     },
   })
 
-  const tmpDir = path.join(os.tmpdir(), 'freecut-serve')
+  const tmpDir = path.join(os.tmpdir(), 'beat-video-maker-serve')
   fs.mkdirSync(tmpDir, { recursive: true })
   let counter = 0
 
@@ -251,7 +251,7 @@ async function main() {
       // Header values must be ASCII; sanitize defensively so a warning never
       // turns a successful render into a 500.
       ...(summary.warnings?.length
-        ? { 'X-Freecut-Warnings': warningsHeaderValue(summary.warnings) }
+        ? { 'X-Beatvideo-Warnings': warningsHeaderValue(summary.warnings) }
         : {}),
     })
     const stream = fs.createReadStream(summary.outputPath)
@@ -267,7 +267,7 @@ async function main() {
     const media = collectAddClipMedia(workspace, ops)
     const result = await queue.enqueue(
       () =>
-        session.page.evaluate((payload) => window.freecut.editProject(payload), {
+        session.page.evaluate((payload) => window.beatVideoMaker.editProject(payload), {
           project,
           ops,
           media,
@@ -279,7 +279,7 @@ async function main() {
 
   const browserNormalize = (project) =>
     queue.enqueue(
-      () => session.page.evaluate((value) => window.freecut.normalizeProject(value), project),
+      () => session.page.evaluate((value) => window.beatVideoMaker.normalizeProject(value), project),
       { timeoutMs: editTimeoutMs, kind: 'project-normalize' },
     )
 
@@ -334,7 +334,7 @@ async function main() {
       },
       async () => {
         const project = await queue.enqueue(
-          () => session.page.evaluate((value) => window.freecut.createProject(value), body),
+          () => session.page.evaluate((value) => window.beatVideoMaker.createProject(value), body),
           { timeoutMs: editTimeoutMs, kind: 'project-create' },
         )
         const resource = await createProjectResource(workspace, project)
@@ -391,7 +391,7 @@ async function main() {
       const media = collectAddClipMedia(workspace, body.ops)
       const result = await queue.enqueue(
         () =>
-          session.page.evaluate((payload) => window.freecut.editProject(payload), {
+          session.page.evaluate((payload) => window.beatVideoMaker.editProject(payload), {
             project: current.project,
             ops: body.ops,
             media,
@@ -451,7 +451,7 @@ async function main() {
     if (!source) throw new HttpError(422, 'MISSING_MEDIA', 'Media source file is missing')
     const probe = await queue.enqueue(
       () =>
-        session.page.evaluate((payload) => window.freecut.probeMedia(payload), {
+        session.page.evaluate((payload) => window.beatVideoMaker.probeMedia(payload), {
           url: mediaUrlOf(id),
           fileName: path.basename(source),
           mimeType: current.metadata.mimeType,
@@ -501,7 +501,7 @@ async function main() {
       async () => {
         const downloadPromise = session.page.waitForEvent('download', { timeout: 5 * 60_000 })
         downloadPromise.catch(() => {})
-        const s = await session.page.evaluate((payload) => window.freecut.renderFrame(payload), {
+        const s = await session.page.evaluate((payload) => window.beatVideoMaker.renderFrame(payload), {
           project,
           media,
           frame: body.frame,
@@ -527,8 +527,8 @@ async function main() {
       'Content-Type': mime,
       'Content-Length': fs.statSync(outPath).size,
       'Content-Disposition': `attachment; filename="${path.basename(outPath)}"`,
-      'X-Freecut-Frame': String(summary.frame),
-      ...(missing.length ? { 'X-Freecut-Missing-Media': asciiHeader(missing) } : {}),
+      'X-Beatvideo-Frame': String(summary.frame),
+      ...(missing.length ? { 'X-Beatvideo-Missing-Media': asciiHeader(missing) } : {}),
     })
     const stream = fs.createReadStream(outPath)
     stream.pipe(res)
@@ -546,7 +546,7 @@ async function main() {
     const { media } = resolveProjectMedia(workspace, project, mediaUrlOf, null)
     const layout = await queue.enqueue(
       () =>
-        session.page.evaluate((payload) => window.freecut.dumpLayout(payload), {
+        session.page.evaluate((payload) => window.beatVideoMaker.dumpLayout(payload), {
           project,
           media,
           frame: body.frame,
@@ -704,7 +704,7 @@ async function main() {
   // The default remains loopback-only because the render service has no auth.
   // Network exposure must be an explicit CLI/environment configuration choice.
   await new Promise((resolve) => server.listen(port, host, resolve))
-  console.log(`FreeCut render service on http://${host}:${port}  (workspace: ${workspace})`)
+  console.log(`Beat Video Maker render service on http://${host}:${port}  (workspace: ${workspace})`)
   console.log(
     `  GET /health  GET /capabilities  GET /projects  POST /render  POST /edit  POST /frame  POST /layout`,
   )

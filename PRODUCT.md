@@ -4,7 +4,7 @@
 
 Beatvideo Maker is a focused local-first editor for beat-driven photo and music-video visuals. It combines a fast music-production workflow with the interaction quality of a mature desktop video editor.
 
-The product is downstream of FreeCut. FreeCut owns the general editing engine; Beatvideo owns the narrower workflow, music intelligence and product hierarchy.
+Beat Video Maker owns both the general editing runtime and the narrower producer workflow, music intelligence and product hierarchy in this repository.
 
 ## Primary users
 
@@ -33,12 +33,12 @@ Photo mode is the fastest path for a beat visual:
 - Beat, Visual, Color and Master are the primary workflow pages;
 - Visual begins with an explicit **Visual source** action: add/replace the hero still in Photo, or add footage in Video; imported footage may be prepared for scene-aware Auto Arrange immediately;
 - Visual uses visible labeled creation tools such as Media, Text and Graphics rather than a collapsed icon rail; effect browsing, applied effects, transform motion, camera shake and audio-reactive controls live together in the visible Inspector on the right;
-- Color remains a focused grading workspace; motion/composition internals remain available through FreeCut when needed but are not a normal top-level Beatvideo navigation step;
+- Color remains a focused grading workspace; motion/composition internals remain available through Advanced editing when needed but are not a normal top-level Beatvideo navigation step;
 - generic video-only controls stay out of the normal path.
 
-Overlay means real timeline/compositor layers built from FreeCut primitives: text, imported logo/image and simple shapes. It is not a renamed preset/look menu.
+Overlay means real timeline/compositor layers built from canonical editor primitives: text, imported logo/image and simple shapes. It is not a renamed preset/look menu.
 
-Audio reactivity is a capability of effect parameters, not a small preset category. Quick reactive looks are shortcuts only and belong in the same Inspector as applied effects. The Inspector should put a small producer-focused quick-effects set first while keeping the complete FreeCut effect catalog searchable in the same picker. Any GPU-effect numeric parameter marked safe/animatable by the effect definition should expose a compact Reactive control next to the real parameter; advanced driver/timing controls stay progressively disclosed. Audio-hit/low/mid/high drivers use analyzed transient evidence, while Beat/Downbeat drivers use the corrected musical grid. Every reactive envelope peaks on the mapped hit; optional lead-in anticipates it rather than delaying the picture after the audio. Non-numeric choices, quality-only controls and parameters that cannot be modulated deterministically do not expose React. Do not duplicate a second generic “Audio Reactive” panel underneath specialized effect editors.
+Audio reactivity is a capability of effect parameters, not a small preset category. Quick reactive looks are shortcuts only and belong in the same Inspector as applied effects. The Inspector should put a small producer-focused quick-effects set first while keeping the complete effect catalog searchable in the same picker. Any GPU-effect numeric parameter marked safe/animatable by the effect definition should expose a compact Reactive control next to the real parameter; advanced driver/timing controls stay progressively disclosed. Audio-hit/low/mid/high drivers use analyzed transient evidence, while Beat/Downbeat drivers use the corrected musical grid. Every reactive envelope peaks on the mapped hit; optional lead-in anticipates it rather than delaying the picture after the audio. Non-numeric choices, quality-only controls and parameters that cannot be modulated deterministically do not expose React. Do not duplicate a second generic “Audio Reactive” panel underneath specialized effect editors.
 
 Reactive graphics follow the same rule: they are normal editable timeline/compositor layers with canonical `audioReactive` bindings, not a parallel visualizer engine. Visual → Graphics may offer compact quick starts such as **Beat flash**, **Pulse frame** and **3-band bars**. The 3-band bars are transient-driven low/mid/high pulse graphics; they are intentionally not presented as a continuous FFT spectrum. Future continuous waveform/spectrum/circular renderers must reuse the same project timing/audio evidence and remain ordinary editable visual layers.
 
@@ -46,18 +46,18 @@ Reactive graphics follow the same rule: they are normal editable timeline/compos
 
 Video mode exposes footage editing without changing engines:
 
-- normal FreeCut timeline, waveform, playhead and seeking;
+- canonical timeline, waveform, playhead and seeking;
 - cuts, slip/slide and transitions;
 - text/shapes/effects;
 - motion/keyframes and color;
-- **Auto Arrange footage** for multi-source music-video editing: existing FreeCut scene detection supplies shot boundaries, while the verified corrected beat grid determines every generated internal cut position;
-- Auto Arrange exposes meaningful producer controls—pace, **Cuts only / Accent transitions** and an optional repeating bar motif—without exposing planner internals. Accent transitions are sparse real FreeCut transition objects at strong musical section changes, currently alternating Light Leak Burn and Film Gate Slip when source handles permit them. They are not a genre-specific mode; the same transition library remains manually usable at any valid cut;
+- **Auto Arrange footage** for multi-source music-video editing: existing scene detection supplies shot boundaries, while the verified corrected beat grid determines every generated internal cut position;
+- Auto Arrange exposes meaningful producer controls—pace, **Cuts only / Accent transitions** and an optional repeating bar motif—without exposing planner internals. Accent transitions are sparse real transition objects at strong musical section changes, currently alternating Light Leak Burn and Film Gate Slip when source handles permit them. They are not a genre-specific mode; the same transition library remains manually usable at any valid cut;
 - section/energy analysis may change cadence and source choice, but a raw section timestamp must never pull a generated cut away from the corrected musical grid. In Loop mode, a high-confidence intro touching the song start and/or high-confidence outro touching the song end stays outside Loop A at beat-locked boundaries; low-confidence labels never invent structure;
 - generated shots remain editable through one compact **Arrangement grid** in Visual: each cell represents an existing beat-locked generated slot; a detected shot from the collapsible Shot tray can be dragged onto a cell, while the per-slot selector remains the keyboard/fallback route. Replacing a slot changes source media only—its timeline boundaries stay on the corrected musical grid. A shot can still be marked to avoid on the next rebuild; repeated motif slots propagate source replacement across their linked repeats;
-- repeating motifs use one reusable FreeCut **Loop A** sequence with multiple timeline instances. Double-clicking any Loop A instance opens the shared internal cuts; editing that sequence once updates every linked repeat. **Make Unique** in the existing clip context menu forks one chosen instance into an independent sequence (for example Loop B) for deliberate variation; repeats never silently diverge;
+- repeating motifs use one reusable **Loop A** sequence with multiple timeline instances. Double-clicking any Loop A instance opens the shared internal cuts; editing that sequence once updates every linked repeat. **Make Unique** in the existing clip context menu forks one chosen instance into an independent sequence (for example Loop B) for deliberate variation; repeats never silently diverge;
 - **Fill with one clip** remains a simpler fallback for one repeated source;
 - rebuilding a generated arrangement replaces the previous generated clips atomically instead of stacking another edit on top;
-- all generated routes materialize normal editable FreeCut timeline clips with source trims and muted footage audio.
+- all generated routes materialize normal editable timeline clips with source trims and muted footage audio.
 
 Auto Arrange does **not** cut on every beat. Beats/downbeats are timing anchors; pace, music-section energy, available shot duration and reuse policy determine whether a segment lasts 1, 2, 4, 8, 16 or another musically sensible beat span. Internal boundaries still land on the corrected mapped beat grid. Manual edits remain authoritative after generation.
 
@@ -67,8 +67,8 @@ The old standalone Beatvideo waveform/grid is not part of the product direction.
 
 The canonical rule is:
 
-- FreeCut owns the time axis, playhead, waveform and click/scrub behavior;
-- Beatvideo analysis is stored in **source-media time** and is mapped through the actual FreeCut timeline clip, including move, trim, speed and reverse;
+- The canonical timeline owns the time axis, playhead, waveform and click/scrub behavior;
+- Beatvideo analysis is stored in **source-media time** and is mapped through the actual timeline clip, including move, trim, speed and reverse;
 - never draw raw analysis seconds as absolute timeline seconds;
 - Beat This beat/downbeat positions are timing **evidence**, not automatically the final grid. For stable programmed music, fit one global tempo + phase/anchor across the track and accept it only when residual error and local tempo drift stay within confidence bounds;
 - coherent source-audio onset evidence may refine the fitted phase so a detector that consistently fires slightly after a kick/transient does not leave the visible grid late. In stable programmed music, coherent low-end/kick evidence may also repair a half-beat phase error when it clearly out-scores the detector baseline. If phase is correct near the start but the grid drifts over time, recurring low-end onsets are a second tempo measurement: robustly fit their slope across multiple song regions and only refine the global BPM when those regions agree. Sparse bass fills, isolated 808 attacks or one local phrase must never retune the whole song;
@@ -99,7 +99,7 @@ Producer tags are a musical-timeline workflow, not generic overlay audio and not
 - pattern placement exposes a clear first bar plus repeat interval such as 8, 16, 32 or 64 bars;
 - **Producer tag** and **Watermark** are separate sources and separate tracks: Producer tags are intentional one-shots placed at the playhead; Watermarks are repeated protection tags aligned to musical bars on a dedicated Watermarks track;
 - a watermark pattern exposes first bar plus repeat interval such as 8, 16, 32 or 64 bars and reapplying the pattern replaces only the Watermarks track, never the producer-tag source or track;
-- generated tag/watermark clips materialize as normal FreeCut audio clips;
+- generated tag/watermark clips materialize as normal timeline audio clips;
 - after generation, any clip can be moved, trimmed, faded, turned down or deleted without breaking unrelated tag/watermark content;
 - optional automatic ducking belongs to the tag clip and targets the beat/music track, so the music moves behind the spoken tag without requiring the user to build a manual sidechain graph;
 - the compact first implementation may use numeric trim/anchor fields, but the intended direct-manipulation UI is a small tag waveform with start/end handles and one draggable anchor marker; do not grow a second waveform/timeline system around it;
@@ -162,14 +162,14 @@ Beatvideo's music intelligence owns:
 
 - Beat This beat/downbeat analysis;
 - MusicMap and musical sections;
-- FreeCut's existing fast histogram or adaptive scene detection as source-native shot-boundary evidence;
+- The existing fast histogram or adaptive scene detection as source-native shot-boundary evidence;
 - a ClipMap adapter that converts persisted scene cuts into footage shots without modifying the user's timeline just to analyze media;
 - deterministic, section-aware edit-plan infrastructure for multi-clip Auto Arrange;
 - beat/amplitude/phrase reactive modulation.
 
 When motion or quality evidence is unavailable, use neutral planner inputs and mark the evidence unavailable; never fabricate a measured score. Scene detection and musical planning are separate concerns: scene cuts define *what source ranges are valid shots*, while the music grid defines *where timeline edits may land*.
 
-Automation must remain inspectable and correctable. It produces normal FreeCut project/timeline data.
+Automation must remain inspectable and correctable. It produces normal project/timeline data.
 
 ## Design
 
@@ -185,7 +185,7 @@ Photo and Video are two workflows over the same studio shell, not two separate e
 - **Program monitor:** fullscreen enlarges only the real Program surface. Speaker mute is a one-click temporary monitor mute; monitor volume never changes project/export gain.
 - **Mixer:** Master exposes the existing project mixer as a floating/resizable utility window, closer to a DAW mixer than a permanent side strip. The Mixer is the single owner of the project output/master-bus fader; Master may show its dB value but does not expose a duplicate volume slider. Desktop Master defaults to a narrow real master meter beside an audio-focused canonical timeline; the full mixer opens only when track balance/EQ is needed. Beat / Producer tags / Watermarks remain the same timeline state. Legacy projects without dedicated audio lanes fall back to the full timeline rather than showing an empty Master workspace.
 - **Timeline:** the timeline is the shared direct-manipulation surface for Photo layers and Video edits. The normal Beat/Visual/Master producer path uses one vertically scrolling FL-style stack rather than independent video/audio scroll panes: Media first, Beat directly below, then only real optional lanes behind a compact Extras disclosure. Empty A/V defaults are not product UI. On phone, Preview keeps the Program monitor plus a compact view of that same canonical timeline underneath it so playback and timing context stay together; the dedicated Timeline surface is the larger precision view. The mobile shell uses dynamic viewport height so its transport/surface dock cannot sit below browser chrome. Video adds scene-aware arrangement, Loop A and transitions; Photo leans on layers/text/graphics and the Inspector. Advanced/Motion may retain richer split-pane track plumbing when it serves specialist editing.
-- **Transitions:** generated and manual transitions remain normal selectable FreeCut transition bridges between clips and show their real treatment name when space permits.
+- **Transitions:** generated and manual transitions remain normal selectable transition bridges between clips and show their real treatment name when space permits.
 - **Pattern editing:** Loop A is a reusable sequence, not a rendered block. Opening it reveals ordinary clips that may be dragged, replaced, trimmed or lengthened with normal timeline tools.
 - **Shell hierarchy:** use flat text tabs, separators, aligned controls and contextual utility windows before creating rounded cards. Studio Steel is shell state only; creative colors inside media are independent.
 
@@ -197,7 +197,7 @@ Avoid:
 - inert placeholder features;
 - duplicate controls that do nearly the same thing;
 - explanatory copy in place of a working interaction;
-- separate custom editor systems where FreeCut already has a mature implementation.
+- separate duplicate editor systems where the canonical runtime already has a mature implementation.
 
 Prefer direct manipulation, conventional editor behavior, consistent spacing and progressive disclosure.
 
@@ -207,7 +207,7 @@ Prefer direct manipulation, conventional editor behavior, consistent spacing and
 - effect state has one atomic lifecycle: **add → edit → remove → undo/redo**. Removing an effect also removes its effect-keyframes and audio-reactive bindings in the same history transaction; Undo restores all of them and Redo removes all of them again;
 - removing one mapped effect from a multi-selection is one undoable edit, never one hidden history entry per selected clip;
 - live slider previews must be cleared before effect removal so preview-only state can never survive a deleted effect;
-- the default Beat/Visual/Color/Master path is text-first and progressively disclosed. Do not leave rows of permanent utility icons visible just because FreeCut supports the commands;
+- the default Beat/Visual/Color/Master path is text-first and progressively disclosed. Do not leave rows of permanent utility icons visible just because the runtime supports the commands;
 - advanced track controls such as disable/solo/lock/sync-lock/close-gaps remain available through contextual menus in the simplified Beatvideo timeline; richer permanent controls may remain in Advanced editor workspaces where they are expected;
 - Settings, shortcuts, render queue and project-bundle export belong under a compact utility menu; the primary toolbar should emphasize project identity, Beat/Visual/Color/Master, Inspector when relevant, Project settings near Save, Save and Export.
 
@@ -215,6 +215,8 @@ Prefer direct manipulation, conventional editor behavior, consistent spacing and
 
 Projects and media stay local. The browser may ask the user to choose a workspace folder before project creation so the editor has a durable local source of truth. Core editing does not require accounts, cloud uploads or a rendering backend.
 
-## Upstream rule
+## Runtime ownership rule
 
-FreeCut remains a maintained dependency/foundation, not a one-time code dump. Keep Beatvideo-specific changes localized and preserve upstream lineage and MIT provenance in `UPSTREAM_FREECUT.md`.
+The current repository is the product authority. Preserve mature in-repo timeline, preview, effects, motion, color, storage and export systems when they already solve the job well, but evolve them directly when Beat Video Maker requires a different workflow.
+
+Third-party license obligations live in `THIRD_PARTY_NOTICES.md`.

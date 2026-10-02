@@ -1,6 +1,6 @@
-# FreeCut i18n Checklist
+# Beat Video Maker i18n Checklist
 
-Use this reference when working in the FreeCut repo.
+Use this reference when working in the Beat Video Maker repo.
 
 ## Files
 
@@ -18,7 +18,7 @@ Use this reference when working in the FreeCut repo.
 ## Commands
 
 ```bash
-node C:/Users/walter/.codex/skills/translate-app-locales/scripts/check-locale-coverage.mjs --locales src/i18n/locales --partials src/i18n/locales/partials --source en --target tr
+node <skill>/scripts/check-locale-coverage.mjs --locales src/i18n/locales --partials src/i18n/locales/partials --source en --target tr
 bun run build
 ```
 

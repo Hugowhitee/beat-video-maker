@@ -1,11 +1,9 @@
-name: Downstream CI
+name: Beat Video Maker CI
 
 on:
   pull_request:
   push:
     branches:
-      - migration/freecut-upstream
-      - feat/freecut-photo-video-mode
       - main
 
 permissions:

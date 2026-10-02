@@ -13,7 +13,7 @@ import './index.css'
 
 const log = createLogger('App')
 const UPDATE_CHECK_INTERVAL_MS = 5 * 60 * 1000
-const ACCEPTED_APP_UPDATE_SIGNATURE_KEY = 'freecut-accepted-app-update-signature'
+const ACCEPTED_APP_UPDATE_SIGNATURE_KEY = 'beat-video-maker-accepted-app-update-signature'
 const APP_BASE_URL = import.meta.env.BASE_URL
 
 let updateToastVisible = false
@@ -51,7 +51,7 @@ async function saveCurrentProjectBeforeReload(): Promise<boolean> {
 }
 
 async function showSaveBeforeReloadFailedToast() {
-  window.dispatchEvent(new Event('freecut:ensure-toaster'))
+  window.dispatchEvent(new Event('beat-video-maker:ensure-toaster'))
   try {
     const { toast } = await import('sonner')
     toast.error(i18n.t('editor.editor.projectSaveFailed'))
@@ -79,7 +79,7 @@ async function showUpdateAvailableToast(
   }
 
   updateToastVisible = true
-  window.dispatchEvent(new Event('freecut:ensure-toaster'))
+  window.dispatchEvent(new Event('beat-video-maker:ensure-toaster'))
   let toast: typeof import('sonner').toast
   try {
     ;({ toast } = await import('sonner'))
@@ -153,7 +153,7 @@ async function checkForAppShellUpdate() {
   }
   appShellUpdateCheckInFlight = true
   try {
-    const response = await fetch(`${APP_BASE_URL}?__freecut_update_check=${Date.now()}`, {
+    const response = await fetch(`${APP_BASE_URL}?__beat_video_update_check=${Date.now()}`, {
       cache: 'no-store',
       headers: {
         'Cache-Control': 'no-cache',

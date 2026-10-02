@@ -18,7 +18,7 @@ import {
   useProjectStore,
   useTimelineSettingsStore,
   useTransitionsStore,
-} from './deps/freecut-contract'
+} from './deps/editor-runtime-contract'
 
 const FALLBACK_SOURCE_FPS = 30
 
@@ -432,7 +432,7 @@ async function resolveEditSources(
   )
 }
 
-export async function applyEditPlanSourceChangesToFreeCutTimeline(
+export async function applyEditPlanSourceChangesToTimeline(
   previousPlan: EditPlan,
   nextPlan: EditPlan,
   itemIdBySegmentId: Record<string, string>,
@@ -471,7 +471,7 @@ export async function applyEditPlanSourceChangesToFreeCutTimeline(
   return { changedItemIds, patches }
 }
 
-export async function applyEditPlanToFreeCutTimeline(
+export async function applyEditPlanToTimeline(
   plan: EditPlan,
   options: ApplyEditPlanOptions = {},
 ): Promise<ApplyEditPlanResult> {

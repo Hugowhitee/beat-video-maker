@@ -1,4 +1,4 @@
-// FreeCut headless layout-dump CLI.
+// Beat Video Maker headless layout-dump CLI.
 //
 // Prints the COMPUTED on-canvas bounding box of every visible item at a given
 // frame, as JSON — WITHOUT rendering. It reuses the exact transform resolver
@@ -75,7 +75,7 @@ async function dumpLayoutToOutput(page, { args, workspace, mediaUrlOf, frame, at
     )
   }
 
-  const layout = await page.evaluate((payload) => window.freecut.dumpLayout(payload), {
+  const layout = await page.evaluate((payload) => window.beatVideoMaker.dumpLayout(payload), {
     project,
     media,
     frame,

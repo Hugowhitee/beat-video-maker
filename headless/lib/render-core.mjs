@@ -197,7 +197,7 @@ export function prepareJob(workspace, jobArgs, mediaUrlOf) {
     range,
   )
 
-  const outName = `${(project.name ?? 'freecut-export').replace(/[^\w.-]+/g, '_')}.${settings.container}`
+  const outName = `${(project.name ?? 'beat-video-maker-export').replace(/[^\w.-]+/g, '_')}.${settings.container}`
   const outPath = path.resolve(jobArgs.out ?? path.join('headless', 'output', outName))
 
   return {
@@ -315,7 +315,7 @@ export async function renderJob(
   setProgressLabel?.(path.basename(job.outPath))
   const downloadPromise = page.waitForEvent('download', { timeout: downloadTimeoutMs })
   downloadPromise.catch(() => {})
-  const summary = await page.evaluate((payload) => window.freecut.renderProject(payload), {
+  const summary = await page.evaluate((payload) => window.beatVideoMaker.renderProject(payload), {
     project: job.project,
     settings: job.settings,
     media: job.media,

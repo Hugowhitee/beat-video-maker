@@ -13,7 +13,7 @@ import {
   getOrDecodeAudio,
   resolveMediaUrl,
   useMediaLibraryStore,
-} from './deps/freecut-contract'
+} from './deps/editor-runtime-contract'
 
 export type MusicAnalysisPhase =
   | 'decode'

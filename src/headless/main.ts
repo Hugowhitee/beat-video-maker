@@ -2,7 +2,7 @@
  * Headless render harness.
  *
  * This is a dedicated Vite entry (loaded by `headless.html`) that exposes a
- * small `window.freecut` API so a Node/Playwright driver can render projects to
+ * small `window.beatVideoMaker` API so a Node/Playwright driver can render projects to
  * video inside a real (headless) Chrome — reusing the exact same render engine
  * the editor uses, with no React UI, router, or workspace gate mounted.
  *
@@ -423,7 +423,7 @@ function reportValidationWarnings(
 type ProgressSink = (progress: RenderProgress) => void
 
 function reportProgress(progress: RenderProgress): void {
-  const sink = (globalThis as unknown as { __freecutProgress?: ProgressSink }).__freecutProgress
+  const sink = (globalThis as unknown as { __beatVideoMakerProgress?: ProgressSink }).__beatVideoMakerProgress
   if (!sink) return
   try {
     sink(progress)
@@ -459,7 +459,7 @@ function triggerDownload(blob: Blob, fileName: string): void {
 }
 
 function defaultFileName(settings: ClientExportSettings): string {
-  return `freecut-export.${settings.container}`
+  return `beat-video-maker-export.${settings.container}`
 }
 
 function effectiveFileName(requested: string | undefined, settings: ClientExportSettings): string {
@@ -547,9 +547,9 @@ async function adaptVideoSettings(
   if (settings.mode === 'audio') return { settings, warnings: [] }
   const testOverride = (
     globalThis as unknown as {
-      __freecutSupportedCodecsOverride?: Awaited<ReturnType<typeof getSupportedCodecs>>
+      __beatVideoMakerSupportedCodecsOverride?: Awaited<ReturnType<typeof getSupportedCodecs>>
     }
-  ).__freecutSupportedCodecsOverride
+  ).__beatVideoMakerSupportedCodecsOverride
   const supported =
     testOverride ??
     (await getSupportedCodecs({
@@ -967,7 +967,7 @@ async function renderFrame(input: HeadlessFrameInput): Promise<HeadlessFrameSumm
     quality: input.quality ?? 1,
   })
   const ext = format === 'image/jpeg' ? 'jpg' : format === 'image/webp' ? 'webp' : 'png'
-  const fileName = input.outputFileName ?? `freecut-frame-${frame}.${ext}`
+  const fileName = input.outputFileName ?? `beat-video-maker-frame-${frame}.${ext}`
   triggerDownload(blob, fileName)
 
   log.info('Headless frame grab complete', {
@@ -1190,7 +1190,7 @@ async function dumpLayout(input: HeadlessLayoutInput): Promise<HeadlessLayoutRes
   }
 }
 
-interface FreecutHeadlessApi {
+interface BeatVideoMakerHeadlessApi {
   ready: true
   renderTimeline: typeof renderTimeline
   renderProject: typeof renderProject
@@ -1253,7 +1253,7 @@ async function probeMedia(input: { url: string; fileName: string; mimeType?: str
   }
   const root = await navigator.storage.getDirectory()
   const safeName = input.fileName.replace(/[^A-Za-z0-9._-]/g, '_').slice(-160) || 'source.bin'
-  const tempName = `.freecut-probe-${crypto.randomUUID()}-${safeName}`
+  const tempName = `.beat-video-maker-probe-${crypto.randomUUID()}-${safeName}`
   try {
     const handle = await root.getFileHandle(tempName, { create: true })
     const writable = await handle.createWritable()
@@ -1274,11 +1274,11 @@ async function probeMedia(input: { url: string; fileName: string; mimeType?: str
 
 declare global {
   interface Window {
-    freecut: FreecutHeadlessApi
+    beatVideoMaker: BeatVideoMakerHeadlessApi
   }
 }
 
-window.freecut = {
+window.beatVideoMaker = {
   ready: true,
   renderTimeline,
   renderProject,
