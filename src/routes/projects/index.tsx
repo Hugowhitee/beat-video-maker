@@ -8,7 +8,7 @@ const logger = createLogger('ProjectsIndex')
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
 import { Plus, Upload, FolderOpen, File } from 'lucide-react'
-import { FreeCutLogo } from '@/components/brand/freecut-logo'
+import { BeatVideoLogo } from '@/components/brand/beat-video-logo'
 import { ProjectList } from '@/features/projects/components/project-list'
 import { EditProjectForm } from '@/features/projects/components/project-form'
 import {
@@ -264,7 +264,7 @@ function ProjectsIndex() {
           <div className="mx-auto flex max-w-[1920px] flex-col gap-3 px-3 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-6 sm:py-5">
             <div className="flex min-w-0 items-center justify-between gap-3">
               <Link to="/" className="min-w-0">
-                <FreeCutLogo
+                <BeatVideoLogo
                   variant="full"
                   size="md"
                   className="hover:opacity-80 transition-opacity"
