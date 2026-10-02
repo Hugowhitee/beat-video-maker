@@ -8,6 +8,8 @@ import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from '@/componen
 import { ErrorBoundary } from '@/app/error-boundary'
 import { Toolbar } from './toolbar'
 import { MediaSidebar } from './media-sidebar'
+import { BeatvideoMasterPanel } from './beatvideo-master-panel'
+import { StudioProjectRail } from './studio-project-rail'
 import { PropertiesSidebar } from './properties-sidebar'
 import { PreviewArea } from './preview-area'
 import { MotionPreviewArea, MotionTimelineDock } from './compose-workspace/compose-layout'
@@ -759,6 +761,7 @@ export const LoadedEditor = memo(function LoadedEditor({
 
   const timelineDuration = 30
   const isColorWorkspace = workspace === 'color'
+  const isMasterWorkspace = workspace === 'master'
   const isMotionWorkspace = workspace === 'motion'
   // Color replaces the default editor shell. Motion deliberately keeps it and
   // swaps the preview/timeline surfaces while retaining the shared sidebars.
@@ -907,7 +910,9 @@ export const LoadedEditor = memo(function LoadedEditor({
       {/* Main Layout: Full-height sidebar + vertical split */}
       <div className="flex-1 flex overflow-hidden">
         {/* Left Sidebar - Media Library (full column mode) */}
-        {mediaFullColumn && !hidesDefaultSidebars && (
+        {isMasterWorkspace ? <StudioProjectRail /> : null}
+
+        {mediaFullColumn && !hidesDefaultSidebars && !isMasterWorkspace && (
           <InteractionLockRegion locked={isMaskEditingActive}>
             <ErrorBoundary level="feature">
               <MediaSidebar beatvideoMode={beatvideoMode} />
@@ -951,7 +956,7 @@ export const LoadedEditor = memo(function LoadedEditor({
             >
               <div className="h-full flex overflow-hidden relative">
                 {/* Left Sidebar - Media Library (inline with preview) */}
-                {!mediaFullColumn && (
+                {!mediaFullColumn && !isMasterWorkspace && (
                   <InteractionLockRegion locked={isMaskEditingActive}>
                     <ErrorBoundary level="feature">
                       <MediaSidebar beatvideoMode={beatvideoMode} />
@@ -1019,8 +1024,19 @@ export const LoadedEditor = memo(function LoadedEditor({
           </ResizablePanelGroup>
         )}
 
+        {isMasterWorkspace ? (
+          <InteractionLockRegion
+            locked={isMaskEditingActive}
+            className="studio-master-column h-full w-[400px] shrink-0 border-l border-border"
+          >
+            <ErrorBoundary level="feature">
+              <BeatvideoMasterPanel />
+            </ErrorBoundary>
+          </InteractionLockRegion>
+        ) : null}
+
         {/* Right Sidebar - Properties (full column mode) */}
-        {propertiesFullColumn && !hidesDefaultSidebars && (
+        {propertiesFullColumn && !hidesDefaultSidebars && !isMasterWorkspace && (
           <InteractionLockRegion locked={isMaskEditingActive}>
             <ErrorBoundary level="feature">
               <PropertiesSidebar />
