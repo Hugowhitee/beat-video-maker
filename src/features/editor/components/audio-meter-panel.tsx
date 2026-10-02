@@ -1143,13 +1143,13 @@ export const AudioMeterPanel = memo(function AudioMeterPanel({
           className="relative h-[148px] w-[70px] shrink-0"
           aria-label={t('editor.audioMeters.audioMeter')}
         >
-          <span className="absolute left-1 top-[39px] font-mono text-[8px] leading-[10px] text-[#686d67]">
+          <span className="absolute left-[6px] top-[39px] font-mono text-[9px] leading-[11px] text-[#686d67]">
             −6
           </span>
-          <span className="absolute left-0 top-[91px] font-mono text-[8px] leading-[10px] text-[#686d67]">
+          <span className="absolute left-0 top-[91px] font-mono text-[9px] leading-[11px] text-[#686d67]">
             −12
           </span>
-          <span className="absolute left-0 top-[134px] font-mono text-[8px] leading-[10px] text-[#686d67]">
+          <span className="absolute left-0 top-[134px] font-mono text-[9px] leading-[11px] text-[#686d67]">
             −24
           </span>
           <div className="absolute left-[38px] top-0 h-[148px] w-8 rounded-[2px] bg-[#242724]">
