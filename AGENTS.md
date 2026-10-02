@@ -5,7 +5,7 @@
 This repository is the canonical Beat Video Maker product and runtime.
 
 - `main` is the product source of truth.
-- The current in-repo editor/runtime is canonical; historical donor repositories and migration branches are not implementation authorities.
+- The current in-repo editor/runtime is canonical.
 - Old chats, deleted branches and pre-migration code are supporting context only.
 - Third-party provenance belongs in `THIRD_PARTY_NOTICES.md`, not in product architecture or UI guidance.
 
