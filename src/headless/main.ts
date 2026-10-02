@@ -1274,7 +1274,7 @@ async function probeMedia(input: { url: string; fileName: string; mimeType?: str
 
 declare global {
   interface Window {
-    beat-video-maker: BeatVideoMakerHeadlessApi
+    beatVideoMaker: BeatVideoMakerHeadlessApi
   }
 }
 
