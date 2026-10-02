@@ -293,7 +293,7 @@ function ProjectFormBase({
                 <div className="mb-3 text-[9px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
                   {t('projects.form.frameRate')}
                 </div>
-                <div className="studio-segmented flex h-8 max-w-[430px]">
+                <div className="studio-segmented flex h-8 max-w-full overflow-x-auto sm:max-w-[430px]">
                   {fpsOptions.map((preset) => (
                     <button
                       key={preset.value}
@@ -318,7 +318,7 @@ function ProjectFormBase({
             </div>
           </div>
 
-          <div className="flex items-end justify-between gap-4 border-t border-border pt-5">
+          <div className="flex flex-col gap-4 border-t border-border pt-5 sm:flex-row sm:items-end sm:justify-between">
             <div className="min-w-0">
               <div className="text-[9px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
                 Ready
@@ -329,8 +329,8 @@ function ProjectFormBase({
             </div>
 
             {/* Actions */}
-            <div className="grid shrink-0 grid-cols-2 gap-2 sm:flex sm:justify-end sm:gap-2">
-            {onCancel ? (
+            <div className="grid w-full shrink-0 grid-cols-2 gap-2 sm:w-auto sm:flex sm:justify-end sm:gap-2">
+              {onCancel ? (
               <Button
                 type="button"
                 variant="outline"
