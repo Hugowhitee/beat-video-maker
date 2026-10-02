@@ -1,6 +1,11 @@
 import { memo, useEffect, useState } from 'react'
 import { useEditorStore } from '@/shared/state/editor'
 import { useProjectStore } from '@/features/editor/deps/projects-contract'
+import { useMediaLibraryStore } from '@/features/editor/deps/media-library'
+import {
+  useCompositionsStore,
+  useItemsStore,
+} from '@/features/editor/deps/timeline-store'
 import type { EditorSidebarTab, EditorWorkspaceId } from '@/config/editor-workspaces'
 import { cn } from '@/shared/ui/cn'
 
@@ -39,6 +44,18 @@ export const StudioProjectRail = memo(function StudioProjectRail() {
   const setWorkspace = useEditorStore((state) => state.setWorkspace)
   const setActiveTab = useEditorStore((state) => state.setActiveTab)
   const project = useProjectStore((state) => state.currentProject)
+  const mediaCount = useMediaLibraryStore((state) => state.mediaItems.length)
+  const sequenceCount = useCompositionsStore((state) => state.compositions.length)
+  const graphicsCount = useItemsStore(
+    (state) =>
+      state.items.filter(
+        (item) =>
+          item.type === 'text' ||
+          item.type === 'shape' ||
+          item.type === 'lottie' ||
+          item.type === 'sticker',
+      ).length,
+  )
 
   const music = project?.beatvideoMusic
   const bpm = music?.bpmOverride ?? music?.musicMap?.bpm ?? null
@@ -101,6 +118,18 @@ export const StudioProjectRail = memo(function StudioProjectRail() {
                 {target.label === 'Beat grid' && beatReady ? (
                   <span className="text-[9px] font-medium uppercase text-muted-foreground">
                     Ready
+                  </span>
+                ) : target.label === 'Media' && mediaCount > 0 ? (
+                  <span className="text-[9px] font-medium text-muted-foreground">
+                    {mediaCount}
+                  </span>
+                ) : target.label === 'Sequences' && sequenceCount > 0 ? (
+                  <span className="text-[9px] font-medium text-muted-foreground">
+                    {sequenceCount}
+                  </span>
+                ) : target.label === 'Graphics' && graphicsCount > 0 ? (
+                  <span className="text-[9px] font-medium text-muted-foreground">
+                    {graphicsCount}
                   </span>
                 ) : null}
               </button>
