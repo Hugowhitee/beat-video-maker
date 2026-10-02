@@ -179,6 +179,8 @@ describe('PropertiesSidebar', () => {
           detectedBarOneTime: 0,
           barOneTime: 0,
           barOneVerified: true,
+          bpmOverride: null,
+          gridMode: 'detected',
           correctionAnchors: [],
         },
       },
