@@ -4,7 +4,7 @@ import type { BeatvideoMusicAnalysis } from '@/types/beatvideo'
  * Bump when detector reconciliation changes enough that an untouched saved
  * detected grid should be refreshed automatically.
  */
-export const BEATVIDEO_ANALYSIS_REVISION = 6
+export const BEATVIDEO_ANALYSIS_REVISION = 7
 
 export function shouldRefreshBeatvideoAnalysis(
   analysis: BeatvideoMusicAnalysis | null | undefined,
