@@ -6,6 +6,7 @@ import {
   useItemsStore,
 } from '@/features/editor/deps/timeline-store'
 import { useEditorStore } from '@/shared/state/editor'
+import { useProjectStore } from '@/features/editor/deps/projects'
 import { useSelectionStore } from '@/shared/state/selection'
 import type { AudioItem, VideoItem } from '@/types/timeline'
 import { PropertiesSidebar } from './index'
@@ -134,6 +135,59 @@ describe('PropertiesSidebar', () => {
 
     expect(screen.getByRole('heading', { name: 'Composition-Motion Card' })).toBeInTheDocument()
     expect(screen.getByText('Canvas Panel')).toBeInTheDocument()
+  })
+
+  it('does not treat the project beat as a Visual clip inspector target', async () => {
+    const beat: AudioItem = {
+      id: 'beat-item',
+      type: 'audio',
+      trackId: 'beat-track',
+      from: 0,
+      durationInFrames: 240,
+      label: 'midnight-loop.mp3',
+      src: 'blob:beat',
+      mediaId: 'beat-media',
+    }
+    resetStores([beat], [beat.id])
+    useEditorStore.setState({ workspace: 'edit', rightSidebarOpen: true })
+    useProjectStore.setState({
+      currentProject: {
+        id: 'project-1',
+        name: 'Project',
+        description: '',
+        createdAt: 0,
+        updatedAt: 0,
+        duration: 8,
+        metadata: {
+          width: 1920,
+          height: 1080,
+          fps: 30,
+          backgroundColor: '#000000',
+        },
+        beatvideoMusic: {
+          version: 2,
+          mediaId: 'beat-media',
+          analyzedAt: 0,
+          musicMap: {
+            duration: 8,
+            bpm: 128,
+            beatsPerBar: 4,
+            beats: [],
+            sections: [],
+          },
+          detectedBarOneTime: 0,
+          barOneTime: 0,
+          barOneVerified: true,
+          correctionAnchors: [],
+        },
+      },
+    })
+
+    render(<PropertiesSidebar />)
+
+    expect(screen.getByText('Canvas Panel')).toBeInTheDocument()
+    expect(screen.queryByText('midnight-loop.mp3')).not.toBeInTheDocument()
+    expect(screen.queryByText('Clip Panel')).not.toBeInTheDocument()
   })
 
   it('shows the selected clip filename in the header', async () => {
