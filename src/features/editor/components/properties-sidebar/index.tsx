@@ -127,8 +127,10 @@ function getClipHeader(items: HeaderItem[]) {
  */
 export const PropertiesSidebar = memo(function PropertiesSidebar({
   mobile = false,
+  studioTaskColumn = false,
 }: {
   mobile?: boolean
+  studioTaskColumn?: boolean
 }) {
   const { t } = useTranslation()
   const editorDensity = useSettingsStore((s) => s.editorDensity)
@@ -220,10 +222,11 @@ export const PropertiesSidebar = memo(function PropertiesSidebar({
   // Keep the panel content mounted + visible while the collapse animation plays
   // so it slides out smoothly instead of blinking away. Only switch Activity to
   // `hidden` (the perf win) once the close animation has actually settled.
-  const [contentVisible, setContentVisible] = useState(rightSidebarOpen)
+  const taskPanelOpen = studioTaskColumn || rightSidebarOpen
+  const [contentVisible, setContentVisible] = useState(taskPanelOpen)
   useEffect(() => {
-    if (rightSidebarOpen) setContentVisible(true)
-  }, [rightSidebarOpen])
+    if (taskPanelOpen) setContentVisible(true)
+  }, [taskPanelOpen])
 
   useEffect(() => {
     if (!mobile && selectedBeatOnly && rightSidebarOpen) {
@@ -286,26 +289,33 @@ export const PropertiesSidebar = memo(function PropertiesSidebar({
           tracks the pointer instead of easing behind it. */}
       <motion.div
         className={
-          mobile
+          mobile || studioTaskColumn
             ? 'panel-bg relative h-full w-full min-w-0 flex-1 overflow-hidden'
             : 'panel-bg border-l border-border shrink-0 relative h-full overflow-hidden'
         }
         initial={false}
-        animate={{ width: mobile ? '100%' : rightSidebarOpen ? rightSidebarWidth : 0 }}
+        animate={{
+          width:
+            mobile || studioTaskColumn
+              ? '100%'
+              : rightSidebarOpen
+                ? rightSidebarWidth
+                : 0,
+        }}
         transition={
-          mobile || isResizingRef.current || prefersReducedMotion
+          mobile || studioTaskColumn || isResizingRef.current || prefersReducedMotion
             ? { duration: 0 }
             : { type: 'tween', duration: rightSidebarOpen ? 0.26 : 0.2, ease: [0.32, 0.72, 0, 1] }
         }
         onAnimationComplete={() => {
-          if (!mobile && !rightSidebarOpen) setContentVisible(false)
+          if (!mobile && !studioTaskColumn && !rightSidebarOpen) setContentVisible(false)
         }}
       >
         {/* Use Activity for React 19 performance optimization */}
-        <Activity mode={mobile || contentVisible ? 'visible' : 'hidden'}>
+        <Activity mode={mobile || studioTaskColumn || contentVisible ? 'visible' : 'hidden'}>
           <div
             className="h-full min-w-0 flex flex-col"
-            style={{ width: mobile ? '100%' : rightSidebarWidth }}
+            style={{ width: mobile || studioTaskColumn ? '100%' : rightSidebarWidth }}
           >
             {/* Sidebar Header */}
             <div
@@ -313,7 +323,7 @@ export const PropertiesSidebar = memo(function PropertiesSidebar({
               style={{ height: EDITOR_LAYOUT_CSS_VALUES.sidebarHeaderHeight }}
             >
               <div className="min-w-0 flex items-center gap-1.5">
-                {!mobile && !producerWorkspace ? (
+                {!mobile && !studioTaskColumn && !producerWorkspace ? (
                   <Button
                     variant="ghost"
                     size="icon"
@@ -359,7 +369,7 @@ export const PropertiesSidebar = memo(function PropertiesSidebar({
                   ) : null}
                 </h2>
               </div>
-              {!mobile && !producerWorkspace ? (
+              {!mobile && !studioTaskColumn && !producerWorkspace ? (
                 <Button
                   variant="ghost"
                   size="icon"
@@ -421,7 +431,7 @@ export const PropertiesSidebar = memo(function PropertiesSidebar({
           </div>
         </Activity>
         {/* Resize Handle */}
-        {!mobile && rightSidebarOpen && (
+        {!mobile && !studioTaskColumn && rightSidebarOpen && (
           <div
             onMouseDown={handleResizeStart}
             className="absolute top-0 left-0 w-1 h-full cursor-col-resize hover:bg-primary/50 active:bg-primary/50 transition-colors z-10"
@@ -433,7 +443,7 @@ export const PropertiesSidebar = memo(function PropertiesSidebar({
           size, chevron, and top alignment so the arrow stays in the same place
           and size when toggling (mirrors the always-present arrow on the left
           sidebar rail). Edge-attached rounded tab keeps it discoverable. */}
-      {!mobile && !rightSidebarOpen && !producerWorkspace && (
+      {!mobile && !studioTaskColumn && !rightSidebarOpen && !producerWorkspace && (
         <button
           onClick={toggleRightSidebar}
           className="absolute right-0 top-2 z-10 flex items-center justify-center rounded-l-md border border-r-0 border-border bg-secondary/50 hover:bg-secondary transition-colors"
