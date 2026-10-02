@@ -18,10 +18,11 @@ import { WorkspaceSwitcher } from './workspace-switcher'
 import { cn } from '@/shared/ui/cn'
 import { useDebugStore } from '@/features/editor/stores/debug-store'
 import { useEditorStore } from '@/shared/state/editor'
-import { useTimelineStore } from '@/features/editor/deps/timeline-store'
+import { useTimelineCommandStore, useTimelineStore } from '@/features/editor/deps/timeline-store'
 import type { BeatvideoProjectMode } from '@/types/project'
 import { toast } from 'sonner'
 import { useProjectStore } from '@/features/editor/deps/projects-contract'
+import { useMediaLibraryStore } from '@/features/editor/deps/media-library'
 
 const SaveDirtyIndicator = memo(function SaveDirtyIndicator() {
   const isDirty = useTimelineStore((state) => state.isDirty)
@@ -70,11 +71,20 @@ export const Toolbar = memo(function Toolbar({
   const workspace = useEditorStore((state) => state.workspace)
   const rightSidebarOpen = useEditorStore((state) => state.rightSidebarOpen)
   const toggleRightSidebar = useEditorStore((state) => state.toggleRightSidebar)
+  const mixerFloating = useEditorStore((state) => state.mixerFloating)
+  const toggleMixerFloating = useEditorStore((state) => state.toggleMixerFloating)
+  const canUndo = useTimelineCommandStore((state) => state.canUndo)
+  const canRedo = useTimelineCommandStore((state) => state.canRedo)
+  const undo = useTimelineCommandStore((state) => state.undo)
+  const redo = useTimelineCommandStore((state) => state.redo)
   const storedProjectName = useProjectStore((state) =>
     state.currentProject?.id === projectId ? state.currentProject.name : null,
   )
   const beatvideoMusic = useProjectStore((state) =>
     state.currentProject?.id === projectId ? state.currentProject.beatvideoMusic : undefined,
+  )
+  const beatSourceName = useMediaLibraryStore((state) =>
+    beatvideoMusic?.mediaId ? state.mediaById[beatvideoMusic.mediaId]?.fileName ?? null : null,
   )
   const bpm =
     beatvideoMusic?.bpmOverride ?? beatvideoMusic?.musicMap?.bpm ?? null
@@ -252,16 +262,16 @@ export const Toolbar = memo(function Toolbar({
       role="toolbar"
       aria-label={t('toolbar.ariaLabel')}
     >
-      <div className="studio-topbar flex h-12 shrink-0 items-center border-b border-black/30 bg-[#242724] px-[18px] text-[#f3f4f0]">
+      <div className="studio-topbar flex h-12 shrink-0 items-center bg-[#242724] px-[18px] text-[#f6f7f3]">
         <button
           type="button"
           onClick={handleBackClick}
-          className="mr-6 flex shrink-0 items-baseline gap-1 text-left"
+          className="mr-8 flex shrink-0 items-baseline text-left"
           aria-label={t('toolbar.backToProjectsAria')}
           title={t('toolbar.backToProjects')}
         >
-          <span className="text-[12px] font-bold tracking-[-0.02em]">BEAT VIDEO</span>
-          <span className="text-[9px] font-semibold tracking-[0.08em] text-white/55">MAKER</span>
+          <span className="text-[12px] font-semibold tracking-[-0.01em]">BEAT VIDEO</span>
+          <span className="ml-1 text-[12px] font-semibold text-[#c7e85a]">MAKER</span>
         </button>
 
         <UnsavedChangesDialog
@@ -271,41 +281,18 @@ export const Toolbar = memo(function Toolbar({
           projectName={project?.name}
         />
 
-        <div className="min-w-0 flex-1">
-          {editingProjectName ? (
-            <input
-              autoFocus
-              value={projectNameDraft}
-              onChange={(event) => setProjectNameDraft(event.target.value)}
-              onBlur={() => void commitProjectName()}
-              onKeyDown={(event) => {
-                if (event.key === 'Enter') void commitProjectName()
-                if (event.key === 'Escape') {
-                  setProjectNameDraft(projectName)
-                  setEditingProjectName(false)
-                }
-              }}
-              className="h-7 w-full max-w-[360px] border-0 bg-transparent px-0 text-[11px] font-medium text-white outline-none focus-visible:ring-1 focus-visible:ring-[#c7e85a]"
-              aria-label="Project title"
-            />
-          ) : (
-            <button
-              type="button"
-              className="group flex h-7 max-w-[360px] items-center gap-1.5 text-left text-[11px] font-medium text-white/88"
-              onClick={() => setEditingProjectName(true)}
-              aria-label="Rename project"
-            >
-              <span className="truncate">{projectName}</span>
-              <Pencil className="h-3 w-3 shrink-0 text-white/35 transition-colors group-hover:text-white/70" />
-            </button>
-          )}
+        <div
+          className="min-w-0 flex-1 truncate text-[11px] font-medium text-[#bfc4bc]"
+          title={beatSourceName ?? projectName}
+        >
+          {beatSourceName ?? projectName}
         </div>
 
-        <div className="flex shrink-0 items-center gap-1.5">
-          <span className="px-2 font-mono text-[10px] tabular-nums text-white/58">
-            {bpm ? `${Math.round(bpm)} BPM` : '— BPM'}
+        <div className="flex shrink-0 items-center gap-0">
+          <span className="px-3 text-[11px] font-medium tabular-nums text-[#d7dbd3]">
+            {bpm ? `${bpm.toFixed(2).replace(/\.00$/, '')} BPM` : '— BPM'}
           </span>
-          <span className="border-l border-white/15 px-2 font-mono text-[10px] tabular-nums text-white/58">
+          <span className="px-3 text-[11px] font-medium tabular-nums text-[#d7dbd3]">
             {beatsPerBar}/4
           </span>
 
@@ -313,50 +300,25 @@ export const Toolbar = memo(function Toolbar({
             <DebugPopover projectId={projectId} />
           ) : null}
 
-          {workspace === 'edit' ? (
-            <Button
-              variant="ghost"
-              size="sm"
-              className="studio-topbar-button h-7 px-2"
-              onClick={toggleRightSidebar}
-              aria-pressed={rightSidebarOpen}
-              aria-label={rightSidebarOpen ? 'Hide inspector' : 'Show inspector'}
-            >
-              Inspector
-            </Button>
-          ) : null}
-
-          {onProjectSettings ? (
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              className="studio-topbar-button h-7 px-2"
-              onClick={onProjectSettings}
-            >
-              Project settings
-            </Button>
-          ) : null}
-
-          <Button
-            variant="ghost"
-            size="sm"
-            className="studio-topbar-button relative h-7 px-2"
-            onClick={handleSave}
-            aria-label={t('toolbar.saveAria')}
-          >
-            {t('toolbar.save')}
-            <SaveDirtyIndicator />
-          </Button>
-
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="sm" className="studio-topbar-button h-7 gap-1 px-2">
-                More
-                <ChevronDown className="h-3 w-3" />
+              <Button
+                variant="ghost"
+                size="sm"
+                className="studio-topbar-button relative mx-1 h-7 w-8 px-0"
+                aria-label="Editor menu"
+              >
+                •••
+                <SaveDirtyIndicator />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => void handleSave()}>
+                Save project
+              </DropdownMenuItem>
+              {onProjectSettings ? (
+                <DropdownMenuItem onClick={onProjectSettings}>Project settings</DropdownMenuItem>
+              ) : null}
               <DropdownMenuItem onClick={() => setShowSettingsDialog(true)}>
                 Settings
               </DropdownMenuItem>
@@ -378,7 +340,7 @@ export const Toolbar = memo(function Toolbar({
 
           <Button
             size="sm"
-            className="studio-export-button ml-1 h-8 min-w-[92px] px-4 text-[11px] font-semibold"
+            className="studio-export-button ml-1 h-[30px] w-[92px] px-0 text-[10px] font-semibold uppercase"
             onClick={onExport}
           >
             {t('toolbar.export')}
@@ -386,8 +348,47 @@ export const Toolbar = memo(function Toolbar({
         </div>
       </div>
 
-      <div className="studio-workspacebar flex h-11 shrink-0 items-center border-b border-border bg-[#c7cac4] px-4">
+      <div className="studio-workspacebar flex h-11 shrink-0 items-center bg-[#c7cac4] px-4">
         <WorkspaceSwitcher beatvideoMode={beatvideoMode} />
+
+        <div className="ml-auto flex h-full items-center gap-5">
+          <button
+            type="button"
+            disabled={!canUndo}
+            onClick={undo}
+            className="studio-workspace-action text-[10px] font-medium"
+          >
+            Undo
+          </button>
+          <button
+            type="button"
+            disabled={!canRedo}
+            onClick={redo}
+            className="studio-workspace-action text-[10px] font-medium"
+          >
+            Redo
+          </button>
+          {workspace === 'edit' ? (
+            <button
+              type="button"
+              onClick={toggleRightSidebar}
+              aria-pressed={rightSidebarOpen}
+              className="studio-workspace-action text-[10px] font-semibold"
+            >
+              Inspector
+            </button>
+          ) : null}
+          {workspace === 'master' ? (
+            <button
+              type="button"
+              onClick={toggleMixerFloating}
+              aria-pressed={mixerFloating}
+              className="studio-workspace-action text-[10px] font-semibold text-foreground"
+            >
+              Mixer ↗
+            </button>
+          ) : null}
+        </div>
       </div>
 
       <ShortcutsDialog open={showShortcutsDialog} onOpenChange={setShowShortcutsDialog} />
