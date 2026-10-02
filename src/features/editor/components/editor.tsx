@@ -465,6 +465,7 @@ export const LoadedEditor = memo(function LoadedEditor({
   const propertiesFullColumn = useEditorStore((s) => s.propertiesFullColumn)
   const mediaFullColumn = useEditorStore((s) => s.mediaFullColumn)
   const workspace = useEditorStore((s) => s.workspace)
+  const rightSidebarOpen = useEditorStore((s) => s.rightSidebarOpen)
   const compactViewport = useCompactEditorViewport()
   const [mobileSurface, setMobileSurface] = useState<MobileEditorSurface>(() =>
     defaultMobileEditorSurface(workspace),
@@ -763,6 +764,8 @@ export const LoadedEditor = memo(function LoadedEditor({
   const isColorWorkspace = workspace === 'color'
   const isMasterWorkspace = workspace === 'master'
   const isMotionWorkspace = workspace === 'motion'
+  const isProducerWorkspace =
+    workspace === 'beat' || workspace === 'edit' || workspace === 'master'
   // Color replaces the default editor shell. Motion deliberately keeps it and
   // swaps the preview/timeline surfaces while retaining the shared sidebars.
   const hidesDefaultSidebars = isColorWorkspace
@@ -910,9 +913,9 @@ export const LoadedEditor = memo(function LoadedEditor({
       {/* Main Layout: Full-height sidebar + vertical split */}
       <div className="flex-1 flex overflow-hidden">
         {/* Left Sidebar - Media Library (full column mode) */}
-        {isMasterWorkspace ? <StudioProjectRail /> : null}
+        {isProducerWorkspace ? <StudioProjectRail /> : null}
 
-        {mediaFullColumn && !hidesDefaultSidebars && !isMasterWorkspace && (
+        {mediaFullColumn && !hidesDefaultSidebars && !isProducerWorkspace && (
           <InteractionLockRegion locked={isMaskEditingActive}>
             <ErrorBoundary level="feature">
               <MediaSidebar beatvideoMode={beatvideoMode} />
@@ -956,7 +959,7 @@ export const LoadedEditor = memo(function LoadedEditor({
             >
               <div className="h-full flex overflow-hidden relative">
                 {/* Left Sidebar - Media Library (inline with preview) */}
-                {!mediaFullColumn && !isMasterWorkspace && (
+                {!mediaFullColumn && !isProducerWorkspace && (
                   <InteractionLockRegion locked={isMaskEditingActive}>
                     <ErrorBoundary level="feature">
                       <MediaSidebar beatvideoMode={beatvideoMode} />
@@ -978,7 +981,7 @@ export const LoadedEditor = memo(function LoadedEditor({
                 </ErrorBoundary>
 
                 {/* Right Sidebar - Properties (inline with preview) */}
-                {!propertiesFullColumn && (
+                {!propertiesFullColumn && !isProducerWorkspace && (
                   <InteractionLockRegion locked={isMaskEditingActive}>
                     <ErrorBoundary level="feature">
                       <PropertiesSidebar />
@@ -1039,10 +1042,23 @@ export const LoadedEditor = memo(function LoadedEditor({
               <BeatvideoMasterPanel />
             </ErrorBoundary>
           </InteractionLockRegion>
+        ) : workspace === 'beat' || workspace === 'edit' ? (
+          <InteractionLockRegion
+            locked={isMaskEditingActive}
+            className="studio-task-column h-full w-[400px] shrink-0 border-l border-border bg-[#e8e9e5]"
+          >
+            <ErrorBoundary level="feature">
+              {workspace === 'edit' && rightSidebarOpen ? (
+                <PropertiesSidebar studioTaskColumn />
+              ) : (
+                <MediaSidebar beatvideoMode={beatvideoMode} studioTaskColumn />
+              )}
+            </ErrorBoundary>
+          </InteractionLockRegion>
         ) : null}
 
         {/* Right Sidebar - Properties (full column mode) */}
-        {propertiesFullColumn && !hidesDefaultSidebars && !isMasterWorkspace && (
+        {propertiesFullColumn && !hidesDefaultSidebars && !isProducerWorkspace && (
           <InteractionLockRegion locked={isMaskEditingActive}>
             <ErrorBoundary level="feature">
               <PropertiesSidebar />
