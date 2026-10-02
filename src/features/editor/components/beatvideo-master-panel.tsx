@@ -152,7 +152,7 @@ function MasterRange({
           onPointerUp={onGestureEnd}
           onPointerCancel={onGestureEnd}
           onChange={(event) => onChange(Number(event.target.value))}
-          className="block h-4 w-full min-w-0 accent-foreground"
+          className="block h-4 w-full min-w-0 accent-primary"
         />
         <span className="mt-0.5 grid grid-cols-3 font-mono text-[8px] leading-none text-muted-foreground/60">
           <span>{formatScale(min)}</span>
@@ -199,7 +199,7 @@ function TransferGraph({
   const ceilingY = ceilingDb === undefined ? null : (1 - (ceilingDb + 60) / 60) * 100
 
   return (
-    <div className="relative h-36 overflow-hidden rounded-md border border-border bg-black/30">
+    <div className="relative h-36 overflow-hidden rounded border border-[#555a55] bg-[#343834]">
       <svg viewBox="0 0 100 100" preserveAspectRatio="none" className="absolute inset-0 h-full w-full">
         {[25, 50, 75].map((n) => (
           <g key={n}>
@@ -212,7 +212,7 @@ function TransferGraph({
         {ceilingY !== null ? (
           <line x1="0" x2="100" y1={ceilingY} y2={ceilingY} stroke="currentColor" className="text-muted-foreground" strokeDasharray="2 2" strokeWidth="0.65" />
         ) : null}
-        <polyline points={points} fill="none" stroke="currentColor" className="text-foreground" strokeWidth="1.6" vectorEffect="non-scaling-stroke" />
+        <polyline points={points} fill="none" stroke="currentColor" className="text-primary" strokeWidth="1.6" vectorEffect="non-scaling-stroke" />
       </svg>
       <div className="absolute left-2 top-2 text-[11px] uppercase tracking-[0.14em] text-muted-foreground">
         {mode === 'compressor' ? 'Transfer' : 'Peak control'}
@@ -237,12 +237,12 @@ function SaturationGraph({ driveDb, mix }: { driveDb: number; mix: number }) {
   }, [driveDb, mix])
 
   return (
-    <div className="relative h-36 overflow-hidden rounded-md border border-border bg-black/30">
+    <div className="relative h-36 overflow-hidden rounded border border-[#555a55] bg-[#343834]">
       <svg viewBox="0 0 100 100" preserveAspectRatio="none" className="absolute inset-0 h-full w-full">
         <line x1="0" y1="100" x2="100" y2="0" stroke="currentColor" className="text-muted-foreground/35" strokeWidth="0.65" />
         <line x1="50" y1="0" x2="50" y2="100" stroke="currentColor" className="text-border" strokeWidth="0.45" />
         <line x1="0" y1="50" x2="100" y2="50" stroke="currentColor" className="text-border" strokeWidth="0.45" />
-        <polyline points={points} fill="none" stroke="currentColor" className="text-foreground" strokeWidth="1.6" vectorEffect="non-scaling-stroke" />
+        <polyline points={points} fill="none" stroke="currentColor" className="text-primary" strokeWidth="1.6" vectorEffect="non-scaling-stroke" />
       </svg>
       <div className="absolute left-2 top-2 text-[11px] uppercase tracking-[0.14em] text-muted-foreground">
         Transfer curve
@@ -616,24 +616,12 @@ export function BeatvideoMasterPanel() {
   )
 
   return (
-    <div className="flex h-full min-h-0 flex-col bg-background">
-      <div className="shrink-0 border-b border-border px-3 py-3">
+    <div className="flex h-full min-h-0 flex-col bg-[#e8e9e5]">
+      <div className="shrink-0 border-b border-border px-4 py-3">
         <div className="flex items-center gap-2">
-          <Gauge className="h-4 w-4 text-muted-foreground" />
-          <div className="text-sm font-medium text-foreground">Master</div>
-          <Button
-            type="button"
-            size="sm"
-            variant={mixerFloating ? 'secondary' : 'outline'}
-            className="ml-auto h-7 px-2.5 text-xs"
-            onClick={toggleMixerFloating}
-            aria-pressed={mixerFloating}
-          >
-            Mixer
-            <span className="ml-1 font-mono text-[10px] tabular-nums text-muted-foreground">
-              {masterBusDb > 0 ? '+' : ''}{masterBusDb.toFixed(1)} dB
-            </span>
-          </Button>
+          <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-foreground">Mastering</div>
+          <div className="ml-auto" />
+
           <Button
             type="button"
             size="icon"
@@ -776,16 +764,15 @@ export function BeatvideoMasterPanel() {
         <div className="mt-3 border-t border-border pt-3">
           <div className="flex items-center justify-between gap-3">
             <div className="min-w-0">
-              <div className="text-xs font-medium text-foreground">Input level</div>
-              <div className="mt-0.5 text-[10px] leading-relaxed text-muted-foreground">
-                Auto Level measures the beat and moves Input trim before the master chain. It never moves the Mixer output fader.
+              <div className="text-[9px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">Input</div>
+              <div className="mt-0.5 font-mono text-[15px] font-medium tabular-nums text-foreground">
+                {resolved.inputGainDb >= 0 ? '+' : ''}{resolved.inputGainDb.toFixed(1)} dB
               </div>
             </div>
             <Button
               type="button"
               size="sm"
-              variant="outline"
-              className="h-7 shrink-0 px-2 text-xs"
+              className="studio-primary-action h-8 shrink-0 px-3 text-[10px] font-semibold uppercase tracking-[0.08em]"
               disabled={autoLeveling}
               onClick={() => void autoLevel()}
             >
@@ -863,7 +850,7 @@ export function BeatvideoMasterPanel() {
 
       <div className="shrink-0 border-b border-border p-2">
         <div className="mb-1.5 flex items-center justify-between gap-2 px-1">
-          <span className="text-xs font-medium text-foreground">Master chain</span>
+          <span className="text-[9px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">Inserts</span>
           <div className="flex items-center gap-2">
             <span className="font-mono text-[10px] text-muted-foreground">
               {activeBuiltInPresetId
@@ -930,8 +917,8 @@ export function BeatvideoMasterPanel() {
                 }}
                 className={cn(
                   'group flex min-w-0 items-stretch',
-                  selected && 'bg-secondary/55 shadow-[inset_2px_0_0_hsl(var(--primary))]',
-                  dragTarget && 'bg-primary/10 shadow-[inset_0_2px_0_hsl(var(--primary))]',
+                  selected && 'bg-[#d4d7d1] shadow-[inset_3px_0_0_var(--primary)]',
+                  dragTarget && 'bg-primary/15 shadow-[inset_0_2px_0_var(--primary)]',
                 )}
               >
                 <button
@@ -1033,7 +1020,7 @@ export function BeatvideoMasterPanel() {
         ) : null}
       </div>
 
-      <div className="min-h-0 flex-1 overflow-y-auto p-3">
+      <div className="min-h-0 flex-1 overflow-y-auto border-t border-border bg-[#dfe1dc] p-4">
         {selectedSlot === 'eq' ? (
           <AudioEqPanelContent
             targetLabel="Master"
@@ -1098,6 +1085,35 @@ export function BeatvideoMasterPanel() {
             </p>
           </div>
         ) : null}
+      </div>
+
+      <div className="shrink-0 border-t border-border bg-[#e8e9e5] px-4 py-3">
+        <div className="mb-2 flex items-center justify-between">
+          <div>
+            <div className="text-[9px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+              Master out
+            </div>
+            <div className="mt-0.5 font-mono text-[13px] tabular-nums text-foreground">
+              {masterBusDb > 0 ? '+' : ''}{masterBusDb.toFixed(1)} dB
+            </div>
+          </div>
+          <span
+            className={cn(
+              'text-[9px] font-semibold uppercase tracking-[0.12em]',
+              mixerFloating ? 'text-[#759719]' : 'text-muted-foreground',
+            )}
+          >
+            {mixerFloating ? 'Mixer open' : 'Output fader in Mixer'}
+          </span>
+        </div>
+        <button
+          type="button"
+          onClick={toggleMixerFloating}
+          aria-pressed={mixerFloating}
+          className="studio-secondary-action h-8 w-full"
+        >
+          {mixerFloating ? 'Close Mixer' : 'Open Mixer'}
+        </button>
       </div>
     </div>
   )
