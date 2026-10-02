@@ -339,12 +339,12 @@ export const Toolbar = memo(function Toolbar({
       <div className="studio-workspacebar flex h-11 shrink-0 items-center bg-[#c7cac4] px-4">
         <WorkspaceSwitcher beatvideoMode={beatvideoMode} />
 
-        <div className="ml-auto flex h-full items-center gap-5">
+        <div className="relative ml-auto h-full w-[234px] shrink-0">
           <button
             type="button"
             disabled={!canUndo}
             onClick={undo}
-            className="studio-workspace-action text-[10px] font-medium"
+            className="studio-workspace-action absolute left-0 top-0 flex h-full items-center text-[10px] font-medium"
           >
             Undo
           </button>
@@ -352,7 +352,7 @@ export const Toolbar = memo(function Toolbar({
             type="button"
             disabled={!canRedo}
             onClick={redo}
-            className="studio-workspace-action text-[10px] font-medium"
+            className="studio-workspace-action absolute left-[50px] top-0 flex h-full items-center text-[10px] font-medium"
           >
             Redo
           </button>
@@ -361,7 +361,7 @@ export const Toolbar = memo(function Toolbar({
               type="button"
               onClick={toggleRightSidebar}
               aria-pressed={rightSidebarOpen}
-              className="studio-workspace-action text-[10px] font-semibold"
+              className="studio-workspace-action absolute left-[135px] top-0 flex h-full items-center text-[10px] font-semibold"
             >
               Inspector
             </button>
@@ -371,7 +371,7 @@ export const Toolbar = memo(function Toolbar({
               type="button"
               onClick={toggleMixerFloating}
               aria-pressed={mixerFloating}
-              className="studio-workspace-action text-[10px] font-semibold text-foreground"
+              className="studio-workspace-action absolute left-[135px] top-0 flex h-full items-center text-[10px] font-semibold text-foreground"
             >
               Mixer ↗
             </button>
