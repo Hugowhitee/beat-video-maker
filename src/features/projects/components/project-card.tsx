@@ -198,7 +198,7 @@ export function ProjectCard({
       role="button"
       tabIndex={0}
       aria-label={t('projects.card.openProject')}
-      className={`group relative overflow-hidden rounded-[3px] border transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring md:min-h-[100px] ${
+      className={`group relative overflow-hidden rounded-[3px] border transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring lg:min-h-[100px] ${
         isSelected
           ? 'border-foreground bg-[#d1d4ce]'
           : 'border-transparent bg-[#e8e9e5] hover:border-border hover:bg-[#dfe1dc]'
@@ -208,8 +208,8 @@ export function ProjectCard({
         <div className="absolute inset-y-0 left-0 z-10 w-[3px] bg-primary" aria-hidden="true" />
       ) : null}
 
-      <div className="grid grid-cols-1 gap-3 p-3 md:grid-cols-[142px_minmax(0,1fr)_92px_180px_64px_140px_92px] md:items-center md:gap-4 md:p-[10px_12px]">
-        <div className="relative h-32 overflow-hidden rounded-[2px] bg-[#343834] md:h-20">
+      <div className="grid grid-cols-1 gap-3 p-3 lg:grid-cols-[142px_minmax(0,1fr)_92px_180px_64px_140px_92px] lg:items-center lg:gap-4 lg:px-3 lg:py-2.5">
+        <div className="relative h-32 overflow-hidden rounded-[2px] bg-[#343834] lg:h-20">
           {thumbnailUrl ? (
             <img
               key={project.updatedAt}
@@ -242,17 +242,17 @@ export function ProjectCard({
           </p>
         </div>
 
-        <div className="hidden text-[11px] text-foreground md:block">
+        <div className="hidden text-[11px] text-foreground lg:block">
           {projectMode === 'photo' ? 'Photo' : 'Video'}
         </div>
-        <div className="hidden font-mono text-[11px] text-foreground md:block">{resolution}</div>
-        <div className="hidden font-mono text-[11px] text-foreground md:block">{fps}</div>
-        <div className="hidden text-[11px] text-muted-foreground md:block">
+        <div className="hidden font-mono text-[11px] text-foreground lg:block">{resolution}</div>
+        <div className="hidden font-mono text-[11px] text-foreground lg:block">{fps}</div>
+        <div className="hidden text-[11px] text-muted-foreground lg:block">
           {formatRelativeTime(project.updatedAt)}
         </div>
 
-        <div className="flex items-center justify-between gap-2 md:justify-end">
-          <div className="flex items-center gap-2 text-[10px] text-muted-foreground md:hidden">
+        <div className="flex items-center justify-between gap-2 lg:justify-end">
+          <div className="flex items-center gap-2 text-[10px] text-muted-foreground lg:hidden">
             <span>{projectMode === 'photo' ? 'Photo' : 'Video'}</span>
             <span>·</span>
             <span className="font-mono">{aspectRatioLabel}</span>
