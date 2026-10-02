@@ -128,7 +128,6 @@ export const Timeline = memo(function Timeline({
   const selectedTrackIdsSet = useMemo(() => new Set(selectedTrackIds), [selectedTrackIds])
 
   const itemsByTrackId = useItemsStore((s) => s.itemsByTrackId)
-  const [producerExtrasExpanded, setProducerExtrasExpanded] = useState(false)
   const producerExpandedTrackHeightsRef = useRef(new Map<string, number>())
   const workspaceTracks = useMemo(
     () => resolveWorkspaceVisibleTracks(tracks, workspace),
@@ -147,7 +146,6 @@ export const Timeline = memo(function Timeline({
   )
   const showProducerExtras =
     workspace === 'master' ||
-    producerExtrasExpanded ||
     (activeTrackId !== null && producerExtraTrackIds.has(activeTrackId))
   const visibleTracks = useMemo(() => {
     if (!simplifiedBeatvideoTimeline) return workspaceTracks
