@@ -4,9 +4,11 @@ Beat Video Maker is a local-first editor for turning a beat plus photos or foota
 
 ## Open the app
 
-GitHub Pages: **https://hugowhitee.github.io/beat-video-maker/**
+Primary app: **https://beat-video-maker-live-production.up.railway.app/**
 
-A production container is also supported through `Dockerfile`, `deploy/nginx.conf.template` and `railway.json`.
+GitHub Pages remains a fallback: **https://hugowhitee.github.io/beat-video-maker/**
+
+Railway serves the production container from `main` through `Dockerfile`, `deploy/nginx.conf.template` and `railway.json`.
 
 On first use the browser asks for a local workspace folder. Project files, media metadata, caches and exports stay local; no cloud backend is required for normal editing.
 
