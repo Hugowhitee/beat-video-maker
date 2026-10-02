@@ -20,6 +20,7 @@ jobs:
             const branches = [
               'migration/freecut-upstream',
               'upstream/freecut',
+              'feat/editor-save-as',
             ]
 
             for (const branch of branches) {
