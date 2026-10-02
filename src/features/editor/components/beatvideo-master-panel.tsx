@@ -4,8 +4,6 @@ import {
   Activity,
   BookmarkPlus,
   Flame,
-  Gauge,
-  GripVertical,
   Plus,
   Power,
   RotateCcw,
@@ -867,7 +865,7 @@ export function BeatvideoMasterPanel() {
 
             const meta = SLOT_META_BY_ID.get(id)
             if (!meta) return null
-            const { label, hint, icon: Icon } = meta
+            const { label, hint } = meta
             const enabled = slotEnabled(id)
             const selected = selectedSlot === id
             const dragTarget = dragOverSlot === id && draggingSlot !== id
