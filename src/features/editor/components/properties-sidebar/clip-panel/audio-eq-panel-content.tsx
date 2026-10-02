@@ -1555,7 +1555,7 @@ export function AudioEqPanelContent({
               <AudioEqCurveEditor
                 settings={eqCurveSettings}
                 disabled={eqControlsDisabled}
-                className="text-zinc-300"
+                className="text-foreground"
                 graphClassName={cn(
                   'bg-background',
                   isDetachedLayout ? 'h-[clamp(288px,33vh,344px)]' : 'h-[220px]',
