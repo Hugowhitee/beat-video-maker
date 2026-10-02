@@ -146,7 +146,15 @@ export const TrackHeader = memo(function TrackHeader({
             onMouseDown={simplified ? undefined : handleDragStart}
           >
             {simplified ? (
-              <div className="flex h-full min-h-0 items-center px-2.5">
+              <div
+                className="flex h-full min-h-0 items-center px-2.5"
+                data-collapsed={collapsed ? 'true' : undefined}
+                onDoubleClick={(event) => {
+                  if (!onToggleCollapsed) return
+                  event.stopPropagation()
+                  onToggleCollapsed()
+                }}
+              >
                 <span
                   className={`min-w-0 flex-1 truncate text-[9px] font-medium leading-[11px] ${trackDisabled ? 'text-[#8d928b]' : 'text-[#d6dad4]'}`}
                 >
