@@ -80,7 +80,7 @@ export function WorkspaceGate({ children }: { children: React.ReactNode }) {
       )
     }, 0)
     setStatus({ kind: 'ready' })
-    window.dispatchEvent(new Event('freecut:ensure-toaster'))
+    window.dispatchEvent(new Event('beat-video-maker:ensure-toaster'))
   }, [])
 
   // Initial load: check if we have a saved handle, check its permission.
