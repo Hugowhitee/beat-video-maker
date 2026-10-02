@@ -14,6 +14,7 @@ import {
   X,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import {
   captureSnapshot,
   useTimelineCommandStore,
@@ -42,6 +43,7 @@ import { getOrDecodeAudio, getPreviewMasterReduction } from '@/features/editor/d
 import { resolveMediaUrl } from '@/features/editor/deps/media-library'
 import { useProjectStore } from '@/features/editor/deps/projects'
 import { cn } from '@/shared/ui/cn'
+import { AudioMeterPanel } from './audio-meter-panel'
 
 type MasterSlot = MasterProcessorId
 
@@ -53,10 +55,10 @@ const SLOT_META: ReadonlyArray<{
   hint: string
   icon: typeof SlidersHorizontal
 }> = [
-  { id: 'eq', label: 'EQ', hint: 'Tone and cleanup', icon: SlidersHorizontal },
-  { id: 'compressor', label: 'Compressor', hint: 'Glue and punch', icon: Activity },
-  { id: 'saturator', label: 'Saturator', hint: 'Harmonics and density', icon: Flame },
-  { id: 'limiter', label: 'Peak limiter', hint: 'Peak control', icon: Shield },
+  { id: 'eq', label: 'EQ', hint: 'Tone shaping', icon: SlidersHorizontal },
+  { id: 'compressor', label: 'Compressor', hint: 'Glue', icon: Activity },
+  { id: 'saturator', label: 'Saturator', hint: 'Warmth', icon: Flame },
+  { id: 'limiter', label: 'Limiter', hint: 'Peak control', icon: Shield },
 ]
 
 const SLOT_META_BY_ID = new Map(SLOT_META.map((meta) => [meta.id, meta]))
@@ -617,28 +619,134 @@ export function BeatvideoMasterPanel() {
 
   return (
     <div className="flex h-full min-h-0 flex-col bg-[#e8e9e5]">
-      <div className="shrink-0 border-b border-border px-4 py-3">
-        <div className="flex items-center gap-2">
-          <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-foreground">Mastering</div>
-          <div className="ml-auto" />
+      <div className="flex h-[62px] shrink-0 items-start border-b border-border px-5 pt-4">
+        <div className="min-w-0">
+          <div className="text-[11px] font-semibold uppercase tracking-[0.08em] text-foreground">
+            Master
+          </div>
+          <div className="mt-1 text-[10px] text-muted-foreground">
+            Finish the beat, then export.
+          </div>
+        </div>
+
+        <div className="ml-auto flex items-center gap-1">
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button
+                type="button"
+                size="sm"
+                variant="ghost"
+                className="h-7 px-2 text-[9px] font-semibold uppercase tracking-[0.08em] text-muted-foreground"
+              >
+                Presets
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent align="end" sideOffset={6} className="w-[360px] p-3">
+              <div className="text-[9px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+                Master presets
+              </div>
+              <div className="studio-segmented mt-2 grid grid-cols-3">
+                {MASTERING_PRESETS.map((preset) => (
+                  <button
+                    key={preset.id}
+                    type="button"
+                    onClick={() => applyPreset(preset.id)}
+                    aria-pressed={activeBuiltInPresetId === preset.id}
+                    className="studio-segment h-7 px-2 text-[10px] font-medium"
+                    title={preset.description}
+                  >
+                    {preset.label}
+                  </button>
+                ))}
+              </div>
+
+              {savedPresets.length > 0 ? (
+                <div className="mt-3 border-t border-border pt-2">
+                  <div className="mb-1 text-[9px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+                    My presets
+                  </div>
+                  <div className="space-y-1">
+                    {savedPresets.map((preset) => (
+                      <div
+                        key={preset.id}
+                        className="flex h-7 items-center border border-border bg-background"
+                      >
+                        <button
+                          type="button"
+                          onClick={() => applySavedPreset(preset)}
+                          className="min-w-0 flex-1 truncate px-2 text-left text-[10px] font-medium text-foreground"
+                        >
+                          {preset.name}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => removeSavedPreset(preset.id)}
+                          className="flex h-full w-7 items-center justify-center border-l border-border text-muted-foreground hover:text-foreground"
+                          aria-label={`Delete ${preset.name} preset`}
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
+
+              <div className="mt-3 border-t border-border pt-2">
+                {savingPreset ? (
+                  <div className="flex items-center gap-1.5">
+                    <input
+                      autoFocus
+                      value={presetName}
+                      maxLength={48}
+                      placeholder="Preset name"
+                      onChange={(event) => setPresetName(event.target.value)}
+                      onKeyDown={(event) => {
+                        if (event.key === 'Enter') saveCurrentPreset()
+                        if (event.key === 'Escape') {
+                          setSavingPreset(false)
+                          setPresetName('')
+                        }
+                      }}
+                      className="h-7 min-w-0 flex-1 border border-input bg-background px-2 text-[10px] text-foreground outline-none"
+                    />
+                    <Button
+                      type="button"
+                      size="sm"
+                      className="h-7 px-2 text-[10px]"
+                      disabled={presetName.trim() === ''}
+                      onClick={saveCurrentPreset}
+                    >
+                      Save
+                    </Button>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    className="flex h-7 items-center gap-1.5 text-[10px] font-medium text-muted-foreground hover:text-foreground"
+                    onClick={() => setSavingPreset(true)}
+                  >
+                    <BookmarkPlus className="h-3.5 w-3.5" />
+                    Save current preset
+                  </button>
+                )}
+              </div>
+            </PopoverContent>
+          </Popover>
 
           <Button
             type="button"
             size="icon"
             variant="ghost"
-            className={cn(
-              'h-7 w-7',
-              resolved.enabled &&
-                'studio-tool-active',
-            )}
+            className={cn('h-7 w-7', resolved.enabled && 'studio-tool-active')}
             onClick={() =>
               commitMasterFx(
                 { ...resolved, enabled: !resolved.enabled },
                 'TOGGLE_MASTER_BYPASS',
               )
             }
-            aria-label={resolved.enabled ? 'Bypass dynamics FX' : 'Enable dynamics FX'}
-            data-tooltip={resolved.enabled ? 'Bypass dynamics FX' : 'Enable dynamics FX'}
+            aria-label={resolved.enabled ? 'Bypass master dynamics' : 'Enable master dynamics'}
+            title={resolved.enabled ? 'Bypass master dynamics' : 'Enable master dynamics'}
           >
             <Power className="h-3.5 w-3.5" />
           </Button>
@@ -648,207 +756,74 @@ export function BeatvideoMasterPanel() {
             variant="ghost"
             className="h-7 w-7"
             onClick={resetAll}
-            data-tooltip="Reset master chain"
+            title="Reset master chain"
             aria-label="Reset master chain"
           >
             <RotateCcw className="h-3.5 w-3.5" />
           </Button>
         </div>
+      </div>
 
-        <div className="studio-segmented mt-3 flex max-w-full overflow-x-auto">
-          {MASTERING_PRESETS.map((preset) => (
-            <button
-              key={preset.id}
-              type="button"
-              onClick={() => applyPreset(preset.id)}
-              aria-pressed={activeBuiltInPresetId === preset.id}
-              className={cn(
-                'studio-segment h-7 shrink-0 px-2.5 text-xs font-medium',
-              )}
-              title={preset.description}
-            >
-              {preset.label}
-            </button>
-          ))}
+      <div className="shrink-0 px-5 py-4">
+        <div className="text-[9px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+          Input
+        </div>
+        <div className="mt-1 text-[20px] font-semibold leading-none tabular-nums text-foreground">
+          {resolved.inputGainDb >= 0 ? '+' : ''}{resolved.inputGainDb.toFixed(1)} dB
+        </div>
+        <div className="mt-3 flex items-center gap-2">
+          <input
+            type="range"
+            min={-12}
+            max={12}
+            step={0.1}
+            value={resolved.inputGainDb}
+            onPointerDown={beginGesture}
+            onPointerUp={endGesture}
+            onPointerCancel={endGesture}
+            onChange={(event) => {
+              setAutoLevelResult(null)
+              patchMaster({ enabled: true, inputGainDb: Number(event.target.value) })
+            }}
+            className="studio-master-input-range h-6 min-w-0 flex-1 accent-foreground"
+            aria-label="Input trim"
+          />
+          <Button
+            type="button"
+            size="sm"
+            className="studio-primary-action h-8 w-28 shrink-0 px-0"
+            disabled={autoLeveling}
+            onClick={() => void autoLevel()}
+          >
+            {autoLeveling ? 'Analyzing…' : 'Auto level'}
+          </Button>
         </div>
 
-        {savedPresets.length > 0 ? (
-          <div className="mt-2">
-            <div className="mb-1 text-[11px] font-medium uppercase tracking-[0.12em] text-muted-foreground">
-              My presets
+        {autoLevelResult ? (
+          <div className="mt-2 font-mono text-[9px] leading-[17px] text-muted-foreground" data-auto-level-result>
+            <div>
+              {autoLevelResult.rmsDb.toFixed(1)} dBFS measured
+              {'  →  '}
+              {autoLevelResult.inputGainDb >= 0 ? '+' : ''}
+              {autoLevelResult.inputGainDb.toFixed(1)} dB trim
+              {'  →  '}
+              {autoLevelResult.projectedRmsDb.toFixed(1)} dBFS into chain
             </div>
-            <div className="flex gap-1 overflow-x-auto pb-1">
-              {savedPresets.map((preset) => (
-                <div
-                  key={preset.id}
-                  className="flex shrink-0 items-center rounded-md border border-border bg-background"
-                >
-                  <button
-                    type="button"
-                    onClick={() => applySavedPreset(preset)}
-                    className="px-2 py-1.5 text-xs font-medium text-foreground hover:bg-secondary/50"
-                    title="Load saved master preset"
-                  >
-                    {preset.name}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => removeSavedPreset(preset.id)}
-                    className="flex h-6 w-6 items-center justify-center border-l border-border text-muted-foreground hover:bg-secondary/50 hover:text-foreground"
-                    aria-label={`Delete ${preset.name} preset`}
-                    title="Delete preset"
-                  >
-                    <X className="h-3 w-3" />
-                  </button>
-                </div>
-              ))}
+            <div>
+              Peak headroom{' '}
+              {Math.max(
+                0,
+                AUTO_LEVEL_LIMITER_CEILING_DB - autoLevelResult.projectedPeakDb,
+              ).toFixed(1)} dB
+              {autoLevelResult.estimatedLimiterReductionDb > 0.05
+                ? ` · limiter ~${autoLevelResult.estimatedLimiterReductionDb.toFixed(1)} dB`
+                : ''}
             </div>
           </div>
         ) : null}
-
-        <div className="mt-2">
-          {savingPreset ? (
-            <div className="flex items-center gap-1.5">
-              <input
-                autoFocus
-                value={presetName}
-                maxLength={48}
-                placeholder="Preset name"
-                onChange={(event) => setPresetName(event.target.value)}
-                onKeyDown={(event) => {
-                  if (event.key === 'Enter') saveCurrentPreset()
-                  if (event.key === 'Escape') {
-                    setSavingPreset(false)
-                    setPresetName('')
-                  }
-                }}
-                className="h-7 min-w-0 flex-1 rounded-md border border-input bg-secondary px-2 text-xs text-foreground outline-none focus:border-foreground/40"
-              />
-              <Button
-                type="button"
-                size="sm"
-                className="h-7 px-2 text-xs"
-                disabled={presetName.trim() === ''}
-                onClick={saveCurrentPreset}
-              >
-                Save
-              </Button>
-              <Button
-                type="button"
-                size="icon"
-                variant="ghost"
-                className="h-7 w-7"
-                onClick={() => {
-                  setSavingPreset(false)
-                  setPresetName('')
-                }}
-                aria-label="Cancel saving preset"
-              >
-                <X className="h-3.5 w-3.5" />
-              </Button>
-            </div>
-          ) : (
-            <Button
-              type="button"
-              size="sm"
-              variant="ghost"
-              className="h-7 gap-1.5 px-2 text-xs text-muted-foreground"
-              onClick={() => setSavingPreset(true)}
-            >
-              <BookmarkPlus className="h-3.5 w-3.5" />
-              Save current preset
-            </Button>
-          )}
-        </div>
-
-        <div className="mt-3 border-t border-border pt-3">
-          <div className="flex items-center justify-between gap-3">
-            <div className="min-w-0">
-              <div className="text-[9px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">Input</div>
-              <div className="mt-0.5 font-mono text-[15px] font-medium tabular-nums text-foreground">
-                {resolved.inputGainDb >= 0 ? '+' : ''}{resolved.inputGainDb.toFixed(1)} dB
-              </div>
-            </div>
-            <Button
-              type="button"
-              size="sm"
-              className="studio-primary-action h-8 shrink-0 px-3 text-[10px] font-semibold uppercase tracking-[0.08em]"
-              disabled={autoLeveling}
-              onClick={() => void autoLevel()}
-            >
-              <Gauge className="h-3.5 w-3.5" />
-              {autoLeveling ? 'Analyzing…' : 'Auto level'}
-            </Button>
-          </div>
-
-          <div className="mt-2">
-            <MasterRange
-              label="Input trim"
-              value={resolved.inputGainDb}
-              min={-12}
-              max={12}
-              step={0.1}
-              unit=" dB"
-              onGestureStart={beginGesture}
-              onGestureEnd={endGesture}
-              onChange={(inputGainDb) => {
-                setAutoLevelResult(null)
-                patchMaster({ enabled: true, inputGainDb })
-              }}
-            />
-          </div>
-
-          {autoLevelResult ? (
-            <div
-              className="mt-2 divide-y divide-border/70 border-y border-border/70 text-[11px]"
-              title="Gated program RMS and sample peak; not LUFS or true peak"
-              data-auto-level-result
-            >
-              <div className="grid grid-cols-[88px_1fr] gap-3 py-1.5">
-                <span className="text-muted-foreground">Measured input</span>
-                <span className="text-right font-mono tabular-nums text-foreground">
-                  {autoLevelResult.rmsDb.toFixed(1)} dBFS avg · {autoLevelResult.peakDb.toFixed(1)} dBFS peak
-                </span>
-              </div>
-              <div className="grid grid-cols-[88px_1fr] gap-3 py-1.5">
-                <span className="text-muted-foreground">Input trim</span>
-                <span className="text-right font-mono tabular-nums text-foreground">
-                  {autoLevelResult.inputGainDb >= 0 ? '+' : ''}
-                  {autoLevelResult.inputGainDb.toFixed(1)} dB
-                </span>
-              </div>
-              <div className="grid grid-cols-[88px_1fr] gap-3 py-1.5">
-                <span className="text-muted-foreground">Into chain</span>
-                <span className="text-right font-mono tabular-nums text-foreground">
-                  {autoLevelResult.projectedRmsDb.toFixed(1)} dBFS avg · {autoLevelResult.projectedPeakDb.toFixed(1)} dBFS peak
-                </span>
-              </div>
-              <div className="grid grid-cols-[88px_1fr] gap-3 py-1.5 text-[10px]">
-                <span className="text-muted-foreground">Peak control</span>
-                <span className="text-right text-muted-foreground">
-                  Limiter ceiling {AUTO_LEVEL_LIMITER_CEILING_DB.toFixed(1)} dBFS
-                  {autoLevelResult.estimatedLimiterReductionDb > 0.05
-                    ? ` · ~${autoLevelResult.estimatedLimiterReductionDb.toFixed(1)} dB reduction`
-                    : ' · no reduction expected'}
-                </span>
-              </div>
-              <div className="grid grid-cols-[88px_1fr] gap-3 py-1.5 text-[10px]">
-                <span className="text-muted-foreground">Mixer output</span>
-                <span className="text-right text-muted-foreground">
-                  {masterBusDb > 0 ? '+' : ''}{masterBusDb.toFixed(1)} dB · unchanged
-                </span>
-              </div>
-              {autoLevelResult.limitedByPeak ? (
-                <div className="py-1.5 text-[10px] leading-relaxed text-muted-foreground">
-                  Target {autoLevelResult.targetRmsDb.toFixed(1)} dBFS was reduced to preserve transient headroom instead of flattening the beat.
-                </div>
-              ) : null}
-            </div>
-          ) : null}
-        </div>
       </div>
 
-      <div className="shrink-0 border-b border-border p-2">
+      <div className="shrink-0 border-b border-border px-5 pb-3 pt-2">
         <div className="mb-1.5 flex items-center justify-between gap-2 px-1">
           <span className="text-[9px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">Inserts</span>
           <div className="flex items-center gap-2">
@@ -860,7 +835,7 @@ export function BeatvideoMasterPanel() {
             <span className="text-[11px] text-muted-foreground">top → bottom</span>
           </div>
         </div>
-        <div className="divide-y divide-border border-y border-border">
+        <div className="space-y-2">
           {Array.from({ length: MAX_MASTER_SLOTS }, (_, index) => {
             const id = resolved.order[index]
             if (!id) {
@@ -868,7 +843,7 @@ export function BeatvideoMasterPanel() {
               return (
                 <div
                   key={`empty-${index}`}
-                  className="flex h-[49px] min-w-0 items-center gap-2 px-2 text-muted-foreground"
+                  className="flex h-[46px] min-w-0 items-center gap-2 rounded-[3px] bg-[#d1d4ce] px-2 text-muted-foreground"
                 >
                   <span className="w-5 shrink-0 font-mono text-[11px] tabular-nums">
                     {String(index + 1).padStart(2, '0')}
@@ -915,30 +890,22 @@ export function BeatvideoMasterPanel() {
                   setDraggingSlot(null)
                   setDragOverSlot(null)
                 }}
+                draggable
+                onDragStart={(event) => {
+                  setDraggingSlot(id)
+                  event.dataTransfer.effectAllowed = 'move'
+                  event.dataTransfer.setData('text/plain', id)
+                }}
+                onDragEnd={() => {
+                  setDraggingSlot(null)
+                  setDragOverSlot(null)
+                }}
                 className={cn(
-                  'group flex min-w-0 items-stretch',
-                  selected && 'bg-[#d4d7d1] shadow-[inset_3px_0_0_var(--primary)]',
-                  dragTarget && 'bg-primary/15 shadow-[inset_0_2px_0_var(--primary)]',
+                  'group flex h-[46px] min-w-0 cursor-grab items-stretch rounded-[3px] bg-[#d1d4ce] active:cursor-grabbing',
+                  selected && 'bg-[#c7cac4]',
+                  dragTarget && 'shadow-[inset_0_2px_0_var(--primary)]',
                 )}
               >
-                <button
-                  type="button"
-                  draggable
-                  onDragStart={(event) => {
-                    setDraggingSlot(id)
-                    event.dataTransfer.effectAllowed = 'move'
-                    event.dataTransfer.setData('text/plain', id)
-                  }}
-                  onDragEnd={() => {
-                    setDraggingSlot(null)
-                    setDragOverSlot(null)
-                  }}
-                  className="flex w-7 shrink-0 cursor-grab items-center justify-center text-muted-foreground hover:text-foreground active:cursor-grabbing"
-                  aria-label={`Move ${label}`}
-                  title="Drag to reorder"
-                >
-                  <GripVertical className="h-3.5 w-3.5" />
-                </button>
                 <button
                   type="button"
                   onClick={() => setSelectedSlot(id)}
@@ -948,12 +915,7 @@ export function BeatvideoMasterPanel() {
                   <span className="w-5 shrink-0 font-mono text-[11px] tabular-nums text-muted-foreground">
                     {String(index + 1).padStart(2, '0')}
                   </span>
-                  <Icon
-                    className={cn(
-                      'h-4 w-4 shrink-0',
-                      enabled ? 'text-primary' : 'text-muted-foreground',
-                    )}
-                  />
+
                   <span className="min-w-0 flex-1">
                     <span className="block truncate text-xs font-medium text-foreground">
                       {label}
@@ -985,7 +947,7 @@ export function BeatvideoMasterPanel() {
                   aria-pressed={enabled}
                   title={`${enabled ? 'Bypass' : 'Enable'} ${label}`}
                 >
-                  <Power className="h-3.5 w-3.5" />
+                  <span className="text-[8px] font-semibold uppercase">{enabled ? 'On' : 'Off'}</span>
                 </button>
               </div>
             )
@@ -1087,33 +1049,29 @@ export function BeatvideoMasterPanel() {
         ) : null}
       </div>
 
-      <div className="shrink-0 border-t border-border bg-[#e8e9e5] px-4 py-3">
-        <div className="mb-2 flex items-center justify-between">
-          <div>
-            <div className="text-[9px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+      <div className="shrink-0 border-t border-border bg-[#e8e9e5] px-5 py-3">
+        <div className="grid grid-cols-[minmax(0,1fr)_52px] items-end gap-3">
+          <div className="min-w-0">
+            <div className="text-[9px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
               Master out
             </div>
-            <div className="mt-0.5 font-mono text-[13px] tabular-nums text-foreground">
-              {masterBusDb > 0 ? '+' : ''}{masterBusDb.toFixed(1)} dB
+            <div className="mt-1 text-[9px] text-muted-foreground">
+              Mixer fader lives in Mixer ↗
+            </div>
+            <button
+              type="button"
+              onClick={toggleMixerFloating}
+              aria-pressed={mixerFloating}
+              className="studio-primary-action mt-3 h-9 w-full"
+            >
+              {mixerFloating ? 'Close Mixer' : 'Open Mixer'}
+            </button>
+            <div className="mt-3 text-[9px] font-semibold uppercase tracking-[0.08em] text-foreground">
+              Auto level · pre-FX only
             </div>
           </div>
-          <span
-            className={cn(
-              'text-[9px] font-semibold uppercase tracking-[0.12em]',
-              mixerFloating ? 'text-[#759719]' : 'text-muted-foreground',
-            )}
-          >
-            {mixerFloating ? 'Mixer open' : 'Output fader in Mixer'}
-          </span>
+          <AudioMeterPanel initialMode="meter" allowDockedMixer={false} presentation="master-inline" />
         </div>
-        <button
-          type="button"
-          onClick={toggleMixerFloating}
-          aria-pressed={mixerFloating}
-          className="studio-secondary-action h-8 w-full"
-        >
-          {mixerFloating ? 'Close Mixer' : 'Open Mixer'}
-        </button>
       </div>
     </div>
   )
