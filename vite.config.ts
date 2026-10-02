@@ -12,11 +12,11 @@ import { fileURLToPath } from 'node:url'
 // version and old cached chunks are never purged. Uses the content hash (not a timestamp)
 // so identical builds produce an identical SW and avoid needless update churn.
 function serviceWorkerVersionPlugin(): Plugin {
-  const placeholder = '__FREECUT_BUILD_ID__'
+  const placeholder = '__BEAT_VIDEO_BUILD_ID__'
   let buildId = ''
 
   return {
-    name: 'freecut-sw-version',
+    name: 'beat-video-maker-sw-version',
     apply: 'build',
     writeBundle(options, bundle) {
       const mainEntry = Object.values(bundle).find(
