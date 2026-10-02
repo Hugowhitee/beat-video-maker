@@ -1,5 +1,4 @@
 import { memo } from 'react'
-import { AudioLines, Blend, Film, FolderOpen, Layers3, Type } from 'lucide-react'
 import { useEditorStore } from '@/shared/state/editor'
 import { useProjectStore } from '@/features/editor/deps/projects-contract'
 import type { EditorSidebarTab, EditorWorkspaceId } from '@/config/editor-workspaces'
@@ -7,25 +6,32 @@ import { cn } from '@/shared/ui/cn'
 
 type RailTarget = {
   label: string
-  icon: typeof FolderOpen
   workspace: EditorWorkspaceId
   tab: EditorSidebarTab
 }
 
 const PROJECT_TARGETS: readonly RailTarget[] = [
-  { label: 'Media', icon: FolderOpen, workspace: 'edit', tab: 'media' },
-  { label: 'Beat grid', icon: AudioLines, workspace: 'beat', tab: 'beat' },
-  { label: 'Sequences', icon: Layers3, workspace: 'edit', tab: 'media' },
-  { label: 'Transitions', icon: Blend, workspace: 'edit', tab: 'transitions' },
-  { label: 'Graphics', icon: Type, workspace: 'edit', tab: 'text' },
+  { label: 'Media', workspace: 'edit', tab: 'media' },
+  { label: 'Beat grid', workspace: 'beat', tab: 'beat' },
+  { label: 'Sequences', workspace: 'edit', tab: 'media' },
+  { label: 'Transitions', workspace: 'edit', tab: 'transitions' },
+  { label: 'Graphics', workspace: 'edit', tab: 'text' },
 ]
 
 const QUICK_TARGETS: readonly RailTarget[] = [
-  { label: 'Footage', icon: Film, workspace: 'edit', tab: 'media' },
-  { label: 'Beat', icon: AudioLines, workspace: 'beat', tab: 'beat' },
-  { label: 'Text', icon: Type, workspace: 'edit', tab: 'text' },
-  { label: 'Graphic', icon: Layers3, workspace: 'edit', tab: 'shapes' },
+  { label: 'Footage', workspace: 'edit', tab: 'media' },
+  { label: 'Photo', workspace: 'edit', tab: 'media' },
+  { label: 'Text', workspace: 'edit', tab: 'text' },
+  { label: 'Graphic', workspace: 'edit', tab: 'shapes' },
 ]
+
+function formatSourceTime(seconds: number | null | undefined): string {
+  if (seconds === null || seconds === undefined || !Number.isFinite(seconds)) return '—'
+  const safe = Math.max(0, seconds)
+  const minutes = Math.floor(safe / 60)
+  const remainder = safe - minutes * 60
+  return `${String(minutes).padStart(2, '0')}:${remainder.toFixed(3).padStart(6, '0')}`
+}
 
 export const StudioProjectRail = memo(function StudioProjectRail() {
   const workspace = useEditorStore((state) => state.workspace)
@@ -38,7 +44,8 @@ export const StudioProjectRail = memo(function StudioProjectRail() {
   const bpm = music?.bpmOverride ?? music?.musicMap?.bpm ?? null
   const beatsPerBar = music?.musicMap?.beatsPerBar ?? 4
   const beatReady = Boolean(music?.musicMap?.beats?.length)
-  const gridVerified = Boolean(music?.barOneVerified)
+  const gridLocked = beatReady && Boolean(music?.barOneVerified)
+  const downbeat = music?.barOneTime ?? music?.detectedBarOneTime ?? null
 
   const openTarget = (target: RailTarget) => {
     setWorkspace(target.workspace)
@@ -50,26 +57,20 @@ export const StudioProjectRail = memo(function StudioProjectRail() {
       className="studio-project-rail hidden h-full w-[214px] shrink-0 flex-col overflow-hidden border-r border-border bg-sidebar md:flex"
       aria-label="Project"
     >
-      <div className="flex h-11 shrink-0 items-center border-b border-border px-4">
-        <span className="text-[11px] font-semibold uppercase tracking-[0.12em] text-foreground">
+      <div className="min-h-0 flex-1 overflow-y-auto px-4 pt-4">
+        <div className="text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
           Project
-        </span>
-      </div>
-
-      <div className="min-h-0 flex-1 overflow-y-auto px-2 py-2">
-        <div className="px-2 pb-2 pt-1">
-          <div className="truncate text-[12px] font-semibold text-foreground">
-            {project?.name ?? 'Untitled project'}
-          </div>
-          <div className="mt-0.5 font-mono text-[9px] text-muted-foreground">
-            {bpm ? `${Math.round(bpm)} BPM · ${beatsPerBar}/4` : 'Beat not analyzed'}
-          </div>
+        </div>
+        <div className="mt-2 truncate text-[15px] font-semibold leading-5 text-foreground">
+          {project?.name ?? 'Untitled project'}
         </div>
 
-        <nav className="border-y border-border py-1" aria-label="Project sections">
+        <div className="mt-3 border-t border-border pt-1.5">
           {PROJECT_TARGETS.map((target) => {
-            const Icon = target.icon
-            const selected = workspace === target.workspace && activeTab === target.tab
+            const isBeatStatusRow = target.label === 'Beat grid' && beatReady
+            const selected =
+              isBeatStatusRow || (workspace === target.workspace && activeTab === target.tab)
+
             return (
               <button
                 key={target.label}
@@ -77,64 +78,56 @@ export const StudioProjectRail = memo(function StudioProjectRail() {
                 onClick={() => openTarget(target)}
                 aria-current={selected ? 'page' : undefined}
                 className={cn(
-                  'studio-rail-row flex h-9 w-full items-center gap-2.5 px-2 text-left text-[11px] font-medium',
-                  selected ? 'studio-rail-row-active' : 'text-muted-foreground',
+                  'studio-rail-row flex h-[42px] w-full items-center justify-between px-3 text-left text-[11px] font-medium',
+                  selected ? 'studio-rail-row-active font-semibold' : 'text-foreground',
                 )}
               >
-                <Icon className="h-3.5 w-3.5 shrink-0" strokeWidth={1.75} />
-                <span className="min-w-0 flex-1 truncate">{target.label}</span>
+                <span className="min-w-0 truncate">{target.label}</span>
+                {target.label === 'Beat grid' && beatReady ? (
+                  <span className="text-[9px] font-medium uppercase text-muted-foreground">
+                    Ready
+                  </span>
+                ) : null}
               </button>
             )
           })}
-        </nav>
+        </div>
 
-        <section className="py-3">
-          <div className="px-2 pb-2 text-[9px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
+        <section className="mt-5">
+          <div className="pb-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
             Quick add
           </div>
-          <div className="grid grid-cols-2 gap-1.5 px-1">
-            {QUICK_TARGETS.map((target) => {
-              const Icon = target.icon
-              return (
-                <button
-                  key={target.label}
-                  type="button"
-                  onClick={() => openTarget(target)}
-                  className="studio-quick-tile flex h-14 flex-col items-start justify-between border border-border bg-card px-2.5 py-2 text-left text-[10px] font-medium text-foreground"
-                >
-                  <Icon className="h-3.5 w-3.5 text-muted-foreground" strokeWidth={1.75} />
-                  <span>{target.label}</span>
-                </button>
-              )
-            })}
+          <div className="grid grid-cols-2 gap-2">
+            {QUICK_TARGETS.map((target) => (
+              <button
+                key={target.label}
+                type="button"
+                onClick={() => openTarget(target)}
+                className="studio-quick-tile flex h-8 items-center border-0 bg-[#d9dbd6] px-2.5 text-left text-[10px] font-medium text-foreground"
+              >
+                + {target.label}
+              </button>
+            ))}
           </div>
         </section>
 
-        <section className="border-t border-border px-2 py-3">
-          <div className="mb-2 flex items-center justify-between gap-2">
-            <span className="text-[9px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">
-              Beat status
-            </span>
-            <span
-              className={cn(
-                'h-1.5 w-1.5 rounded-full',
-                beatReady ? 'bg-primary' : 'bg-muted-foreground/45',
-              )}
-              aria-hidden="true"
-            />
+        <section className="mt-6 border-t border-border pt-4">
+          <div className="text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+            Beat status
           </div>
-          <div className="grid grid-cols-[1fr_auto] gap-x-3 gap-y-1 text-[10px]">
-            <span className="text-muted-foreground">Analysis</span>
-            <span className="font-medium text-foreground">{beatReady ? 'Ready' : 'Missing'}</span>
-            <span className="text-muted-foreground">Bar 1</span>
-            <span className="font-medium text-foreground">
-              {gridVerified ? 'Verified' : beatReady ? 'Review' : '—'}
-            </span>
+          <div className="mt-2 text-[11px] font-semibold text-foreground">
+            {gridLocked ? 'Grid locked' : beatReady ? 'Grid ready' : 'No beat grid'}
+          </div>
+          <div className="mt-1 font-mono text-[10px] tabular-nums text-muted-foreground">
+            {bpm ? `${bpm.toFixed(2)} BPM · ${beatsPerBar}/4` : '— BPM · 4/4'}
+          </div>
+          <div className="mt-1 font-mono text-[10px] tabular-nums text-muted-foreground">
+            Downbeat {formatSourceTime(downbeat)}
           </div>
           <button
             type="button"
-            onClick={() => openTarget(PROJECT_TARGETS[1])}
-            className="studio-secondary-action mt-3 h-8 w-full"
+            onClick={() => openTarget(PROJECT_TARGETS[1]!)}
+            className="studio-primary-action mt-4 h-8 w-full"
           >
             Review grid
           </button>
