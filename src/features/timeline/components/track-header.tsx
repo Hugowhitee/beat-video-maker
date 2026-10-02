@@ -16,8 +16,6 @@ import {
   Radio,
   FoldHorizontal,
   Link2,
-  ChevronDown,
-  ChevronRight,
 } from 'lucide-react'
 import type { TimelineTrack } from '@/types/timeline'
 import { useTrackDrag } from '../hooks/use-track-drag'
@@ -148,50 +146,12 @@ export const TrackHeader = memo(function TrackHeader({
             onMouseDown={simplified ? undefined : handleDragStart}
           >
             {simplified ? (
-              <div className="flex h-full min-h-0 items-center gap-1 px-1">
-                {onToggleCollapsed ? (
-                  <button
-                    type="button"
-                    className="studio-tool flex h-6 w-6 shrink-0 items-center justify-center p-0"
-                    onClick={(event) => {
-                      event.stopPropagation()
-                      onToggleCollapsed()
-                    }}
-                    aria-expanded={!collapsed}
-                    aria-label={`${collapsed ? 'Expand' : 'Collapse'} ${producerTrackLabel} track`}
-                    data-tooltip={collapsed ? 'Expand track' : 'Collapse track'}
-                  >
-                    {collapsed ? (
-                      <ChevronRight className="h-3 w-3" />
-                    ) : (
-                      <ChevronDown className="h-3 w-3" />
-                    )}
-                  </button>
-                ) : null}
-                {displayTrackColor ? (
-                  <span
-                    className="h-2 w-2 shrink-0 rounded-[2px]"
-                    style={{ backgroundColor: displayTrackColor }}
-                    aria-hidden="true"
-                  />
-                ) : null}
-                <span className="min-w-0 flex-1 truncate font-mono text-xs font-semibold">
+              <div className="flex h-full min-h-0 items-center px-2.5">
+                <span
+                  className={`min-w-0 flex-1 truncate text-[9px] font-medium leading-[11px] ${trackDisabled ? 'text-[#8d928b]' : 'text-[#d6dad4]'}`}
+                >
                   {producerTrackLabel}
                 </span>
-                {itemCount > 0 ? (
-                  <span className="shrink-0 font-mono text-[9px] tabular-nums text-muted-foreground">
-                    {itemCount}
-                  </span>
-                ) : null}
-                {track.solo ? (
-                  <span className="shrink-0 text-[9px] font-semibold text-primary">S</span>
-                ) : null}
-                {track.locked ? (
-                  <span className="shrink-0 text-[9px] font-semibold text-muted-foreground">L</span>
-                ) : null}
-                {trackDisabled ? (
-                  <span className="shrink-0 text-[9px] font-semibold text-muted-foreground">Off</span>
-                ) : null}
               </div>
             ) : (
               <>
