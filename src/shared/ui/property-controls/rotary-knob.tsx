@@ -7,10 +7,13 @@ interface RotaryKnobProps {
   value: MixedValue
   onChange: (value: number) => void
   onLiveChange?: (value: number) => void
+  onGestureStart?: () => void
+  onGestureEnd?: () => void
   min: number
   max: number
   step?: number
   size?: number
+  appearance?: 'arc' | 'plain'
   className?: string
 }
 
@@ -32,15 +35,34 @@ export function RotaryKnob({
   value,
   onChange,
   onLiveChange,
+  onGestureStart,
+  onGestureEnd,
   min,
   max,
   step = 1,
   size = 28,
+  appearance = 'arc',
   className,
 }: RotaryKnobProps) {
   const elRef = useRef<HTMLDivElement>(null)
-  const stateRef = useRef({ onChange, onLiveChange, min, max, step })
-  stateRef.current = { onChange, onLiveChange, min, max, step }
+  const stateRef = useRef({
+    onChange,
+    onLiveChange,
+    onGestureStart,
+    onGestureEnd,
+    min,
+    max,
+    step,
+  })
+  stateRef.current = {
+    onChange,
+    onLiveChange,
+    onGestureStart,
+    onGestureEnd,
+    min,
+    max,
+    step,
+  }
 
   const [draftValue, setDraftValue] = useState<number | null>(null)
 
@@ -63,6 +85,7 @@ export function RotaryKnob({
       if (!el) return
       el.setPointerCapture(e.pointerId)
 
+      stateRef.current.onGestureStart?.()
       const startY = e.clientY
       const startValue = num
       setDraftValue(num)
@@ -89,6 +112,7 @@ export function RotaryKnob({
         const v = compute(ue.clientY)
         setDraftValue(null)
         stateRef.current.onChange(v)
+        stateRef.current.onGestureEnd?.()
         el.removeEventListener('pointermove', handleMove)
         el.removeEventListener('pointerup', handleUp)
         el.removeEventListener('pointercancel', handleUp)
@@ -144,23 +168,48 @@ export function RotaryKnob({
       onKeyDown={onKeyDown}
     >
       <svg viewBox={`0 0 ${size} ${size}`} width={size} height={size}>
-        <path
-          d={arcPath(cx, cy, r, ARC_START_DEG, ARC_START_DEG + ARC_SWEEP_DEG)}
-          fill="none"
-          stroke="#2e2e31"
-          strokeWidth={2.5}
-          strokeLinecap="round"
-        />
-        {norm > 0.005 && (
-          <path
-            d={arcPath(cx, cy, r, ARC_START_DEG, deg)}
-            fill="none"
-            stroke="#ff7b63"
-            strokeWidth={2.5}
-            strokeLinecap="round"
-          />
+        {appearance === 'plain' ? (
+          <>
+            <circle
+              cx={cx}
+              cy={cy}
+              r={r + 1}
+              fill="var(--background)"
+              stroke="var(--muted-foreground)"
+              strokeWidth={1}
+            />
+            <line
+              x1={cx}
+              y1={cy}
+              x2={cx}
+              y2={4}
+              stroke="var(--foreground)"
+              strokeWidth={2}
+              strokeLinecap="round"
+              transform={`rotate(${-135 + norm * 270} ${cx} ${cy})`}
+            />
+          </>
+        ) : (
+          <>
+            <path
+              d={arcPath(cx, cy, r, ARC_START_DEG, ARC_START_DEG + ARC_SWEEP_DEG)}
+              fill="none"
+              stroke="var(--border)"
+              strokeWidth={2.5}
+              strokeLinecap="round"
+            />
+            {norm > 0.005 && (
+              <path
+                d={arcPath(cx, cy, r, ARC_START_DEG, deg)}
+                fill="none"
+                stroke="var(--foreground)"
+                strokeWidth={2.5}
+                strokeLinecap="round"
+              />
+            )}
+            <circle cx={tip.x} cy={tip.y} r={2} fill="var(--foreground)" />
+          </>
         )}
-        <circle cx={tip.x} cy={tip.y} r={2} fill="white" />
       </svg>
     </div>
   )

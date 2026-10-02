@@ -303,6 +303,10 @@ export async function analyzeMusicMedia(
     ? media.duration
     : decoded.duration
   const stabilized = stabilizeBeatGrid(detectedRhythm, duration)
+  // Stable programmed music uses the reconciled global tempo/phase lattice.
+  // Variable material is returned unchanged by stabilizeBeatGrid, so this keeps
+  // one canonical MusicMap while avoiding raw detector jitter or cumulative
+  // detector drift in the normal producer timeline.
   const musicMap = {
     ...buildMusicMapFromRhythm(stabilized.rhythm, duration),
     gridFit: stabilized.fit,

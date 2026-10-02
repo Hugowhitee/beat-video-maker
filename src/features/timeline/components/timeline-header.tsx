@@ -506,6 +506,7 @@ export const TimelineHeader = memo(function TimelineHeader({
     BEAT_GRID_RESOLUTION_OPTIONS.find((option) => option.value === beatGridResolution)?.label ??
     'Auto'
   const musicalSnapEnabled = snapEnabled && beatGridSnapEnabled
+  const producerZoomLevel = useZoomStore((state) => state.contentLevel)
 
   const toggleMusicalSnap = useCallback(() => {
     if (musicalSnapEnabled) {
@@ -542,6 +543,80 @@ export const TimelineHeader = memo(function TimelineHeader({
 
   const handleRedo = () => {
     useTimelineStore.temporal.getState().redo()
+  }
+
+  if (isSimplified && !compact) {
+    const producerZoomPercent = Math.round(producerZoomLevel * 100)
+    const zoomOut = onZoomOut ?? useZoomStore.getState().zoomOut
+    const zoomIn = onZoomIn ?? useZoomStore.getState().zoomIn
+
+    return (
+      <div
+        className="relative h-[42px] shrink-0 bg-[#e8e9e5] text-[#171917]"
+        role="toolbar"
+        aria-label={t('timeline.header.controls')}
+        data-studio-timeline-toolbar
+      >
+        <div className="absolute left-3 top-[15px] text-[10px] font-semibold uppercase leading-3">
+          Sequence 01
+        </div>
+
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button
+              type="button"
+              className="absolute left-[660px] top-0 flex h-[42px] w-[50px] items-center text-left font-mono text-[10px] text-[#686d67] hover:text-[#171917]"
+              aria-label={`Grid: ${beatGridResolutionLabel}`}
+              data-tooltip="Musical grid"
+            >
+              {beatGridResolutionLabel} snap
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="min-w-40">
+            <DropdownMenuItem onClick={toggleBeatGridVisible}>
+              <span className="w-4 font-mono text-xs">{beatGridVisible ? '✓' : ''}</span>
+              <span>Show grid</span>
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={toggleMusicalSnap}>
+              <span className="w-4 font-mono text-xs">{musicalSnapEnabled ? '✓' : ''}</span>
+              <span>Snap to grid</span>
+            </DropdownMenuItem>
+            {BEAT_GRID_RESOLUTION_OPTIONS.map((option, index) => (
+              <DropdownMenuItem
+                key={option.value}
+                onClick={() => setBeatGridResolution(option.value as BeatGridResolution)}
+                className={index === 0 ? 'border-t border-border/60' : ''}
+              >
+                <span className="w-4 font-mono text-xs">
+                  {option.value === beatGridResolution ? '✓' : ''}
+                </span>
+                <span className="font-mono text-xs">{option.label}</span>
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
+
+        <div className="absolute left-[710px] top-0 flex h-[42px] w-[64px] items-center justify-between font-mono text-[10px]">
+          <button
+            type="button"
+            onClick={zoomOut}
+            className="h-full w-3 text-[#686d67] hover:text-[#171917]"
+            aria-label={t('timeline.header.zoomOut')}
+          >
+            −
+          </button>
+          <span className="w-9 text-center tabular-nums">{producerZoomPercent}%</span>
+          <button
+            type="button"
+            onClick={zoomIn}
+            className="h-full w-3 text-[#686d67] hover:text-[#171917]"
+            aria-label={t('timeline.header.zoomIn')}
+          >
+            +
+          </button>
+        </div>
+      </div>
+    )
   }
 
   return (

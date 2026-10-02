@@ -123,7 +123,7 @@ export const useEditorStore = create<EditorState & EditorActions>((set) => ({
   // State
   activePanel: null,
   leftSidebarOpen: true,
-  rightSidebarOpen: initialWorkspace !== 'beat' && initialWorkspace !== 'master',
+  rightSidebarOpen: false,
   keyframeEditorShortcutScopeActive: false,
   transcriptEditorShortcutScopeActive: false,
   workspace: initialWorkspace,
@@ -206,12 +206,13 @@ export const useEditorStore = create<EditorState & EditorActions>((set) => ({
         workspace,
         ...loadEditorWorkspaceLayout(workspace),
         leftSidebarOpen: producerWorkspace ? true : state.leftSidebarOpen,
+        // Producer workspaces do not pop a generic Properties panel open as a
+        // side effect of navigation. Visual owns an explicit Inspector action;
+        // Beat/Master use their dedicated task panels.
         rightSidebarOpen:
-          workspace === 'beat' || workspace === 'master'
+          workspace === 'beat' || workspace === 'master' || workspace === 'edit'
             ? false
-            : workspace === 'edit'
-              ? true
-              : state.rightSidebarOpen,
+            : state.rightSidebarOpen,
       }
     }),
   setActiveTab: (tab) =>

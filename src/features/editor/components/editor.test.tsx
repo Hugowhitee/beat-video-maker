@@ -19,6 +19,7 @@ const mocks = vi.hoisted(() => ({
     workspace: 'edit',
     propertiesFullColumn: false,
     mediaFullColumn: false,
+    rightSidebarOpen: false,
   },
   clearPreviewAudioCache: vi.fn(),
   importExportDialog: vi.fn().mockResolvedValue({
@@ -84,6 +85,14 @@ vi.mock('./properties-sidebar', () => ({
   PropertiesSidebar: ({ mobile }: { mobile?: boolean }) => (
     <div data-testid="properties-sidebar" data-mobile={mobile ? 'true' : 'false'} />
   ),
+}))
+
+vi.mock('./studio-project-rail', () => ({
+  StudioProjectRail: () => <div data-testid="studio-project-rail" />,
+}))
+
+vi.mock('./beatvideo-master-panel', () => ({
+  BeatvideoMasterPanel: () => <div data-testid="beatvideo-master-panel" />,
 }))
 
 vi.mock('./preview-area', () => ({
@@ -262,6 +271,7 @@ vi.mock('@/shared/state/editor', () => ({
       syncSidebarLayout: typeof mocks.syncSidebarLayout
       propertiesFullColumn: boolean
       mediaFullColumn: boolean
+      rightSidebarOpen: boolean
       workspace: string
     }) => unknown,
   ) =>
@@ -269,6 +279,7 @@ vi.mock('@/shared/state/editor', () => ({
       syncSidebarLayout: mocks.syncSidebarLayout,
       propertiesFullColumn: mocks.editorState.propertiesFullColumn,
       mediaFullColumn: mocks.editorState.mediaFullColumn,
+      rightSidebarOpen: mocks.editorState.rightSidebarOpen,
       workspace: mocks.editorState.workspace,
     }),
 }))
@@ -356,6 +367,7 @@ describe('LoadedEditor migration metadata refresh', () => {
     mocks.editorState.workspace = 'edit'
     mocks.editorState.propertiesFullColumn = false
     mocks.editorState.mediaFullColumn = false
+    mocks.editorState.rightSidebarOpen = false
     mocks.loadTimeline.mockResolvedValue(undefined)
     mocks.loadMediaItems.mockResolvedValue(undefined)
     mocks.invalidate.mockResolvedValue(undefined)
@@ -566,6 +578,35 @@ describe('LoadedEditor migration metadata refresh', () => {
     expect(screen.getByTestId('timeline')).toHaveAttribute('data-compact', 'true')
     expect(screen.queryByTestId('mobile-playback-controls')).not.toBeInTheDocument()
     expect(dock).toBeInTheDocument()
+  })
+
+  it('uses the fixed Figma three-column shell in Master without the generic split handle', async () => {
+    mocks.editorState.workspace = 'master'
+
+    render(
+      <LoadedEditor
+        projectId="project-master"
+        project={{
+          id: 'project-master',
+          name: 'Master Project',
+          width: 1920,
+          height: 1080,
+          fps: 30,
+        }}
+        migration={{
+          storedSchemaVersion: 14,
+          currentSchemaVersion: 14,
+          requiresUpgrade: false,
+        }}
+      />,
+    )
+
+    expect(screen.getByTestId('studio-project-rail')).toBeInTheDocument()
+    expect(screen.getByTestId('beatvideo-master-panel')).toBeInTheDocument()
+    expect(screen.getByTestId('preview-area')).toBeInTheDocument()
+    expect(await screen.findByTestId('timeline')).toBeInTheDocument()
+    expect(screen.queryByTestId('resizable-handle')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('audio-meter-panel')).not.toBeInTheDocument()
   })
 
   it('mounts Motion in the shared editor shell and swaps only the classic Timeline', async () => {

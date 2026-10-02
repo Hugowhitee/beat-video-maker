@@ -74,7 +74,7 @@ const EDITOR_WORKSPACE_PRESETS: Record<EditorWorkspaceId, EditorWorkspaceLayout>
 export const EDITOR_WORKSPACE_TIMELINE_SIZE: Record<EditorWorkspaceId, number | null> = {
   beat: null,
   edit: null,
-  master: 18,
+  master: 47,
   color: 18,
   // Motion reuses the standard split and swaps only the timeline surface.
   motion: null,

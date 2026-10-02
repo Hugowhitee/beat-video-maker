@@ -200,11 +200,13 @@ export const AudioMeterPanel = memo(function AudioMeterPanel({
   initialMode = 'meter',
   mobile = false,
   allowDockedMixer = true,
+  presentation = 'dock',
 }: {
   initialMode?: PanelMode
   mobile?: boolean
   /** Master keeps the timeline wide: track balance lives in the floating mixer utility. */
   allowDockedMixer?: boolean
+  presentation?: 'dock' | 'master-inline' | 'host-only'
 }) {
   const { t } = useTranslation()
   const [panelMode, setPanelMode] = useState<PanelMode>(
@@ -1036,7 +1038,6 @@ export const AudioMeterPanel = memo(function AudioMeterPanel({
       storageKey={FLOATING_MIXER_STORAGE_KEY}
       onClose={() => setMixerFloating(false)}
       headerExtra={modeDropdown}
-      autoWidth
     >
       <Suspense fallback={null}>
         <LazyAudioMixerView
@@ -1123,6 +1124,67 @@ export const AudioMeterPanel = memo(function AudioMeterPanel({
   const unlitLedBg =
     'repeating-linear-gradient(to top, rgba(255,255,255,0.03) 0px, rgba(255,255,255,0.03) 3px, transparent 3px, transparent 4px)'
   const isScanningMeter = estimate.unresolvedSourceCount > 0 && estimate.resolvedSourceCount === 0
+
+  if (presentation === 'host-only') {
+    return (
+      <>
+        {detachedEqPanel}
+        {floatingMixer}
+      </>
+    )
+  }
+
+  if (presentation === 'master-inline') {
+    return (
+      <>
+        {detachedEqPanel}
+        {floatingMixer}
+        <div
+          className="relative h-[148px] w-[70px] shrink-0"
+          aria-label={t('editor.audioMeters.audioMeter')}
+        >
+          <span className="absolute left-[6px] top-[39px] font-mono text-[9px] leading-[11px] text-[#686d67]">
+            −6
+          </span>
+          <span className="absolute left-0 top-[91px] font-mono text-[9px] leading-[11px] text-[#686d67]">
+            −12
+          </span>
+          <span className="absolute left-0 top-[134px] font-mono text-[9px] leading-[11px] text-[#686d67]">
+            −24
+          </span>
+          <div className="absolute left-[38px] top-0 h-[148px] w-8 rounded-[2px] bg-[#242724]">
+            <div
+              ref={meterVisualRootRef}
+              className="absolute bottom-1 left-1 right-1 top-1 flex gap-[2px]"
+            >
+              {(['l', 'r'] as const).map((channel) => (
+                <div
+                  key={channel}
+                  className="relative w-[11px] flex-1 overflow-hidden rounded-[1px] bg-[#111411]"
+                >
+                  <div
+                    className={`absolute inset-x-0 bottom-0 bg-[#c7e85a] transition-[height] duration-75 ease-out ${isScanningMeter ? 'opacity-50' : ''}`}
+                    style={{
+                      height: channel === 'l' ? 'var(--meter-l, 0%)' : 'var(--meter-r, 0%)',
+                    }}
+                  />
+                  <div
+                    className="absolute inset-x-0 h-px bg-white/75 transition-[bottom] duration-100 ease-out"
+                    style={{
+                      bottom:
+                        channel === 'l'
+                          ? 'var(--meter-l-peak, 0%)'
+                          : 'var(--meter-r-peak, 0%)',
+                    }}
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </>
+    )
+  }
 
   return (
     <>

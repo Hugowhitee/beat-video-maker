@@ -147,6 +147,8 @@ export const FloatingPanel = memo(function FloatingPanel({
   const dragRef = useRef<{
     type: 'move' | 'resize'
     edge?: ResizeEdge
+    pointerId: number
+    captureTarget: HTMLElement | null
     startX: number
     startY: number
     startBounds: FloatingPanelBounds
@@ -223,22 +225,48 @@ export const FloatingPanel = memo(function FloatingPanel({
       setBounds(clampToViewport({ x, y, width, height }))
     }
 
-    const handlePointerUp = () => {
+    const finishPointerGesture = (e?: PointerEvent) => {
+      const drag = dragRef.current
+      if (!drag) return
+      if (e && e.pointerId !== drag.pointerId) return
+      try {
+        if (drag.captureTarget?.hasPointerCapture(drag.pointerId)) {
+          drag.captureTarget.releasePointerCapture(drag.pointerId)
+        }
+      } catch {
+        // Capture can already be gone after browser/window transitions.
+      }
       dragRef.current = null
+      document.body.style.cursor = ''
+      document.body.style.userSelect = ''
     }
 
-    window.addEventListener('pointermove', handlePointerMove)
-    window.addEventListener('pointerup', handlePointerUp)
+    window.addEventListener('pointermove', handlePointerMove, true)
+    window.addEventListener('pointerup', finishPointerGesture, true)
+    window.addEventListener('pointercancel', finishPointerGesture, true)
     return () => {
-      window.removeEventListener('pointermove', handlePointerMove)
-      window.removeEventListener('pointerup', handlePointerUp)
+      window.removeEventListener('pointermove', handlePointerMove, true)
+      window.removeEventListener('pointerup', finishPointerGesture, true)
+      window.removeEventListener('pointercancel', finishPointerGesture, true)
+      finishPointerGesture()
     }
   }, [autoHeight, autoWidth, minHeight, minWidth])
 
-  const handleTitlePointerDown = useCallback((e: React.PointerEvent) => {
+  const handleTitlePointerDown = useCallback((e: React.PointerEvent<HTMLDivElement>) => {
+    if (e.button !== 0) return
     e.preventDefault()
+    const target = e.currentTarget
+    try {
+      target.setPointerCapture(e.pointerId)
+    } catch {
+      // Global capture listeners below remain the fallback.
+    }
+    document.body.style.cursor = 'grabbing'
+    document.body.style.userSelect = 'none'
     dragRef.current = {
       type: 'move',
+      pointerId: e.pointerId,
+      captureTarget: target,
       startX: e.clientX,
       startY: e.clientY,
       startBounds: { ...boundsRef.current },
@@ -246,13 +274,22 @@ export const FloatingPanel = memo(function FloatingPanel({
   }, [])
 
   const handleResizePointerDown = useCallback(
-    (edge: ResizeEdge, e: React.PointerEvent) => {
-      if (!resizable) return
+    (edge: ResizeEdge, e: React.PointerEvent<HTMLDivElement>) => {
+      if (!resizable || e.button !== 0) return
       e.preventDefault()
       e.stopPropagation()
+      const target = e.currentTarget
+      try {
+        target.setPointerCapture(e.pointerId)
+      } catch {
+        // Global capture listeners below remain the fallback.
+      }
+      document.body.style.userSelect = 'none'
       dragRef.current = {
         type: 'resize',
         edge,
+        pointerId: e.pointerId,
+        captureTarget: target,
         startX: e.clientX,
         startY: e.clientY,
         startBounds: { ...boundsRef.current },
@@ -264,7 +301,7 @@ export const FloatingPanel = memo(function FloatingPanel({
   const resizeHandle = (edge: ResizeEdge, positionClass: string) => (
     <div
       key={edge}
-      className={`absolute ${positionClass} ${RESIZE_CURSORS[edge]} z-10`}
+      className={`absolute ${positionClass} ${RESIZE_CURSORS[edge]} z-10 touch-none`}
       onPointerDown={(e) => handleResizePointerDown(edge, e)}
     />
   )
@@ -316,7 +353,7 @@ export const FloatingPanel = memo(function FloatingPanel({
       ) : null}
 
       <div
-        className="flex items-center justify-between gap-2 border-b border-border bg-secondary/30 px-2 py-1.5 cursor-grab active:cursor-grabbing select-none shrink-0"
+        className="flex touch-none items-center justify-between gap-2 border-b border-border bg-secondary/30 px-2 py-1.5 cursor-grab active:cursor-grabbing select-none shrink-0"
         onPointerDown={handleTitlePointerDown}
       >
         <span className="text-xs font-mono uppercase tracking-[0.12em] text-muted-foreground">
