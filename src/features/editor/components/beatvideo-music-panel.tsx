@@ -63,6 +63,7 @@ import {
 
 const ANCHOR_EPSILON = 1e-4
 const ANCHOR_GAP_SECONDS = 0.001
+const AUTO_REFRESH_ANALYSIS_ATTEMPTS = new Set<string>()
 function sourceSupportsBeatAnalysis(mimeType: string) {
   return mimeType.startsWith('audio/')
 }
@@ -632,6 +633,30 @@ export function BeatvideoMusicPanel() {
     pendingAutoAnalyzeMediaIdRef.current = null
     void analyze()
   }, [analyze, analyzing, currentProject, selectedMediaId])
+
+  useEffect(() => {
+    if (
+      !analysisUpdateAvailable ||
+      !selectedAnalysis ||
+      analyzing ||
+      !currentProject ||
+      selectedAnalysis.mediaId !== selectedMediaId
+    ) {
+      return
+    }
+
+    const refreshKey = `${selectedAnalysis.mediaId}:${selectedAnalysis.analysisRevision ?? 0}`
+    if (AUTO_REFRESH_ANALYSIS_ATTEMPTS.has(refreshKey)) return
+    AUTO_REFRESH_ANALYSIS_ATTEMPTS.add(refreshKey)
+    void analyze()
+  }, [
+    analysisUpdateAvailable,
+    analyze,
+    analyzing,
+    currentProject,
+    selectedAnalysis,
+    selectedMediaId,
+  ])
 
   const insertTagAudio = useCallback(
     async (kind: 'producer' | 'watermark') => {
