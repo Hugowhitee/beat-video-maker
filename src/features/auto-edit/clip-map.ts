@@ -6,7 +6,7 @@ import {
   saveScenes,
   SCENE_DETECTOR_VERSION,
 } from './deps/analysis-contract'
-import { resolveMediaUrl } from './deps/freecut-contract'
+import { resolveMediaUrl } from './deps/editor-runtime-contract'
 
 const FALLBACK_VIDEO_FPS = 30
 const MIN_AUTO_EDIT_SHOT_SECONDS = 0.18
