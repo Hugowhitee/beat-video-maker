@@ -4,7 +4,6 @@ import {
   Activity,
   BookmarkPlus,
   Flame,
-  Plus,
   Shield,
   SlidersHorizontal,
   X,
@@ -811,7 +810,10 @@ export function BeatvideoMasterPanel() {
             setAutoLevelResult(null)
             patchMaster({ enabled: true, inputGainDb: Number(event.target.value) })
           }}
-          className="studio-master-input-range absolute left-5 top-[61px] h-6 w-[240px] accent-foreground"
+          className="studio-master-input-range absolute left-5 top-[61px] h-6 w-[240px]"
+          style={{
+            background: `linear-gradient(to right, #242724 0 ${Math.max(0, Math.min(100, ((resolved.inputGainDb + 12) / 24) * 100))}%, #c7cac4 ${Math.max(0, Math.min(100, ((resolved.inputGainDb + 12) / 24) * 100))}% 100%)`,
+          }}
           aria-label="Input trim"
         />
         <Button
