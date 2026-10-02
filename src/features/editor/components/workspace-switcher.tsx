@@ -36,7 +36,7 @@ export const WorkspaceSwitcher = memo(function WorkspaceSwitcher({
     <div
       role="tablist"
       aria-label={t('toolbar.workspaces.label')}
-      className="studio-workspace-tabs flex h-full items-center gap-1"
+      className="studio-workspace-tabs flex h-full items-center gap-[6px]"
     >
       {PRIMARY_WORKSPACES.map(({ id, label }) => {
         const isActive = workspace === id
