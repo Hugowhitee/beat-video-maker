@@ -331,19 +331,19 @@ export function ProjectList({ onEditProject, onImportProject }: ProjectListProps
   const selectionCount = selectedIds.size
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {/* Search and Filters Bar */}
       {!isEmpty && (
-        <div className="grid grid-cols-2 gap-2 sm:flex sm:items-center sm:gap-3">
+        <div className="grid grid-cols-2 gap-2 rounded-[3px] bg-[#e8e9e5] p-2 sm:flex sm:items-center sm:gap-2">
           {/* Search */}
-          <div className="relative col-span-2 w-full sm:max-w-md sm:flex-1">
+          <div className="relative col-span-2 w-full sm:flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <Input
               type="text"
               placeholder={t('projects.list.searchPlaceholder')}
               value={localSearchQuery}
               onChange={(e) => handleSearchChange(e.target.value)}
-              className="pl-9 pr-9"
+              className="h-9 border-0 bg-transparent pl-9 pr-9 text-[11px] shadow-none focus-visible:ring-0"
             />
             {localSearchQuery && (
               <Button
@@ -362,10 +362,10 @@ export function ProjectList({ onEditProject, onImportProject }: ProjectListProps
             value={filterResolution || 'all'}
             onValueChange={(value) => setFilterResolution(value === 'all' ? undefined : value)}
           >
-            <SelectTrigger className="w-full sm:w-[180px]">
+            <SelectTrigger className="h-9 w-full border-border bg-[#d9dbd6] text-[10px] shadow-none sm:w-[150px]">
               <SelectValue placeholder={t('projects.list.allResolutions')} />
             </SelectTrigger>
-            <SelectContent>
+            <SelectContent data-studio-v2="true">
               <SelectItem value="all">{t('projects.list.allResolutions')}</SelectItem>
               {uniqueResolutions.map((res) => (
                 <SelectItem key={res} value={res}>
@@ -380,7 +380,7 @@ export function ProjectList({ onEditProject, onImportProject }: ProjectListProps
             value={filterFps?.toString() || 'all'}
             onValueChange={(value) => setFilterFps(value === 'all' ? undefined : Number(value))}
           >
-            <SelectTrigger className="w-full sm:w-[140px]">
+            <SelectTrigger className="h-9 w-full border-border bg-[#d9dbd6] text-[10px] shadow-none sm:w-[112px]">
               <SelectValue placeholder={t('projects.list.allFps')} />
             </SelectTrigger>
             <SelectContent>
@@ -396,11 +396,11 @@ export function ProjectList({ onEditProject, onImportProject }: ProjectListProps
           {/* Sort Menu */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="icon">
+              <Button variant="outline" size="icon" className="h-9 w-9 border-border bg-[#d9dbd6] shadow-none">
                 <ArrowUpDown className="w-4 h-4" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-48">
+            <DropdownMenuContent align="end" className="w-48" data-studio-v2="true">
               <DropdownMenuLabel>{t('projects.list.sortBy')}</DropdownMenuLabel>
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={() => setSortField('name')}>
@@ -506,33 +506,39 @@ export function ProjectList({ onEditProject, onImportProject }: ProjectListProps
         </div>
       )}
 
-      {/* Project Grid */}
+      {/* Project list */}
       {!isEmpty && !hasNoResults && (
         <div>
-          <div className="flex items-center justify-between mb-4">
-            <p className="text-sm text-muted-foreground">
-              {filteredProjects.length === allProjects.length
-                ? t('projects.list.projectCount', { count: allProjects.length })
-                : t('projects.list.projectCountFiltered', {
-                    shown: filteredProjects.length,
-                    total: allProjects.length,
-                  })}
-            </p>
+          <div className="hidden grid-cols-[142px_minmax(0,1fr)_92px_180px_64px_140px_92px] gap-4 px-3 pb-2 text-[9px] font-semibold uppercase tracking-[0.1em] text-muted-foreground md:grid">
+            <span />
+            <span>Project</span>
+            <span>Type</span>
+            <span>Format</span>
+            <span>FPS</span>
+            <span>Modified</span>
+            <span />
           </div>
 
-          <div ref={containerRef} className="relative -mx-3 px-3 py-2 min-h-[200px]">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-              {filteredProjects.map((project) => (
-                <ProjectCard
-                  key={project.id}
-                  project={project}
-                  onEdit={onEditProject}
-                  isSelected={selectedIds.has(project.id)}
-                  onCardClick={handleCardClick}
-                />
-              ))}
-            </div>
+          <div ref={containerRef} className="relative min-h-[200px] space-y-3">
+            {filteredProjects.map((project) => (
+              <ProjectCard
+                key={project.id}
+                project={project}
+                onEdit={onEditProject}
+                isSelected={selectedIds.has(project.id)}
+                onCardClick={handleCardClick}
+              />
+            ))}
           </div>
+
+          <p className="mt-4 text-[10px] text-muted-foreground">
+            {filteredProjects.length === allProjects.length
+              ? t('projects.list.projectCount', { count: allProjects.length })
+              : t('projects.list.projectCountFiltered', {
+                  shown: filteredProjects.length,
+                  total: allProjects.length,
+                })}
+          </p>
         </div>
       )}
 
@@ -551,7 +557,7 @@ export function ProjectList({ onEditProject, onImportProject }: ProjectListProps
 
       {/* Bulk delete confirm */}
       <AlertDialog open={showBulkDeleteDialog} onOpenChange={setShowBulkDeleteDialog}>
-        <AlertDialogContent>
+        <AlertDialogContent data-studio-v2="true">
           <AlertDialogHeader>
             <AlertDialogTitle className="flex items-center gap-2">
               <AlertTriangle className="h-5 w-5 text-destructive" />
