@@ -195,7 +195,8 @@ export const PropertiesSidebar = memo(function PropertiesSidebar({
   // the user clicked the beat lane; Beat and Master own those workflows.
   const hasClipSelection = selectedItemIds.length > 0 && !selectedBeatOnly
   const clipHeader = useMemo(() => getClipHeader(selectedItems), [selectedItems])
-  const activeClipHeader = !selectedTransitionId && !selectedMarkerId ? clipHeader : null
+  const activeClipHeader =
+    hasClipSelection && !selectedTransitionId && !selectedMarkerId ? clipHeader : null
   const motionCompositionHeader =
     workspace === 'motion' &&
     !hasClipSelection &&
