@@ -48,7 +48,10 @@ export const WorkspaceSwitcher = memo(function WorkspaceSwitcher({
             aria-selected={isActive}
             title={id === 'edit' ? visualHint : undefined}
             onClick={() => setWorkspace(id)}
-            className="studio-workspace-tab flex h-7 min-w-[68px] items-center justify-center px-3 text-[11px] font-medium"
+            className="studio-workspace-tab flex h-[30px] items-center justify-center px-3 text-[11px] font-medium"
+            style={{
+              width: id === 'beat' ? 68 : id === 'edit' ? 72 : id === 'color' ? 70 : 78,
+            }}
           >
             {label}
           </button>
