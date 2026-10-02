@@ -66,6 +66,6 @@ The production container serves the same built `dist/` through nginx and keeps t
 
 ## Ownership and third-party notices
 
-This repository is the canonical Beat Video Maker product and runtime. Historical donor repositories are not implementation authorities.
+This repository is the canonical Beat Video Maker product and runtime.
 
 Third-party license notices for incorporated open-source code are retained in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
