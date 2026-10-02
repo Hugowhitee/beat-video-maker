@@ -66,9 +66,9 @@ export function App() {
 
   useEffect(() => {
     const show = () => setShowToaster(true)
-    window.addEventListener('freecut:ensure-toaster', show)
+    window.addEventListener('beat-video-maker:ensure-toaster', show)
     return () => {
-      window.removeEventListener('freecut:ensure-toaster', show)
+      window.removeEventListener('beat-video-maker:ensure-toaster', show)
     }
   }, [])
 
