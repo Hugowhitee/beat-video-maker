@@ -126,14 +126,14 @@ function ProjectFormBase({
 
       {/* Form */}
       <div className={isInlineSurface ? '' : 'max-w-[1400px] mx-auto px-6 py-8'}>
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+        <form
+          onSubmit={handleSubmit(onSubmit)}
+          className="mx-auto max-w-[820px] space-y-7 rounded-[4px] bg-[#e8e9e5] p-5 sm:p-6"
+        >
           <input type="hidden" {...register('beatvideoMode')} />
-          <div className="panel-bg border border-border rounded-lg p-4 sm:p-5">
-            <div className="mb-3">
-              <h2 className="text-sm font-semibold text-foreground">Project type</h2>
-              <p className="mt-1 text-xs text-muted-foreground">
-                Choose what you are making. You can switch later without losing shared project settings.
-              </p>
+          <div>
+            <div className="mb-3 text-[9px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+              Project type
             </div>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
               {([
@@ -164,16 +164,21 @@ function ProjectFormBase({
                       })
                     }
                     className={cn(
-                      'flex min-h-20 items-start gap-3 rounded-lg border p-3 text-left transition-colors',
+                      'flex min-h-16 items-start gap-3 rounded-[3px] border px-4 py-3 text-left transition-colors',
                       selected
-                        ? 'border-primary bg-primary/10 text-foreground'
-                        : 'border-border bg-secondary/20 text-muted-foreground hover:bg-secondary/40 hover:text-foreground',
+                        ? 'border-[#242724] bg-[#242724] text-[#f6f7f3]'
+                        : 'border-transparent bg-[#d1d4ce] text-foreground hover:border-border hover:bg-[#c7cac4]',
                     )}
                   >
                     <Icon className="mt-0.5 h-5 w-5 shrink-0" />
                     <span>
                       <strong className="block text-sm font-medium">{modeOption.label}</strong>
-                      <span className="mt-1 block text-xs leading-relaxed">
+                      <span
+                        className={cn(
+                          'mt-1 block text-[10px] leading-relaxed',
+                          selected ? 'text-[#c7cac4]' : 'text-muted-foreground',
+                        )}
+                      >
                         {modeOption.description}
                       </span>
                     </span>
@@ -182,16 +187,13 @@ function ProjectFormBase({
               })}
             </div>
           </div>
-          <div className="grid grid-cols-1 lg:grid-cols-[minmax(320px,420px)_1fr] gap-6 items-start">
+          <div className="grid grid-cols-1 gap-8">
             {/* Project Details */}
             <div
-              className={`panel-bg border border-border rounded-lg p-4 sm:p-6 ${isInlineSurface ? '' : 'lg:sticky lg:top-6'}`}
+              className="border-t border-border pt-6"
             >
-              <div className="flex items-center gap-3 mb-6">
-                <div className="h-8 w-1 bg-primary rounded-full" />
-                <h2 className="text-lg font-medium text-foreground">
-                  {t('projects.form.projectDetails')}
-                </h2>
+              <div className="mb-5 text-[9px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+                {t('projects.form.projectDetails')}
               </div>
 
               <div className="space-y-5">
@@ -204,7 +206,7 @@ function ProjectFormBase({
                     id="name"
                     type="text"
                     {...register('name')}
-                    className="w-full px-3 py-2 bg-secondary border border-input rounded-md text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent transition-[color,border-color,box-shadow] duration-150"
+                    className="h-10 w-full rounded-[3px] border border-input bg-[#d9dbd6] px-3 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
                     placeholder={t('projects.form.projectNamePlaceholder')}
                   />
                   {errors.name && (
@@ -224,7 +226,7 @@ function ProjectFormBase({
                     id="description"
                     rows={4}
                     {...register('description')}
-                    className="w-full px-3 py-2 bg-secondary border border-input rounded-md text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent transition-[color,border-color,box-shadow] duration-150 resize-none"
+                    className="w-full resize-none rounded-[3px] border border-input bg-[#d9dbd6] px-3 py-2 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
                     placeholder={t('projects.form.descriptionPlaceholder')}
                   />
                   {errors.description && (
@@ -262,12 +264,9 @@ function ProjectFormBase({
             </div>
 
             {/* Video Settings */}
-            <div className="panel-bg border border-border rounded-lg p-4 sm:p-6">
-              <div className="flex items-center gap-3 mb-6">
-                <div className="h-8 w-1 bg-primary rounded-full" />
-                <h2 className="text-lg font-medium text-foreground">
-                  {t('projects.form.resolution')}
-                </h2>
+            <div className="border-t border-border pt-6">
+              <div className="mb-5 text-[9px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+                {t('projects.form.resolution')}
               </div>
 
               <ProjectTemplatePicker
@@ -288,7 +287,7 @@ function ProjectFormBase({
                       id="width"
                       type="number"
                       {...register('width', { valueAsNumber: true })}
-                      className="w-full px-3 py-2 bg-secondary border border-input rounded-md text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent transition-[color,border-color,box-shadow] duration-150"
+                      className="h-10 w-full rounded-[3px] border border-input bg-[#d9dbd6] px-3 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
                       placeholder="1920"
                       min={320}
                     />
@@ -308,7 +307,7 @@ function ProjectFormBase({
                       id="height"
                       type="number"
                       {...register('height', { valueAsNumber: true })}
-                      className="w-full px-3 py-2 bg-secondary border border-input rounded-md text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent transition-[color,border-color,box-shadow] duration-150"
+                      className="h-10 w-full rounded-[3px] border border-input bg-[#d9dbd6] px-3 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
                       placeholder="1080"
                       min={240}
                     />
@@ -321,10 +320,10 @@ function ProjectFormBase({
             </div>
           </div>
 
-          <Separator />
+          <Separator className="bg-border" />
 
           {/* Actions */}
-          <div className="grid grid-cols-2 gap-2 sm:flex sm:justify-end sm:gap-3">
+          <div className="grid grid-cols-2 gap-2 border-t border-border pt-5 sm:flex sm:justify-end sm:gap-2">
             {onCancel ? (
               <Button
                 type="button"
