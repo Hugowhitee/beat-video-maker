@@ -8,7 +8,6 @@ const logger = createLogger('ProjectsIndex')
 import { Button } from '@/components/ui/button'
 import { Separator } from '@/components/ui/separator'
 import { Plus, Upload, FolderOpen, File } from 'lucide-react'
-import { BeatVideoLogo } from '@/components/brand/beat-video-logo'
 import { ProjectList } from '@/features/projects/components/project-list'
 import { EditProjectForm } from '@/features/projects/components/project-form'
 import {
@@ -258,63 +257,63 @@ function ProjectsIndex() {
 
   return (
     <>
-      <div className="min-h-dvh overflow-x-hidden bg-background">
-        {/* Header */}
-        <div className="panel-header border-b border-border" data-no-marquee>
-          <div className="mx-auto flex max-w-[1920px] flex-col gap-3 px-3 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-6 sm:py-5">
-            <div className="flex min-w-0 items-center justify-between gap-3">
-              <Link to="/" className="min-w-0">
-                <BeatVideoLogo
-                  variant="full"
-                  size="md"
-                  className="hover:opacity-80 transition-opacity"
-                />
-              </Link>
-              <div className="shrink-0 sm:hidden">
-                <LanguageSwitcher size="md" align="end" side="bottom" />
-              </div>
+      <div
+        data-studio-v2="true"
+        className="min-h-dvh overflow-x-hidden bg-[#d9dbd6] text-foreground"
+      >
+        <div className="flex h-12 items-center bg-[#242724] px-[18px] text-[#f6f7f3]" data-no-marquee>
+          <Link to="/" className="flex shrink-0 items-baseline gap-1.5">
+            <span className="text-[10px] font-semibold">BEAT VIDEO</span>
+            <span className="text-[10px] font-semibold text-[#c7e85a]">MAKER</span>
+          </Link>
+          <span className="ml-[51px] text-[11px] font-medium text-[#bfc4bc]">Projects</span>
+          <div className="ml-auto flex h-full items-center gap-4">
+            <div className="hidden md:block text-[#d7dbd3]">
+              <WorkspaceIndicator />
             </div>
-            <div className="grid min-w-0 grid-cols-2 gap-2 sm:flex sm:items-center sm:gap-3">
-              <div className="hidden sm:block">
-                <LanguageSwitcher size="md" align="end" side="bottom" />
-              </div>
-
-              <Separator orientation="vertical" className="hidden h-6 sm:block" />
-
-              <div className="hidden sm:block">
-                <WorkspaceIndicator />
-              </div>
-              <Button
-                variant="outline"
-                size="lg"
-                className="w-full min-w-0 gap-2 px-3 sm:w-auto sm:px-4"
-                onClick={handleImportClick}
-              >
-                <Upload className="h-4 w-4 shrink-0" />
-                <span className="truncate">{t('projects.importProject')}</span>
-              </Button>
-              <Link to="/projects/new" className="min-w-0">
-                <Button size="lg" className="w-full min-w-0 gap-2 px-3 sm:w-auto sm:px-4">
-                  <Plus className="h-4 w-4 shrink-0" />
-                  <span className="truncate">{t('projects.newProject')}</span>
-                </Button>
-              </Link>
+            <div className="hidden sm:block text-[#d7dbd3]">
+              <LanguageSwitcher size="sm" align="end" side="bottom" />
             </div>
+            <button
+              type="button"
+              className="h-full text-[9px] font-semibold uppercase tracking-[0.04em] text-[#c7cac4] hover:text-white"
+              onClick={handleImportClick}
+            >
+              {t('projects.importProject')}
+            </button>
+            <Link
+              to="/projects/new"
+              className="flex h-[30px] items-center rounded-[4px] bg-[#c7e85a] px-4 text-[9px] font-semibold uppercase tracking-[0.04em] text-[#242724]"
+            >
+              {t('projects.newProject')}
+            </Link>
+          </div>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".zip"
+            onChange={handleFileSelect}
+            className="hidden"
+          />
+        </div>
 
-            {/* Hidden file input for import */}
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept=".zip"
-              onChange={handleFileSelect}
-              className="hidden"
-            />
+        <div className="px-4 pt-8 sm:px-8 sm:pt-10">
+          <div className="border-b border-border pb-6">
+            <div className="text-[9px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+              Projects
+            </div>
+            <h1 className="mt-2 text-[26px] font-semibold leading-8 text-foreground">
+              Recent projects
+            </h1>
+            <p className="mt-1 text-[11px] text-muted-foreground">
+              Open a project or start a new beat video.
+            </p>
           </div>
         </div>
 
         {/* Error state */}
         {error && (
-          <div className="max-w-[1920px] mx-auto px-3 py-4 sm:px-6">
+          <div className="px-4 py-4 sm:px-8">
             <div className="panel-bg border border-destructive/50 rounded-lg p-4 text-destructive">
               <p className="font-medium">{t('projects.errorLoading')}</p>
               <p className="text-sm mt-1">{error}</p>
@@ -323,7 +322,7 @@ function ProjectsIndex() {
         )}
 
         {/* Legacy IDB migration banner — appears only when old data is present and unmigrated */}
-        <div className="max-w-[1920px] mx-auto px-3 pt-4 space-y-3 sm:px-6 sm:pt-6">
+        <div className="px-4 pt-4 space-y-3 sm:px-8 sm:pt-5">
           <LegacyMigrationBanner onMigrated={loadProjects} />
           {/* Retry banner — appears only when a previous migration left failed items behind */}
           <LegacyMigrationErrors onRetried={loadProjects} />
@@ -331,7 +330,7 @@ function ProjectsIndex() {
 
         {/* Loading state */}
         {showInitialLoadingSpinner ? (
-          <div className="max-w-[1920px] mx-auto px-3 py-16 flex items-center justify-center sm:px-6">
+          <div className="px-4 py-16 flex items-center justify-center sm:px-8">
             <div className="text-center">
               <div className="w-12 h-12 border-4 border-primary/20 border-t-primary rounded-full animate-spin mx-auto mb-4" />
               <p className="text-muted-foreground">{t('projects.loadingProjects')}</p>
@@ -339,7 +338,7 @@ function ProjectsIndex() {
           </div>
         ) : (
           /* Projects List */
-          <div className="max-w-[1920px] mx-auto px-3 py-5 sm:px-6 sm:py-8">
+          <div className="px-4 py-5 sm:px-8 sm:py-6">
             <ProjectList onEditProject={handleEditProject} onImportProject={handleImportClick} />
             <TrashSection />
           </div>
@@ -348,7 +347,7 @@ function ProjectsIndex() {
 
       {/* Edit Project Dialog */}
       <Dialog open={!!editingProject} onOpenChange={(open) => !open && setEditingProject(null)}>
-        <DialogContent className="max-w-[1200px] w-[95vw] max-h-[90vh] overflow-y-auto">
+        <DialogContent data-studio-v2="true" className="max-w-[920px] w-[95vw] max-h-[90vh] overflow-y-auto bg-[#d9dbd6]">
           <DialogHeader>
             <DialogTitle className="text-2xl">{t('projects.form.editTitle')}</DialogTitle>
             <DialogDescription>{t('projects.form.editSubtitle')}</DialogDescription>
@@ -378,7 +377,7 @@ function ProjectsIndex() {
           if (!open) handleCloseImportDialog()
         }}
       >
-        <DialogContent className="max-w-md">
+        <DialogContent data-studio-v2="true" className="max-w-md bg-[#e8e9e5]">
           <DialogHeader>
             <DialogTitle>
               {importError
