@@ -402,9 +402,11 @@ function persistMasterSidebarWidth(width: number): void {
 export const MediaSidebar = memo(function MediaSidebar({
   beatvideoMode = 'video',
   mobile = false,
+  studioTaskColumn = false,
 }: {
   beatvideoMode?: BeatvideoProjectMode
   mobile?: boolean
+  studioTaskColumn?: boolean
 }) {
   const { t } = useTranslation()
   const editorDensity = useSettingsStore((s) => s.editorDensity)
@@ -1198,7 +1200,12 @@ export const MediaSidebar = memo(function MediaSidebar({
   }, [])
 
   return (
-    <div className={cn('flex h-full min-w-0', mobile ? 'w-full flex-1' : 'flex-shrink-0')}>
+    <div
+      className={cn(
+        'flex h-full min-w-0',
+        mobile || studioTaskColumn ? 'w-full flex-1' : 'flex-shrink-0',
+      )}
+    >
       {/* The generic FreeCut icon rail remains available outside the focused
           Beatvideo producer flow. Producer workspaces use labeled tabs instead. */}
       {!mobile && !producerShell ? (
@@ -1278,24 +1285,28 @@ export const MediaSidebar = memo(function MediaSidebar({
       <motion.div
         className={cn(
           'panel-bg overflow-hidden relative',
-          mobile ? 'w-full flex-1 border-r-0' : 'border-r border-border',
+          mobile || studioTaskColumn
+            ? 'w-full flex-1 border-r-0'
+            : 'border-r border-border',
         )}
         initial={false}
         animate={{
           width:
-            mobile
+            mobile || studioTaskColumn
               ? '100%'
               : producerShell || leftSidebarOpen
                 ? effectiveSidebarWidth
                 : 0,
         }}
         transition={
-          mobile || isResizingRef.current || prefersReducedMotion
+          mobile || studioTaskColumn || isResizingRef.current || prefersReducedMotion
             ? { duration: 0 }
             : { type: 'tween', duration: leftSidebarOpen ? 0.26 : 0.2, ease: [0.32, 0.72, 0, 1] }
         }
         onAnimationComplete={() => {
-          if (!mobile && !producerShell && !leftSidebarOpen) setContentInert(true)
+          if (!mobile && !studioTaskColumn && !producerShell && !leftSidebarOpen) {
+            setContentInert(true)
+          }
         }}
       >
         {/* Promote the content to its own GPU layer so the panel's width/clip
@@ -1305,10 +1316,10 @@ export const MediaSidebar = memo(function MediaSidebar({
         <div
           className="h-full min-h-0 flex flex-col"
           style={{
-            width: mobile ? '100%' : effectiveSidebarWidth,
+            width: mobile || studioTaskColumn ? '100%' : effectiveSidebarWidth,
             transform: 'translateZ(0)',
           }}
-          inert={mobile || producerShell ? false : contentInert}
+          inert={mobile || studioTaskColumn || producerShell ? false : contentInert}
         >
           <>
             {/* Panel Header — sits with the tab content */}
@@ -1358,7 +1369,7 @@ export const MediaSidebar = memo(function MediaSidebar({
                     </DropdownMenuContent>
                   </DropdownMenu>
                 ) : null}
-                {!mobile ? (
+                {!mobile && !studioTaskColumn ? (
                 <Button
                 variant="ghost"
                 size="icon"
@@ -2181,7 +2192,7 @@ export const MediaSidebar = memo(function MediaSidebar({
           </>
         </div>
         {/* Resize Handle */}
-        {leftSidebarOpen && (
+        {leftSidebarOpen && !studioTaskColumn && (
           <div
             data-resize-handle
             onMouseDown={handleResizeStart}
