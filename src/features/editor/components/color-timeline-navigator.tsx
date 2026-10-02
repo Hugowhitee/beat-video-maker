@@ -288,10 +288,13 @@ export const ColorTimelineNavigator = memo(function ColorTimelineNavigator() {
       ) ?? null,
     [items],
   )
-  const globalGradeEffects =
-    (globalGrade && livePreviewEdits?.[globalGrade.id]?.effects) ??
-    globalGrade?.effects ??
-    []
+  const globalGradeEffects = useMemo(
+    () =>
+      (globalGrade && livePreviewEdits?.[globalGrade.id]?.effects) ??
+      globalGrade?.effects ??
+      [],
+    [globalGrade, livePreviewEdits],
+  )
   const navigatorTrackIds = useMemo(
     () => new Set(items.filter(isVisualNavigatorItem).map((item) => item.trackId)),
     [items],
