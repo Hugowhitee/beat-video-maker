@@ -3,10 +3,7 @@ import { toast } from 'sonner'
 import { useEditorStore } from '@/shared/state/editor'
 import { useProjectStore } from '@/features/editor/deps/projects-contract'
 import { useMediaLibraryStore } from '@/features/editor/deps/media-library'
-import {
-  useCompositionsStore,
-  useItemsStore,
-} from '@/features/editor/deps/timeline-store'
+import { useItemsStore } from '@/features/editor/deps/timeline-store'
 import type { EditorSidebarTab, EditorWorkspaceId } from '@/config/editor-workspaces'
 import { cn } from '@/shared/ui/cn'
 import {
@@ -55,7 +52,7 @@ export const StudioProjectRail = memo(function StudioProjectRail() {
   const setActiveTab = useEditorStore((state) => state.setActiveTab)
   const project = useProjectStore((state) => state.currentProject)
   const mediaCount = useMediaLibraryStore((state) => state.mediaItems.length)
-  const sequenceCount = useCompositionsStore((state) => state.compositions.length)
+  const sequenceCount = project?.timeline?.topLevelSequenceIds?.length ?? 0
   const graphicsCount = useItemsStore(
     (state) =>
       state.items.filter(
