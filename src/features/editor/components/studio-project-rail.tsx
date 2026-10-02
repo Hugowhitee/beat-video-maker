@@ -75,7 +75,7 @@ export const StudioProjectRail = memo(function StudioProjectRail() {
   const [quickAddBusy, setQuickAddBusy] = useState<QuickTarget['action'] | null>(null)
 
   useEffect(() => {
-    if (workspace === 'beat') {
+    if (workspace === 'beat' || (workspace === 'master' && beatReady)) {
       setSelectedProjectSection('Beat grid')
     } else if (workspace === 'edit' && activeTab === 'transitions') {
       setSelectedProjectSection('Transitions')
@@ -91,7 +91,7 @@ export const StudioProjectRail = memo(function StudioProjectRail() {
     ) {
       setSelectedProjectSection('Media')
     }
-  }, [activeTab, selectedProjectSection, workspace])
+  }, [activeTab, beatReady, selectedProjectSection, workspace])
 
   const openTarget = (target: RailTarget) => {
     setSelectedProjectSection(target.label)
@@ -150,98 +150,104 @@ export const StudioProjectRail = memo(function StudioProjectRail() {
     }
   }
 
+  const projectRows = PROJECT_TARGETS.map((target, index) => ({
+    target,
+    top: 79 + index * 42,
+    count:
+      target.label === 'Beat grid' && beatReady
+        ? 'READY'
+        : target.label === 'Media' && mediaCount > 0
+          ? String(mediaCount)
+          : target.label === 'Sequences' && sequenceCount > 0
+            ? String(sequenceCount)
+            : target.label === 'Graphics' && graphicsCount > 0
+              ? String(graphicsCount)
+              : null,
+  }))
+
   return (
     <aside
-      className="studio-project-rail hidden h-full w-[214px] shrink-0 flex-col overflow-hidden border-r border-border bg-sidebar md:flex"
+      className="studio-project-rail relative hidden h-full w-[214px] shrink-0 overflow-hidden border-r border-border bg-[#e8e9e5] md:block"
       aria-label="Project"
     >
-      <div className="min-h-0 flex-1 overflow-y-auto px-4 pt-4">
-        <div className="text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
-          Project
-        </div>
-        <div className="mt-2 truncate text-[15px] font-semibold leading-5 text-foreground">
-          {project?.name ?? 'Untitled project'}
-        </div>
-
-        <div className="mt-3 border-t border-border pt-1.5">
-          {PROJECT_TARGETS.map((target) => {
-            const selected = selectedProjectSection === target.label
-
-            return (
-              <button
-                key={target.label}
-                type="button"
-                onClick={() => openTarget(target)}
-                aria-current={selected ? 'page' : undefined}
-                className={cn(
-                  'studio-rail-row flex h-[42px] w-full items-center justify-between px-3 text-left text-[11px] font-medium',
-                  selected ? 'studio-rail-row-active font-semibold' : 'text-foreground',
-                )}
-              >
-                <span className="min-w-0 truncate">{target.label}</span>
-                {target.label === 'Beat grid' && beatReady ? (
-                  <span className="text-[9px] font-medium uppercase text-muted-foreground">
-                    Ready
-                  </span>
-                ) : target.label === 'Media' && mediaCount > 0 ? (
-                  <span className="text-[9px] font-medium text-muted-foreground">
-                    {mediaCount}
-                  </span>
-                ) : target.label === 'Sequences' && sequenceCount > 0 ? (
-                  <span className="text-[9px] font-medium text-muted-foreground">
-                    {sequenceCount}
-                  </span>
-                ) : target.label === 'Graphics' && graphicsCount > 0 ? (
-                  <span className="text-[9px] font-medium text-muted-foreground">
-                    {graphicsCount}
-                  </span>
-                ) : null}
-              </button>
-            )
-          })}
-        </div>
-
-        <section className="mt-5">
-          <div className="pb-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
-            Quick add
-          </div>
-          <div className="grid grid-cols-2 gap-2">
-            {QUICK_TARGETS.map((target) => (
-              <button
-                key={target.label}
-                type="button"
-                disabled={quickAddBusy !== null}
-                onClick={() => void runQuickAdd(target)}
-                className="studio-quick-tile flex h-8 items-center border-0 bg-[#d9dbd6] px-2.5 text-left text-[10px] font-medium text-foreground disabled:cursor-wait disabled:opacity-55"
-              >
-                + {quickAddBusy === target.action ? 'Adding…' : target.label}
-              </button>
-            ))}
-          </div>
-        </section>
-
-        <section className="mt-6 border-t border-border pt-4">
-          <div className="text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
-            Beat status
-          </div>
-          <div className="mt-2 text-[11px] font-semibold text-foreground">
-            {gridLocked ? 'Grid locked' : beatReady ? 'Grid ready' : 'No beat grid'}
-          </div>
-          <div className="mt-1 font-mono text-[10px] tabular-nums text-muted-foreground">
-            {bpm ? `${bpm.toFixed(2)} BPM · ${beatsPerBar}/4` : '— BPM · 4/4'}
-          </div>
-          <div className="mt-1 font-mono text-[10px] tabular-nums text-muted-foreground">
-            Downbeat {formatSourceTime(downbeat)}
-          </div>
-          <button
-            type="button"
-            onClick={() => openTarget(PROJECT_TARGETS[1]!)}
-            className="studio-primary-action mt-4 h-8 w-full"
-          >
-            Review grid
-          </button>
-        </section>
+      <div className="absolute left-4 top-[18px] text-[10px] font-semibold uppercase leading-3 tracking-[0.12em] text-muted-foreground">
+        Project
       </div>
+      <div className="absolute left-4 top-[39px] max-w-[182px] truncate text-[15px] font-semibold leading-[18px] text-foreground">
+        {project?.name ?? 'Untitled project'}
+      </div>
+      <div className="absolute left-4 top-[68px] h-px w-[182px] bg-border" />
+
+      <nav aria-label="Project sections">
+        {projectRows.map(({ target, top, count }) => {
+          const selected = selectedProjectSection === target.label
+          return (
+            <button
+              key={target.label}
+              type="button"
+              onClick={() => openTarget(target)}
+              aria-current={selected ? 'page' : undefined}
+              className={cn(
+                'studio-rail-row absolute left-4 h-[34px] w-[182px] rounded-[3px] text-left text-[11px] leading-[13px] text-foreground',
+                selected && 'studio-rail-row-active font-semibold',
+              )}
+              style={{ top }}
+            >
+              <span className="absolute left-3 top-[7px] max-w-[112px] truncate">
+                {target.label}
+              </span>
+              {count ? (
+                <span
+                  className={cn(
+                    'absolute left-[134px] top-[7px] max-w-[44px] truncate text-[9px] font-medium uppercase leading-[11px]',
+                    selected ? 'text-foreground' : 'text-muted-foreground',
+                  )}
+                >
+                  {count}
+                </span>
+              ) : null}
+            </button>
+          )
+        })}
+      </nav>
+
+      <div className="absolute left-4 top-[322px] text-[10px] font-semibold uppercase leading-3 tracking-[0.12em] text-muted-foreground">
+        Quick add
+      </div>
+      <div className="absolute left-4 top-[344px] grid grid-cols-2 gap-x-2 gap-y-2">
+        {QUICK_TARGETS.map((target) => (
+          <button
+            key={target.label}
+            type="button"
+            disabled={quickAddBusy !== null}
+            onClick={() => void runQuickAdd(target)}
+            className="studio-quick-tile flex h-8 w-[86px] items-center rounded-[3px] border-0 bg-[#d9dbd6] px-2.5 text-left text-[10px] font-medium text-foreground disabled:cursor-wait disabled:opacity-55"
+          >
+            + {quickAddBusy === target.action ? 'Adding…' : target.label}
+          </button>
+        ))}
+      </div>
+
+      <div className="absolute left-4 top-[440px] h-px w-[182px] bg-border" />
+      <div className="absolute left-4 top-[458px] text-[10px] font-semibold uppercase leading-3 tracking-[0.12em] text-muted-foreground">
+        Beat status
+      </div>
+      <div className="absolute left-4 top-[482px] text-[11px] font-semibold leading-[13px] text-foreground">
+        {gridLocked ? 'Grid locked' : beatReady ? 'Grid ready' : 'No beat grid'}
+      </div>
+      <div className="absolute left-4 top-[502px] font-mono text-[10px] leading-3 tabular-nums text-muted-foreground">
+        {bpm ? `${bpm.toFixed(2)} BPM · ${beatsPerBar}/4` : '— BPM · 4/4'}
+      </div>
+      <div className="absolute left-4 top-[519px] font-mono text-[10px] leading-3 tabular-nums text-muted-foreground">
+        Downbeat {formatSourceTime(downbeat)}
+      </div>
+      <button
+        type="button"
+        onClick={() => openTarget(PROJECT_TARGETS[1]!)}
+        className="studio-primary-action absolute left-4 top-[548px] h-8 w-[182px]"
+      >
+        Review grid
+      </button>
     </aside>
   )
 })
