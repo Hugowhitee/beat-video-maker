@@ -1023,7 +1023,7 @@ export const LoadedEditor = memo(function LoadedEditor({
                         </Suspense>
                       )}
                     </div>
-                    {workspace !== 'master' && beatvideoMode === 'video' ? (
+                    {workspace === 'edit' && beatvideoMode === 'video' ? (
                       <AudioMeterPanel key="editor-meter" initialMode="meter" />
                     ) : null}
                   </div>
