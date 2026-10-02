@@ -20,11 +20,7 @@ jobs:
         with:
           script: |
             const branch = context.payload.pull_request.head.ref
-            const durable = new Set([
-              'main',
-              'migration/freecut-upstream',
-              'upstream/freecut',
-            ])
+            const durable = new Set(['main'])
 
             if (durable.has(branch)) {
               core.notice(`Keeping durable branch ${branch}`)
