@@ -1,4 +1,5 @@
 import { memo, useEffect, useState } from 'react'
+import { toast } from 'sonner'
 import { useEditorStore } from '@/shared/state/editor'
 import { useProjectStore } from '@/features/editor/deps/projects-contract'
 import { useMediaLibraryStore } from '@/features/editor/deps/media-library'
@@ -8,11 +9,20 @@ import {
 } from '@/features/editor/deps/timeline-store'
 import type { EditorSidebarTab, EditorWorkspaceId } from '@/config/editor-workspaces'
 import { cn } from '@/shared/ui/cn'
+import {
+  addStudioGraphicLayer,
+  addStudioTextLayer,
+  importStudioVisualMedia,
+} from '../utils/studio-quick-add'
 
 type RailTarget = {
   label: string
   workspace: EditorWorkspaceId
   tab: EditorSidebarTab
+}
+
+type QuickTarget = RailTarget & {
+  action: 'footage' | 'photo' | 'text' | 'graphic'
 }
 
 const PROJECT_TARGETS: readonly RailTarget[] = [
@@ -23,11 +33,11 @@ const PROJECT_TARGETS: readonly RailTarget[] = [
   { label: 'Graphics', workspace: 'edit', tab: 'text' },
 ]
 
-const QUICK_TARGETS: readonly RailTarget[] = [
-  { label: 'Footage', workspace: 'edit', tab: 'media' },
-  { label: 'Photo', workspace: 'edit', tab: 'media' },
-  { label: 'Text', workspace: 'edit', tab: 'text' },
-  { label: 'Graphic', workspace: 'edit', tab: 'shapes' },
+const QUICK_TARGETS: readonly QuickTarget[] = [
+  { label: 'Footage', workspace: 'edit', tab: 'media', action: 'footage' },
+  { label: 'Photo', workspace: 'edit', tab: 'media', action: 'photo' },
+  { label: 'Text', workspace: 'edit', tab: 'text', action: 'text' },
+  { label: 'Graphic', workspace: 'edit', tab: 'shapes', action: 'graphic' },
 ]
 
 function formatSourceTime(seconds: number | null | undefined): string {
@@ -65,6 +75,7 @@ export const StudioProjectRail = memo(function StudioProjectRail() {
   const [selectedProjectSection, setSelectedProjectSection] = useState(
     beatReady ? 'Beat grid' : 'Media',
   )
+  const [quickAddBusy, setQuickAddBusy] = useState<QuickTarget['action'] | null>(null)
 
   useEffect(() => {
     if (workspace === 'beat') {
@@ -83,6 +94,57 @@ export const StudioProjectRail = memo(function StudioProjectRail() {
     setSelectedProjectSection(target.label)
     setWorkspace(target.workspace)
     setActiveTab(target.tab)
+  }
+
+  const runQuickAdd = async (target: QuickTarget) => {
+    if (quickAddBusy) return
+
+    setWorkspace(target.workspace)
+    setActiveTab(target.tab)
+
+    if (target.action === 'text') {
+      setSelectedProjectSection('Graphics')
+      if (!addStudioTextLayer()) toast.error('Could not add a text layer')
+      return
+    }
+
+    if (target.action === 'graphic') {
+      setSelectedProjectSection('Graphics')
+      if (!addStudioGraphicLayer()) toast.error('Could not add a graphic layer')
+      return
+    }
+
+    setSelectedProjectSection('Media')
+    setQuickAddBusy(target.action)
+    try {
+      const result = await importStudioVisualMedia(
+        target.action === 'footage' ? 'video' : 'image',
+      )
+      if (result.importedCount === 0) return
+      if (result.matchingCount === 0) {
+        toast.warning(
+          target.action === 'footage'
+            ? 'Choose one or more video files'
+            : 'Choose one or more image files',
+        )
+        return
+      }
+      toast.success(
+        target.action === 'footage'
+          ? result.matchingCount === 1
+            ? 'Footage added to the project'
+            : `${result.matchingCount} footage files added`
+          : result.matchingCount === 1
+            ? 'Photo added to the project'
+            : `${result.matchingCount} photos added`,
+      )
+    } catch (error) {
+      toast.error(target.action === 'footage' ? 'Could not add footage' : 'Could not add photo', {
+        description: error instanceof Error ? error.message : String(error),
+      })
+    } finally {
+      setQuickAddBusy(null)
+    }
   }
 
   return (
@@ -145,10 +207,11 @@ export const StudioProjectRail = memo(function StudioProjectRail() {
               <button
                 key={target.label}
                 type="button"
-                onClick={() => openTarget(target)}
-                className="studio-quick-tile flex h-8 items-center border-0 bg-[#d9dbd6] px-2.5 text-left text-[10px] font-medium text-foreground"
+                disabled={quickAddBusy !== null}
+                onClick={() => void runQuickAdd(target)}
+                className="studio-quick-tile flex h-8 items-center border-0 bg-[#d9dbd6] px-2.5 text-left text-[10px] font-medium text-foreground disabled:cursor-wait disabled:opacity-55"
               >
-                + {target.label}
+                + {quickAddBusy === target.action ? 'Adding…' : target.label}
               </button>
             ))}
           </div>
