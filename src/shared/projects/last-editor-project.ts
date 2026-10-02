@@ -1,4 +1,4 @@
-const LAST_EDITOR_PROJECT_ID_KEY = 'freecut-last-editor-project-id'
+const LAST_EDITOR_PROJECT_ID_KEY = 'beat-video-maker-last-editor-project-id'
 const appBasePath = import.meta.env.BASE_URL === '/' ? '' : import.meta.env.BASE_URL.replace(/\/$/, '')
 
 function safeDecodeURIComponent(value: string): string {
@@ -49,6 +49,6 @@ export function getEditorProjectReloadPathWithCacheBust(): string {
     nextUrl.pathname = `${appBasePath}/editor/${encodeURIComponent(projectId)}`
   }
 
-  nextUrl.searchParams.set('__freecut_updated', Date.now().toString())
+  nextUrl.searchParams.set('__beat_video_updated', Date.now().toString())
   return `${nextUrl.pathname}${nextUrl.search}${nextUrl.hash}`
 }
