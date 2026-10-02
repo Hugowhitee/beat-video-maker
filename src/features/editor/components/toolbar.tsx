@@ -262,11 +262,11 @@ export const Toolbar = memo(function Toolbar({
       role="toolbar"
       aria-label={t('toolbar.ariaLabel')}
     >
-      <div className="studio-topbar flex h-12 shrink-0 items-center bg-[#242724] px-[18px] text-[#f6f7f3]">
+      <div className="studio-topbar flex h-12 shrink-0 items-center bg-[#242724] pl-[18px] pr-4 text-[#f6f7f3]">
         <button
           type="button"
           onClick={handleBackClick}
-          className="mr-8 flex shrink-0 items-baseline text-left"
+          className="mr-[51px] flex shrink-0 items-baseline text-left"
           aria-label={t('toolbar.backToProjectsAria')}
           title={t('toolbar.backToProjects')}
         >
@@ -281,66 +281,54 @@ export const Toolbar = memo(function Toolbar({
           projectName={project?.name}
         />
 
-        <div
-          className="min-w-0 flex-1 truncate text-[11px] font-medium text-[#bfc4bc]"
-          title={beatSourceName ?? projectName}
-        >
-          {beatSourceName ?? projectName}
-        </div>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button
+              type="button"
+              className="min-w-0 flex-1 truncate text-left text-[11px] font-medium text-[#bfc4bc] hover:text-[#f6f7f3]"
+              title={`${beatSourceName ?? projectName} · Project menu`}
+              aria-label="Project menu"
+            >
+              {beatSourceName ?? projectName}
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start">
+            <DropdownMenuItem onClick={() => void handleSave()}>
+              Save project
+            </DropdownMenuItem>
+            {onProjectSettings ? (
+              <DropdownMenuItem onClick={onProjectSettings}>Project settings</DropdownMenuItem>
+            ) : null}
+            <DropdownMenuItem onClick={() => setShowSettingsDialog(true)}>
+              Settings
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => setShowShortcutsDialog(true)}>
+              Keyboard shortcuts
+            </DropdownMenuItem>
+            {onOpenRenderQueue ? (
+              <DropdownMenuItem onClick={onOpenRenderQueue}>
+                Render queue{renderQueueCount > 0 ? ` (${renderQueueCount})` : ''}
+              </DropdownMenuItem>
+            ) : null}
+            {onExportBundle ? (
+              <DropdownMenuItem onClick={onExportBundle}>
+                Download project ZIP
+              </DropdownMenuItem>
+            ) : null}
+          </DropdownMenuContent>
+        </DropdownMenu>
 
-        <div className="flex shrink-0 items-center gap-0">
-          <span className="px-3 text-[11px] font-medium tabular-nums text-[#d7dbd3]">
+        <div className="flex w-[254px] shrink-0 items-center">
+          <span className="w-[72px] text-left text-[11px] font-medium tabular-nums text-[#d7dbd3]">
             {bpm ? `${bpm.toFixed(2).replace(/\.00$/, '')} BPM` : '— BPM'}
           </span>
-          <span className="px-3 text-[11px] font-medium tabular-nums text-[#d7dbd3]">
+          <span className="w-[19px] text-left text-[11px] font-medium tabular-nums text-[#d7dbd3]">
             {beatsPerBar}/4
           </span>
-
-          {import.meta.env.DEV && import.meta.env.VITE_SHOW_DEBUG_PANEL !== 'false' ? (
-            <DebugPopover projectId={projectId} />
-          ) : null}
-
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="studio-topbar-button relative mx-1 h-7 w-8 px-0"
-                aria-label="Editor menu"
-              >
-                •••
-                <SaveDirtyIndicator />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => void handleSave()}>
-                Save project
-              </DropdownMenuItem>
-              {onProjectSettings ? (
-                <DropdownMenuItem onClick={onProjectSettings}>Project settings</DropdownMenuItem>
-              ) : null}
-              <DropdownMenuItem onClick={() => setShowSettingsDialog(true)}>
-                Settings
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => setShowShortcutsDialog(true)}>
-                Keyboard shortcuts
-              </DropdownMenuItem>
-              {onOpenRenderQueue ? (
-                <DropdownMenuItem onClick={onOpenRenderQueue}>
-                  Render queue{renderQueueCount > 0 ? ` (${renderQueueCount})` : ''}
-                </DropdownMenuItem>
-              ) : null}
-              {onExportBundle ? (
-                <DropdownMenuItem onClick={onExportBundle}>
-                  Download project ZIP
-                </DropdownMenuItem>
-              ) : null}
-            </DropdownMenuContent>
-          </DropdownMenu>
-
+          <span className="w-[71px]" aria-hidden="true" />
           <Button
             size="sm"
-            className="studio-export-button ml-1 h-[30px] w-[92px] px-0 text-[10px] font-semibold uppercase"
+            className="studio-export-button h-[30px] w-[92px] px-0 text-[10px] font-semibold uppercase"
             onClick={onExport}
           >
             {t('toolbar.export')}
