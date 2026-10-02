@@ -7,6 +7,8 @@ interface RotaryKnobProps {
   value: MixedValue
   onChange: (value: number) => void
   onLiveChange?: (value: number) => void
+  onGestureStart?: () => void
+  onGestureEnd?: () => void
   min: number
   max: number
   step?: number
@@ -32,6 +34,8 @@ export function RotaryKnob({
   value,
   onChange,
   onLiveChange,
+  onGestureStart,
+  onGestureEnd,
   min,
   max,
   step = 1,
@@ -39,8 +43,24 @@ export function RotaryKnob({
   className,
 }: RotaryKnobProps) {
   const elRef = useRef<HTMLDivElement>(null)
-  const stateRef = useRef({ onChange, onLiveChange, min, max, step })
-  stateRef.current = { onChange, onLiveChange, min, max, step }
+  const stateRef = useRef({
+    onChange,
+    onLiveChange,
+    onGestureStart,
+    onGestureEnd,
+    min,
+    max,
+    step,
+  })
+  stateRef.current = {
+    onChange,
+    onLiveChange,
+    onGestureStart,
+    onGestureEnd,
+    min,
+    max,
+    step,
+  }
 
   const [draftValue, setDraftValue] = useState<number | null>(null)
 
@@ -63,6 +83,7 @@ export function RotaryKnob({
       if (!el) return
       el.setPointerCapture(e.pointerId)
 
+      stateRef.current.onGestureStart?.()
       const startY = e.clientY
       const startValue = num
       setDraftValue(num)
@@ -89,6 +110,7 @@ export function RotaryKnob({
         const v = compute(ue.clientY)
         setDraftValue(null)
         stateRef.current.onChange(v)
+        stateRef.current.onGestureEnd?.()
         el.removeEventListener('pointermove', handleMove)
         el.removeEventListener('pointerup', handleUp)
         el.removeEventListener('pointercancel', handleUp)
@@ -147,7 +169,7 @@ export function RotaryKnob({
         <path
           d={arcPath(cx, cy, r, ARC_START_DEG, ARC_START_DEG + ARC_SWEEP_DEG)}
           fill="none"
-          stroke="#2e2e31"
+          stroke="var(--border)"
           strokeWidth={2.5}
           strokeLinecap="round"
         />
@@ -155,12 +177,12 @@ export function RotaryKnob({
           <path
             d={arcPath(cx, cy, r, ARC_START_DEG, deg)}
             fill="none"
-            stroke="#ff7b63"
+            stroke="var(--foreground)"
             strokeWidth={2.5}
             strokeLinecap="round"
           />
         )}
-        <circle cx={tip.x} cy={tip.y} r={2} fill="white" />
+        <circle cx={tip.x} cy={tip.y} r={2} fill="var(--foreground)" />
       </svg>
     </div>
   )
