@@ -16,7 +16,7 @@ export function ProjectTemplatePicker({
   const { t } = useTranslation()
   const isCustomSelected = selectedTemplateId === 'custom'
   return (
-    <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4">
+    <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
       {PROJECT_TEMPLATES.map((template) => {
         const isSelected = selectedTemplateId === template.id
         const aspectRatio = getAspectRatio(template.width, template.height)
@@ -28,86 +28,46 @@ export function ProjectTemplatePicker({
             type="button"
             aria-pressed={isSelected}
             onClick={() => onSelectTemplate(template)}
-            className={`group relative flex flex-col gap-2 p-3 panel-bg sm:gap-3 sm:p-4 border rounded-lg transition-[transform,border-color,box-shadow] duration-150 active:scale-[0.98] hover:border-primary/50 hover:shadow-lg hover:shadow-primary/5 ${
-              isSelected ? 'border-primary ring-2 ring-primary/30' : 'border-border'
+            className={`min-h-14 rounded-[3px] border px-3 py-2 text-left transition-colors ${
+              isSelected
+                ? 'border-[#242724] bg-[#242724] text-[#f6f7f3]'
+                : 'border-transparent bg-[#d1d4ce] text-foreground hover:border-border hover:bg-[#c7cac4]'
             }`}
           >
-            {/* Silhouette Container */}
-            <div
-              className="relative h-20 bg-secondary/30 sm:h-24 rounded overflow-hidden flex items-center justify-center"
-              style={{ containerType: 'size' }}
+            <span className="block text-[10px] font-semibold">{template.name}</span>
+            <span
+              className={`mt-1 block font-mono text-[9px] ${
+                isSelected ? 'text-[#c7cac4]' : 'text-muted-foreground'
+              }`}
             >
-              {/* Aspect Ratio Silhouette */}
-              <div
-                className={`bg-primary/20 border-2 border-dashed rounded-sm ${
-                  isSelected ? 'border-primary' : 'border-primary/40'
-                }`}
-                style={{
-                  aspectRatio: `${template.width} / ${template.height}`,
-                  width: `min(100cqw, ${(template.width / template.height) * 100}cqh)`,
-                  height: `min(100cqh, ${(template.height / template.width) * 100}cqw)`,
-                }}
-              />
-            </div>
-
-            {/* Template Info */}
-            <div className="flex-1 text-left">
-              <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-                {template.platform}
-              </p>
-              <h3 className="font-medium text-sm text-foreground group-hover:text-primary transition-colors mt-1">
-                {template.name}
-              </h3>
-              <p className="text-xs text-muted-foreground mt-2">
-                {resolution}
-                <span className="mx-1">•</span>
-                {aspectRatio}
-              </p>
-            </div>
+              {resolution} · {aspectRatio}
+            </span>
           </button>
         )
       })}
-      {onSelectCustom && (
+      {onSelectCustom ? (
         <button
           type="button"
           aria-pressed={isCustomSelected}
           onClick={onSelectCustom}
-          className={`group relative flex flex-col gap-2 p-3 panel-bg sm:gap-3 sm:p-4 border rounded-lg transition-[transform,border-color,box-shadow] duration-150 active:scale-[0.98] hover:border-primary/50 hover:shadow-lg hover:shadow-primary/5 ${
-            isCustomSelected ? 'border-primary ring-2 ring-primary/30' : 'border-border'
+          className={`min-h-14 rounded-[3px] border px-3 py-2 text-left transition-colors ${
+            isCustomSelected
+              ? 'border-[#242724] bg-[#242724] text-[#f6f7f3]'
+              : 'border-transparent bg-[#d1d4ce] text-foreground hover:border-border hover:bg-[#c7cac4]'
           }`}
         >
-          <div className="relative h-20 bg-secondary/30 sm:h-24 rounded overflow-hidden flex items-center justify-center">
-            <div
-              className={`border-2 border-dashed rounded-sm transition-colors ${
-                isCustomSelected
-                  ? 'border-primary/70 bg-primary/10'
-                  : 'border-muted-foreground/30 bg-muted/10'
-              }`}
-              style={{ aspectRatio: '4 / 3', height: '80%', maxWidth: '80%' }}
-            />
-            <Plus
-              className={`absolute w-5 h-5 transition-colors ${
-                isCustomSelected ? 'text-primary' : 'text-muted-foreground/60'
-              }`}
-            />
-          </div>
-          <div className="flex-1 text-left">
-            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
-              {t('projects.templatePicker.custom')}
-            </p>
-            <h3
-              className={`font-medium text-sm transition-colors mt-1 ${
-                isCustomSelected ? 'text-primary' : 'text-foreground group-hover:text-primary'
-              }`}
-            >
-              {t('projects.templatePicker.customSize')}
-            </h3>
-            <p className="text-xs text-muted-foreground mt-2">
-              {t('projects.templatePicker.enterDimensions')}
-            </p>
-          </div>
+          <span className="flex items-center gap-1.5 text-[10px] font-semibold">
+            <Plus className="h-3 w-3" />
+            {t('projects.templatePicker.custom')}
+          </span>
+          <span
+            className={`mt-1 block text-[9px] ${
+              isCustomSelected ? 'text-[#c7cac4]' : 'text-muted-foreground'
+            }`}
+          >
+            {t('projects.templatePicker.enterDimensions')}
+          </span>
         </button>
-      )}
+      ) : null}
     </div>
-  )
-}
+  )}

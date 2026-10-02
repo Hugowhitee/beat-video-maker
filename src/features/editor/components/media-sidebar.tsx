@@ -1324,12 +1324,30 @@ export const MediaSidebar = memo(function MediaSidebar({
           <>
             {/* Panel Header — sits with the tab content */}
             <div
-              className="flex items-center justify-between px-3 border-b border-border flex-shrink-0"
-              style={{ height: EDITOR_LAYOUT_CSS_VALUES.sidebarHeaderHeight }}
+              className={cn(
+                'flex items-center justify-between border-b border-border flex-shrink-0',
+                studioTaskColumn && workspace === 'edit' ? 'h-[62px] px-5' : 'px-3',
+              )}
+              style={
+                studioTaskColumn && workspace === 'edit'
+                  ? undefined
+                  : { height: EDITOR_LAYOUT_CSS_VALUES.sidebarHeaderHeight }
+              }
             >
-              <span className="text-sm font-medium text-foreground">
-                {categories.find((c) => c.id === activeTab)?.label}
-              </span>
+              {studioTaskColumn && workspace === 'edit' ? (
+                <div className="min-w-0">
+                  <div className="text-[11px] font-semibold uppercase tracking-[0.08em] text-foreground">
+                    Visual
+                  </div>
+                  <p className="mt-1.5 truncate text-[10px] text-muted-foreground">
+                    Build the picture, then refine selected clips in Inspector.
+                  </p>
+                </div>
+              ) : (
+                <span className="text-sm font-medium text-foreground">
+                  {categories.find((c) => c.id === activeTab)?.label}
+                </span>
+              )}
               <div className="flex items-center gap-1">
                 {workspace === 'edit' ? (
                   <DropdownMenu>
@@ -1402,26 +1420,29 @@ export const MediaSidebar = memo(function MediaSidebar({
             </div>
 
             {producerShell && categories.length > 1 ? (
-              <div className="flex h-8 shrink-0 gap-0 overflow-x-auto border-b border-border px-2">
-                {categories.map(({ id, label }) => (
-                  <button
-                    key={id}
-                    type="button"
-                    aria-pressed={activeTab === id}
-                    onClick={() => {
-                      setActiveTab(id)
-                      if (id === 'effects') triggerPreviews()
-                    }}
-                    className={cn(
-                      'relative h-8 shrink-0 px-2.5 text-[10px] font-medium transition-colors',
-                      activeTab === id
-                        ? 'text-foreground after:absolute after:inset-x-2 after:bottom-[-1px] after:h-[2px] after:bg-primary'
-                        : 'text-muted-foreground hover:bg-secondary/40 hover:text-foreground',
-                    )}
-                  >
-                    {label}
-                  </button>
-                ))}
+              <div className="shrink-0 border-b border-border px-5 py-3">
+                <div
+                  className="studio-segmented flex h-8 w-full min-w-max"
+                  role="tablist"
+                  aria-label="Visual tools"
+                >
+                  {categories.map(({ id, label }) => (
+                    <button
+                      key={id}
+                      type="button"
+                      role="tab"
+                      aria-selected={activeTab === id}
+                      aria-pressed={activeTab === id}
+                      onClick={() => {
+                        setActiveTab(id)
+                        if (id === 'effects') triggerPreviews()
+                      }}
+                      className="studio-segment h-7 min-w-[78px] flex-1 px-2 text-[9px] font-medium"
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
               </div>
             ) : null}
 

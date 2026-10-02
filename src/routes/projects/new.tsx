@@ -6,8 +6,8 @@ import { createLogger } from '@/shared/logging/logger'
 import { InlineCreateProjectForm } from '@/features/projects/components/project-form'
 import { useCreateProject } from '@/features/projects/hooks/use-project-actions'
 import { useProjectStore } from '@/features/projects/stores/project-store'
-import { BeatVideoLogo } from '@/components/brand/beat-video-logo'
 import type { ProjectFormData } from '@/features/projects/utils/validation'
+import { useStudioV2DocumentTheme } from '@/shared/ui/use-studio-v2-document-theme'
 
 const logger = createLogger('NewProject')
 
@@ -24,6 +24,7 @@ export const Route = createFileRoute('/projects/new')({
 })
 
 function NewProject() {
+  useStudioV2DocumentTheme()
   const navigate = useNavigate()
   const { t } = useTranslation()
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -53,19 +54,33 @@ function NewProject() {
   }
 
   return (
-    <div className="min-h-dvh overflow-x-hidden bg-background">
-      {/* Header */}
-      <div className="panel-header border-b border-border">
-        <div className="max-w-7xl mx-auto px-3 py-4 sm:px-6 sm:py-5">
-          <Link to="/projects">
-            <BeatVideoLogo variant="full" size="md" className="hover:opacity-80 transition-opacity" />
-          </Link>
-        </div>
+    <div
+      data-studio-v2="true"
+      className="min-h-dvh overflow-x-hidden bg-[#d9dbd6] text-foreground"
+    >
+      <div className="flex h-12 items-center bg-[#242724] px-[18px] text-[#f6f7f3]">
+        <Link to="/projects" className="flex shrink-0 items-baseline gap-1.5">
+          <span className="text-[10px] font-semibold">BEAT VIDEO</span>
+          <span className="text-[10px] font-semibold text-[#c7e85a]">MAKER</span>
+        </Link>
+        <span className="ml-[51px] text-[11px] font-medium text-[#bfc4bc]">New project</span>
       </div>
 
-      {/* Content */}
-      <div className="max-w-7xl mx-auto px-3 py-5 sm:px-6 sm:py-8">
-        <InlineCreateProjectForm onSubmit={handleSubmit} isSubmitting={isSubmitting} />
+      <div className="px-4 py-8 sm:px-8 sm:py-10">
+        <Link
+          to="/projects"
+          className="text-[9px] font-semibold uppercase tracking-[0.08em] text-muted-foreground hover:text-foreground"
+        >
+          ← Projects
+        </Link>
+        <h1 className="mt-5 text-[26px] font-semibold leading-8 text-foreground">New project</h1>
+        <p className="mt-1 text-[11px] text-muted-foreground">
+          Set the essentials. Everything else stays editable later.
+        </p>
+
+        <div className="mt-10">
+          <InlineCreateProjectForm onSubmit={handleSubmit} isSubmitting={isSubmitting} />
+        </div>
       </div>
     </div>
   )

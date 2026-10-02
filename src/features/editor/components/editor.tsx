@@ -87,6 +87,8 @@ const LazyColorTimelineNavigator = lazy(() =>
     default: ColorTimelineNavigator,
   })),
 )
+import { useStudioV2DocumentTheme } from '@/shared/ui/use-studio-v2-document-theme'
+
 const EDITOR_PROJECT_ROUTE_ID = '/editor/$projectId'
 
 type MobileEditorSurface = 'tools' | 'preview' | 'inspector' | 'timeline' | 'mixer' | 'color'
@@ -445,6 +447,7 @@ export const LoadedEditor = memo(function LoadedEditor({
   migration,
 }: EditorProps) {
   const { t } = useTranslation()
+  useStudioV2DocumentTheme()
   const router = useRouter()
   const [exportDialogOpen, setExportDialogOpen] = useState(false)
   const [bundleExportDialogOpen, setBundleExportDialogOpen] = useState(false)
@@ -765,7 +768,10 @@ export const LoadedEditor = memo(function LoadedEditor({
   const isMasterWorkspace = workspace === 'master'
   const isMotionWorkspace = workspace === 'motion'
   const isProducerWorkspace =
-    workspace === 'beat' || workspace === 'edit' || workspace === 'master'
+    workspace === 'beat' ||
+    workspace === 'edit' ||
+    workspace === 'color' ||
+    workspace === 'master'
   // Color replaces the default editor shell. Motion deliberately keeps it and
   // swaps the preview/timeline surfaces while retaining the shared sidebars.
   const hidesDefaultSidebars = isColorWorkspace
@@ -925,18 +931,20 @@ export const LoadedEditor = memo(function LoadedEditor({
 
         {/* Right side: Preview/Properties + Timeline */}
         {isColorWorkspace ? (
-          <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
+          <div className="flex min-w-0 flex-1 flex-col overflow-hidden bg-[#d9dbd6] px-5 pb-7 pt-[18px]">
             <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
               <ErrorBoundary level="feature">
                 <PreviewArea project={project} />
               </ErrorBoundary>
             </div>
-            <Suspense fallback={null}>
-              <LazyColorTimelineNavigator />
-            </Suspense>
+            <div className="mt-3 shrink-0">
+              <Suspense fallback={null}>
+                <LazyColorTimelineNavigator />
+              </Suspense>
+            </div>
             <InteractionLockRegion
               locked={isMaskEditingActive}
-              className="h-[37%] min-h-[288px] max-h-[39vh] shrink-0"
+              className="mt-3 h-[37%] min-h-[288px] max-h-[39vh] shrink-0"
             >
               <ErrorBoundary level="feature">
                 <Suspense fallback={null}>

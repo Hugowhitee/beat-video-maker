@@ -3,7 +3,11 @@ import { toast } from 'sonner'
 import { useEditorStore } from '@/shared/state/editor'
 import { useProjectStore } from '@/features/editor/deps/projects-contract'
 import { useMediaLibraryStore } from '@/features/editor/deps/media-library'
-import { useItemsStore } from '@/features/editor/deps/timeline-store'
+import {
+  useCompositionNavigationStore,
+  useCompositionsStore,
+  useItemsStore,
+} from '@/features/editor/deps/timeline-store'
 import type { EditorSidebarTab, EditorWorkspaceId } from '@/config/editor-workspaces'
 import { cn } from '@/shared/ui/cn'
 import {
@@ -24,9 +28,8 @@ type QuickTarget = RailTarget & {
 
 const PROJECT_TARGETS: readonly RailTarget[] = [
   { label: 'Media', workspace: 'edit', tab: 'media' },
-  { label: 'Beat grid', workspace: 'beat', tab: 'beat' },
-  { label: 'Sequences', workspace: 'edit', tab: 'media' },
-  { label: 'Transitions', workspace: 'edit', tab: 'transitions' },
+  { label: 'Beat', workspace: 'beat', tab: 'beat' },
+  { label: 'Loops & sequences', workspace: 'edit', tab: 'media' },
   { label: 'Graphics', workspace: 'edit', tab: 'text' },
 ]
 
@@ -53,6 +56,10 @@ export const StudioProjectRail = memo(function StudioProjectRail() {
   const project = useProjectStore((state) => state.currentProject)
   const mediaCount = useMediaLibraryStore((state) => state.mediaItems.length)
   const sequenceCount = project?.timeline?.topLevelSequenceIds?.length ?? 0
+  const sequences = useCompositionsStore((state) =>
+    state.compositions.filter((composition) => composition.editorKind === 'sequence'),
+  )
+  const switchToSequence = useCompositionNavigationStore((state) => state.switchToSequence)
   const graphicsCount = useItemsStore(
     (state) =>
       state.items.filter(
@@ -70,15 +77,13 @@ export const StudioProjectRail = memo(function StudioProjectRail() {
   const gridLocked = beatReady && Boolean(music?.barOneVerified)
   const downbeat = music?.barOneTime ?? music?.detectedBarOneTime ?? null
   const [selectedProjectSection, setSelectedProjectSection] = useState(
-    beatReady ? 'Beat grid' : 'Media',
+    beatReady ? 'Beat' : 'Media',
   )
   const [quickAddBusy, setQuickAddBusy] = useState<QuickTarget['action'] | null>(null)
 
   useEffect(() => {
     if (workspace === 'beat' || (workspace === 'master' && beatReady)) {
-      setSelectedProjectSection('Beat grid')
-    } else if (workspace === 'edit' && activeTab === 'transitions') {
-      setSelectedProjectSection('Transitions')
+      setSelectedProjectSection('Beat')
     } else if (
       workspace === 'edit' &&
       (activeTab === 'text' || activeTab === 'shapes' || activeTab === 'lottie')
@@ -87,7 +92,7 @@ export const StudioProjectRail = memo(function StudioProjectRail() {
     } else if (
       workspace === 'edit' &&
       activeTab === 'media' &&
-      selectedProjectSection !== 'Sequences'
+      selectedProjectSection !== 'Loops & sequences'
     ) {
       setSelectedProjectSection('Media')
     }
@@ -97,6 +102,17 @@ export const StudioProjectRail = memo(function StudioProjectRail() {
     setSelectedProjectSection(target.label)
     setWorkspace(target.workspace)
     setActiveTab(target.tab)
+
+    if (target.label === 'Loops & sequences') {
+      const firstSequence = sequences[0]
+      if (firstSequence) {
+        switchToSequence(firstSequence.id)
+      } else {
+        toast.info('No sequences yet', {
+          description: 'Create or build a reusable sequence from the Visual workspace first.',
+        })
+      }
+    }
   }
 
   const runQuickAdd = async (target: QuickTarget) => {
@@ -154,11 +170,11 @@ export const StudioProjectRail = memo(function StudioProjectRail() {
     target,
     top: 79 + index * 42,
     count:
-      target.label === 'Beat grid' && beatReady
+      target.label === 'Beat' && beatReady
         ? 'READY'
         : target.label === 'Media' && mediaCount > 0
           ? String(mediaCount)
-          : target.label === 'Sequences' && sequenceCount > 0
+          : target.label === 'Loops & sequences' && sequenceCount > 0
             ? String(sequenceCount)
             : target.label === 'Graphics' && graphicsCount > 0
               ? String(graphicsCount)
@@ -171,7 +187,7 @@ export const StudioProjectRail = memo(function StudioProjectRail() {
       aria-label="Project"
     >
       <div className="absolute left-4 top-[18px] text-[10px] font-semibold uppercase leading-3 tracking-[0.12em] text-muted-foreground">
-        Project
+        Project content
       </div>
       <div className="absolute left-4 top-[39px] max-w-[182px] truncate text-[15px] font-semibold leading-[18px] text-foreground">
         {project?.name ?? 'Untitled project'}
@@ -187,6 +203,15 @@ export const StudioProjectRail = memo(function StudioProjectRail() {
               type="button"
               onClick={() => openTarget(target)}
               aria-current={selected ? 'page' : undefined}
+              title={
+                target.label === 'Media'
+                  ? 'Imported photo and video sources'
+                  : target.label === 'Beat'
+                    ? 'Project beat source and musical timing'
+                    : target.label === 'Loops & sequences'
+                      ? 'Reusable Loop A and sequence timelines'
+                      : 'Text, shapes and visual overlays'
+              }
               className={cn(
                 'studio-rail-row absolute left-4 h-[34px] w-[182px] rounded-[3px] text-left text-[11px] leading-[13px] text-foreground',
                 selected && 'studio-rail-row-active font-semibold',
@@ -211,10 +236,10 @@ export const StudioProjectRail = memo(function StudioProjectRail() {
         })}
       </nav>
 
-      <div className="absolute left-4 top-[322px] text-[10px] font-semibold uppercase leading-3 tracking-[0.12em] text-muted-foreground">
+      <div className="absolute left-4 top-[280px] text-[10px] font-semibold uppercase leading-3 tracking-[0.12em] text-muted-foreground">
         Quick add
       </div>
-      <div className="absolute left-4 top-[344px] grid grid-cols-2 gap-x-2 gap-y-2">
+      <div className="absolute left-4 top-[302px] grid grid-cols-2 gap-x-2 gap-y-2">
         {QUICK_TARGETS.map((target) => (
           <button
             key={target.label}
@@ -228,23 +253,23 @@ export const StudioProjectRail = memo(function StudioProjectRail() {
         ))}
       </div>
 
-      <div className="absolute left-4 top-[440px] h-px w-[182px] bg-border" />
-      <div className="absolute left-4 top-[458px] text-[10px] font-semibold uppercase leading-3 tracking-[0.12em] text-muted-foreground">
+      <div className="absolute left-4 top-[398px] h-px w-[182px] bg-border" />
+      <div className="absolute left-4 top-[416px] text-[10px] font-semibold uppercase leading-3 tracking-[0.12em] text-muted-foreground">
         Beat status
       </div>
-      <div className="absolute left-4 top-[482px] text-[11px] font-semibold leading-[13px] text-foreground">
+      <div className="absolute left-4 top-[440px] text-[11px] font-semibold leading-[13px] text-foreground">
         {gridLocked ? 'Grid locked' : beatReady ? 'Grid ready' : 'No beat grid'}
       </div>
-      <div className="absolute left-4 top-[502px] font-mono text-[10px] leading-3 tabular-nums text-muted-foreground">
+      <div className="absolute left-4 top-[460px] font-mono text-[10px] leading-3 tabular-nums text-muted-foreground">
         {bpm ? `${bpm.toFixed(2)} BPM · ${beatsPerBar}/4` : '— BPM · 4/4'}
       </div>
-      <div className="absolute left-4 top-[519px] font-mono text-[10px] leading-3 tabular-nums text-muted-foreground">
+      <div className="absolute left-4 top-[477px] font-mono text-[10px] leading-3 tabular-nums text-muted-foreground">
         Downbeat {formatSourceTime(downbeat)}
       </div>
       <button
         type="button"
         onClick={() => openTarget(PROJECT_TARGETS[1]!)}
-        className="studio-primary-action absolute left-4 top-[548px] h-8 w-[182px]"
+        className="studio-primary-action absolute left-4 top-[506px] h-8 w-[182px]"
       >
         Review grid
       </button>

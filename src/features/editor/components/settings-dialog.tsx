@@ -574,7 +574,10 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
   ).length
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl gap-0 overflow-hidden p-0 sm:top-16 sm:max-h-[calc(100vh-4rem)] sm:translate-y-0 sm:origin-top">
+      <DialogContent
+        data-studio-v2="true"
+        className="max-w-2xl gap-0 overflow-hidden bg-[#e8e9e5] p-0 sm:top-16 sm:max-h-[calc(100vh-4rem)] sm:translate-y-0 sm:origin-top"
+      >
         <DialogHeader className="flex flex-row items-center justify-between border-b px-6 py-4 pr-14">
           <DialogTitle>{t('settings.title')}</DialogTitle>
           <Button
@@ -589,7 +592,7 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
         </DialogHeader>
         <div className="flex min-h-0">
           {/* Sidebar */}
-          <nav className="flex w-44 shrink-0 flex-col gap-0.5 border-r border-white/6 p-2">
+          <nav className="flex w-44 shrink-0 flex-col gap-0.5 border-r border-border bg-[#d9dbd6] p-2">
             {SETTINGS_SECTIONS.map((section) => {
               const Icon = section.icon
               return (
@@ -598,10 +601,10 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
                   type="button"
                   onClick={() => setActiveSection(section.id)}
                   className={cn(
-                    'flex items-center gap-2 rounded-lg px-3 py-2 text-left text-[13px] transition-colors duration-150 ease-out motion-reduce:transition-none',
+                    'flex items-center gap-2 rounded-[3px] px-3 py-2 text-left text-[12px] transition-colors duration-150 ease-out motion-reduce:transition-none',
                     activeSection === section.id
-                      ? 'bg-primary/15 text-primary'
-                      : 'text-muted-foreground hover:bg-white/5 hover:text-foreground/80',
+                      ? 'bg-[#242724] text-[#f6f7f3] shadow-[inset_3px_0_0_#c7e85a]'
+                      : 'text-muted-foreground hover:bg-[#d1d4ce] hover:text-foreground',
                   )}
                 >
                   <Icon className="h-3.5 w-3.5 shrink-0" />
@@ -1113,7 +1116,7 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
       </DialogContent>
 
       <AlertDialog open={showClearConfirm} onOpenChange={setShowClearConfirm}>
-        <AlertDialogContent>
+        <AlertDialogContent data-studio-v2="true">
           <AlertDialogHeader>
             <AlertDialogTitle>{t('settings.storage.clearCacheConfirmTitle')}</AlertDialogTitle>
             <AlertDialogDescription>
