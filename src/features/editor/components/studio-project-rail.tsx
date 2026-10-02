@@ -67,9 +67,15 @@ export const StudioProjectRail = memo(function StudioProjectRail() {
 
         <div className="mt-3 border-t border-border pt-1.5">
           {PROJECT_TARGETS.map((target) => {
-            const isBeatStatusRow = target.label === 'Beat grid' && beatReady
+            const hasDirectProjectTarget = PROJECT_TARGETS.some(
+              (candidate) =>
+                workspace === candidate.workspace && activeTab === candidate.tab,
+            )
+            const directSelection =
+              workspace === target.workspace && activeTab === target.tab
             const selected =
-              isBeatStatusRow || (workspace === target.workspace && activeTab === target.tab)
+              directSelection ||
+              (!hasDirectProjectTarget && target.label === 'Beat grid' && beatReady)
 
             return (
               <button
