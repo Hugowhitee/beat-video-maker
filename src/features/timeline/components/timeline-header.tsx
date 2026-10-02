@@ -506,6 +506,7 @@ export const TimelineHeader = memo(function TimelineHeader({
     BEAT_GRID_RESOLUTION_OPTIONS.find((option) => option.value === beatGridResolution)?.label ??
     'Auto'
   const musicalSnapEnabled = snapEnabled && beatGridSnapEnabled
+  const producerZoomLevel = useZoomStore((state) => state.contentLevel)
 
   const toggleMusicalSnap = useCallback(() => {
     if (musicalSnapEnabled) {
@@ -545,7 +546,7 @@ export const TimelineHeader = memo(function TimelineHeader({
   }
 
   if (isSimplified && !compact) {
-    const producerZoomPercent = Math.round(useZoomStore.getState().level * 100)
+    const producerZoomPercent = Math.round(producerZoomLevel * 100)
     const zoomOut = onZoomOut ?? useZoomStore.getState().zoomOut
     const zoomIn = onZoomIn ?? useZoomStore.getState().zoomIn
 
