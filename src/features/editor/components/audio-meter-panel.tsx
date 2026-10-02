@@ -1140,40 +1140,46 @@ export const AudioMeterPanel = memo(function AudioMeterPanel({
         {detachedEqPanel}
         {floatingMixer}
         <div
-          className="relative h-[148px] w-[52px] shrink-0 rounded-[2px] bg-[#242724] px-2 py-2"
+          className="relative h-[148px] w-[70px] shrink-0"
           aria-label={t('editor.audioMeters.audioMeter')}
         >
-          <div className="absolute bottom-2 left-1 top-2 flex w-4 flex-col justify-between font-mono text-[8px] text-[#9ca19a]">
-            <span>−6</span>
-            <span>−12</span>
-            <span>−24</span>
-          </div>
-          <div
-            ref={meterVisualRootRef}
-            className="absolute bottom-2 right-2 top-2 flex gap-[2px]"
-          >
-            {(['l', 'r'] as const).map((channel) => (
-              <div
-                key={channel}
-                className="relative w-[8px] overflow-hidden rounded-[1px] bg-[#111411]"
-              >
+          <span className="absolute left-1 top-[39px] font-mono text-[8px] leading-[10px] text-[#686d67]">
+            −6
+          </span>
+          <span className="absolute left-0 top-[91px] font-mono text-[8px] leading-[10px] text-[#686d67]">
+            −12
+          </span>
+          <span className="absolute left-0 top-[134px] font-mono text-[8px] leading-[10px] text-[#686d67]">
+            −24
+          </span>
+          <div className="absolute left-[38px] top-0 h-[148px] w-8 rounded-[2px] bg-[#242724]">
+            <div
+              ref={meterVisualRootRef}
+              className="absolute bottom-1 left-1 right-1 top-1 flex gap-[2px]"
+            >
+              {(['l', 'r'] as const).map((channel) => (
                 <div
-                  className={`absolute inset-x-0 bottom-0 bg-[#c7e85a] transition-[height] duration-75 ease-out ${isScanningMeter ? 'opacity-50' : ''}`}
-                  style={{
-                    height: channel === 'l' ? 'var(--meter-l, 0%)' : 'var(--meter-r, 0%)',
-                  }}
-                />
-                <div
-                  className="absolute inset-x-0 h-px bg-white/75 transition-[bottom] duration-100 ease-out"
-                  style={{
-                    bottom:
-                      channel === 'l'
-                        ? 'var(--meter-l-peak, 0%)'
-                        : 'var(--meter-r-peak, 0%)',
-                  }}
-                />
-              </div>
-            ))}
+                  key={channel}
+                  className="relative w-[11px] flex-1 overflow-hidden rounded-[1px] bg-[#111411]"
+                >
+                  <div
+                    className={`absolute inset-x-0 bottom-0 bg-[#c7e85a] transition-[height] duration-75 ease-out ${isScanningMeter ? 'opacity-50' : ''}`}
+                    style={{
+                      height: channel === 'l' ? 'var(--meter-l, 0%)' : 'var(--meter-r, 0%)',
+                    }}
+                  />
+                  <div
+                    className="absolute inset-x-0 h-px bg-white/75 transition-[bottom] duration-100 ease-out"
+                    style={{
+                      bottom:
+                        channel === 'l'
+                          ? 'var(--meter-l-peak, 0%)'
+                          : 'var(--meter-r-peak, 0%)',
+                    }}
+                  />
+                </div>
+              ))}
+            </div>
           </div>
         </div>
       </>
