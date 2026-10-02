@@ -545,39 +545,18 @@ body.canvas-translate-cursor-not-allowed * {
 }
 
 [data-studio-v2='true'] .studio-rail-row {
-  position: relative;
-  border-radius: 0;
-  transition: color 100ms ease;
-}
-
-[data-studio-v2='true'] .studio-rail-row::before {
-  content: '';
-  position: absolute;
-  inset: 4px 0;
-  z-index: 0;
   border-radius: 3px;
   background: transparent;
-  transition: background-color 100ms ease;
-}
-
-[data-studio-v2='true'] .studio-rail-row > * {
-  position: relative;
-  z-index: 1;
-}
-
-[data-studio-v2='true'] .studio-rail-row:hover::before {
-  background: #d9dbd6;
+  transition: background-color 100ms ease, color 100ms ease;
 }
 
 [data-studio-v2='true'] .studio-rail-row:hover {
+  background: #d9dbd6;
   color: #242724;
 }
 
-[data-studio-v2='true'] .studio-rail-row-active::before {
-  background: #d1d4ce;
-}
-
 [data-studio-v2='true'] .studio-rail-row-active {
+  background: #d1d4ce;
   color: #171917;
 }
 
