@@ -518,6 +518,32 @@ body.canvas-translate-cursor-not-allowed * {
   background: #e8e9e5;
 }
 
+
+[data-studio-v2='true'] .studio-master-preview-frame {
+  background: #d9dbd6;
+}
+
+[data-studio-v2='true'] .studio-master-program {
+  --background: #242724;
+  --foreground: #f6f7f3;
+  --muted: #343834;
+  --muted-foreground: #cdd1ca;
+  --secondary: #343834;
+  --secondary-foreground: #f6f7f3;
+  --border: #4a4f4a;
+  --panel-header: #242724;
+  color-scheme: dark;
+  background: #242724;
+}
+
+[data-studio-v2='true'] .studio-master-program input[type='range'] {
+  accent-color: #c7e85a;
+}
+
+[data-studio-v2='true'] .studio-master-input-range {
+  accent-color: #242724;
+}
+
 [data-studio-v2='true'] .studio-rail-row {
   border-radius: 3px;
   transition: background-color 100ms ease, color 100ms ease;
