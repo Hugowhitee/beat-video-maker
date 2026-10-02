@@ -1,4 +1,4 @@
-# FreeCut Web
+# Beat Video Maker
 
 Browser-based multi-track video editor. React 19 + TypeScript + Vite.
 
