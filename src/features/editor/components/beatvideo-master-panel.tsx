@@ -254,7 +254,6 @@ function SaturationGraph({ driveDb, mix }: { driveDb: number; mix: number }) {
 export function BeatvideoMasterPanel() {
   const masterFx = usePlaybackStore((state) => state.masterFx)
   const setMasterFx = usePlaybackStore((state) => state.setMasterFx)
-  const masterBusDb = usePlaybackStore((state) => state.masterBusDb)
   const busAudioEq = usePlaybackStore((state) => state.busAudioEq)
   const setBusAudioEq = usePlaybackStore((state) => state.setBusAudioEq)
   const currentProject = useProjectStore((state) => state.currentProject)
