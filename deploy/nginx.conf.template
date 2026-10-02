@@ -11,9 +11,16 @@ server {
   add_header Cross-Origin-Embedder-Policy "require-corp" always;
   add_header X-Content-Type-Options "nosniff" always;
 
-  # The service worker is version-stamped by the build. Revalidate it on each visit
-  # so deploys are picked up without users getting stuck on an old application shell.
+  # The service worker and app shell must never stick across deployments.
+  # Hashed /assets/* can still be cached normally; these two files are the version switch.
   location = /sw.js {
+    add_header Cache-Control "no-store, no-cache, must-revalidate" always;
+    expires -1;
+    try_files $uri =404;
+  }
+
+  location = /index.html {
+    add_header Cache-Control "no-store, no-cache, must-revalidate" always;
     expires -1;
     try_files $uri =404;
   }
