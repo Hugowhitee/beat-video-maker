@@ -945,6 +945,27 @@ export const LoadedEditor = memo(function LoadedEditor({
               </ErrorBoundary>
             </InteractionLockRegion>
           </div>
+        ) : isMasterWorkspace ? (
+          <div className="flex min-w-0 flex-1 flex-col overflow-hidden bg-[#d9dbd6]">
+            <div className="h-[476px] shrink-0 px-5 pt-[18px]">
+              <InteractionLockRegion locked={isMaskEditingActive} className="h-[442px]">
+                <ErrorBoundary level="feature">
+                  <PreviewArea project={project} />
+                </ErrorBoundary>
+              </InteractionLockRegion>
+            </div>
+            <InteractionLockRegion
+              locked={isMaskEditingActive}
+              className="h-[384px] shrink-0 px-5"
+            >
+              <ErrorBoundary level="feature">
+                <Suspense fallback={null}>
+                  <LazyTimeline duration={timelineDuration} beatvideoMode={beatvideoMode} />
+                </Suspense>
+              </ErrorBoundary>
+            </InteractionLockRegion>
+            <div className="h-7 shrink-0" aria-hidden="true" />
+          </div>
         ) : (
           <ResizablePanelGroup
             direction="vertical"
@@ -971,10 +992,6 @@ export const LoadedEditor = memo(function LoadedEditor({
                 <ErrorBoundary level="feature">
                   {isMotionWorkspace ? (
                     <MotionPreviewArea project={project} />
-                  ) : isMasterWorkspace ? (
-                    <div className="studio-master-preview-frame flex h-full min-w-0 flex-1 px-5 pb-1 pt-[18px]">
-                      <PreviewArea project={project} />
-                    </div>
                   ) : (
                     <PreviewArea project={project} />
                   )}
@@ -1008,13 +1025,7 @@ export const LoadedEditor = memo(function LoadedEditor({
               <InteractionLockRegion locked={isMaskEditingActive} className="h-full">
                 <ErrorBoundary level="feature">
                   <div className="h-full flex overflow-hidden">
-                    <div
-                      className={
-                        isMasterWorkspace
-                          ? 'min-w-0 flex-1 px-5 pb-7'
-                          : 'min-w-0 flex-1'
-                      }
-                    >
+                    <div className="min-w-0 flex-1">
                       {isMotionWorkspace ? (
                         <MotionTimelineDock project={project} />
                       ) : (
