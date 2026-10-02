@@ -29,8 +29,6 @@ import {
   Check,
   Video,
   AudioLines,
-  ChevronDown,
-  ChevronRight,
 } from 'lucide-react'
 import { CompositionBreadcrumbs } from './composition-breadcrumbs'
 import { SequenceTabs } from './sequence-tabs'
@@ -72,7 +70,7 @@ import { createRafCoalescedCallback } from '../utils/raf-coalesced-callback'
 import type { BeatvideoProjectMode } from '@/types/project'
 
 const logger = createLogger('Timeline')
-const PRODUCER_TIMELINE_SIDEBAR_WIDTH = 144
+const PRODUCER_TIMELINE_SIDEBAR_WIDTH = 70
 
 /**
  * Track height presets exposed through the track-size flyout. Their heights
@@ -148,6 +146,7 @@ export const Timeline = memo(function Timeline({
     [producerTrackLayout],
   )
   const showProducerExtras =
+    workspace === 'master' ||
     producerExtrasExpanded ||
     (activeTrackId !== null && producerExtraTrackIds.has(activeTrackId))
   const visibleTracks = useMemo(() => {
@@ -168,25 +167,29 @@ export const Timeline = memo(function Timeline({
     if (!simplifiedBeatvideoTimeline) return labels
 
     const primaryMediaId = producerTrackLayout?.primaryMediaTrackId
-    if (primaryMediaId) labels.set(primaryMediaId, 'Media')
-    let overlayIndex = 0
-    let auxAudioIndex = 0
+    let graphicsIndex = 0
+    let audioIndex = 0
+
     for (const track of visibleTracks) {
-      if (track.id === primaryMediaId || track.name === 'Beat') continue
-      if (track.name === 'Producer tags') {
-        labels.set(track.id, 'Producer tags')
-        continue
-      }
-      if (track.name === 'Watermarks') {
-        labels.set(track.id, 'Watermarks')
-        continue
-      }
       if (getTrackKind(track) === 'video') {
-        overlayIndex += 1
-        labels.set(track.id, `Overlay ${overlayIndex}`)
+        if (track.id === primaryMediaId) {
+          labels.set(track.id, 'V1 · Footage')
+        } else {
+          graphicsIndex += 1
+          labels.set(track.id, `G${graphicsIndex} · Graphics`)
+        }
+        continue
+      }
+
+      audioIndex += 1
+      if (track.name === 'Beat') {
+        labels.set(track.id, `A${audioIndex} · Beat`)
+      } else if (track.name === 'Producer tags') {
+        labels.set(track.id, `A${audioIndex} · Producer`)
+      } else if (track.name === 'Watermarks') {
+        labels.set(track.id, `A${audioIndex} · Watermark`)
       } else {
-        auxAudioIndex += 1
-        labels.set(track.id, `Audio ${auxAudioIndex}`)
+        labels.set(track.id, `A${audioIndex} · Audio`)
       }
     }
     return labels
@@ -986,8 +989,16 @@ export const Timeline = memo(function Timeline({
             return (
               <RowFrame
                 key={track.id}
-                onResizeMouseDown={(event) => handleTrackResizeStart(event, track.id)}
-                onResizeDoubleClick={(event) => handleTrackResizeReset(event, track.id)}
+                onResizeMouseDown={
+                  simplifiedBeatvideoTimeline
+                    ? undefined
+                    : (event) => handleTrackResizeStart(event, track.id)
+                }
+                onResizeDoubleClick={
+                  simplifiedBeatvideoTimeline
+                    ? undefined
+                    : (event) => handleTrackResizeReset(event, track.id)
+                }
                 resizeHandleLabel={`Resize ${track.name} height`}
                 resizeHandlePosition={getTrackKind(track) === 'video' ? 'top' : 'bottom'}
               >
@@ -1065,7 +1076,11 @@ export const Timeline = memo(function Timeline({
 
   return (
     <div
-      className="timeline-bg h-full border-t border-border flex flex-col overflow-hidden"
+      className={
+        simplifiedBeatvideoTimeline
+          ? 'h-full flex flex-col overflow-hidden bg-[#d9dbd6]'
+          : 'timeline-bg h-full border-t border-border flex flex-col overflow-hidden'
+      }
       role="region"
       aria-label={t('timeline.region')}
     >
@@ -1079,6 +1094,9 @@ export const Timeline = memo(function Timeline({
         onZoomOut={zoomHandlers?.handleZoomOut}
         onZoomToFit={zoomHandlers?.handleZoomToFit}
       />
+      {simplifiedBeatvideoTimeline && !compact ? (
+        <div className="h-1 shrink-0 bg-[#d9dbd6]" aria-hidden="true" />
+      ) : null}
 
       {/* Multi-sequence authoring is an Advanced/Motion concern. Keeping the
           Main/+ strip out of Beat, Visual and Master makes the producer path
@@ -1090,55 +1108,32 @@ export const Timeline = memo(function Timeline({
 
       {/* Timeline Content */}
       <div
-        className="flex-1 flex overflow-hidden min-h-0"
+        className={
+          simplifiedBeatvideoTimeline
+            ? 'flex-1 flex overflow-hidden min-h-0 bg-[#343834]'
+            : 'flex-1 flex overflow-hidden min-h-0'
+        }
         onMouseDown={handleTimelineAreaMouseDown}
       >
         {/* Track Headers Sidebar */}
         <div
-          className="border-r border-border panel-bg flex-shrink-0 flex flex-col overflow-x-hidden"
+          className={
+            simplifiedBeatvideoTimeline
+              ? 'flex-shrink-0 flex flex-col overflow-x-hidden bg-[#343834] text-[#d6dad4]'
+              : 'border-r border-border panel-bg flex-shrink-0 flex flex-col overflow-x-hidden'
+          }
           style={{ width: timelineSidebarWidth }}
         >
           {/* Beatvideo keeps layer creation in Visual instead of exposing raw track plumbing. */}
           <div
-            className="flex items-center justify-between px-3 border-b border-border bg-secondary/20 flex-shrink-0"
+            className={
+              simplifiedBeatvideoTimeline
+                ? 'shrink-0 bg-[#343834]'
+                : 'flex items-center justify-between px-3 border-b border-border bg-secondary/20 flex-shrink-0'
+            }
             style={{ height: EDITOR_LAYOUT_CSS_VALUES.timelineTracksHeaderHeight }}
           >
-            {simplifiedBeatvideoTimeline ? (
-              <div className="flex min-w-0 flex-1 items-center justify-between gap-2">
-                <span className="text-xs font-medium text-muted-foreground">
-                  Tracks
-                </span>
-                {(producerTrackLayout?.extraTracks.length ?? 0) > 0 ? (
-                  <button
-                    type="button"
-                    className="flex h-7 items-center gap-1 px-1 text-[10px] font-medium text-muted-foreground hover:text-foreground"
-                    aria-expanded={showProducerExtras}
-                    onClick={() => {
-                      const nextExpanded = !showProducerExtras
-                      setProducerExtrasExpanded(nextExpanded)
-                      if (
-                        !nextExpanded &&
-                        activeTrackId &&
-                        producerExtraTrackIds.has(activeTrackId)
-                      ) {
-                        setActiveTrack(
-                          producerTrackLayout?.primaryMediaTrackId ??
-                            producerTrackLayout?.beatTrackId ??
-                            null,
-                        )
-                      }
-                    }}
-                  >
-                    {showProducerExtras ? (
-                      <ChevronDown className="h-3 w-3" aria-hidden="true" />
-                    ) : (
-                      <ChevronRight className="h-3 w-3" aria-hidden="true" />
-                    )}
-                    Extras {producerTrackLayout?.extraTracks.length ?? 0}
-                  </button>
-                ) : null}
-              </div>
-            ) : (
+            {!simplifiedBeatvideoTimeline ? (
               <>
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
@@ -1211,7 +1206,7 @@ export const Timeline = memo(function Timeline({
                   </Button>
                 </div>
               </>
-            )}
+            ) : null}
           </div>
 
           {/* Track labels - synced scroll (no scrollbar) */}
@@ -1287,15 +1282,17 @@ export const Timeline = memo(function Timeline({
         />
       </div>
 
-      <div className="flex flex-shrink-0 overflow-hidden">
-        <div
-          className="border-r border-border panel-bg flex-shrink-0"
-          style={{ width: timelineSidebarWidth }}
-        />
-        <div className="flex-1 min-w-0">
-          <TimelineNavigator actualDuration={duration} scrollContainerRef={timelineContentRef} />
+      {!simplifiedBeatvideoTimeline ? (
+        <div className="flex flex-shrink-0 overflow-hidden">
+          <div
+            className="border-r border-border panel-bg flex-shrink-0"
+            style={{ width: timelineSidebarWidth }}
+          />
+          <div className="flex-1 min-w-0">
+            <TimelineNavigator actualDuration={duration} scrollContainerRef={timelineContentRef} />
+          </div>
         </div>
-      </div>
+      ) : null}
       <KeyframeGraphPanel
         isOpen={beatvideoMode === 'video' && keyframePanelOpen}
         placement="bottom"
