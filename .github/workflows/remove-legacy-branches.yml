@@ -9,6 +9,7 @@ on:
 permissions:
   contents: write
 
+# One-shot final branch cleanup; remove this workflow after it runs.
 jobs:
   cleanup:
     runs-on: ubuntu-latest
