@@ -968,6 +968,10 @@ export const LoadedEditor = memo(function LoadedEditor({
                 <ErrorBoundary level="feature">
                   {isMotionWorkspace ? (
                     <MotionPreviewArea project={project} />
+                  ) : isMasterWorkspace ? (
+                    <div className="studio-master-preview-frame flex h-full min-w-0 flex-1 px-5 pt-[18px]">
+                      <PreviewArea project={project} />
+                    </div>
                   ) : (
                     <PreviewArea project={project} />
                   )}
@@ -1001,7 +1005,13 @@ export const LoadedEditor = memo(function LoadedEditor({
               <InteractionLockRegion locked={isMaskEditingActive} className="h-full">
                 <ErrorBoundary level="feature">
                   <div className="h-full flex overflow-hidden">
-                    <div className="min-w-0 flex-1">
+                    <div
+                      className={
+                        isMasterWorkspace
+                          ? 'min-w-0 flex-1 px-5 pb-7'
+                          : 'min-w-0 flex-1'
+                      }
+                    >
                       {isMotionWorkspace ? (
                         <MotionTimelineDock project={project} />
                       ) : (
@@ -1010,12 +1020,8 @@ export const LoadedEditor = memo(function LoadedEditor({
                         </Suspense>
                       )}
                     </div>
-                    {workspace === 'master' || beatvideoMode === 'video' ? (
-                      <AudioMeterPanel
-                        key={workspace === 'master' ? 'master-meter' : 'editor-meter'}
-                        initialMode="meter"
-                        allowDockedMixer={workspace !== 'master'}
-                      />
+                    {workspace !== 'master' && beatvideoMode === 'video' ? (
+                      <AudioMeterPanel key="editor-meter" initialMode="meter" />
                     ) : null}
                   </div>
                 </ErrorBoundary>
