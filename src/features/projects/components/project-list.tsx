@@ -509,7 +509,7 @@ export function ProjectList({ onEditProject, onImportProject }: ProjectListProps
       {/* Project list */}
       {!isEmpty && !hasNoResults && (
         <div>
-          <div className="hidden grid-cols-[142px_minmax(0,1fr)_92px_180px_64px_140px_92px] gap-4 px-3 pb-2 text-[9px] font-semibold uppercase tracking-[0.1em] text-muted-foreground md:grid">
+          <div className="hidden grid-cols-[142px_minmax(0,1fr)_92px_180px_64px_140px_92px] gap-4 px-3 pb-2 text-[9px] font-semibold uppercase tracking-[0.1em] text-muted-foreground lg:grid">
             <span />
             <span>Project</span>
             <span>Type</span>
