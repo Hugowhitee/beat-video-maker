@@ -1036,7 +1036,6 @@ export const AudioMeterPanel = memo(function AudioMeterPanel({
       storageKey={FLOATING_MIXER_STORAGE_KEY}
       onClose={() => setMixerFloating(false)}
       headerExtra={modeDropdown}
-      autoWidth
     >
       <Suspense fallback={null}>
         <LazyAudioMixerView
