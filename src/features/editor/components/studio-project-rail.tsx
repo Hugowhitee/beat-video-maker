@@ -87,8 +87,14 @@ export const StudioProjectRail = memo(function StudioProjectRail() {
       (activeTab === 'text' || activeTab === 'shapes' || activeTab === 'lottie')
     ) {
       setSelectedProjectSection('Graphics')
+    } else if (
+      workspace === 'edit' &&
+      activeTab === 'media' &&
+      selectedProjectSection !== 'Sequences'
+    ) {
+      setSelectedProjectSection('Media')
     }
-  }, [activeTab, workspace])
+  }, [activeTab, selectedProjectSection, workspace])
 
   const openTarget = (target: RailTarget) => {
     setSelectedProjectSection(target.label)
