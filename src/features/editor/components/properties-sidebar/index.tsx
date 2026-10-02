@@ -136,6 +136,7 @@ export const PropertiesSidebar = memo(function PropertiesSidebar({
   // Use granular selectors - Zustand v5 best practice
   const rightSidebarOpen = useEditorStore((s) => s.rightSidebarOpen)
   const toggleRightSidebar = useEditorStore((s) => s.toggleRightSidebar)
+  const setRightSidebarOpen = useEditorStore((s) => s.setRightSidebarOpen)
   const rightSidebarWidth = useEditorStore((s) => s.rightSidebarWidth)
   const setRightSidebarWidth = useEditorStore((s) => s.setRightSidebarWidth)
   const propertiesFullColumn = useEditorStore((s) => s.propertiesFullColumn)
@@ -223,6 +224,12 @@ export const PropertiesSidebar = memo(function PropertiesSidebar({
   useEffect(() => {
     if (rightSidebarOpen) setContentVisible(true)
   }, [rightSidebarOpen])
+
+  useEffect(() => {
+    if (!mobile && selectedBeatOnly && rightSidebarOpen) {
+      setRightSidebarOpen(false)
+    }
+  }, [mobile, rightSidebarOpen, selectedBeatOnly, setRightSidebarOpen])
 
   // Resize handle logic
   const isResizingRef = useRef(false)
