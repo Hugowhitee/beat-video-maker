@@ -8,9 +8,9 @@ export {
   type ClipMapBuildProgress,
 } from '@/features/auto-edit/clip-map'
 export {
-  applyEditPlanSourceChangesToFreeCutTimeline,
-  applyEditPlanToFreeCutTimeline,
-} from '@/features/auto-edit/freecutTimeline'
+  applyEditPlanSourceChangesToTimeline,
+  applyEditPlanToTimeline,
+} from '@/features/auto-edit/timeline-materialization'
 
 export type { EditPace, SourceMixMode, TransitionProfile } from '@/features/auto-edit/types'
 export {
