@@ -662,9 +662,127 @@ export function BeatvideoMasterPanel() {
     <div className="flex h-full min-h-0 flex-col bg-[#e8e9e5]">
       <div className="flex h-[62px] shrink-0 items-start border-b border-border px-5 pt-[18px]">
         <div className="min-w-0">
-          <div className="text-[11px] font-semibold uppercase tracking-[0.08em] text-foreground">
-            Master
-          </div>
+          <Popover>
+            <PopoverTrigger asChild>
+              <button
+                type="button"
+                className="block text-[11px] font-semibold uppercase tracking-[0.08em] text-foreground"
+                title="Master options"
+              >
+                Master
+              </button>
+            </PopoverTrigger>
+            <PopoverContent align="start" sideOffset={8} className="w-[360px] p-3">
+              <div className="text-[9px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+                Master presets
+              </div>
+              <div className="studio-segmented mt-2 grid grid-cols-3">
+                {MASTERING_PRESETS.map((preset) => (
+                  <button
+                    key={preset.id}
+                    type="button"
+                    onClick={() => applyPreset(preset.id)}
+                    aria-pressed={activeBuiltInPresetId === preset.id}
+                    className="studio-segment h-7 px-2 text-[10px] font-medium"
+                    title={preset.description}
+                  >
+                    {preset.label}
+                  </button>
+                ))}
+              </div>
+
+              {savedPresets.length > 0 ? (
+                <div className="mt-3 border-t border-border pt-2">
+                  <div className="mb-1 text-[9px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+                    My presets
+                  </div>
+                  <div className="space-y-1">
+                    {savedPresets.map((preset) => (
+                      <div key={preset.id} className="flex h-7 items-center border border-border bg-background">
+                        <button
+                          type="button"
+                          onClick={() => applySavedPreset(preset)}
+                          className="min-w-0 flex-1 truncate px-2 text-left text-[10px] font-medium text-foreground"
+                        >
+                          {preset.name}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => removeSavedPreset(preset.id)}
+                          className="flex h-full w-7 items-center justify-center border-l border-border text-muted-foreground hover:text-foreground"
+                          aria-label={`Delete ${preset.name} preset`}
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
+
+              <div className="mt-3 border-t border-border pt-2">
+                {savingPreset ? (
+                  <div className="flex items-center gap-1.5">
+                    <input
+                      autoFocus
+                      value={presetName}
+                      maxLength={48}
+                      placeholder="Preset name"
+                      onChange={(event) => setPresetName(event.target.value)}
+                      onKeyDown={(event) => {
+                        if (event.key === 'Enter') saveCurrentPreset()
+                        if (event.key === 'Escape') {
+                          setSavingPreset(false)
+                          setPresetName('')
+                        }
+                      }}
+                      className="h-7 min-w-0 flex-1 border border-input bg-background px-2 text-[10px] text-foreground outline-none"
+                    />
+                    <Button
+                      type="button"
+                      size="sm"
+                      className="h-7 px-2 text-[10px]"
+                      disabled={presetName.trim() === ''}
+                      onClick={saveCurrentPreset}
+                    >
+                      Save
+                    </Button>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    className="flex h-7 items-center gap-1.5 text-[10px] font-medium text-muted-foreground hover:text-foreground"
+                    onClick={() => setSavingPreset(true)}
+                  >
+                    <BookmarkPlus className="h-3.5 w-3.5" />
+                    Save current preset
+                  </button>
+                )}
+              </div>
+
+              <div className="mt-3 grid grid-cols-2 gap-2 border-t border-border pt-2">
+                <button
+                  type="button"
+                  className="studio-secondary-action h-8"
+                  onClick={() =>
+                    commitMasterFx(
+                      { ...resolved, enabled: !resolved.enabled },
+                      'TOGGLE_MASTER_BYPASS',
+                    )
+                  }
+                >
+                  {resolved.enabled ? 'Bypass chain' : 'Enable chain'}
+                </button>
+                <button
+                  type="button"
+                  className="studio-secondary-action h-8"
+                  onClick={resetAll}
+                >
+                  Reset chain
+                </button>
+              </div>
+            </PopoverContent>
+          </Popover>
           <div className="mt-[8px] text-[10px] leading-3 text-muted-foreground">
             Finish the beat, then export.
           </div>
@@ -749,24 +867,33 @@ export function BeatvideoMasterPanel() {
               return (
                 <div
                   key={`empty-${index}`}
-                  className="absolute left-0 flex h-[46px] w-[360px] min-w-0 items-center gap-2 rounded-[3px] bg-[#d1d4ce] px-2 text-muted-foreground"
+                  className={cn(
+                    'absolute left-0 h-[46px] w-[360px] min-w-0 rounded-[3px] text-muted-foreground',
+                    canAdd ? 'bg-[#d9dbd6]' : 'bg-[#d1d4ce]',
+                  )}
                   style={{ top: index * 54 }}
                 >
-                  <span className="w-5 shrink-0 font-mono text-[11px] tabular-nums">
+                  <span className="absolute left-[10px] top-[10px] font-mono text-[9px] font-semibold leading-[11px] tabular-nums">
                     {String(index + 1).padStart(2, '0')}
                   </span>
                   {canAdd ? (
                     <button
                       type="button"
                       onClick={() => setAddEffectOpen((open) => !open)}
-                      className="flex min-w-0 flex-1 items-center gap-2 text-left text-xs hover:text-foreground"
+                      className="absolute inset-0 text-left hover:bg-black/[0.025]"
                       aria-expanded={addEffectOpen}
                     >
-                      <Plus className="h-3.5 w-3.5" />
-                      Add effect
+                      <span className="absolute left-[42px] top-[8px] text-[11px] font-semibold leading-[13px] text-foreground">
+                        +&nbsp; Add effect
+                      </span>
+                      <span className="absolute left-[42px] top-[25px] text-[9px] font-medium leading-[11px] text-muted-foreground">
+                        Empty slot
+                      </span>
                     </button>
                   ) : (
-                    <span className="text-xs text-muted-foreground/55">Empty slot</span>
+                    <span className="absolute left-[42px] top-[15px] text-[9px] text-muted-foreground/55">
+                      Empty slot
+                    </span>
                   )}
                 </div>
               )
@@ -809,34 +936,33 @@ export function BeatvideoMasterPanel() {
                 }}
                 style={{ top: index * 54 }}
                 className={cn(
-                  'group absolute left-0 flex h-[46px] w-[360px] min-w-0 cursor-grab items-stretch rounded-[3px] bg-[#d1d4ce] active:cursor-grabbing',
-                  selected && 'bg-[#c7cac4]',
+                  'group absolute left-0 h-[46px] w-[360px] min-w-0 cursor-grab rounded-[3px] bg-[#d1d4ce] active:cursor-grabbing',
                   dragTarget && 'shadow-[inset_0_2px_0_var(--primary)]',
                 )}
+                data-selected={selected ? 'true' : undefined}
               >
                 <button
                   type="button"
                   onClick={() => setSelectedSlot(id)}
-                  className="flex min-w-0 flex-1 items-center gap-2 py-2 pr-2 text-left"
+                  className="absolute inset-0 text-left"
                   title={hint}
                 >
-                  <span className="w-5 shrink-0 font-mono text-[11px] tabular-nums text-muted-foreground">
+                  <span className="absolute left-[10px] top-[10px] font-mono text-[9px] font-semibold leading-[11px] tabular-nums text-muted-foreground">
                     {String(index + 1).padStart(2, '0')}
                   </span>
-
-                  <span className="min-w-0 flex-1">
-                    <span className="block truncate text-xs font-medium text-foreground">
-                      {label}
-                    </span>
-                    <span className="block truncate text-[11px] text-muted-foreground">
-                      {hint}
-                    </span>
+                  <span className="absolute left-[42px] top-[8px] max-w-[220px] truncate text-[11px] font-semibold leading-[13px] text-foreground">
+                    {label}
+                  </span>
+                  <span className="absolute left-[42px] top-[25px] max-w-[220px] truncate text-[9px] font-medium leading-[11px] text-muted-foreground">
+                    {id === 'limiter'
+                      ? `Ceiling ${resolved.limiter.ceilingDb.toFixed(1)} dB`
+                      : hint}
                   </span>
                 </button>
                 <button
                   type="button"
                   onClick={() => removeProcessor(id)}
-                  className="flex w-8 shrink-0 items-center justify-center border-l border-border text-muted-foreground opacity-0 transition-opacity hover:bg-secondary/60 hover:text-foreground focus:opacity-100 group-hover:opacity-100"
+                  className="absolute bottom-0 right-10 top-0 flex w-8 items-center justify-center text-muted-foreground opacity-0 transition-opacity hover:bg-black/[0.04] hover:text-foreground focus:opacity-100 group-hover:opacity-100"
                   aria-label={`Remove ${label}`}
                   title={`Remove ${label}`}
                 >
@@ -846,10 +972,8 @@ export function BeatvideoMasterPanel() {
                   type="button"
                   onClick={() => toggleSlot(id)}
                   className={cn(
-                    'flex w-10 shrink-0 items-center justify-center border-l border-border',
-                    enabled
-                      ? 'text-primary hover:bg-primary/10'
-                      : 'text-muted-foreground hover:bg-secondary/60 hover:text-foreground',
+                    'absolute bottom-0 right-0 top-0 flex w-10 items-center justify-center',
+                    enabled ? 'text-foreground' : 'text-muted-foreground',
                   )}
                   aria-label={`${enabled ? 'Bypass' : 'Enable'} ${label}`}
                   aria-pressed={enabled}
@@ -890,7 +1014,7 @@ export function BeatvideoMasterPanel() {
         ) : null}
       </div>
 
-      <div className="h-[132px] shrink-0 overflow-y-auto bg-[#dfe1dc] p-5">
+      <div className="h-[132px] shrink-0 overflow-y-auto bg-[#e8e9e5] p-5">
         {selectedSlot === 'eq' ? (
           <AudioEqPanelContent
             targetLabel="Master"
@@ -904,9 +1028,29 @@ export function BeatvideoMasterPanel() {
 
         {selectedSlot === 'compressor' ? (
           <div>
-            <div className="text-[9px] font-semibold text-muted-foreground">
-              Selected insert · Compressor
-            </div>
+            <Popover>
+              <PopoverTrigger asChild>
+                <button
+                  type="button"
+                  className="block text-[9px] font-semibold text-muted-foreground"
+                  title="Compressor advanced controls"
+                >
+                  Selected insert · Compressor
+                </button>
+              </PopoverTrigger>
+              <PopoverContent align="start" sideOffset={8} className="w-[360px] p-3">
+                <div className="space-y-3">
+                  <TransferGraph
+                    thresholdDb={resolved.compressor.thresholdDb}
+                    ratio={resolved.compressor.ratio}
+                    reductionDb={reduction.compressorDb}
+                    mode="compressor"
+                  />
+                  <MasterRange label="Knee" value={resolved.compressor.kneeDb} min={0} max={40} step={0.5} unit=" dB" onGestureStart={beginGesture} onGestureEnd={endGesture} onChange={(kneeDb) => patchMaster({ enabled: true, compressor: { ...resolved.compressor, enabled: true, kneeDb } })} />
+                  <MasterRange label="Makeup" value={resolved.compressor.makeupGainDb} min={-6} max={12} step={0.1} unit=" dB" onGestureStart={beginGesture} onGestureEnd={endGesture} onChange={(makeupGainDb) => patchMaster({ enabled: true, compressor: { ...resolved.compressor, enabled: true, makeupGainDb } })} />
+                </div>
+              </PopoverContent>
+            </Popover>
             <div className="mt-4 flex items-start">
               <MasterKnob
                 label="Thresh"
@@ -992,21 +1136,6 @@ export function BeatvideoMasterPanel() {
               </button>
             </div>
 
-            <details className="mt-4 border-t border-border pt-2">
-              <summary className="cursor-pointer list-none text-[9px] font-medium uppercase tracking-[0.1em] text-muted-foreground marker:hidden [&::-webkit-details-marker]:hidden">
-                Advanced
-              </summary>
-              <div className="mt-3 space-y-3">
-                <TransferGraph
-                  thresholdDb={resolved.compressor.thresholdDb}
-                  ratio={resolved.compressor.ratio}
-                  reductionDb={reduction.compressorDb}
-                  mode="compressor"
-                />
-                <MasterRange label="Knee" value={resolved.compressor.kneeDb} min={0} max={40} step={0.5} unit=" dB" onGestureStart={beginGesture} onGestureEnd={endGesture} onChange={(kneeDb) => patchMaster({ enabled: true, compressor: { ...resolved.compressor, enabled: true, kneeDb } })} />
-                <MasterRange label="Makeup" value={resolved.compressor.makeupGainDb} min={-6} max={12} step={0.1} unit=" dB" onGestureStart={beginGesture} onGestureEnd={endGesture} onChange={(makeupGainDb) => patchMaster({ enabled: true, compressor: { ...resolved.compressor, enabled: true, makeupGainDb } })} />
-              </div>
-            </details>
           </div>
         ) : null}
 
@@ -1047,130 +1176,6 @@ export function BeatvideoMasterPanel() {
           </div>
         ) : null}
 
-        <details className="mt-5 border-t border-border pt-2">
-          <summary className="cursor-pointer list-none text-[9px] font-medium uppercase tracking-[0.1em] text-muted-foreground marker:hidden [&::-webkit-details-marker]:hidden">
-            Master options
-          </summary>
-          <div className="mt-3 space-y-2 pb-3">
-            <Popover>
-              <PopoverTrigger asChild>
-                <button type="button" className="studio-secondary-action h-8 w-full">
-                  Presets
-                </button>
-              </PopoverTrigger>
-              <PopoverContent align="end" sideOffset={6} className="w-[360px] p-3">
-                <div className="text-[9px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
-                  Master presets
-                </div>
-                <div className="studio-segmented mt-2 grid grid-cols-3">
-                  {MASTERING_PRESETS.map((preset) => (
-                    <button
-                      key={preset.id}
-                      type="button"
-                      onClick={() => applyPreset(preset.id)}
-                      aria-pressed={activeBuiltInPresetId === preset.id}
-                      className="studio-segment h-7 px-2 text-[10px] font-medium"
-                      title={preset.description}
-                    >
-                      {preset.label}
-                    </button>
-                  ))}
-                </div>
-
-                {savedPresets.length > 0 ? (
-                  <div className="mt-3 border-t border-border pt-2">
-                    <div className="mb-1 text-[9px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
-                      My presets
-                    </div>
-                    <div className="space-y-1">
-                      {savedPresets.map((preset) => (
-                        <div key={preset.id} className="flex h-7 items-center border border-border bg-background">
-                          <button
-                            type="button"
-                            onClick={() => applySavedPreset(preset)}
-                            className="min-w-0 flex-1 truncate px-2 text-left text-[10px] font-medium text-foreground"
-                          >
-                            {preset.name}
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => removeSavedPreset(preset.id)}
-                            className="flex h-full w-7 items-center justify-center border-l border-border text-muted-foreground hover:text-foreground"
-                            aria-label={`Delete ${preset.name} preset`}
-                          >
-                            <X className="h-3 w-3" />
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                ) : null}
-
-                <div className="mt-3 border-t border-border pt-2">
-                  {savingPreset ? (
-                    <div className="flex items-center gap-1.5">
-                      <input
-                        autoFocus
-                        value={presetName}
-                        maxLength={48}
-                        placeholder="Preset name"
-                        onChange={(event) => setPresetName(event.target.value)}
-                        onKeyDown={(event) => {
-                          if (event.key === 'Enter') saveCurrentPreset()
-                          if (event.key === 'Escape') {
-                            setSavingPreset(false)
-                            setPresetName('')
-                          }
-                        }}
-                        className="h-7 min-w-0 flex-1 border border-input bg-background px-2 text-[10px] text-foreground outline-none"
-                      />
-                      <Button
-                        type="button"
-                        size="sm"
-                        className="h-7 px-2 text-[10px]"
-                        disabled={presetName.trim() === ''}
-                        onClick={saveCurrentPreset}
-                      >
-                        Save
-                      </Button>
-                    </div>
-                  ) : (
-                    <button
-                      type="button"
-                      className="flex h-7 items-center gap-1.5 text-[10px] font-medium text-muted-foreground hover:text-foreground"
-                      onClick={() => setSavingPreset(true)}
-                    >
-                      <BookmarkPlus className="h-3.5 w-3.5" />
-                      Save current preset
-                    </button>
-                  )}
-                </div>
-              </PopoverContent>
-            </Popover>
-
-            <div className="grid grid-cols-2 gap-2">
-              <button
-                type="button"
-                className="studio-secondary-action h-8"
-                onClick={() =>
-                  commitMasterFx(
-                    { ...resolved, enabled: !resolved.enabled },
-                    'TOGGLE_MASTER_BYPASS',
-                  )
-                }
-              >
-                {resolved.enabled ? 'Bypass chain' : 'Enable chain'}
-              </button>
-              <button
-                type="button"
-                className="studio-secondary-action h-8"
-                onClick={resetAll}
-              >
-                Reset chain
-              </button>
-            </div>
-          </div>
-        </details>
       </div>
 
       <div className="relative h-[250px] shrink-0 border-t border-border bg-[#e8e9e5]">
@@ -1180,7 +1185,7 @@ export function BeatvideoMasterPanel() {
         <div className="absolute left-5 top-[37px] text-[9px] leading-[11px] text-muted-foreground">
           Mixer fader lives in Mixer ↗
         </div>
-        <div className="absolute left-[294px] top-[11px]">
+        <div className="absolute left-[294px] top-[12px]">
           <AudioMeterPanel initialMode="meter" allowDockedMixer={false} presentation="master-inline" />
         </div>
         <button
