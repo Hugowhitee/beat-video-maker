@@ -19,6 +19,7 @@ const mocks = vi.hoisted(() => ({
     workspace: 'edit',
     propertiesFullColumn: false,
     mediaFullColumn: false,
+    rightSidebarOpen: false,
   },
   clearPreviewAudioCache: vi.fn(),
   importExportDialog: vi.fn().mockResolvedValue({
@@ -266,6 +267,7 @@ vi.mock('@/shared/state/editor', () => ({
       syncSidebarLayout: typeof mocks.syncSidebarLayout
       propertiesFullColumn: boolean
       mediaFullColumn: boolean
+      rightSidebarOpen: boolean
       workspace: string
     }) => unknown,
   ) =>
@@ -273,6 +275,7 @@ vi.mock('@/shared/state/editor', () => ({
       syncSidebarLayout: mocks.syncSidebarLayout,
       propertiesFullColumn: mocks.editorState.propertiesFullColumn,
       mediaFullColumn: mocks.editorState.mediaFullColumn,
+      rightSidebarOpen: mocks.editorState.rightSidebarOpen,
       workspace: mocks.editorState.workspace,
     }),
 }))
@@ -360,6 +363,7 @@ describe('LoadedEditor migration metadata refresh', () => {
     mocks.editorState.workspace = 'edit'
     mocks.editorState.propertiesFullColumn = false
     mocks.editorState.mediaFullColumn = false
+    mocks.editorState.rightSidebarOpen = false
     mocks.loadTimeline.mockResolvedValue(undefined)
     mocks.loadMediaItems.mockResolvedValue(undefined)
     mocks.invalidate.mockResolvedValue(undefined)
