@@ -7,6 +7,7 @@ import { InlineCreateProjectForm } from '@/features/projects/components/project-
 import { useCreateProject } from '@/features/projects/hooks/use-project-actions'
 import { useProjectStore } from '@/features/projects/stores/project-store'
 import type { ProjectFormData } from '@/features/projects/utils/validation'
+import { useStudioV2DocumentTheme } from '@/shared/ui/use-studio-v2-document-theme'
 
 const logger = createLogger('NewProject')
 
@@ -23,6 +24,7 @@ export const Route = createFileRoute('/projects/new')({
 })
 
 function NewProject() {
+  useStudioV2DocumentTheme()
   const navigate = useNavigate()
   const { t } = useTranslation()
   const [isSubmitting, setIsSubmitting] = useState(false)
