@@ -10,7 +10,7 @@ Everything here is **plain files** you can inspect and back up with normal tools
 ```
 ./
 |-- README.md                  <- this file
-|-- .freecut-workspace.json    <- legacy-compatible marker + schema version
+|-- .freecut-workspace.json    <- compatibility marker + schema version
 |-- index.json                 <- fast project list
 |-- projects/
 |   `-- <projectId>/
@@ -42,7 +42,7 @@ Everything here is **plain files** you can inspect and back up with normal tools
 ## Compatibility files
 
 Some internal filenames still use the historical `.freecut-*` prefix. They are kept
-for safe compatibility with the upstream storage format; the product and workspace
+only for safe compatibility with existing workspaces; the product and workspace
 are Beatvideo Maker.
 
 ## Safe to edit?
