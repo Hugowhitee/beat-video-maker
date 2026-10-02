@@ -303,8 +303,15 @@ export async function analyzeMusicMedia(
     ? media.duration
     : decoded.duration
   const stabilized = stabilizeBeatGrid(detectedRhythm, duration)
+  // Keep the detector beat map as the canonical "Detected timing" evidence.
+  // The stable global fit is stored separately and supplies the trusted BPM for
+  // the explicit Fixed BPM mode. Previously we replaced the detector map with
+  // an even fitted lattice here, so "Detected timing" could accumulate a small
+  // BPM error and visibly drift ahead/behind the waveform over a long beat.
+  const detectedMap = buildMusicMapFromRhythm(detectedRhythm, duration)
   const musicMap = {
-    ...buildMusicMapFromRhythm(stabilized.rhythm, duration),
+    ...detectedMap,
+    bpm: stabilized.fit.bpm ?? detectedMap.bpm,
     gridFit: stabilized.fit,
   }
   if (
