@@ -661,12 +661,12 @@ export function BeatvideoMasterPanel() {
 
   return (
     <div className="flex h-full min-h-0 flex-col bg-[#e8e9e5]">
-      <div className="flex h-[62px] shrink-0 items-start border-b border-border px-5 pt-4">
+      <div className="flex h-[62px] shrink-0 items-start border-b border-border px-5 pt-[18px]">
         <div className="min-w-0">
           <div className="text-[11px] font-semibold uppercase tracking-[0.08em] text-foreground">
             Master
           </div>
-          <div className="mt-1 text-[10px] text-muted-foreground">
+          <div className="mt-[8px] text-[10px] leading-3 text-muted-foreground">
             Finish the beat, then export.
           </div>
         </div>
@@ -806,50 +806,52 @@ export function BeatvideoMasterPanel() {
         </div>
       </div>
 
-      <div className="shrink-0 px-5 py-4">
-        <div className="text-[9px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+      <div className="relative h-[144px] shrink-0">
+        <div className="absolute left-5 top-[15px] text-[9px] font-semibold uppercase leading-[11px] tracking-[0.12em] text-muted-foreground">
           Input
         </div>
-        <div className="mt-1 text-[20px] font-semibold leading-none tabular-nums text-foreground">
+        <div className="absolute left-5 top-[36px] text-[20px] font-semibold leading-6 tabular-nums text-foreground">
           {resolved.inputGainDb >= 0 ? '+' : ''}{resolved.inputGainDb.toFixed(1)} dB
         </div>
-        <div className="mt-3 flex items-center gap-2">
-          <input
-            type="range"
-            min={-12}
-            max={12}
-            step={0.1}
-            value={resolved.inputGainDb}
-            onPointerDown={beginGesture}
-            onPointerUp={endGesture}
-            onPointerCancel={endGesture}
-            onChange={(event) => {
-              setAutoLevelResult(null)
-              patchMaster({ enabled: true, inputGainDb: Number(event.target.value) })
-            }}
-            className="studio-master-input-range h-6 min-w-0 flex-1 accent-foreground"
-            aria-label="Input trim"
-          />
-          <Button
-            type="button"
-            size="sm"
-            className="studio-primary-action h-8 w-28 shrink-0 px-0"
-            disabled={autoLeveling}
-            onClick={() => void autoLevel()}
-          >
-            {autoLeveling ? 'Analyzing…' : 'Auto level'}
-          </Button>
-        </div>
+
+        <input
+          type="range"
+          min={-12}
+          max={12}
+          step={0.1}
+          value={resolved.inputGainDb}
+          onPointerDown={beginGesture}
+          onPointerUp={endGesture}
+          onPointerCancel={endGesture}
+          onChange={(event) => {
+            setAutoLevelResult(null)
+            patchMaster({ enabled: true, inputGainDb: Number(event.target.value) })
+          }}
+          className="studio-master-input-range absolute left-5 top-[61px] h-6 w-[240px] accent-foreground"
+          aria-label="Input trim"
+        />
+        <Button
+          type="button"
+          size="sm"
+          className="studio-primary-action absolute left-[268px] top-[61px] h-8 w-28 px-0"
+          disabled={autoLeveling}
+          onClick={() => void autoLevel()}
+        >
+          {autoLeveling ? 'Analyzing…' : 'Auto level'}
+        </Button>
 
         {autoLevelResult ? (
-          <div className="mt-2 font-mono text-[9px] leading-[17px] text-muted-foreground" data-auto-level-result>
+          <div
+            className="absolute left-5 top-[102px] max-w-[360px] font-mono text-[9px] leading-[17px] text-muted-foreground"
+            data-auto-level-result
+          >
             <div>
               {autoLevelResult.rmsDb.toFixed(1)} dBFS measured
               {'  →  '}
               {autoLevelResult.inputGainDb >= 0 ? '+' : ''}
               {autoLevelResult.inputGainDb.toFixed(1)} dB trim
               {'  →  '}
-              {autoLevelResult.projectedRmsDb.toFixed(1)} dBFS into chain
+              {autoLevelResult.projectedRmsDb.toFixed(1)} dBFS projected
             </div>
             <div>
               Peak headroom{' '}
@@ -862,22 +864,18 @@ export function BeatvideoMasterPanel() {
                 : ''}
             </div>
           </div>
-        ) : null}
+        ) : (
+          <div className="absolute left-5 top-[102px] text-[9px] leading-[17px] text-muted-foreground">
+            Auto level measures the beat pre-FX and leaves Mixer output unchanged.
+          </div>
+        )}
       </div>
 
-      <div className="shrink-0 border-b border-border px-5 pb-3 pt-2">
-        <div className="mb-1.5 flex items-center justify-between gap-2 px-1">
-          <span className="text-[9px] font-semibold uppercase tracking-[0.14em] text-muted-foreground">Inserts</span>
-          <div className="flex items-center gap-2">
-            <span className="font-mono text-[10px] text-muted-foreground">
-              {activeBuiltInPresetId
-                ? MASTERING_PRESETS.find((preset) => preset.id === activeBuiltInPresetId)?.label
-                : 'Custom'}
-            </span>
-            <span className="text-[11px] text-muted-foreground">top → bottom</span>
-          </div>
+      <div className="relative h-[300px] shrink-0 border-b border-border">
+        <div className="absolute left-5 top-[8px] text-[9px] font-semibold uppercase leading-[11px] tracking-[0.14em] text-muted-foreground">
+          Inserts
         </div>
-        <div className="space-y-2">
+        <div className="absolute left-5 top-[30px] h-[262px] w-[360px]">
           {Array.from({ length: MAX_MASTER_SLOTS }, (_, index) => {
             const id = resolved.order[index]
             if (!id) {
@@ -885,7 +883,8 @@ export function BeatvideoMasterPanel() {
               return (
                 <div
                   key={`empty-${index}`}
-                  className="flex h-[46px] min-w-0 items-center gap-2 rounded-[3px] bg-[#d1d4ce] px-2 text-muted-foreground"
+                  className="absolute left-0 flex h-[46px] w-[360px] min-w-0 items-center gap-2 rounded-[3px] bg-[#d1d4ce] px-2 text-muted-foreground"
+                  style={{ top: index * 54 }}
                 >
                   <span className="w-5 shrink-0 font-mono text-[11px] tabular-nums">
                     {String(index + 1).padStart(2, '0')}
@@ -942,8 +941,9 @@ export function BeatvideoMasterPanel() {
                   setDraggingSlot(null)
                   setDragOverSlot(null)
                 }}
+                style={{ top: index * 54 }}
                 className={cn(
-                  'group flex h-[46px] min-w-0 cursor-grab items-stretch rounded-[3px] bg-[#d1d4ce] active:cursor-grabbing',
+                  'group absolute left-0 flex h-[46px] w-[360px] min-w-0 cursor-grab items-stretch rounded-[3px] bg-[#d1d4ce] active:cursor-grabbing',
                   selected && 'bg-[#c7cac4]',
                   dragTarget && 'shadow-[inset_0_2px_0_var(--primary)]',
                 )}
@@ -997,7 +997,7 @@ export function BeatvideoMasterPanel() {
         </div>
 
         {addEffectOpen ? (
-          <div className="border-x border-b border-border bg-background p-1.5">
+          <div className="absolute left-5 top-[294px] z-20 w-[360px] border border-border bg-background p-1.5 shadow-lg">
             <div className="mb-1 px-1 text-[9px] uppercase tracking-[0.12em] text-muted-foreground">
               Available effects
             </div>
@@ -1024,7 +1024,7 @@ export function BeatvideoMasterPanel() {
         ) : null}
       </div>
 
-      <div className="min-h-0 flex-1 overflow-y-auto border-t border-border bg-[#dfe1dc] p-5">
+      <div className="h-[132px] shrink-0 overflow-y-auto bg-[#dfe1dc] p-5">
         {selectedSlot === 'eq' ? (
           <AudioEqPanelContent
             targetLabel="Master"
