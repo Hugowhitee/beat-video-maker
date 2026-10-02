@@ -14,8 +14,8 @@ import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Switch } from '@/components/ui/switch'
 import {
-  applyEditPlanSourceChangesToFreeCutTimeline,
-  applyEditPlanToFreeCutTimeline,
+  applyEditPlanSourceChangesToTimeline,
+  applyEditPlanToTimeline,
   buildClipMapForMedia,
   createEditPlan,
   createSingleClipLoopPlan,
@@ -369,7 +369,7 @@ export function BeatvideoVisualSourcePanel({
 
   const applyArrangement = useCallback(
     async (plan: EditPlan, clipMap: ClipMap) => {
-      const result = await applyEditPlanToFreeCutTimeline(plan, {
+      const result = await applyEditPlanToTimeline(plan, {
         preferredVideoTrackId: lastTargetVideoTrackId ?? undefined,
         replaceItemIds: lastAppliedItemIds,
       })
@@ -477,7 +477,7 @@ export function BeatvideoVisualSourcePanel({
   const applyArrangementSourceRepair = useCallback(
     async (nextPlan: EditPlan) => {
       if (!lastPlan) return null
-      const result = await applyEditPlanSourceChangesToFreeCutTimeline(
+      const result = await applyEditPlanSourceChangesToTimeline(
         lastPlan,
         nextPlan,
         lastItemIdBySegmentId,
@@ -837,7 +837,7 @@ export function BeatvideoVisualSourcePanel({
     }
 
     try {
-      const result = await applyEditPlanToFreeCutTimeline(
+      const result = await applyEditPlanToTimeline(
         createSingleClipLoopPlan({
           sourceId: media.id,
           sourceDuration: media.duration,
