@@ -52,8 +52,7 @@ export const StudioProjectRail = memo(function StudioProjectRail() {
         (item) =>
           item.type === 'text' ||
           item.type === 'shape' ||
-          item.type === 'lottie' ||
-          item.type === 'sticker',
+          item.type === 'lottie',
       ).length,
   )
 
