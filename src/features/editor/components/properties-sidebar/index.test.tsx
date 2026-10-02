@@ -97,6 +97,7 @@ function resetStores(items: Array<VideoItem | AudioItem>, selectedItemIds: strin
 
 describe('PropertiesSidebar', () => {
   beforeEach(() => {
+    useProjectStore.setState({ currentProject: null })
     resetStores([CLIP_A], [CLIP_A.id])
   })
 
@@ -188,6 +189,9 @@ describe('PropertiesSidebar', () => {
     expect(screen.getByText('Canvas Panel')).toBeInTheDocument()
     expect(screen.queryByText('midnight-loop.mp3')).not.toBeInTheDocument()
     expect(screen.queryByText('Clip Panel')).not.toBeInTheDocument()
+    await waitFor(() => {
+      expect(useEditorStore.getState().rightSidebarOpen).toBe(false)
+    })
   })
 
   it('shows the selected clip filename in the header', async () => {
