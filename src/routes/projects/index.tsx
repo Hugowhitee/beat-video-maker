@@ -71,18 +71,18 @@ function ProjectsIndex() {
   const PROJECTS_FOLDER_NAME = 'BeatvideoProjects'
 
   // Extract project name from bundle filename
-  // Handles both "myproject.freecut.zip" and browser-renamed "myproject.freecut (1).zip"
+  // Also accepts legacy bundle filenames and browser-added duplicate suffixes.
   const extractProjectName = (fileName: string): string => {
     // Remove .zip extension first
     let name = fileName.replace(/\.zip$/i, '')
     // Remove browser duplicate suffix like " (1)", " (2)", etc.
     name = name.replace(/\s*\(\d+\)$/, '')
-    // Remove Beatvideo suffix, or the legacy FreeCut suffix for old bundles.
+    // Remove the current suffix or the legacy bundle suffix.
     name = name.replace(/\.(?:beatvideo|freecut)$/i, '')
     return name
   }
 
-  // Accept Beatvideo bundles and legacy FreeCut bundles for backwards compatibility.
+  // Accept current bundles and the legacy suffix for backwards compatibility.
   const isValidBundleFile = (fileName: string): boolean => {
     return /\.(?:beatvideo|freecut)(\s*\(\d+\))?\.zip$/i.test(fileName)
   }
@@ -114,7 +114,7 @@ function ProjectsIndex() {
     // Reset file input for next selection
     event.target.value = ''
 
-    // Validate file extension (handles browser-renamed files like "project.freecut (1).zip")
+    // Validate bundle extension, including browser-added duplicate suffixes.
     if (!isValidBundleFile(file.name)) {
       setImportError(t('projects.import.invalidFile', { extension: BUNDLE_EXTENSION }))
       setImportDialogOpen(true)
@@ -136,7 +136,7 @@ function ProjectsIndex() {
   const handleSelectDestination = async () => {
     try {
       const dirHandle = await window.showDirectoryPicker({
-        id: 'freecut-import',
+        id: 'beatvideo-import',
         mode: 'readwrite',
         startIn: 'documents',
       })
@@ -169,7 +169,7 @@ function ProjectsIndex() {
     setImportProgress({ percent: 0, stage: 'validating' })
 
     try {
-      // If useProjectsFolder is enabled, create/get the FreeCutProjects subfolder first
+      // If enabled, create/get the BeatvideoProjects subfolder first
       let finalDestination = destinationDir
       if (useProjectsFolder) {
         try {
@@ -177,7 +177,7 @@ function ProjectsIndex() {
             create: true,
           })
         } catch (err) {
-          logger.error('Failed to create FreeCutProjects folder:', err)
+          logger.error('Failed to create BeatvideoProjects folder:', err)
           throw new Error(t('projects.import.createFolderFailed', { folder: PROJECTS_FOLDER_NAME }))
         }
       }
