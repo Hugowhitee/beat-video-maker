@@ -1,4 +1,4 @@
-import { memo } from 'react'
+import { memo, useEffect, useState } from 'react'
 import { useEditorStore } from '@/shared/state/editor'
 import { useProjectStore } from '@/features/editor/deps/projects-contract'
 import type { EditorSidebarTab, EditorWorkspaceId } from '@/config/editor-workspaces'
@@ -46,8 +46,25 @@ export const StudioProjectRail = memo(function StudioProjectRail() {
   const beatReady = Boolean(music?.musicMap?.beats?.length)
   const gridLocked = beatReady && Boolean(music?.barOneVerified)
   const downbeat = music?.barOneTime ?? music?.detectedBarOneTime ?? null
+  const [selectedProjectSection, setSelectedProjectSection] = useState(
+    beatReady ? 'Beat grid' : 'Media',
+  )
+
+  useEffect(() => {
+    if (workspace === 'beat') {
+      setSelectedProjectSection('Beat grid')
+    } else if (workspace === 'edit' && activeTab === 'transitions') {
+      setSelectedProjectSection('Transitions')
+    } else if (
+      workspace === 'edit' &&
+      (activeTab === 'text' || activeTab === 'shapes' || activeTab === 'lottie')
+    ) {
+      setSelectedProjectSection('Graphics')
+    }
+  }, [activeTab, workspace])
 
   const openTarget = (target: RailTarget) => {
+    setSelectedProjectSection(target.label)
     setWorkspace(target.workspace)
     setActiveTab(target.tab)
   }
@@ -67,15 +84,7 @@ export const StudioProjectRail = memo(function StudioProjectRail() {
 
         <div className="mt-3 border-t border-border pt-1.5">
           {PROJECT_TARGETS.map((target) => {
-            const hasDirectProjectTarget = PROJECT_TARGETS.some(
-              (candidate) =>
-                workspace === candidate.workspace && activeTab === candidate.tab,
-            )
-            const directSelection =
-              workspace === target.workspace && activeTab === target.tab
-            const selected =
-              directSelection ||
-              (!hasDirectProjectTarget && target.label === 'Beat grid' && beatReady)
+            const selected = selectedProjectSection === target.label
 
             return (
               <button
