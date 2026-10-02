@@ -41,11 +41,12 @@ import { getOrDecodeAudio, getPreviewMasterReduction } from '@/features/editor/d
 import { resolveMediaUrl } from '@/features/editor/deps/media-library'
 import { useProjectStore } from '@/features/editor/deps/projects'
 import { cn } from '@/shared/ui/cn'
+import { RotaryKnob } from '@/shared/ui/property-controls/rotary-knob'
 import { AudioMeterPanel } from './audio-meter-panel'
 
 type MasterSlot = MasterProcessorId
 
-const MAX_MASTER_SLOTS = 6
+const MAX_MASTER_SLOTS = 5
 
 const SLOT_META: ReadonlyArray<{
   id: MasterSlot
@@ -168,6 +169,50 @@ function MasterRange({
   )
 }
 
+function MasterKnob({
+  label,
+  value,
+  min,
+  max,
+  step,
+  display,
+  onChange,
+  onGestureStart,
+  onGestureEnd,
+}: {
+  label: string
+  value: number
+  min: number
+  max: number
+  step: number
+  display: string
+  onChange: (value: number) => void
+  onGestureStart: () => void
+  onGestureEnd: () => void
+}) {
+  return (
+    <div className="flex w-[74px] flex-col items-center">
+      <RotaryKnob
+        value={value}
+        min={min}
+        max={max}
+        step={step}
+        size={32}
+        onLiveChange={onChange}
+        onChange={onChange}
+        onGestureStart={onGestureStart}
+        onGestureEnd={onGestureEnd}
+      />
+      <div className="mt-[7px] text-[10px] font-medium uppercase leading-3 text-muted-foreground">
+        {label}
+      </div>
+      <div className="mt-px font-mono text-[10px] leading-3 tabular-nums text-foreground">
+        {display}
+      </div>
+    </div>
+  )
+}
+
 function TransferGraph({
   thresholdDb,
   ratio,
@@ -260,7 +305,7 @@ export function BeatvideoMasterPanel() {
   const mixerFloating = useEditorStore((state) => state.mixerFloating)
   const toggleMixerFloating = useEditorStore((state) => state.toggleMixerFloating)
   const resolved = useMemo(() => resolveMasterFxSettings(masterFx), [masterFx])
-  const [selectedSlot, setSelectedSlot] = useState<MasterSlot | null>('eq')
+  const [selectedSlot, setSelectedSlot] = useState<MasterSlot | null>('compressor')
   const [draggingSlot, setDraggingSlot] = useState<MasterSlot | null>(null)
   const [dragOverSlot, setDragOverSlot] = useState<MasterSlot | null>(null)
   const [addEffectOpen, setAddEffectOpen] = useState(false)
@@ -992,19 +1037,110 @@ export function BeatvideoMasterPanel() {
         ) : null}
 
         {selectedSlot === 'compressor' ? (
-          <div className="space-y-3">
-            <TransferGraph
-              thresholdDb={resolved.compressor.thresholdDb}
-              ratio={resolved.compressor.ratio}
-              reductionDb={reduction.compressorDb}
-              mode="compressor"
-            />
-            <MasterRange label="Threshold" value={resolved.compressor.thresholdDb} min={-40} max={0} step={0.5} unit=" dB" onGestureStart={beginGesture} onGestureEnd={endGesture} onChange={(thresholdDb) => patchMaster({ enabled: true, compressor: { ...resolved.compressor, enabled: true, thresholdDb } })} />
-            <MasterRange label="Ratio" value={resolved.compressor.ratio} min={1} max={12} step={0.1} onGestureStart={beginGesture} onGestureEnd={endGesture} onChange={(ratio) => patchMaster({ enabled: true, compressor: { ...resolved.compressor, enabled: true, ratio } })} />
-            <MasterRange label="Knee" value={resolved.compressor.kneeDb} min={0} max={40} step={0.5} unit=" dB" onGestureStart={beginGesture} onGestureEnd={endGesture} onChange={(kneeDb) => patchMaster({ enabled: true, compressor: { ...resolved.compressor, enabled: true, kneeDb } })} />
-            <MasterRange label="Attack" value={resolved.compressor.attackSec * 1000} min={0} max={200} step={1} unit=" ms" onGestureStart={beginGesture} onGestureEnd={endGesture} onChange={(ms) => patchMaster({ enabled: true, compressor: { ...resolved.compressor, enabled: true, attackSec: ms / 1000 } })} />
-            <MasterRange label="Release" value={resolved.compressor.releaseSec * 1000} min={20} max={800} step={5} unit=" ms" onGestureStart={beginGesture} onGestureEnd={endGesture} onChange={(ms) => patchMaster({ enabled: true, compressor: { ...resolved.compressor, enabled: true, releaseSec: ms / 1000 } })} />
-            <MasterRange label="Makeup" value={resolved.compressor.makeupGainDb} min={-6} max={12} step={0.1} unit=" dB" onGestureStart={beginGesture} onGestureEnd={endGesture} onChange={(makeupGainDb) => patchMaster({ enabled: true, compressor: { ...resolved.compressor, enabled: true, makeupGainDb } })} />
+          <div>
+            <div className="text-[9px] font-semibold text-muted-foreground">
+              Selected insert · Compressor
+            </div>
+            <div className="mt-4 flex items-start justify-between">
+              <MasterKnob
+                label="Thresh"
+                value={resolved.compressor.thresholdDb}
+                min={-40}
+                max={0}
+                step={0.5}
+                display={resolved.compressor.thresholdDb.toFixed(0)}
+                onGestureStart={beginGesture}
+                onGestureEnd={endGesture}
+                onChange={(thresholdDb) =>
+                  patchMaster({
+                    enabled: true,
+                    compressor: { ...resolved.compressor, enabled: true, thresholdDb },
+                  })
+                }
+              />
+              <MasterKnob
+                label="Ratio"
+                value={resolved.compressor.ratio}
+                min={1}
+                max={12}
+                step={0.1}
+                display={`${resolved.compressor.ratio.toFixed(1).replace(/\.0$/, '')}:1`}
+                onGestureStart={beginGesture}
+                onGestureEnd={endGesture}
+                onChange={(ratio) =>
+                  patchMaster({
+                    enabled: true,
+                    compressor: { ...resolved.compressor, enabled: true, ratio },
+                  })
+                }
+              />
+              <MasterKnob
+                label="Attack"
+                value={resolved.compressor.attackSec * 1000}
+                min={0}
+                max={200}
+                step={1}
+                display={resolved.compressor.attackSec * 1000 < 100
+                  ? (resolved.compressor.attackSec * 1000).toFixed(0)
+                  : Math.round(resolved.compressor.attackSec * 1000).toString()}
+                onGestureStart={beginGesture}
+                onGestureEnd={endGesture}
+                onChange={(ms) =>
+                  patchMaster({
+                    enabled: true,
+                    compressor: {
+                      ...resolved.compressor,
+                      enabled: true,
+                      attackSec: ms / 1000,
+                    },
+                  })
+                }
+              />
+              <MasterKnob
+                label="Release"
+                value={resolved.compressor.releaseSec * 1000}
+                min={20}
+                max={800}
+                step={5}
+                display={Math.round(resolved.compressor.releaseSec * 1000).toString()}
+                onGestureStart={beginGesture}
+                onGestureEnd={endGesture}
+                onChange={(ms) =>
+                  patchMaster({
+                    enabled: true,
+                    compressor: {
+                      ...resolved.compressor,
+                      enabled: true,
+                      releaseSec: ms / 1000,
+                    },
+                  })
+                }
+              />
+              <button
+                type="button"
+                onClick={() => toggleSlot('compressor')}
+                className="studio-secondary-action mt-1 h-7 w-[72px]"
+                aria-pressed={!slotEnabled('compressor')}
+              >
+                Bypass
+              </button>
+            </div>
+
+            <details className="mt-4 border-t border-border pt-2">
+              <summary className="cursor-pointer list-none text-[9px] font-medium uppercase tracking-[0.1em] text-muted-foreground marker:hidden [&::-webkit-details-marker]:hidden">
+                Advanced
+              </summary>
+              <div className="mt-3 space-y-3">
+                <TransferGraph
+                  thresholdDb={resolved.compressor.thresholdDb}
+                  ratio={resolved.compressor.ratio}
+                  reductionDb={reduction.compressorDb}
+                  mode="compressor"
+                />
+                <MasterRange label="Knee" value={resolved.compressor.kneeDb} min={0} max={40} step={0.5} unit=" dB" onGestureStart={beginGesture} onGestureEnd={endGesture} onChange={(kneeDb) => patchMaster({ enabled: true, compressor: { ...resolved.compressor, enabled: true, kneeDb } })} />
+                <MasterRange label="Makeup" value={resolved.compressor.makeupGainDb} min={-6} max={12} step={0.1} unit=" dB" onGestureStart={beginGesture} onGestureEnd={endGesture} onChange={(makeupGainDb) => patchMaster({ enabled: true, compressor: { ...resolved.compressor, enabled: true, makeupGainDb } })} />
+              </div>
+            </details>
           </div>
         ) : null}
 
