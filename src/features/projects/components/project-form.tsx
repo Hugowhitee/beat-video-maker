@@ -3,14 +3,6 @@ import { useTranslation } from 'react-i18next'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { Button } from '@/components/ui/button'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
-import { Separator } from '@/components/ui/separator'
 import { Link } from '@tanstack/react-router'
 import {
   createProjectFormSchema,
@@ -95,6 +87,8 @@ function ProjectFormBase({
 
   const beatvideoMode = watch('beatvideoMode')
   const fps = watch('fps')
+  const width = watch('width')
+  const height = watch('height')
   const fpsOptions = useMemo(() => getProjectFpsOptions(fps), [fps])
 
   const handleSelectTemplate = (template: ProjectTemplate) => {
@@ -214,52 +208,29 @@ function ProjectFormBase({
                   )}
                 </div>
 
-                {/* Description */}
-                <div>
-                  <label
-                    htmlFor="description"
-                    className="block text-sm font-medium text-foreground mb-2"
-                  >
-                    {t('projects.form.description')}
-                  </label>
-                  <textarea
-                    id="description"
-                    rows={4}
-                    {...register('description')}
-                    className="w-full resize-none rounded-[3px] border border-input bg-[#d9dbd6] px-3 py-2 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
-                    placeholder={t('projects.form.descriptionPlaceholder')}
-                  />
-                  {errors.description && (
-                    <p className="mt-1.5 text-sm text-destructive">{errors.description.message}</p>
-                  )}
-                </div>
-
-                {/* Frame Rate */}
-                <div>
-                  <label htmlFor="fps" className="block text-sm font-medium text-foreground mb-2">
-                    {t('projects.form.frameRate')}
-                  </label>
-                  <Select
-                    value={fps.toString()}
-                    onValueChange={(value) =>
-                      setValue('fps', Number(value), { shouldValidate: true })
-                    }
-                  >
-                    <SelectTrigger id="fps">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {fpsOptions.map((preset) => (
-                        <SelectItem key={preset.value} value={preset.value.toString()}>
-                          {preset.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  {errors.fps && (
-                    <p className="mt-1.5 text-sm text-destructive">{errors.fps.message}</p>
-                  )}
-                </div>
+                <details open={isEditing} className="border-t border-border pt-4">
+                  <summary className="cursor-pointer list-none text-[10px] font-medium text-muted-foreground hover:text-foreground marker:hidden [&::-webkit-details-marker]:hidden">
+                    More options
+                  </summary>
+                  <div className="mt-3">
+                    <label
+                      htmlFor="description"
+                      className="mb-2 block text-[10px] font-medium text-foreground"
+                    >
+                      {t('projects.form.description')}
+                    </label>
+                    <textarea
+                      id="description"
+                      rows={3}
+                      {...register('description')}
+                      className="w-full resize-none rounded-[3px] border border-input bg-[#d9dbd6] px-3 py-2 text-[11px] text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+                      placeholder={t('projects.form.descriptionPlaceholder')}
+                    />
+                    {errors.description && (
+                      <p className="mt-1.5 text-[10px] text-destructive">{errors.description.message}</p>
+                    )}
+                  </div>
+                </details>
               </div>
             </div>
 
@@ -279,7 +250,7 @@ function ProjectFormBase({
                   <div className="flex-1">
                     <label
                       htmlFor="width"
-                      className="block text-xs font-medium text-muted-foreground mb-1"
+                      className="mb-1 block text-xs font-medium text-muted-foreground"
                     >
                       {t('projects.form.widthPx')}
                     </label>
@@ -299,7 +270,7 @@ function ProjectFormBase({
                   <div className="flex-1">
                     <label
                       htmlFor="height"
-                      className="block text-xs font-medium text-muted-foreground mb-1"
+                      className="mb-1 block text-xs font-medium text-muted-foreground"
                     >
                       {t('projects.form.heightPx')}
                     </label>
@@ -317,13 +288,48 @@ function ProjectFormBase({
                   </div>
                 </div>
               )}
+
+              <div className="mt-6">
+                <div className="mb-3 text-[9px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+                  {t('projects.form.frameRate')}
+                </div>
+                <div className="studio-segmented flex h-8 max-w-[430px]">
+                  {fpsOptions.map((preset) => (
+                    <button
+                      key={preset.value}
+                      type="button"
+                      className="studio-segment h-7 min-w-[76px] flex-1 px-2 text-[9px] font-medium"
+                      aria-pressed={fps === preset.value}
+                      onClick={() =>
+                        setValue('fps', preset.value, {
+                          shouldDirty: true,
+                          shouldValidate: true,
+                        })
+                      }
+                    >
+                      {preset.value} fps
+                    </button>
+                  ))}
+                </div>
+                {errors.fps && (
+                  <p className="mt-1.5 text-[10px] text-destructive">{errors.fps.message}</p>
+                )}
+              </div>
             </div>
           </div>
 
-          <Separator className="bg-border" />
+          <div className="flex items-end justify-between gap-4 border-t border-border pt-5">
+            <div className="min-w-0">
+              <div className="text-[9px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+                Ready
+              </div>
+              <div className="mt-1 truncate text-[11px] font-semibold text-foreground">
+                {beatvideoMode === 'photo' ? 'Photo' : 'Video'} · {width} × {height} · {fps} fps
+              </div>
+            </div>
 
-          {/* Actions */}
-          <div className="grid grid-cols-2 gap-2 border-t border-border pt-5 sm:flex sm:justify-end sm:gap-2">
+            {/* Actions */}
+            <div className="grid shrink-0 grid-cols-2 gap-2 sm:flex sm:justify-end sm:gap-2">
             {onCancel ? (
               <Button
                 type="button"
@@ -353,6 +359,7 @@ function ProjectFormBase({
                   ? t('projects.form.updateProject')
                   : t('projects.form.createProject')}
             </Button>
+            </div>
           </div>
         </form>
       </div>
