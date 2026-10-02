@@ -463,16 +463,16 @@ body.canvas-translate-cursor-not-allowed * {
 
 [data-studio-v2='true'] .studio-workspace-tab {
   border: 1px solid transparent;
-  border-radius: 4px;
-  background: transparent;
-  color: #555a55;
+  border-radius: 3px;
+  background: #d1d4ce;
+  color: #171917;
   box-shadow: none;
   transition: background-color 100ms ease, color 100ms ease, border-color 100ms ease;
 }
 
 [data-studio-v2='true'] .studio-workspace-tab:hover {
-  background: rgb(36 39 36 / 0.07);
-  color: #242724;
+  background: #d9dbd6;
+  color: #171917;
 }
 
 [data-studio-v2='true'] .studio-workspace-tab[aria-selected='true'] {
@@ -529,12 +529,16 @@ body.canvas-translate-cursor-not-allowed * {
 }
 
 [data-studio-v2='true'] .studio-rail-row-active {
-  background: #242724;
-  color: #f3f4f0;
+  background: #d1d4ce;
+  color: #171917;
+}
+
+[data-studio-v2='true'] .studio-rail-row-active .text-muted-foreground {
+  color: #171917;
 }
 
 [data-studio-v2='true'] .studio-quick-tile {
-  border-radius: 4px;
+  border-radius: 3px;
   box-shadow: none;
   transition: background-color 100ms ease, border-color 100ms ease;
 }
@@ -542,6 +546,36 @@ body.canvas-translate-cursor-not-allowed * {
 [data-studio-v2='true'] .studio-quick-tile:hover {
   border-color: #888d87;
   background: #f0f1ed;
+}
+
+[data-studio-v2='true'] .studio-primary-action {
+  border: 1px solid #242724;
+  border-radius: 3px;
+  background: #242724;
+  color: #f6f7f3;
+  font-size: 10px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+[data-studio-v2='true'] .studio-primary-action:hover {
+  background: #343834;
+}
+
+[data-studio-v2='true'] .studio-workspace-action {
+  color: #686d67;
+  transition: color 100ms ease;
+}
+
+[data-studio-v2='true'] .studio-workspace-action:hover:not(:disabled),
+[data-studio-v2='true'] .studio-workspace-action[aria-pressed='true'] {
+  color: #171917;
+}
+
+[data-studio-v2='true'] .studio-workspace-action:disabled {
+  color: #929790;
+  cursor: default;
 }
 
 [data-studio-v2='true'] .studio-secondary-action {
