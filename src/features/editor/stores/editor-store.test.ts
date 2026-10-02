@@ -203,6 +203,16 @@ describe('editor-store', () => {
     expect(editState.activeTab).toBe('media')
   })
 
+  it('enters Visual with the generic inspector closed until explicitly requested', () => {
+    useEditorStore.getState().setWorkspace('color')
+    useEditorStore.getState().setRightSidebarOpen(true)
+
+    useEditorStore.getState().setWorkspace('edit')
+
+    expect(useEditorStore.getState().workspace).toBe('edit')
+    expect(useEditorStore.getState().rightSidebarOpen).toBe(false)
+  })
+
   it('keeps Beat and Master focused by collapsing generic properties', () => {
     expect(useEditorStore.getState().rightSidebarOpen).toBe(true)
 
