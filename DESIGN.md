@@ -367,5 +367,3 @@ The Program monitor stays dominant and the playback runtime remains mounted.
 - Product/interaction ownership: `AGENTS.md` and `PRODUCT.md`.
 - Runtime design tokens: `src/index.css`.
 - Editable design exploration/contract: current Beat Video Maker Figma file.
-- Historical donor repositories are provenance only, never UI or architecture
-  authorities.
