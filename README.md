@@ -1,70 +1,39 @@
-# Beatvideo Maker
+# Beat Video Maker
 
-Beatvideo Maker is a local-first editor for turning a beat plus photos or footage into a finished music visual. It uses the mature [FreeCut](https://github.com/walterlow/freecut) editor/runtime as its foundation and adds Beatvideo-specific music analysis, Photo/Video workflows and assisted editing.
+Beat Video Maker is a local-first editor for turning a beat plus photos or footage into a finished music visual. It combines music-aware editing with a full timeline, real effect previews, motion/keyframes, transitions, color grading, mastering and local export.
 
 ## Open the app
 
-Primary hosted app: **https://beat-video-maker-live-production.up.railway.app/**
+GitHub Pages: **https://hugowhitee.github.io/beat-video-maker/**
 
-GitHub Pages remains a fallback deployment target: **https://hugowhitee.github.io/beat-video-maker/**. The production container is host-agnostic and serves the same built `dist/` with nginx; it does not rely on Vite Preview host allowlists.
+A production container is also supported through `Dockerfile`, `deploy/nginx.conf.template` and `railway.json`.
 
-On first use the browser asks for a local workspace folder. Project files, media metadata, caches and exports stay local; Beatvideo Maker does not require a cloud backend.
+On first use the browser asks for a local workspace folder. Project files, media metadata, caches and exports stay local; no cloud backend is required for normal editing.
 
-The normal flow is:
+## Producer workflow
 
-1. open or create a project;
-2. choose **Photo** or **Video**, a name, format and FPS — project type is changed from Project Settings, not from a persistent editor toggle;
-3. use **Beat** to import/select the beat, analyze it or enter a known BPM, verify the grid and place producer tags/watermarks;
-4. use **Visual** to import the hero cover/footage, add layers and effects, and make compatible effect parameters audio-reactive;
-5. use **Color** for focused grading/correction of the same visual state;
-6. use **Master** for the project EQ/compressor/saturation/limiter chain;
-7. use Advanced Motion or deeper FreeCut editing only when needed;
-8. export locally for publishing.
+The normal project route is:
 
-## Product modes
+1. **Beat** — import/select the beat, analyze or enter BPM, verify the one canonical musical grid, and manage optional producer tags/watermarks.
+2. **Visual** — add a hero photo or footage, review detected shots, Auto Arrange or build Loop A, then edit real timeline clips.
+3. **Color** — grade the full visual program by default, with clip-local correction available when needed.
+4. **Master** — finish the beat through the ordered EQ/compressor/saturation/limiter rack and open the floating Mixer for channel/output control.
+5. **Export** — render locally for publishing.
 
-### Photo
+Advanced editing remains available through the same canonical timeline/runtime. Beat Video Maker does not maintain a second hidden editor for automation.
 
-Focused cover-art workflow. **Beat → Visual → Color → Master** is the normal path. Visual owns the cover, layers and effects; compatible numeric/animatable effect parameters expose **Reactive** controls for Source, Amount, Threshold and Release. Reactive presets are quick starts that create the same canonical effect/binding state, not a second effect system.
+## Key behavior
 
-The photo stays the visual hero and normally spans the beat. Photo mode reuses the same timeline, renderer and export path as Video mode; deeper Motion tools remain available under Advanced while Color stays a normal finishing step.
-
-### Video
-
-Footage + beat workflow. In addition to Media and Beat, Video exposes the mature FreeCut editing surface for clips, text, shapes, effects, transitions, motion/keyframes and export.
-
-For the common one-clip workflow, **Loop clip to beat** repeats one imported video across the placed beat using normal FreeCut timeline items. Multi-clip edits remain normal editor operations; there is no second hidden Beatvideo timeline.
-
-## Musical grid
-
-Beat analysis is owned by the Beat This model. Beatvideo stores the resulting MusicMap with the project.
-
-The musical grid is an overlay on FreeCut's canonical timeline:
-
-- the normal timeline ruler owns click-to-seek and scrubbing;
-- the normal playhead owns playback position;
-- thin grid lines are beats;
-- stronger numbered lines are bars;
-- bar **1** is explicitly visible and can be locked to the current playhead;
-- a BPM override rebuilds the grid analytically around the bar-1 anchor.
-
-There is no separate waveform/playhead implementation, so musical markers cannot drift independently from clips or waveform geometry.
-
-## FreeCut foundation
-
-Beatvideo deliberately reuses FreeCut for specialist editor infrastructure instead of rebuilding simplified copies:
-
-- workspace/project storage;
-- media library and proxies;
-- multi-track timeline and waveform;
-- source preview and playback;
-- clip operations, transitions and snapping;
-- text, shapes and overlays;
-- GPU effects and color tools;
-- motion/keyframes;
-- export/render queue and codecs.
-
-Beatvideo-specific code should remain a small downstream layer. See [AGENTS.md](AGENTS.md) and [UPSTREAM_FREECUT.md](UPSTREAM_FREECUT.md).
+- One timeline/playhead/waveform and one mapped musical timebase drive visible grid markers, snap, Auto Arrange and beat-reactive effects.
+- Effect browsing keeps the real GPU preview pipeline with poster frames and hover previews.
+- Motion presets keep their real animated preview system.
+- Auto Arrange creates normal editable timeline items. Generated clips can be enabled/disabled, trimmed, replaced, transitioned and given Motion/Effects.
+- Multiple footage sources feed one reviewable shot pool while preserving source identity.
+- Loop A is a reusable editable sequence with linked repeats; Make Unique creates deliberate variation.
+- Transitions remain visible/selectable bridges on real cuts.
+- Color defaults to one full-program grade instead of silently duplicating grading across generated clips.
+- The Master rack is real processing state: membership/order persist and preview/export follow the same processor order.
+- The floating Mixer owns the project output fader; Auto Level adjusts pre-FX input trim.
 
 ## Development
 
@@ -75,7 +44,7 @@ vp install
 vp dev --host
 ```
 
-Normal downstream verification:
+Normal verification:
 
 ```bash
 vp run check
@@ -85,12 +54,16 @@ vp test run
 vp build
 ```
 
-Railway production builds are source-controlled through `Dockerfile`, `deploy/nginx.conf.template` and `railway.json`. Node/Vite+ builds the app; nginx serves the static `dist/` with SPA fallback and the cross-origin-isolation headers required by the editor. This avoids provider-specific Vite Preview host allowlists.
+The repository also contains headless render/edit verification for broad runtime changes.
 
-GitHub Pages production builds remain supported with the project base `/beat-video-maker/`. The Pages workflow installs a SPA fallback so `/projects` and `/editor/<id>` can be refreshed there as well.
+## Deployment
 
-## Upstream and license
+GitHub Pages deploys from `main` through `.github/workflows/pages.yml` with SPA fallback for project/editor routes.
 
-The downstream foundation started from FreeCut commit `4d62e8082c5eb387a96275bcbd323d28f6e41a62` under the MIT license. Provenance and downstream rules are documented in [UPSTREAM_FREECUT.md](UPSTREAM_FREECUT.md).
+The production container serves the same built `dist/` through nginx and keeps the cross-origin-isolation headers required by the editor.
 
-Do not copy the pre-migration custom Beatvideo editor back over FreeCut systems. Git history preserves that implementation for reference.
+## Ownership and third-party notices
+
+This repository is the canonical Beat Video Maker product and runtime. Historical donor repositories are not implementation authorities.
+
+Third-party license notices for incorporated open-source code are retained in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
