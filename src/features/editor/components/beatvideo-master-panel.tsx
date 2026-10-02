@@ -989,18 +989,18 @@ export function BeatvideoMasterPanel() {
         </div>
 
         {addEffectOpen ? (
-          <div className="absolute left-5 top-[294px] z-20 w-[360px] border border-border bg-background p-1.5 shadow-lg">
+          <div className="absolute left-5 top-[286px] z-30 max-h-[220px] w-[360px] overflow-y-auto border border-border bg-[#f2f3ef] p-2 shadow-lg">
             <div className="mb-1 px-1 text-[9px] uppercase tracking-[0.12em] text-muted-foreground">
               Available effects
             </div>
             {availableProcessors.length > 0 ? (
-              <div className="grid grid-cols-2 gap-1">
+              <div className="grid grid-cols-1 gap-1">
                 {availableProcessors.map(({ id, label, icon: Icon }) => (
                   <button
                     key={id}
                     type="button"
                     onClick={() => addProcessor(id)}
-                    className="flex h-8 items-center gap-2 border border-border px-2 text-left text-[10px] text-foreground hover:bg-secondary/55"
+                    className="flex h-9 items-center gap-2 rounded-[3px] border border-border bg-[#e8e9e5] px-2 text-left text-[10px] text-foreground hover:bg-[#d9dbd6]"
                   >
                     <Icon className="h-3.5 w-3.5 text-muted-foreground" />
                     <span className="truncate">{label}</span>
@@ -1016,7 +1016,7 @@ export function BeatvideoMasterPanel() {
         ) : null}
       </div>
 
-      <div className="h-[132px] shrink-0 overflow-y-auto bg-[#e8e9e5] p-5">
+      <div className="min-h-[190px] flex-1 overflow-y-auto border-t border-border bg-[#e8e9e5] p-5">
         {selectedSlot === 'eq' ? (
           <AudioEqPanelContent
             targetLabel="Master"
@@ -1180,31 +1180,25 @@ export function BeatvideoMasterPanel() {
 
       </div>
 
-      <div className="relative h-[250px] shrink-0 bg-[#e8e9e5]">
+      <div className="relative h-[170px] shrink-0 bg-[#e8e9e5]">
         <div className="absolute left-5 top-0 h-px w-[360px] bg-border" aria-hidden="true" />
         <div className="absolute left-5 top-[18px] text-[9px] font-semibold uppercase leading-[11px] tracking-[0.12em] text-muted-foreground">
           Master out
         </div>
         <div className="absolute left-5 top-[37px] text-[9px] leading-[11px] text-muted-foreground">
-          Mixer fader lives in Mixer ↗
+          Output level lives in the Mixer.
         </div>
-        <div className="absolute left-[294px] top-[12px]">
+        <div className="absolute left-[294px] top-[10px]">
           <AudioMeterPanel initialMode="meter" allowDockedMixer={false} presentation="master-inline" />
         </div>
         <button
           type="button"
           onClick={toggleMixerFloating}
           aria-pressed={mixerFloating}
-          className="studio-primary-action absolute left-5 top-[115px] h-9 w-72"
+          className="studio-primary-action absolute left-5 top-[96px] h-9 w-64"
         >
           {mixerFloating ? 'Close Mixer' : 'Open Mixer'}
         </button>
-        <div className="absolute left-5 top-[167px] text-[9px] leading-[11px] text-muted-foreground">
-          No duplicate output-volume slider here.
-        </div>
-        <div className="absolute left-5 top-[211px] text-[9px] font-semibold uppercase leading-[11px] tracking-[0.08em] text-foreground">
-          Auto level · pre-FX only
-        </div>
       </div>
     </div>
   )
