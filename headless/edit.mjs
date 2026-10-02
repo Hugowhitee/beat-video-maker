@@ -1,7 +1,7 @@
-// FreeCut headless edit CLI.
+// Beat Video Maker headless edit CLI.
 //
 // Applies a list of edit ops to a project by driving the real timeline action
-// modules inside headless Chrome (via window.freecut.editProject), then writes
+// modules inside headless Chrome (via window.beatVideoMaker.editProject), then writes
 // the edited project back out. No rendering, no media needed.
 //
 // Usage:
@@ -98,7 +98,7 @@ async function main() {
         ignoreConsoleError: (text) => text.includes('favicon'),
       },
       (page) =>
-        page.evaluate((payload) => window.freecut.editProject(payload), {
+        page.evaluate((payload) => window.beatVideoMaker.editProject(payload), {
           project,
           ops,
           media,
