@@ -15,7 +15,6 @@ import { SettingsDialog } from './settings-dialog'
 import { ShortcutsDialog } from './shortcuts-dialog'
 import { UnsavedChangesDialog } from './unsaved-changes-dialog'
 import { WorkspaceSwitcher } from './workspace-switcher'
-import { EDITOR_LAYOUT_CSS_VALUES } from '@/config/editor-layout'
 import { cn } from '@/shared/ui/cn'
 import { useDebugStore } from '@/features/editor/stores/debug-store'
 import { useEditorStore } from '@/shared/state/editor'
@@ -74,6 +73,12 @@ export const Toolbar = memo(function Toolbar({
   const storedProjectName = useProjectStore((state) =>
     state.currentProject?.id === projectId ? state.currentProject.name : null,
   )
+  const beatvideoMusic = useProjectStore((state) =>
+    state.currentProject?.id === projectId ? state.currentProject.beatvideoMusic : undefined,
+  )
+  const bpm =
+    beatvideoMusic?.bpmOverride ?? beatvideoMusic?.musicMap?.bpm ?? null
+  const beatsPerBar = beatvideoMusic?.musicMap?.beatsPerBar ?? 4
   const updateProject = useProjectStore((state) => state.updateProject)
   const projectName = storedProjectName ?? project?.name ?? t('common.untitledProject')
   const [editingProjectName, setEditingProjectName] = useState(false)
@@ -243,23 +248,21 @@ export const Toolbar = memo(function Toolbar({
 
   return (
     <div
-      className="panel-header flex flex-shrink-0 items-center gap-2.5 border-b border-border px-3"
-      style={{ height: EDITOR_LAYOUT_CSS_VALUES.toolbarHeight }}
+      className="studio-toolbar flex shrink-0 flex-col"
       role="toolbar"
       aria-label={t('toolbar.ariaLabel')}
     >
-      <div className="flex min-w-0 items-center gap-2">
-        <Button
-          variant="ghost"
-          size="icon"
-          className="h-7 w-7 shrink-0"
+      <div className="studio-topbar flex h-12 shrink-0 items-center border-b border-black/30 bg-[#242724] px-[18px] text-[#f3f4f0]">
+        <button
+          type="button"
           onClick={handleBackClick}
-          data-tooltip={t('toolbar.backToProjects')}
-          data-tooltip-side="right"
+          className="mr-6 flex shrink-0 items-baseline gap-1 text-left"
           aria-label={t('toolbar.backToProjectsAria')}
+          title={t('toolbar.backToProjects')}
         >
-          <ArrowLeft className="h-3.5 w-3.5" />
-        </Button>
+          <span className="text-[12px] font-bold tracking-[-0.02em]">BEAT VIDEO</span>
+          <span className="text-[9px] font-semibold tracking-[0.08em] text-white/55">MAKER</span>
+        </button>
 
         <UnsavedChangesDialog
           open={showUnsavedDialog}
@@ -268,7 +271,7 @@ export const Toolbar = memo(function Toolbar({
           projectName={project?.name}
         />
 
-        <div className="min-w-0">
+        <div className="min-w-0 flex-1">
           {editingProjectName ? (
             <input
               autoFocus
@@ -282,107 +285,113 @@ export const Toolbar = memo(function Toolbar({
                   setEditingProjectName(false)
                 }
               }}
-              className="h-5 max-w-64 border-0 bg-transparent px-0 text-[11px] font-medium leading-4 text-foreground outline-none focus-visible:ring-1 focus-visible:ring-ring"
+              className="h-7 w-full max-w-[360px] border-0 bg-transparent px-0 text-[11px] font-medium text-white outline-none focus-visible:ring-1 focus-visible:ring-[#c7e85a]"
               aria-label="Project title"
             />
           ) : (
             <button
               type="button"
-              className="group flex h-5 max-w-64 items-center gap-1.5 text-left text-[11px] font-medium leading-4 text-foreground"
+              className="group flex h-7 max-w-[360px] items-center gap-1.5 text-left text-[11px] font-medium text-white/88"
               onClick={() => setEditingProjectName(true)}
               aria-label="Rename project"
             >
               <span className="truncate">{projectName}</span>
-              <Pencil className="h-3 w-3 shrink-0 text-muted-foreground transition-colors group-hover:text-foreground" />
+              <Pencil className="h-3 w-3 shrink-0 text-white/35 transition-colors group-hover:text-white/70" />
             </button>
           )}
-          <span className="block font-mono text-[9px] leading-3 text-muted-foreground">
-            {project.width}×{project.height} · {project.fps} fps
+        </div>
+
+        <div className="flex shrink-0 items-center gap-1.5">
+          <span className="px-2 font-mono text-[10px] tabular-nums text-white/58">
+            {bpm ? `${Math.round(bpm)} BPM` : '— BPM'}
           </span>
+          <span className="border-l border-white/15 px-2 font-mono text-[10px] tabular-nums text-white/58">
+            {beatsPerBar}/4
+          </span>
+
+          {import.meta.env.DEV && import.meta.env.VITE_SHOW_DEBUG_PANEL !== 'false' ? (
+            <DebugPopover projectId={projectId} />
+          ) : null}
+
+          {workspace === 'edit' ? (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="studio-topbar-button h-7 px-2"
+              onClick={toggleRightSidebar}
+              aria-pressed={rightSidebarOpen}
+              aria-label={rightSidebarOpen ? 'Hide inspector' : 'Show inspector'}
+            >
+              Inspector
+            </Button>
+          ) : null}
+
+          {onProjectSettings ? (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="studio-topbar-button h-7 px-2"
+              onClick={onProjectSettings}
+            >
+              Project settings
+            </Button>
+          ) : null}
+
+          <Button
+            variant="ghost"
+            size="sm"
+            className="studio-topbar-button relative h-7 px-2"
+            onClick={handleSave}
+            aria-label={t('toolbar.saveAria')}
+          >
+            {t('toolbar.save')}
+            <SaveDirtyIndicator />
+          </Button>
+
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="sm" className="studio-topbar-button h-7 gap-1 px-2">
+                More
+                <ChevronDown className="h-3 w-3" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => setShowSettingsDialog(true)}>
+                Settings
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setShowShortcutsDialog(true)}>
+                Keyboard shortcuts
+              </DropdownMenuItem>
+              {onOpenRenderQueue ? (
+                <DropdownMenuItem onClick={onOpenRenderQueue}>
+                  Render queue{renderQueueCount > 0 ? ` (${renderQueueCount})` : ''}
+                </DropdownMenuItem>
+              ) : null}
+              {onExportBundle ? (
+                <DropdownMenuItem onClick={onExportBundle}>
+                  Download project ZIP
+                </DropdownMenuItem>
+              ) : null}
+            </DropdownMenuContent>
+          </DropdownMenu>
+
+          <Button
+            size="sm"
+            className="studio-export-button ml-1 h-8 min-w-[92px] px-4 text-[11px] font-semibold"
+            onClick={onExport}
+          >
+            {t('toolbar.export')}
+          </Button>
         </div>
       </div>
 
-      <div className="flex flex-1 items-center justify-center">
+      <div className="studio-workspacebar flex h-11 shrink-0 items-center border-b border-border bg-[#c7cac4] px-4">
         <WorkspaceSwitcher beatvideoMode={beatvideoMode} />
       </div>
 
       <ShortcutsDialog open={showShortcutsDialog} onOpenChange={setShowShortcutsDialog} />
-
       <SettingsDialog open={showSettingsDialog} onOpenChange={setShowSettingsDialog} />
-
-      <div className="flex items-center gap-1.5">
-        {import.meta.env.DEV && import.meta.env.VITE_SHOW_DEBUG_PANEL !== 'false' && (
-          <DebugPopover projectId={projectId} />
-        )}
-
-        {/* Keep only the producer-critical surfaces permanently visible. */}
-        {workspace === 'edit' ? (
-          <Button
-            variant={rightSidebarOpen ? 'secondary' : 'outline'}
-            size="sm"
-            className="h-7 px-2"
-            onClick={toggleRightSidebar}
-            aria-pressed={rightSidebarOpen}
-            aria-label={rightSidebarOpen ? 'Hide inspector' : 'Show inspector'}
-          >
-            Inspector
-          </Button>
-        ) : null}
-
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="outline" size="sm" className="h-7 gap-1 px-2">
-              More
-              <ChevronDown className="h-3 w-3" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem onClick={() => setShowSettingsDialog(true)}>
-              Settings
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => setShowShortcutsDialog(true)}>
-              Keyboard shortcuts
-            </DropdownMenuItem>
-            {onOpenRenderQueue ? (
-              <DropdownMenuItem onClick={onOpenRenderQueue}>
-                Render queue{renderQueueCount > 0 ? ` (${renderQueueCount})` : ''}
-              </DropdownMenuItem>
-            ) : null}
-            {onExportBundle ? (
-              <DropdownMenuItem onClick={onExportBundle}>
-                Download project ZIP
-              </DropdownMenuItem>
-            ) : null}
-          </DropdownMenuContent>
-        </DropdownMenu>
-
-        {onProjectSettings ? (
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            className="h-7 px-2.5"
-            onClick={onProjectSettings}
-          >
-            Project settings
-          </Button>
-        ) : null}
-
-        <Button
-          variant="outline"
-          size="sm"
-          className="relative h-7 px-2.5"
-          onClick={handleSave}
-          aria-label={t('toolbar.saveAria')}
-        >
-          {t('toolbar.save')}
-          <SaveDirtyIndicator />
-        </Button>
-
-        <Button size="sm" className="h-7 px-3" onClick={onExport}>
-          {t('toolbar.export')}
-        </Button>
-      </div>
     </div>
   )
 })
