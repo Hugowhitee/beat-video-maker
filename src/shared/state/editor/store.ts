@@ -123,7 +123,7 @@ export const useEditorStore = create<EditorState & EditorActions>((set) => ({
   // State
   activePanel: null,
   leftSidebarOpen: true,
-  rightSidebarOpen: initialWorkspace !== 'beat' && initialWorkspace !== 'master',
+  rightSidebarOpen: false,
   keyframeEditorShortcutScopeActive: false,
   transcriptEditorShortcutScopeActive: false,
   workspace: initialWorkspace,
