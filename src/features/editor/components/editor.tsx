@@ -88,6 +88,7 @@ const LazyColorTimelineNavigator = lazy(() =>
   })),
 )
 const EDITOR_PROJECT_ROUTE_ID = '/editor/$projectId'
+import { useStudioV2DocumentTheme } from '@/shared/ui/use-studio-v2-document-theme'
 
 type MobileEditorSurface = 'tools' | 'preview' | 'inspector' | 'timeline' | 'mixer' | 'color'
 
@@ -445,6 +446,7 @@ export const LoadedEditor = memo(function LoadedEditor({
   migration,
 }: EditorProps) {
   const { t } = useTranslation()
+  useStudioV2DocumentTheme()
   const router = useRouter()
   const [exportDialogOpen, setExportDialogOpen] = useState(false)
   const [bundleExportDialogOpen, setBundleExportDialogOpen] = useState(false)
