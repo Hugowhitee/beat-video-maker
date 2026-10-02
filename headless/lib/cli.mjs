@@ -25,13 +25,16 @@ export function parseArgs(argv, { allowed, aliases = {} } = {}) {
 /**
  * Chrome launch args for headless WebGPU, per platform. The ANGLE backend is
  * platform-specific (d3d11 on Windows, metal on macOS, vulkan on Linux). Extra
- * args can be appended via FREECUT_CHROME_ARGS (space-separated) — e.g. in
- * Docker: "--no-sandbox --use-vulkan=swiftshader" for software WebGPU.
+ * args can be appended via BEAT_VIDEO_MAKER_CHROME_ARGS (space-separated) — e.g.
+ * in Docker: "--no-sandbox --use-vulkan=swiftshader" for software WebGPU.
+ * Legacy FREECUT_* names remain accepted for old automation only.
  */
 export function chromeLaunchArgs() {
   // Full override (space-separated) — for tuning the GPU/WebGPU backend, esp.
   // in containers (e.g. SwiftShader). Replaces ALL args including the defaults.
-  const replace = process.env.FREECUT_CHROME_ARGS_REPLACE
+  const replace =
+    process.env.BEAT_VIDEO_MAKER_CHROME_ARGS_REPLACE ??
+    process.env.FREECUT_CHROME_ARGS_REPLACE
   if (replace) return replace.split(/\s+/).filter(Boolean)
 
   const angle =
@@ -46,6 +49,12 @@ export function chromeLaunchArgs() {
     '--ignore-gpu-blocklist',
     angle,
   ]
-  const extra = (process.env.FREECUT_CHROME_ARGS ?? '').split(/\s+/).filter(Boolean)
+  const extra = (
+    process.env.BEAT_VIDEO_MAKER_CHROME_ARGS ??
+    process.env.FREECUT_CHROME_ARGS ??
+    ''
+  )
+    .split(/\s+/)
+    .filter(Boolean)
   return [...base, ...extra]
 }
