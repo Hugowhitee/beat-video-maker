@@ -659,7 +659,7 @@ export function BeatvideoMasterPanel() {
 
   return (
     <div className="flex h-full min-h-0 flex-col bg-[#e8e9e5]">
-      <div className="flex h-[62px] shrink-0 items-start border-b border-border px-5 pt-[18px]">
+      <div className="relative flex h-[62px] shrink-0 items-start px-5 pt-[18px]">
         <div className="min-w-0">
           <Popover>
             <PopoverTrigger asChild>
@@ -786,7 +786,7 @@ export function BeatvideoMasterPanel() {
             Finish the beat, then export.
           </div>
         </div>
-
+        <div className="absolute bottom-0 left-5 h-px w-[360px] bg-border" aria-hidden="true" />
       </div>
 
       <div className="relative h-[144px] shrink-0">
@@ -810,7 +810,7 @@ export function BeatvideoMasterPanel() {
             setAutoLevelResult(null)
             patchMaster({ enabled: true, inputGainDb: Number(event.target.value) })
           }}
-          className="studio-master-input-range absolute left-5 top-[61px] h-6 w-[240px]"
+          className="studio-master-input-range absolute left-5 top-[74px] h-6 w-[240px]"
           style={{
             background: `linear-gradient(to right, #242724 0 ${Math.max(0, Math.min(100, ((resolved.inputGainDb + 12) / 24) * 100))}%, #c7cac4 ${Math.max(0, Math.min(100, ((resolved.inputGainDb + 12) / 24) * 100))}% 100%)`,
           }}
@@ -857,7 +857,7 @@ export function BeatvideoMasterPanel() {
         )}
       </div>
 
-      <div className="relative h-[300px] shrink-0 border-b border-border">
+      <div className="relative h-[300px] shrink-0">
         <div className="absolute left-5 top-[8px] text-[9px] font-semibold uppercase leading-[11px] tracking-[0.14em] text-muted-foreground">
           Inserts
         </div>
@@ -964,7 +964,7 @@ export function BeatvideoMasterPanel() {
                 <button
                   type="button"
                   onClick={() => removeProcessor(id)}
-                  className="absolute bottom-0 right-10 top-0 flex w-8 items-center justify-center text-muted-foreground opacity-0 transition-opacity hover:bg-black/[0.04] hover:text-foreground focus:opacity-100 group-hover:opacity-100"
+                  className="absolute bottom-0 left-[294px] top-0 flex w-8 items-center justify-center text-muted-foreground opacity-0 transition-opacity hover:bg-black/[0.04] hover:text-foreground focus:opacity-100 group-hover:opacity-100"
                   aria-label={`Remove ${label}`}
                   title={`Remove ${label}`}
                 >
@@ -974,7 +974,7 @@ export function BeatvideoMasterPanel() {
                   type="button"
                   onClick={() => toggleSlot(id)}
                   className={cn(
-                    'absolute bottom-0 right-0 top-0 flex w-10 items-center justify-center',
+                    'absolute bottom-0 left-[326px] top-0 flex w-[34px] items-center justify-start',
                     enabled ? 'text-foreground' : 'text-muted-foreground',
                   )}
                   aria-label={`${enabled ? 'Bypass' : 'Enable'} ${label}`}
@@ -1034,7 +1034,7 @@ export function BeatvideoMasterPanel() {
               <PopoverTrigger asChild>
                 <button
                   type="button"
-                  className="block text-[9px] font-semibold text-muted-foreground"
+                  className="block text-[9px] font-semibold leading-[11px] text-muted-foreground"
                   title="Compressor advanced controls"
                 >
                   Selected insert · Compressor
@@ -1053,7 +1053,7 @@ export function BeatvideoMasterPanel() {
                 </div>
               </PopoverContent>
             </Popover>
-            <div className="mt-4 flex items-start">
+            <div className="mt-[17px] flex items-start">
               <MasterKnob
                 label="Thresh"
                 value={resolved.compressor.thresholdDb}
@@ -1180,7 +1180,8 @@ export function BeatvideoMasterPanel() {
 
       </div>
 
-      <div className="relative h-[250px] shrink-0 border-t border-border bg-[#e8e9e5]">
+      <div className="relative h-[250px] shrink-0 bg-[#e8e9e5]">
+        <div className="absolute left-5 top-0 h-px w-[360px] bg-border" aria-hidden="true" />
         <div className="absolute left-5 top-[18px] text-[9px] font-semibold uppercase leading-[11px] tracking-[0.12em] text-muted-foreground">
           Master out
         </div>
