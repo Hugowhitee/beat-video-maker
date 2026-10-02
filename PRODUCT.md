@@ -217,6 +217,6 @@ Projects and media stay local. The browser may ask the user to choose a workspac
 
 ## Runtime ownership rule
 
-The current repository is the product authority. Preserve mature in-repo timeline, preview, effects, motion, color, storage and export systems when they already solve the job well, but evolve them directly when Beat Video Maker requires a different workflow. Historical donor repositories are provenance only and never a reason to keep obsolete product hierarchy, naming or UI.
+The current repository is the product authority. Preserve mature in-repo timeline, preview, effects, motion, color, storage and export systems when they already solve the job well, but evolve them directly when Beat Video Maker requires a different workflow.
 
 Third-party license obligations live in `THIRD_PARTY_NOTICES.md`.
