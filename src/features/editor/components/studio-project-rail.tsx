@@ -29,7 +29,7 @@ type QuickTarget = RailTarget & {
 const PROJECT_TARGETS: readonly RailTarget[] = [
   { label: 'Media', workspace: 'edit', tab: 'media' },
   { label: 'Beat', workspace: 'beat', tab: 'beat' },
-  { label: 'Sequences', workspace: 'edit', tab: 'media' },
+  { label: 'Loops & sequences', workspace: 'edit', tab: 'media' },
   { label: 'Graphics', workspace: 'edit', tab: 'text' },
 ]
 
@@ -92,7 +92,7 @@ export const StudioProjectRail = memo(function StudioProjectRail() {
     } else if (
       workspace === 'edit' &&
       activeTab === 'media' &&
-      selectedProjectSection !== 'Sequences'
+      selectedProjectSection !== 'Loops & sequences'
     ) {
       setSelectedProjectSection('Media')
     }
@@ -103,7 +103,7 @@ export const StudioProjectRail = memo(function StudioProjectRail() {
     setWorkspace(target.workspace)
     setActiveTab(target.tab)
 
-    if (target.label === 'Sequences') {
+    if (target.label === 'Loops & sequences') {
       const firstSequence = sequences[0]
       if (firstSequence) {
         switchToSequence(firstSequence.id)
@@ -174,7 +174,7 @@ export const StudioProjectRail = memo(function StudioProjectRail() {
         ? 'READY'
         : target.label === 'Media' && mediaCount > 0
           ? String(mediaCount)
-          : target.label === 'Sequences' && sequenceCount > 0
+          : target.label === 'Loops & sequences' && sequenceCount > 0
             ? String(sequenceCount)
             : target.label === 'Graphics' && graphicsCount > 0
               ? String(graphicsCount)
@@ -203,6 +203,15 @@ export const StudioProjectRail = memo(function StudioProjectRail() {
               type="button"
               onClick={() => openTarget(target)}
               aria-current={selected ? 'page' : undefined}
+              title={
+                target.label === 'Media'
+                  ? 'Imported photo and video sources'
+                  : target.label === 'Beat'
+                    ? 'Project beat source and musical timing'
+                    : target.label === 'Loops & sequences'
+                      ? 'Reusable Loop A and sequence timelines'
+                      : 'Text, shapes and visual overlays'
+              }
               className={cn(
                 'studio-rail-row absolute left-4 h-[34px] w-[182px] rounded-[3px] text-left text-[11px] leading-[13px] text-foreground',
                 selected && 'studio-rail-row-active font-semibold',
