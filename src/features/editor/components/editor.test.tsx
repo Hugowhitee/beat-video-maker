@@ -86,6 +86,10 @@ vi.mock('./properties-sidebar', () => ({
   ),
 }))
 
+vi.mock('./studio-project-rail', () => ({
+  StudioProjectRail: () => <div data-testid="studio-project-rail" />,
+}))
+
 vi.mock('./preview-area', () => ({
   PreviewArea: ({ compact }: { compact?: boolean }) => (
     <div data-testid="preview-area" data-compact={compact ? 'true' : 'false'} />
