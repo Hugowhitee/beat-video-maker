@@ -191,7 +191,7 @@ function MasterKnob({
   onGestureEnd: () => void
 }) {
   return (
-    <div className="flex w-[74px] flex-col items-center">
+    <div className="flex w-[74px] shrink-0 flex-col items-start pl-[10px]">
       <RotaryKnob
         value={value}
         min={min}
@@ -1024,7 +1024,7 @@ export function BeatvideoMasterPanel() {
         ) : null}
       </div>
 
-      <div className="min-h-0 flex-1 overflow-y-auto border-t border-border bg-[#dfe1dc] p-4">
+      <div className="min-h-0 flex-1 overflow-y-auto border-t border-border bg-[#dfe1dc] p-5">
         {selectedSlot === 'eq' ? (
           <AudioEqPanelContent
             targetLabel="Master"
@@ -1041,7 +1041,7 @@ export function BeatvideoMasterPanel() {
             <div className="text-[9px] font-semibold text-muted-foreground">
               Selected insert · Compressor
             </div>
-            <div className="mt-4 flex items-start justify-between">
+            <div className="mt-4 flex items-start">
               <MasterKnob
                 label="Thresh"
                 value={resolved.compressor.thresholdDb}
@@ -1119,7 +1119,7 @@ export function BeatvideoMasterPanel() {
               <button
                 type="button"
                 onClick={() => toggleSlot('compressor')}
-                className="studio-secondary-action mt-1 h-7 w-[72px]"
+                className="studio-secondary-action -ml-2 mt-1 h-7 w-[72px] shrink-0"
                 aria-pressed={!slotEnabled('compressor')}
               >
                 Bypass
