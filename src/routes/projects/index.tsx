@@ -6,8 +6,7 @@ import { createLogger } from '@/shared/logging/logger'
 
 const logger = createLogger('ProjectsIndex')
 import { Button } from '@/components/ui/button'
-import { Separator } from '@/components/ui/separator'
-import { Plus, Upload, FolderOpen, File } from 'lucide-react'
+import { FolderOpen, File } from 'lucide-react'
 import { ProjectList } from '@/features/projects/components/project-list'
 import { EditProjectForm } from '@/features/projects/components/project-form'
 import {
