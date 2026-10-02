@@ -134,11 +134,27 @@ export const TrackHeader = memo(function TrackHeader({
         >
           <div
             className={`
-              flex flex-col overflow-hidden px-1
-              ${simplified ? 'cursor-default' : 'cursor-grab active:cursor-grabbing'} relative
-              ${isSelected ? 'bg-primary/10' : trackDisabled ? 'bg-muted/30 hover:bg-muted/40' : 'hover:bg-secondary/50'}
-              ${isActive ? 'border-l-3 border-l-primary' : 'border-l-3 border-l-transparent'}
-              ${trackDisabled ? 'text-muted-foreground' : ''}
+              flex flex-col overflow-hidden
+              ${simplified ? 'cursor-default px-0' : 'cursor-grab active:cursor-grabbing px-1'} relative
+              ${
+                simplified
+                  ? isSelected
+                    ? 'bg-[#454a45]'
+                    : 'hover:bg-[#3b403b]'
+                  : isSelected
+                    ? 'bg-primary/10'
+                    : trackDisabled
+                      ? 'bg-muted/30 hover:bg-muted/40'
+                      : 'hover:bg-secondary/50'
+              }
+              ${
+                simplified
+                  ? 'border-l-0'
+                  : isActive
+                    ? 'border-l-3 border-l-primary'
+                    : 'border-l-3 border-l-transparent'
+              }
+              ${!simplified && trackDisabled ? 'text-muted-foreground' : ''}
               transition-colors duration-150
             `}
             style={{ height: `${track.height}px` }}
