@@ -36,7 +36,7 @@ export const WorkspaceSwitcher = memo(function WorkspaceSwitcher({
     <div
       role="tablist"
       aria-label={t('toolbar.workspaces.label')}
-      className="studio-segmented flex h-8 items-stretch"
+      className="studio-workspace-tabs flex h-full items-center gap-1"
     >
       {PRIMARY_WORKSPACES.map(({ id, label }) => {
         const isActive = workspace === id
@@ -48,7 +48,7 @@ export const WorkspaceSwitcher = memo(function WorkspaceSwitcher({
             aria-selected={isActive}
             title={id === 'edit' ? visualHint : undefined}
             onClick={() => setWorkspace(id)}
-            className="studio-segment flex h-7 min-w-[64px] items-center justify-center px-3 text-xs font-medium"
+            className="studio-workspace-tab flex h-7 min-w-[68px] items-center justify-center px-3 text-[11px] font-medium"
           >
             {label}
           </button>
