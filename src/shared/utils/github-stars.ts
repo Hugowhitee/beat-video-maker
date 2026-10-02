@@ -1,7 +1,7 @@
 export const GITHUB_STARS_CACHE_TTL_MS = 60 * 60 * 1000
 
 const GITHUB_REPOSITORY_API_URL = 'https://api.github.com/repos/Hugowhitee/beat-video-maker'
-const GITHUB_STARS_CACHE_KEY = 'freecut.githubStars.v1'
+const GITHUB_STARS_CACHE_KEY = 'beat-video-maker.githubStars.v1'
 
 type StarCacheStorage = Pick<Storage, 'getItem' | 'setItem'>
 
