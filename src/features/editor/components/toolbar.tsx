@@ -1,7 +1,7 @@
 import { memo, useEffect, useState } from 'react'
 import { useNavigate } from '@tanstack/react-router'
 import { useTranslation } from 'react-i18next'
-import { ArrowLeft, Bug, ChevronDown, Pencil } from 'lucide-react'
+import { ArrowLeft, ChevronDown, Pencil } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import {
   DropdownMenu,
@@ -9,14 +9,10 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
-import { ProjectDebugPanel } from './project-debug-panel'
 import { SettingsDialog } from './settings-dialog'
 import { ShortcutsDialog } from './shortcuts-dialog'
 import { UnsavedChangesDialog } from './unsaved-changes-dialog'
 import { WorkspaceSwitcher } from './workspace-switcher'
-import { cn } from '@/shared/ui/cn'
-import { useDebugStore } from '@/features/editor/stores/debug-store'
 import { useEditorStore } from '@/shared/state/editor'
 import { useTimelineCommandStore, useTimelineStore } from '@/features/editor/deps/timeline-store'
 import type { BeatvideoProjectMode } from '@/types/project'
@@ -384,36 +380,3 @@ export const Toolbar = memo(function Toolbar({
     </div>
   )
 })
-
-function DebugPopover({ projectId }: { projectId: string }) {
-  const { t } = useTranslation()
-  const debugPanelOpen = useDebugStore((s) => s.debugPanelOpen)
-  const setDebugPanelOpen = useDebugStore((s) => s.setDebugPanelOpen)
-
-  return (
-    <Popover open={debugPanelOpen} onOpenChange={setDebugPanelOpen}>
-      <PopoverTrigger asChild>
-        <Button
-          variant="outline"
-          size="icon"
-          className={cn(
-            'h-7 w-7',
-            debugPanelOpen && 'bg-amber-500/20 border-amber-500/50 text-amber-400',
-          )}
-          data-tooltip={debugPanelOpen ? undefined : t('toolbar.debugPanel')}
-          data-tooltip-side="bottom"
-          aria-label={t('toolbar.debugPanelAria')}
-        >
-          <Bug className="h-4 w-4" />
-        </Button>
-      </PopoverTrigger>
-      <PopoverContent
-        align="end"
-        sideOffset={8}
-        className="w-64 p-0 bg-zinc-900 border-zinc-700 text-zinc-100"
-      >
-        <ProjectDebugPanel projectId={projectId} />
-      </PopoverContent>
-    </Popover>
-  )
-}
