@@ -972,7 +972,7 @@ export const LoadedEditor = memo(function LoadedEditor({
                   {isMotionWorkspace ? (
                     <MotionPreviewArea project={project} />
                   ) : isMasterWorkspace ? (
-                    <div className="studio-master-preview-frame flex h-full min-w-0 flex-1 px-5 pt-[18px]">
+                    <div className="studio-master-preview-frame flex h-full min-w-0 flex-1 px-5 pb-1 pt-[18px]">
                       <PreviewArea project={project} />
                     </div>
                   ) : (
