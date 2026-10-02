@@ -1258,6 +1258,30 @@ export function BeatvideoMusicPanel() {
             </div>
           )}
 
+          {selectedMedia ? (
+            <details className="border-t border-border/70 pt-2">
+              <summary className="flex cursor-pointer list-none items-center justify-between gap-2 text-[10px] font-medium text-muted-foreground marker:hidden [&::-webkit-details-marker]:hidden">
+                <span>File metadata</span>
+                <span className="max-w-36 truncate font-mono text-[9px] font-normal">
+                  {selectedMedia.fileName}
+                </span>
+              </summary>
+              <div className="mt-2">
+                <BeatvideoFileMetadata
+                  mediaId={selectedMedia.id}
+                  fileName={selectedMedia.fileName}
+                  mimeType={selectedMedia.mimeType}
+                  projectName={currentProject?.name ?? ''}
+                  beatBpm={
+                    effectiveAnalysis?.bpmOverride ??
+                    effectiveAnalysis?.musicMap.bpm ??
+                    null
+                  }
+                />
+              </div>
+            </details>
+          ) : null}
+
           <Button
             type="button"
             size="sm"
@@ -1554,30 +1578,6 @@ export function BeatvideoMusicPanel() {
                   </Button>
                 </div>
               </details>
-            </div>
-          </details>
-        ) : null}
-
-        {selectedMedia ? (
-          <details className="border-t border-border pt-3">
-            <summary className="flex cursor-pointer list-none items-center justify-between gap-2 text-xs font-medium text-foreground marker:hidden [&::-webkit-details-marker]:hidden">
-              <span>File metadata</span>
-              <span className="max-w-36 truncate font-mono text-[9px] font-normal text-muted-foreground">
-                {selectedMedia.fileName}
-              </span>
-            </summary>
-            <div className="mt-3">
-              <BeatvideoFileMetadata
-                mediaId={selectedMedia.id}
-                fileName={selectedMedia.fileName}
-                mimeType={selectedMedia.mimeType}
-                projectName={currentProject?.name ?? ''}
-                beatBpm={
-                  effectiveAnalysis?.bpmOverride ??
-                  effectiveAnalysis?.musicMap.bpm ??
-                  null
-                }
-              />
             </div>
           </details>
         ) : null}
