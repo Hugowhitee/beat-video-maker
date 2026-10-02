@@ -87,8 +87,9 @@ const LazyColorTimelineNavigator = lazy(() =>
     default: ColorTimelineNavigator,
   })),
 )
-const EDITOR_PROJECT_ROUTE_ID = '/editor/$projectId'
 import { useStudioV2DocumentTheme } from '@/shared/ui/use-studio-v2-document-theme'
+
+const EDITOR_PROJECT_ROUTE_ID = '/editor/$projectId'
 
 type MobileEditorSurface = 'tools' | 'preview' | 'inspector' | 'timeline' | 'mixer' | 'color'
 
