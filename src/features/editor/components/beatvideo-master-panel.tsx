@@ -5,8 +5,6 @@ import {
   BookmarkPlus,
   Flame,
   Plus,
-  Power,
-  RotateCcw,
   Shield,
   SlidersHorizontal,
   X,
