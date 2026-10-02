@@ -127,7 +127,7 @@ describe('TrackHeader', () => {
     expect(screen.queryByRole('button', { name: 'Disable sync lock' })).not.toBeInTheDocument()
   })
 
-  it('exposes one real collapse control in the producer header when wired', () => {
+  it('keeps collapse available without adding producer-header icon chrome', () => {
     const onToggleCollapsed = vi.fn()
     render(
       <TrackHeader
@@ -152,7 +152,8 @@ describe('TrackHeader', () => {
       />,
     )
 
-    fireEvent.click(screen.getByRole('button', { name: 'Collapse Beat track' }))
+    expect(screen.queryByRole('button', { name: /collapse beat track/i })).not.toBeInTheDocument()
+    fireEvent.doubleClick(screen.getByText('Beat'))
     expect(onToggleCollapsed).toHaveBeenCalledTimes(1)
   })
 
