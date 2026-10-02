@@ -41,6 +41,7 @@ import {
 } from '@/features/editor/deps/timeline-contract'
 import { usePlaybackStore } from '@/shared/state/playback'
 import { useSelectionStore } from '@/shared/state/selection'
+import { useEditorStore } from '@/shared/state/editor'
 import {
   DEFAULT_PROJECT_HEIGHT,
   DEFAULT_PROJECT_WIDTH,
@@ -129,6 +130,7 @@ function upsertCorrectionAnchor(
 
 export function BeatvideoMusicPanel() {
   const mediaItems = useMediaLibraryStore((state) => state.mediaItems)
+  const setWorkspace = useEditorStore((state) => state.setWorkspace)
   const currentProject = useProjectStore((state) => state.currentProject)
   const items = useItemsStore((state) => state.items)
   const currentFrame = usePlaybackStore((state) => state.currentFrame)
@@ -1227,59 +1229,65 @@ export function BeatvideoMusicPanel() {
   }, [effectiveAnalysis, persistAnalysis])
 
   return (
-    <div className="h-full overflow-y-auto p-3">
-      <div className="space-y-4">
-        <div className="border-b border-border pb-3">
-          <div className="text-xs font-medium text-foreground">Beat</div>
-          <p className="mt-1 text-[10px] leading-relaxed text-muted-foreground">
-            Source-bound analysis drives the grid, snapping and reactive timing.
+    <div className="h-full overflow-y-auto p-5">
+      <div className="space-y-5">
+        <div className="border-b border-border pb-4">
+          <div className="text-[11px] font-semibold uppercase tracking-[0.08em] text-foreground">Beat</div>
+          <p className="mt-2 text-[10px] leading-relaxed text-muted-foreground">
+            Choose the source once. Analysis starts automatically and drives the grid, snapping and reactive timing.
           </p>
         </div>
 
-        <section className="space-y-2">
-          <label className="block text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
-            Beat source
+        <section className="space-y-3">
+          <label className="block text-[9px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+            Source
           </label>
           {candidates.length > 0 ? (
-            <div className="grid grid-cols-[minmax(0,1fr)_auto] gap-1.5">
-              <select
-                value={selectedMediaId}
-                onChange={(event) => setSelectedMediaId(event.target.value)}
-                disabled={analyzing || importingBeat}
-                className="h-8 min-w-0 border border-input bg-secondary px-2 text-xs text-foreground"
-              >
-                {candidates.map((media) => (
-                  <option key={media.id} value={media.id}>
-                    {media.fileName}
-                  </option>
-                ))}
-              </select>
-              <Button
-                type="button"
-                size="sm"
-                variant="outline"
-                className="h-8 px-2.5"
-                disabled={analyzing || importingBeat}
-                onClick={() => void importBeat()}
-              >
-                {importingBeat ? 'Importing…' : 'Import'}
-              </Button>
+            <div className="rounded-[3px] bg-[#d1d4ce] p-3">
+              <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3">
+                <div className="min-w-0">
+                  <select
+                    value={selectedMediaId}
+                    onChange={(event) => setSelectedMediaId(event.target.value)}
+                    disabled={analyzing || importingBeat}
+                    className="h-7 w-full min-w-0 border-0 bg-transparent p-0 text-[11px] font-semibold text-foreground outline-none"
+                    aria-label="Project beat source"
+                  >
+                    {candidates.map((media) => (
+                      <option key={media.id} value={media.id}>
+                        {media.fileName}
+                      </option>
+                    ))}
+                  </select>
+                  <div className="mt-1 text-[9px] text-muted-foreground">
+                    {selectedMedia
+                      ? `${Math.max(0, selectedMedia.duration).toFixed(1)} s · ${selectedMedia.mimeType.replace('audio/', '').toUpperCase()}`
+                      : 'Audio source'}
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  className="studio-secondary-action h-8 px-3"
+                  disabled={analyzing || importingBeat}
+                  onClick={() => void importBeat()}
+                >
+                  {importingBeat ? 'Importing…' : 'Replace'}
+                </button>
+              </div>
             </div>
           ) : (
-            <div className="space-y-2">
-              <div className="border-l-2 border-border pl-2 text-[10px] leading-relaxed text-muted-foreground">
-                Import the beat for this project to create its musical grid.
-              </div>
-              <Button
+            <div className="rounded-[3px] bg-[#d1d4ce] p-3">
+              <p className="text-[10px] leading-relaxed text-muted-foreground">
+                Add the project beat. It will be placed on the Beat lane and analyzed automatically.
+              </p>
+              <button
                 type="button"
-                size="sm"
-                variant="outline"
-                className="w-full"
+                className="studio-primary-action mt-3 h-9 w-full"
                 disabled={analyzing || importingBeat}
                 onClick={() => void importBeat()}
               >
                 {importingBeat ? 'Importing beat…' : 'Import beat'}
-              </Button>
+              </button>
             </div>
           )}
 
@@ -1307,30 +1315,25 @@ export function BeatvideoMusicPanel() {
             </details>
           ) : null}
 
-          <Button
-            type="button"
-            size="sm"
-            className="w-full"
-            disabled={!selectedMediaId}
-            variant={analyzing ? 'outline' : 'default'}
-            onClick={() => {
-              if (analyzing) {
-                abortRef.current?.abort()
-                return
-              }
-              void analyze()
-            }}
-          >
-            {analyzing
-              ? 'Cancel analysis'
-              : effectiveAnalysis
-                ? analysisUpdateAvailable
+          {(analyzing || !effectiveAnalysis || analysisUpdateAvailable) && selectedMediaId ? (
+            <button
+              type="button"
+              className={analyzing ? 'studio-secondary-action h-8 w-full' : 'studio-primary-action h-8 w-full'}
+              onClick={() => {
+                if (analyzing) {
+                  abortRef.current?.abort()
+                  return
+                }
+                void analyze()
+              }}
+            >
+              {analyzing
+                ? 'Cancel analysis'
+                : analysisUpdateAvailable
                   ? 'Update analysis'
-                  : 'Re-analyze'
-                : 'Analyze beat'}
-          </Button>
-
-
+                  : 'Analyze beat'}
+            </button>
+          ) : null}
 
           {analyzing && progress ? (
             <div className="space-y-1.5">
@@ -1350,7 +1353,7 @@ export function BeatvideoMusicPanel() {
           ) : null}
 
           {!analyzing && effectiveAnalysis && resolvedSourceGrid ? (
-            <div className="border-y border-border py-2.5">
+            <div className="rounded-[3px] bg-[#d9dbd6] p-3">
               <div className="flex items-center justify-between gap-3">
                 <div className="min-w-0">
                   <div className="flex items-center gap-1.5 text-xs font-semibold text-foreground">
@@ -1607,8 +1610,8 @@ export function BeatvideoMusicPanel() {
           </details>
         ) : null}
 
-        <details className="border-t border-border pt-3">
-          <summary className="flex cursor-pointer list-none items-center justify-between gap-2 text-xs font-medium text-foreground marker:hidden [&::-webkit-details-marker]:hidden">
+        <details className="border-t border-border pt-4">
+          <summary className="flex cursor-pointer list-none items-center justify-between gap-2 text-[11px] font-semibold text-foreground marker:hidden [&::-webkit-details-marker]:hidden">
             <span>Producer audio</span>
             <span className="text-[9px] font-normal text-muted-foreground">Optional</span>
           </summary>
@@ -1816,6 +1819,18 @@ export function BeatvideoMusicPanel() {
           </div>
         </details>
 
+        <div className="border-t border-border pt-4">
+          <p className="mb-3 text-[10px] leading-relaxed text-muted-foreground">
+            Continue when the source, tempo and Bar 1 are trustworthy.
+          </p>
+          <button
+            type="button"
+            className="studio-primary-action h-9 w-full"
+            onClick={() => setWorkspace('edit')}
+          >
+            Continue to Visual
+          </button>
+        </div>
       </div>
     </div>
   )
