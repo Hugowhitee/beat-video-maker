@@ -190,7 +190,8 @@ describe('PropertiesSidebar', () => {
 
     expect(screen.getByText('Canvas Panel')).toBeInTheDocument()
     expect(screen.queryByText('midnight-loop.mp3')).not.toBeInTheDocument()
-    expect(screen.queryByText('Clip Panel')).not.toBeInTheDocument()
+    expect(screen.getByTestId('properties-clip-panel-host')).toHaveAttribute('hidden')
+    expect(screen.getByText('Clip Panel')).not.toBeVisible()
     await waitFor(() => {
       expect(useEditorStore.getState().rightSidebarOpen).toBe(false)
     })
