@@ -37,6 +37,7 @@ import { TrashSection } from '@/features/projects/components/trash-section'
 import { WorkspaceIndicator } from '@/features/workspace-gate'
 import { LanguageSwitcher } from '@/shared/ui/language-switcher'
 import { resolveBeatvideoProjectMode } from '@/config/beatvideo'
+import { useStudioV2DocumentTheme } from '@/shared/ui/use-studio-v2-document-theme'
 
 export const Route = createFileRoute('/projects/')({
   component: ProjectsIndex,
@@ -50,6 +51,7 @@ export const Route = createFileRoute('/projects/')({
 })
 
 function ProjectsIndex() {
+  useStudioV2DocumentTheme()
   const navigate = useNavigate()
   const { t } = useTranslation()
   const [editingProject, setEditingProject] = useState<Project | null>(null)
