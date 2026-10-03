@@ -422,8 +422,14 @@ export function ProjectList({ onEditProject, onImportProject }: ProjectListProps
           {/* Sort Menu */}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="icon" className="h-9 w-9 border-border bg-[#d9dbd6] shadow-none">
-                <ArrowUpDown className="w-4 h-4" />
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-9 gap-1.5 border-border bg-[#d9dbd6] px-3 text-[9px] shadow-none sm:w-9 sm:px-0"
+              >
+                <ArrowUpDown className="h-3.5 w-3.5" />
+                <span className="sm:hidden">Sort</span>
+                <span className="sr-only sm:inline">Sort projects</span>
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-48" data-studio-v2="true">
