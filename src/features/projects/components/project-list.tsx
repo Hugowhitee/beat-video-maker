@@ -584,20 +584,13 @@ export function ProjectList({ onEditProject, onImportProject }: ProjectListProps
         </div>
       )}
 
-      {/* Project list */}
+      {/* Project tiles */}
       {!isEmpty && !hasNoResults && (
         <div>
-          <div className="hidden grid-cols-[142px_minmax(0,1fr)_92px_180px_64px_140px_92px] gap-4 px-3 pb-2 text-[9px] font-semibold uppercase tracking-[0.1em] text-muted-foreground lg:grid">
-            <span />
-            <span>Project</span>
-            <span>Type</span>
-            <span>Format</span>
-            <span>FPS</span>
-            <span>Modified</span>
-            <span />
-          </div>
-
-          <div ref={containerRef} className="relative min-h-[200px] space-y-3">
+          <div
+            ref={containerRef}
+            className="relative grid min-h-[200px] grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6"
+          >
             {filteredProjects.map((project) => (
               <ProjectCard
                 key={project.id}
