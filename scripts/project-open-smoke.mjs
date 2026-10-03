@@ -32,6 +32,11 @@ async function waitForPreview(url, child) {
 }
 
 async function main() {
+  const hardTimeout = setTimeout(() => {
+    console.error('Project open smoke exceeded 150 seconds')
+    process.exit(124)
+  }, 150_000)
+
   const port = 4179
   const baseUrl = `http://127.0.0.1:${port}`
   const preview = spawn(
@@ -54,7 +59,9 @@ async function main() {
 
   let browser
   try {
+    console.log('Smoke: waiting for production preview')
     await waitForPreview(baseUrl, preview)
+    console.log('Smoke: preview ready; launching Chrome')
 
     browser = await chromium.launch({
       channel: 'chrome',
@@ -86,13 +93,16 @@ async function main() {
       if (message.type() === 'error') consoleErrors.push(message.text())
     })
 
+    console.log('Smoke: opening New Project through OPFS fallback')
     await page.goto(`${baseUrl}/projects/new`, {
       waitUntil: 'domcontentloaded',
       timeout: 30_000,
     })
     await page.locator('#name').waitFor({ state: 'visible', timeout: 20_000 })
+    console.log('Smoke: New Project loaded')
     await page.locator('#name').fill('Project open smoke')
     await page.locator('button[type="submit"]').click()
+    console.log('Smoke: project created; waiting for editor route')
 
     const editor = page.locator('[role="application"][data-studio-v2="true"]')
     const loadingError = page.getByText('Something went wrong', { exact: true })
@@ -102,6 +112,7 @@ async function main() {
       loadingError.waitFor({ state: 'visible', timeout: 30_000 }).then(() => 'error'),
     ])
 
+    console.log(`Smoke: create -> editor result: ${result}`)
     if (result !== 'editor') {
       const details = await page.locator('body').innerText().catch(() => '')
       throw new Error(
@@ -117,12 +128,14 @@ async function main() {
 
     // Reopen through the real Projects screen instead of only testing the
     // create->editor transition.
+    console.log('Smoke: editor opened; returning to Projects')
     await page.goto(`${baseUrl}/projects`, {
       waitUntil: 'domcontentloaded',
       timeout: 30_000,
     })
     const card = page.locator('[data-project-card]').filter({ hasText: 'Project open smoke' }).first()
     await card.waitFor({ state: 'visible', timeout: 20_000 })
+    console.log('Smoke: project tile visible')
 
     const box = await card.boundingBox()
     if (!box) throw new Error('Project tile has no layout box')
@@ -134,12 +147,14 @@ async function main() {
     }
 
     await card.getByRole('button', { name: 'Open', exact: true }).click()
+    console.log('Smoke: clicked Open; waiting for reopened editor')
 
     const reopenResult = await Promise.race([
       editor.waitFor({ state: 'visible', timeout: 30_000 }).then(() => 'editor'),
       loadingError.waitFor({ state: 'visible', timeout: 30_000 }).then(() => 'error'),
     ])
 
+    console.log(`Smoke: reopen result: ${reopenResult}; page errors: ${pageErrors.length}`)
     if (reopenResult !== 'editor' || pageErrors.length > 0) {
       const details = await page.locator('body').innerText().catch(() => '')
       throw new Error(
@@ -156,6 +171,7 @@ async function main() {
     console.log(
       `Project UI smoke passed: create/open/reopen works and tile ratio is ${ratio.toFixed(2)}.`,
     )
+    clearTimeout(hardTimeout)
   } finally {
     if (browser) await browser.close().catch(() => {})
     if (preview.exitCode === null) {
