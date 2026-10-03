@@ -267,7 +267,6 @@ function ProjectsIndex() {
             <span className="text-[10px] font-semibold">BEAT VIDEO</span>
             <span className="text-[10px] font-semibold text-[#c7e85a]">MAKER</span>
           </Link>
-          <span className="ml-[51px] text-[11px] font-medium text-[#bfc4bc]">Projects</span>
           <div className="ml-auto flex h-full items-center gap-4">
             <div className="hidden md:block text-[#d7dbd3]">
               <WorkspaceIndicator />
