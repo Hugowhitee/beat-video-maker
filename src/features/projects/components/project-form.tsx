@@ -11,7 +11,7 @@ import {
   DEFAULT_PROJECT_VALUES,
   PROJECT_TEMPLATES,
 } from '../utils/validation'
-import { getProjectFpsOptions } from '../utils/project-fps'
+import { getProjectFpsPickerOptions } from '../utils/project-fps'
 import { ProjectTemplatePicker } from './project-template-picker'
 import { Clapperboard, Image as ImageIcon } from 'lucide-react'
 import { cn } from '@/shared/ui/cn'
@@ -89,7 +89,7 @@ function ProjectFormBase({
   const fps = watch('fps')
   const width = watch('width')
   const height = watch('height')
-  const fpsOptions = useMemo(() => getProjectFpsOptions(fps), [fps])
+  const fpsOptions = useMemo(() => getProjectFpsPickerOptions(fps), [fps])
 
   const handleSelectTemplate = (template: ProjectTemplate) => {
     setSelectedTemplateId(template.id)
@@ -293,13 +293,19 @@ function ProjectFormBase({
                 <div className="mb-3 text-[9px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
                   {t('projects.form.frameRate')}
                 </div>
-                <div className="studio-segmented flex h-8 max-w-full overflow-x-auto sm:max-w-[430px]">
+                <div
+                  className={cn(
+                    'studio-segmented grid h-9 w-full gap-px sm:max-w-[430px]',
+                    fpsOptions.length === 5 ? 'grid-cols-5' : 'grid-cols-4',
+                  )}
+                >
                   {fpsOptions.map((preset) => (
                     <button
                       key={preset.value}
                       type="button"
-                      className="studio-segment h-7 min-w-[76px] flex-1 px-2 text-[9px] font-medium"
+                      className="studio-segment h-8 min-w-0 px-1 text-[9px] font-medium"
                       aria-pressed={fps === preset.value}
+                      title={preset.label}
                       onClick={() =>
                         setValue('fps', preset.value, {
                           shouldDirty: true,
