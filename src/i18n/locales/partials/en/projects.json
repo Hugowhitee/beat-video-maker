@@ -112,7 +112,7 @@
       "selectedCount_other": "{{count}} selected",
       "deleteN_one": "Delete {{count}}",
       "deleteN_other": "Delete {{count}}",
-      "welcomeTitle": "Welcome to Beatvideo Maker",
+      "welcomeTitle": "Welcome to Beat Video Maker",
       "welcomeDescription": "Get started by creating your first video project. Choose your resolution, frame rate, and start editing!",
       "noResultsTitle": "No projects found",
       "noResultsDescription": "We couldn't find any projects matching your search criteria. Try adjusting your filters or search terms.",
@@ -557,7 +557,7 @@
     },
     "routeError": {
       "title": "Something went wrong",
-      "description": "Beatvideo Maker could not finish loading this page.",
+      "description": "Beat Video Maker could not finish loading this page.",
       "projectNotFoundTitle": "We couldn't find this project",
       "projectNotFoundDescription": "It may have been moved, deleted, or opened from an old link. Your other projects are still available in your workspace.",
       "backToProjects": "Back to projects",
