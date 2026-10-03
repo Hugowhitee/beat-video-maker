@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Download, X } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
-import { Button } from '@/components/ui/button'
 
 const INSTALL_DISMISSED_UNTIL_KEY = 'beat-video-maker-pwa-install-dismissed-until'
 const INSTALL_DISMISS_MS = 7 * 24 * 60 * 60 * 1000
@@ -93,35 +92,36 @@ export function PwaInstallPrompt() {
 
   return (
     <aside
+      data-studio-v2="true"
       aria-label={t('appShell.installPrompt.label')}
-      className="fixed bottom-4 left-4 z-50 w-[min(calc(100vw-2rem),360px)] rounded-lg border border-border bg-background/95 p-3 text-foreground shadow-lg backdrop-blur"
+      className="fixed bottom-4 left-4 z-50 w-[min(calc(100vw-2rem),340px)] rounded-[3px] border border-border bg-[#e8e9e5] p-3 text-foreground shadow-[0_8px_28px_rgba(23,25,23,0.16)]"
     >
-      <div className="flex items-start gap-3">
-        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-primary text-primary-foreground">
-          <Download className="h-4 w-4" />
-        </div>
+      <div className="flex items-start gap-2.5">
+        <Download className="mt-0.5 h-4 w-4 shrink-0 text-foreground" />
         <div className="min-w-0 flex-1">
-          <div className="text-sm font-medium leading-5">{t('appShell.installPrompt.title')}</div>
-          <div className="mt-0.5 text-xs leading-5 text-muted-foreground">
+          <div className="text-[11px] font-semibold leading-4">
+            {t('appShell.installPrompt.title')}
+          </div>
+          <div className="mt-1 text-[9px] leading-4 text-muted-foreground">
             {t('appShell.installPrompt.description')}
           </div>
-          <div className="mt-3 flex flex-wrap gap-2">
-            <Button size="sm" className="h-8" onClick={install}>
+          <div className="mt-3 flex gap-2">
+            <button type="button" className="studio-primary-action h-8 px-3" onClick={install}>
               <Download className="h-3.5 w-3.5" />
               {t('appShell.installPrompt.install')}
-            </Button>
-            <Button size="sm" variant="ghost" className="h-8" onClick={dismiss}>
+            </button>
+            <button type="button" className="studio-secondary-action h-8 px-3" onClick={dismiss}>
               {t('appShell.installPrompt.notNow')}
-            </Button>
+            </button>
           </div>
         </div>
         <button
           type="button"
           aria-label={t('appShell.installPrompt.dismiss')}
-          className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+          className="flex h-7 w-7 shrink-0 items-center justify-center text-muted-foreground hover:bg-[#d1d4ce] hover:text-foreground"
           onClick={dismiss}
         >
-          <X className="h-4 w-4" />
+          <X className="h-3.5 w-3.5" />
         </button>
       </div>
     </aside>
