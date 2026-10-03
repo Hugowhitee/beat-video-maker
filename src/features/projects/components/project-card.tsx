@@ -39,6 +39,7 @@ import {
 } from '../hooks/use-project-actions'
 import { useProjectThumbnail } from '../hooks/use-project-thumbnail'
 import { resolveBeatvideoProjectMode } from '@/config/beatvideo'
+import { getAspectRatio } from '../utils/validation'
 import {
   DEFAULT_PROJECT_FPS,
   DEFAULT_PROJECT_HEIGHT,
@@ -173,17 +174,7 @@ export function ProjectCard({
   const fps = project?.metadata?.fps || DEFAULT_PROJECT_FPS
 
   const resolution = `${width}×${height}`
-  const aspectRatio = width / height
-  const aspectRatioLabel =
-    Math.abs(aspectRatio - 16 / 9) < 0.01
-      ? '16:9'
-      : Math.abs(aspectRatio - 4 / 3) < 0.01
-        ? '4:3'
-        : Math.abs(aspectRatio - 1) < 0.01
-          ? '1:1'
-          : Math.abs(aspectRatio - 21 / 9) < 0.01
-            ? '21:9'
-            : `${width}:${height}`
+  const aspectRatioLabel = getAspectRatio(width, height)
 
   const projectMode = resolveBeatvideoProjectMode(project.beatvideoMode)
 
@@ -208,8 +199,8 @@ export function ProjectCard({
         <div className="absolute inset-y-0 left-0 z-10 w-[3px] bg-primary" aria-hidden="true" />
       ) : null}
 
-      <div className="grid grid-cols-1 gap-3 p-3 lg:grid-cols-[142px_minmax(0,1fr)_92px_180px_64px_140px_92px] lg:items-center lg:gap-4 lg:px-3 lg:py-2.5">
-        <div className="relative h-32 overflow-hidden rounded-[2px] bg-[#343834] lg:h-20">
+      <div className="grid min-h-[96px] grid-cols-[116px_minmax(0,1fr)] items-stretch gap-3 p-2 lg:min-h-0 lg:grid-cols-[142px_minmax(0,1fr)_92px_180px_64px_140px_92px] lg:items-center lg:gap-4 lg:px-3 lg:py-2.5">
+        <div className="relative h-20 overflow-hidden rounded-[2px] bg-[#343834]">
           {thumbnailUrl ? (
             <img
               key={project.updatedAt}
@@ -232,14 +223,21 @@ export function ProjectCard({
           </button>
         </div>
 
-        <div className="min-w-0">
+        <div className="min-w-0 pr-20 lg:pr-0">
           <div className="flex min-w-0 items-center gap-2">
-            <h3 className="truncate text-[14px] font-semibold text-foreground">{project.name}</h3>
+            <h3 className="truncate text-[13px] font-semibold text-foreground lg:text-[14px]">{project.name}</h3>
             {isSelected ? <Check className="h-3.5 w-3.5 shrink-0 text-foreground" /> : null}
           </div>
-          <p className="mt-1 truncate text-[10px] text-muted-foreground">
+          <p className="mt-1 truncate text-[9px] text-muted-foreground lg:text-[10px]">
             {project.description || 'Beat video project'}
           </p>
+          <div className="mt-3 flex items-center gap-1.5 text-[8px] text-muted-foreground lg:hidden">
+            <span>{projectMode === 'photo' ? 'Photo' : 'Video'}</span>
+            <span aria-hidden="true">·</span>
+            <span className="font-mono">{aspectRatioLabel}</span>
+            <span aria-hidden="true">·</span>
+            <span className="font-mono">{fps} fps</span>
+          </div>
         </div>
 
         <div className="hidden text-[11px] text-foreground lg:block">
@@ -251,14 +249,7 @@ export function ProjectCard({
           {formatRelativeTime(project.updatedAt)}
         </div>
 
-        <div className="flex items-center justify-between gap-2 lg:justify-end">
-          <div className="flex items-center gap-2 text-[10px] text-muted-foreground lg:hidden">
-            <span>{projectMode === 'photo' ? 'Photo' : 'Video'}</span>
-            <span>·</span>
-            <span className="font-mono">{aspectRatioLabel}</span>
-            <span>·</span>
-            <span className="font-mono">{fps} fps</span>
-          </div>
+        <div className="absolute bottom-2 right-2 flex items-center gap-1 lg:static lg:justify-end">
           <div className="flex items-center gap-1">
             <Button
               type="button"

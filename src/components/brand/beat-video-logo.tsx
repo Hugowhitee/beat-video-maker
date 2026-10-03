@@ -37,7 +37,7 @@ export function BeatVideoLogo({ variant = 'full', size = 'md', className }: Beat
     <div className={cn('flex items-center', config.gap, className)}>
       <BeatvideoMark className={config.icon} />
       <span className={cn(config.text, 'font-semibold tracking-tight text-foreground')}>
-        Beatvideo Maker
+        Beat Video Maker
       </span>
     </div>
   )

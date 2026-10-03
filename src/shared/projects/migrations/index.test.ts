@@ -41,6 +41,32 @@ function createBaseProject(timeline: ProjectTimeline): Project {
   }
 }
 
+describe('migrateProject legacy metadata recovery', () => {
+  it('restores safe project defaults when stored metadata is missing', () => {
+    const project = {
+      id: 'project-missing-metadata',
+      name: 'Legacy project',
+      description: '',
+      createdAt: 0,
+      updatedAt: 0,
+      duration: 0,
+      schemaVersion: CURRENT_SCHEMA_VERSION,
+      timeline: {
+        tracks: [],
+        items: [],
+      },
+    } as unknown as Project
+
+    const result = migrateProject(project)
+
+    expect(result.project.metadata).toMatchObject({
+      width: 1920,
+      height: 1080,
+      fps: 30,
+    })
+  })
+})
+
 describe('migrateProject transition normalization', () => {
   it('converts legacy overlap transitions back to adjacent cuts and restores linked audio alignment', () => {
     const project = createBaseProject({

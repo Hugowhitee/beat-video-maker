@@ -21,6 +21,8 @@ const ALLOWED_PROJECT_FPS_VALUES = [
   ...LEGACY_PROJECT_FPS_OPTIONS.map((option) => option.value),
 ] as const
 
+const PRIMARY_PROJECT_FPS_VALUES = [24, 25, 30, 60] as const
+
 const AUTO_MATCH_PROJECT_FPS_VALUES = [
   ...DEFAULT_PROJECT_FPS_OPTIONS.map((option) => option.value),
 ] as const
@@ -42,6 +44,27 @@ export function getProjectFpsOptions(currentFps?: number): ProjectFpsOption[] {
 
   const legacyOption = LEGACY_PROJECT_FPS_OPTIONS.find((option) => option.value === currentFps)
   return legacyOption ? [...options, legacyOption] : options
+}
+
+/**
+ * Keep the creation surface scanable: Film/PAL/Standard/Smooth are the four
+ * default choices. A project already using another supported rate (50/120/240)
+ * still exposes that exact value so edit/reopen never mutates legacy timing.
+ */
+export function getProjectFpsPickerOptions(currentFps?: number): ProjectFpsOption[] {
+  const options = DEFAULT_PROJECT_FPS_OPTIONS.filter((option) =>
+    PRIMARY_PROJECT_FPS_VALUES.includes(
+      option.value as (typeof PRIMARY_PROJECT_FPS_VALUES)[number],
+    ),
+  )
+
+  if (!currentFps || !isAllowedProjectFps(currentFps)) return options
+  if (options.some((option) => option.value === currentFps)) return options
+
+  const current = getProjectFpsOptions(currentFps).find(
+    (option) => option.value === currentFps,
+  )
+  return current ? [...options, current] : options
 }
 
 export function formatFpsValue(fps: number): string {

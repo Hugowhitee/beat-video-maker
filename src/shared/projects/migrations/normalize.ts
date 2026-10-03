@@ -18,6 +18,10 @@
 
 import type { Project, ProjectTimeline } from '@/types/project'
 import { DEFAULT_TRACK_HEIGHT, DEFAULT_FPS } from '@/shared/timeline/defaults'
+import {
+  DEFAULT_PROJECT_HEIGHT,
+  DEFAULT_PROJECT_WIDTH,
+} from '@/shared/projects/defaults'
 import { normalizeAudioEqSettings } from '@/shared/utils/audio-eq'
 import { resolveMasterFxSettings } from '@/shared/utils/mastering'
 import { applyOptionalClamps } from '@/shared/timeline/item-clamps'
@@ -323,14 +327,27 @@ function normalizeTimeline(
 /**
  * Normalize project metadata.
  */
-function normalizeMetadata(metadata: Project['metadata']): Project['metadata'] {
+function normalizeMetadata(
+  metadata: Project['metadata'] | undefined,
+): Project['metadata'] {
+  const width =
+    typeof metadata?.width === 'number' && Number.isFinite(metadata.width)
+      ? Math.max(1, metadata.width)
+      : DEFAULT_PROJECT_WIDTH
+  const height =
+    typeof metadata?.height === 'number' && Number.isFinite(metadata.height)
+      ? Math.max(1, metadata.height)
+      : DEFAULT_PROJECT_HEIGHT
+  const fps =
+    typeof metadata?.fps === 'number' && Number.isFinite(metadata.fps)
+      ? Math.max(1, Math.min(120, metadata.fps))
+      : DEFAULT_FPS
+
   return {
     ...metadata,
-    // Ensure dimensions are positive
-    width: Math.max(1, metadata.width),
-    height: Math.max(1, metadata.height),
-    // Ensure FPS is valid
-    fps: Math.max(1, Math.min(120, metadata.fps ?? DEFAULT_FPS)),
+    width,
+    height,
+    fps,
   }
 }
 

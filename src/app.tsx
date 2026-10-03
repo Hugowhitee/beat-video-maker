@@ -8,6 +8,30 @@ import { RouteErrorScreen } from '@/app/route-error'
 import { WorkspaceGate } from '@/features/workspace-gate/workspace-gate'
 import { routeTree } from './routeTree.gen'
 
+
+/**
+ * Several editor subsystems defer non-critical work with requestIdleCallback.
+ * Some mobile/webview engines still omit that API; opening a project must not
+ * crash just because an optimization primitive is unavailable.
+ */
+function installIdleCallbackFallback(): void {
+  if (typeof window === 'undefined') return
+  if (typeof window.requestIdleCallback === 'function') return
+
+  window.requestIdleCallback = (callback: IdleRequestCallback) =>
+    window.setTimeout(
+      () =>
+        callback({
+          didTimeout: false,
+          timeRemaining: () => 0,
+        }),
+      1,
+    )
+  window.cancelIdleCallback = (id: number) => window.clearTimeout(id)
+}
+
+installIdleCallbackFallback()
+
 // Route errors (thrown from beforeLoad/loader) never reach the React
 // ErrorBoundary below — TanStack catches them first. Without this, they render
 // its untranslated built-in fallback with the message hidden in production.

@@ -8,7 +8,6 @@ import {
   AudioLines,
   Gauge,
   Film,
-  ImagePlus,
   Layers,
   Type,
   Square,
@@ -23,7 +22,6 @@ import {
   Captions,
   Sticker,
   WandSparkles,
-  Maximize2,
   Plus,
 } from 'lucide-react'
 import { motion, useReducedMotion } from 'motion/react'
@@ -63,15 +61,9 @@ import {
   createClassicTrack,
   createOverlayLayerTrack,
   createTextTemplateItem,
-  BEATVIDEO_COVER_LAYOUT_PRESETS,
-  buildBeatvideoCoverLayoutItems,
   getDefaultGeneratedLayerDurationInFrames,
   resolvePhotoPublishingDurationInFrames,
   computeInitialTransform,
-} from '@/features/editor/deps/timeline-utils'
-import type {
-  BeatvideoCoverLayoutPresetId,
-  BeatvideoCoverTitleMotion,
 } from '@/features/editor/deps/timeline-utils'
 import {
   addItemsOnNewTracks,
@@ -116,7 +108,6 @@ const LazyTranscriptEditorPanel = lazy(() =>
 )
 import {
   TEXT_STYLE_PRESETS,
-  type TextStylePresetLayout,
   type TextStylePreset,
 } from '@/shared/typography/text-style-presets'
 import {
@@ -136,7 +127,7 @@ function isSidebarTabVisibleForWorkspace(
   if (workspace === 'color') return tab === 'effects'
   if (workspace === 'motion') return tab === 'media'
   if (workspace === 'edit') {
-    return tab !== 'beat' && tab !== 'master' && tab !== 'effects'
+    return tab !== 'beat' && tab !== 'master'
   }
   return tab !== 'beat' && tab !== 'master'
 }
@@ -344,17 +335,80 @@ function renderTextTemplatePreview(preset?: TextStylePreset) {
   )
 }
 
-const TEXT_TEMPLATE_GROUPS: ReadonlyArray<{
-  key: TextStylePresetLayout
-  labelKey: string
+const DEFAULT_TEXT_TEMPLATE_LABEL = 'Text'
+
+type ProducerTextPresetId =
+  | 'corner-mark'
+  | 'lower-third'
+  | 'center-stamp'
+  | 'beat-title'
+
+const PRODUCER_TEXT_PRESETS: ReadonlyArray<{
+  id: ProducerTextPresetId
+  label: string
+  description: string
+  stylePresetId: TextStylePreset['id']
+  text: string
 }> = [
-  { key: 'single', labelKey: 'editor.mediaSidebar.textGroupSingle' },
-  { key: 'two', labelKey: 'editor.mediaSidebar.textGroupTwoSpans' },
-  { key: 'three', labelKey: 'editor.mediaSidebar.textGroupThreeSpans' },
+  {
+    id: 'corner-mark',
+    label: 'Corner mark',
+    description: 'Small producer ID',
+    stylePresetId: 'badge',
+    text: 'PROD. NAME',
+  },
+  {
+    id: 'lower-third',
+    label: 'Lower third',
+    description: 'Name + subline',
+    stylePresetId: 'lower-third',
+    text: 'PROD. NAME',
+  },
+  {
+    id: 'center-stamp',
+    label: 'Center stamp',
+    description: 'Bold centered ID',
+    stylePresetId: 'poster',
+    text: 'PROD. NAME',
+  },
+  {
+    id: 'beat-title',
+    label: 'Beat title',
+    description: 'Title + producer',
+    stylePresetId: 'cinematic',
+    text: 'BEAT TITLE\nPROD. NAME',
+  },
 ]
 
-const DEFAULT_TEXT_TEMPLATE_LABEL = 'Text'
-const ADD_TEXT_TEMPLATE_LABEL = 'Add Text'
+const VISIBLE_TEXT_PRESET_IDS = new Set<TextStylePreset['id']>([
+  'clean-title',
+  'poster',
+  'lower-third',
+  'cinematic',
+  'badge',
+])
+
+function renderProducerTextPreview(preset: (typeof PRODUCER_TEXT_PRESETS)[number]) {
+  return (
+    <div className="relative h-12 w-14 shrink-0 overflow-hidden rounded-[2px] bg-[#343834]">
+      {preset.id === 'corner-mark' ? (
+        <span className="absolute bottom-2 right-1.5 h-1.5 w-5 rounded-[1px] bg-[#c7e85a]" />
+      ) : preset.id === 'lower-third' ? (
+        <>
+          <span className="absolute bottom-3 left-1.5 h-1 w-8 rounded-[1px] bg-[#f6f7f3]" />
+          <span className="absolute bottom-1.5 left-1.5 h-0.5 w-5 bg-[#bfc4bc]" />
+        </>
+      ) : preset.id === 'center-stamp' ? (
+        <span className="absolute left-2 top-[20px] h-2 w-10 rounded-[1px] bg-[#c7e85a]" />
+      ) : (
+        <>
+          <span className="absolute left-1.5 top-3 h-1.5 w-11 rounded-[1px] bg-[#f6f7f3]" />
+          <span className="absolute left-3 top-6 h-1 w-8 rounded-[1px] bg-[#c7e85a]" />
+        </>
+      )}
+    </div>
+  )
+}
 const PHOTO_QUICK_EFFECT_IDS = [
   'gpu-grain',
   'gpu-vignette',
@@ -430,13 +484,6 @@ export const MediaSidebar = memo(function MediaSidebar({
   const [aiTabActivated, setAiTabActivated] = useState(activeTab === 'ai')
   const [showAllPhotoEffects, setShowAllPhotoEffects] = useState(false)
   const [importingPhotoCover, setImportingPhotoCover] = useState(false)
-  const [coverLayoutPresetId, setCoverLayoutPresetId] =
-    useState<BeatvideoCoverLayoutPresetId>('hero-stack')
-  const [coverTitleMotion, setCoverTitleMotion] =
-    useState<BeatvideoCoverTitleMotion>('static')
-  const [coverTitleDraft, setCoverTitleDraft] = useState('BEAT TITLE')
-  const [coverSubtitleDraft, setCoverSubtitleDraft] = useState('ARTIST TYPE BEAT')
-  const [coverBrandingDraft, setCoverBrandingDraft] = useState('PROD. NAME')
   // The Lottie panel hits an external API on mount, so keep it unmounted until
   // the tab is first opened; it then stays mounted (state preserved).
   const [lottieTabActivated, setLottieTabActivated] = useState(activeTab === 'lottie')
@@ -567,170 +614,104 @@ export const MediaSidebar = memo(function MediaSidebar({
     [t],
   )
 
-  const handleAddCoverLayout = useCallback(() => {
-    const timeline = useTimelineStore.getState()
-    const selection = useSelectionStore.getState()
-    const currentProject = useProjectStore.getState().currentProject
-    const canvasWidth = currentProject?.metadata.width ?? DEFAULT_PROJECT_WIDTH
-    const canvasHeight = currentProject?.metadata.height ?? DEFAULT_PROJECT_HEIGHT
-    const publishDuration = resolvePhotoPublishingDurationInFrames(timeline.fps, {
-      beatvideoMode: currentProject?.beatvideoMode,
-      beatvideoMusic: currentProject?.beatvideoMusic,
-      projectMedia: useMediaLibraryStore.getState().mediaItems,
-      timelineItems: timeline.items,
-    })
-    const durationInFrames =
-      publishDuration > 0
-        ? publishDuration
-        : getDefaultGeneratedLayerDurationInFrames(timeline.fps)
-    const from = publishDuration > 0
-      ? 0
-      : Math.max(0, usePlaybackStore.getState().currentFrame)
+  const handleAddProducerText = useCallback(
+    (presetId: ProducerTextPresetId) => {
+      const preset = PRODUCER_TEXT_PRESETS.find((candidate) => candidate.id === presetId)
+      if (!preset) return
 
-    let workingTracks = timeline.tracks
-    let anchorTrackId = selection.activeTrackId
-    const trackIds: {
-      title?: string
-      subtitle?: string
-      branding?: string
-    } = {}
-
-    const roles = [
-      ['title', 'Cover title'],
-      ['subtitle', 'Cover subtitle'],
-      ['branding', 'Cover branding'],
-    ] as const
-
-    for (const [role, name] of roles) {
-      const created = createOverlayLayerTrack({
-        tracks: workingTracks,
-        activeTrackId: anchorTrackId,
+      const timeline = useTimelineStore.getState()
+      const selection = useSelectionStore.getState()
+      const currentProject = useProjectStore.getState().currentProject
+      const newTrack = createOverlayLayerTrack({
+        tracks: timeline.tracks,
+        activeTrackId: selection.activeTrackId,
       })
-      if (!created) {
-        toast.error('Could not create the cover text layers')
+
+      if (!newTrack) {
+        logger.warn('No available track for producer text item')
         return
       }
 
-      workingTracks = created.tracks.map((track) =>
-        track.id === created.trackId ? { ...track, name } : track,
-      )
-      trackIds[role] = created.trackId
-      anchorTrackId = created.trackId
-    }
+      const canvasWidth = currentProject?.metadata.width ?? DEFAULT_PROJECT_WIDTH
+      const canvasHeight = currentProject?.metadata.height ?? DEFAULT_PROJECT_HEIGHT
+      const publishDuration = resolvePhotoPublishingDurationInFrames(timeline.fps, {
+        beatvideoMode: currentProject?.beatvideoMode,
+        beatvideoMusic: currentProject?.beatvideoMusic,
+        projectMedia: useMediaLibraryStore.getState().mediaItems,
+        timelineItems: timeline.items,
+      })
+      const durationInFrames =
+        currentProject?.beatvideoMode === 'photo' && publishDuration > 0
+          ? publishDuration
+          : getDefaultGeneratedLayerDurationInFrames(timeline.fps)
+      const from =
+        currentProject?.beatvideoMode === 'photo' && publishDuration > 0
+          ? 0
+          : Math.max(0, usePlaybackStore.getState().currentFrame)
 
-    if (!trackIds.title || !trackIds.subtitle || !trackIds.branding) return
+      const baseItem = createTextTemplateItem({
+        placement: {
+          trackId: newTrack.trackId,
+          from,
+          durationInFrames,
+          canvasWidth,
+          canvasHeight,
+          fps: timeline.fps,
+        },
+        label: preset.label,
+        text: preset.text,
+        textStylePresetId: preset.stylePresetId,
+      })
 
-    const textItems = buildBeatvideoCoverLayoutItems({
-      presetId: coverLayoutPresetId,
-      content: {
-        title: coverTitleDraft,
-        subtitle: coverSubtitleDraft,
-        branding: coverBrandingDraft,
-      },
-      titleMotion: coverTitleMotion,
-      trackIds: {
-        title: trackIds.title,
-        subtitle: trackIds.subtitle,
-        branding: trackIds.branding,
-      },
-      from,
-      durationInFrames,
-      canvasWidth,
-      canvasHeight,
-      fps: timeline.fps,
-    })
+      const transform =
+        preset.id === 'corner-mark'
+          ? {
+              x: Math.round(canvasWidth * 0.31),
+              y: Math.round(-canvasHeight * 0.39),
+              width: Math.round(canvasWidth * 0.28),
+              height: Math.round(canvasHeight * 0.08),
+            }
+          : preset.id === 'lower-third'
+            ? {
+                x: Math.round(-canvasWidth * 0.22),
+                y: Math.round(canvasHeight * 0.35),
+                width: Math.round(canvasWidth * 0.46),
+                height: Math.round(canvasHeight * 0.11),
+              }
+            : preset.id === 'center-stamp'
+              ? {
+                  x: 0,
+                  y: 0,
+                  width: Math.round(canvasWidth * 0.54),
+                  height: Math.round(canvasHeight * 0.13),
+                }
+              : {
+                  x: 0,
+                  y: Math.round(-canvasHeight * 0.28),
+                  width: Math.round(canvasWidth * 0.82),
+                  height: Math.round(canvasHeight * 0.18),
+                }
 
-    addItemsOnNewTracks(textItems, workingTracks)
-    selection.setActiveTrack(trackIds.title)
-    selection.selectItems(textItems.map((item) => item.id))
-    toast.success('Cover layout added', {
-      description: 'Title, subtitle and branding are normal editable text layers.',
-    })
-  }, [
-    coverBrandingDraft,
-    coverLayoutPresetId,
-    coverSubtitleDraft,
-    coverTitleDraft,
-    coverTitleMotion,
-  ])
+      const textItem: TextItem = {
+        ...baseItem,
+        label: preset.label,
+        text: preset.text,
+        textSpans: undefined,
+        transform: {
+          ...baseItem.transform,
+          ...transform,
+        },
+      }
 
-  const handleAddPhotoText = useCallback((kind: 'display' | 'bold' | 'type-line') => {
-    const { tracks, fps, items, addItemOnNewTrack } = useTimelineStore.getState()
-    const { activeTrackId, selectItems, setActiveTrack } = useSelectionStore.getState()
-    const currentProject = useProjectStore.getState().currentProject
-    const newTrack = createOverlayLayerTrack({ tracks, activeTrackId })
-
-    if (!newTrack) {
-      logger.warn('No available track for Photo text item')
-      return
-    }
-
-    const publishDuration = resolvePhotoPublishingDurationInFrames(fps, {
-      beatvideoMode: currentProject?.beatvideoMode,
-      beatvideoMusic: currentProject?.beatvideoMusic,
-      projectMedia: useMediaLibraryStore.getState().mediaItems,
-      timelineItems: items,
-    })
-    const durationInFrames =
-      publishDuration > 0 ? publishDuration : getDefaultGeneratedLayerDurationInFrames(fps)
-    const canvasWidth = currentProject?.metadata.width ?? DEFAULT_PROJECT_WIDTH
-    const canvasHeight = currentProject?.metadata.height ?? DEFAULT_PROJECT_HEIGHT
-    const isTypeLine = kind === 'type-line'
-    const isDisplay = kind === 'display'
-    const text = isTypeLine ? 'TYPE BEAT' : 'BEAT TITLE'
-
-    const baseItem = createTextTemplateItem({
-      placement: {
-        trackId: newTrack.trackId,
-        from: 0,
-        durationInFrames,
-        canvasWidth,
-        canvasHeight,
-        fps,
-      },
-      label: isTypeLine ? 'Type beat' : isDisplay ? 'Display title' : 'Bold title',
-      text,
-    })
-
-    const textItem: TextItem = {
-      ...baseItem,
-      text,
-      fontFamily: isDisplay ? 'Anton' : 'Inter Tight',
-      fontWeight: isDisplay ? 'normal' : 'bold',
-      fontSize: Math.round(
-        Math.max(
-          isTypeLine ? 30 : 84,
-          Math.min(isTypeLine ? 64 : 180, canvasHeight * (isTypeLine ? 0.04 : isDisplay ? 0.14 : 0.115)),
-        ),
-      ),
-      color: '#ffffff',
-      backgroundColor: undefined,
-      backgroundRadius: 0,
-      textAlign: 'center',
-      verticalAlign: 'middle',
-      lineHeight: isTypeLine ? 1 : 0.94,
-      letterSpacing: isTypeLine ? 0.5 : isDisplay ? -1 : -0.5,
-      textPadding: 0,
-      textShadow: {
-        offsetX: 0,
-        offsetY: Math.max(2, Math.round(canvasHeight * 0.004)),
-        blur: Math.max(10, Math.round(canvasHeight * 0.014)),
-        color: '#000000',
-      },
-      stroke: undefined,
-      transform: {
-        ...baseItem.transform,
-        x: 0,
-        y: Math.round(canvasHeight * (isTypeLine ? 0.23 : 0.09)),
-        width: Math.round(canvasWidth * (isTypeLine ? 0.76 : 0.9)),
-        height: Math.round(canvasHeight * (isTypeLine ? 0.1 : 0.22)),
-      },
-    }
-
-    addItemOnNewTrack(textItem, newTrack.tracks)
-    setActiveTrack(newTrack.trackId)
-    selectItems([textItem.id])
-  }, [])
+      timeline.addItemOnNewTrack(textItem, newTrack.tracks)
+      selection.setActiveTrack(newTrack.trackId)
+      selection.selectItems([textItem.id])
+      toast.success(`${preset.label} added`, {
+        description: 'Edit it like any other text layer in Inspector.',
+      })
+    },
+    [],
+  )
 
   const handleImportPhotoCover = useCallback(async () => {
     if (importingPhotoCover) return
@@ -1112,26 +1093,13 @@ export const MediaSidebar = memo(function MediaSidebar({
   }, [gpuCategories])
   // Which effect/preset tile is hovered — drives its live sweep animation.
   const [hoveredEffectKey, setHoveredEffectKey] = useState<string | null>(null)
-  const textTemplatesByLayout = useMemo(() => {
-    const grouped = {
-      single: [] as TextStylePreset[],
-      two: [] as TextStylePreset[],
-      three: [] as TextStylePreset[],
-    }
 
-    for (const preset of TEXT_STYLE_PRESETS) {
-      grouped[preset.layout].push(preset)
-    }
-
-    return grouped
-  }, [])
 
   // Category items for the vertical nav
   const categories = [
     { id: 'media' as const, icon: Film, label: t('editor.mediaSidebar.media') },
     { id: 'beat' as const, icon: AudioLines, label: 'Beat' },
     { id: 'master' as const, icon: Gauge, label: 'Master' },
-    { id: 'overlay' as const, icon: ImagePlus, label: 'Overlay' },
     { id: 'text' as const, icon: Type, label: t('editor.mediaSidebar.text') },
     { id: 'shapes' as const, icon: Pentagon, label: 'Graphics' },
     { id: 'effects' as const, icon: Layers, label: t('editor.mediaSidebar.effects') },
@@ -1367,11 +1335,7 @@ export const MediaSidebar = memo(function MediaSidebar({
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end" className="min-w-40">
                       <DropdownMenuItem
-                        onSelect={() =>
-                          beatvideoMode === 'photo'
-                            ? handleAddPhotoText('bold')
-                            : handleAddText()
-                        }
+                        onSelect={() => handleAddText()}
                       >
                         <Type className="mr-2 h-3.5 w-3.5" />
                         Text layer
@@ -1485,262 +1449,89 @@ export const MediaSidebar = memo(function MediaSidebar({
               ) : null}
             </div>
 
-            {/* Beatvideo Photo overlay hub — composed from canonical FreeCut text layers. */}
-            <div
-              className={`min-h-0 flex-1 overflow-y-auto p-3 ${activeTab === 'overlay' ? 'block' : 'hidden'}`}
-            >
-              <section className="space-y-2 border-b border-border pb-3">
-                <div className="text-xs font-medium text-foreground">Cover</div>
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="outline"
-                  className="w-full justify-start"
-                  disabled={importingPhotoCover}
-                  onClick={() => void handleImportPhotoCover()}
-                >
-                  <ImagePlus className="h-3.5 w-3.5" />
-                  {importingPhotoCover ? 'Importing cover…' : 'Import & place cover'}
-                </Button>
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="outline"
-                  className="w-full justify-start"
-                  onClick={handleFitPhotoCoverToBeat}
-                >
-                  <Maximize2 className="h-3.5 w-3.5" />
-                  Fit cover to beat
-                </Button>
-              </section>
-
-              <section className="space-y-2 pt-3">
-                <div className="text-xs font-medium text-foreground">Text</div>
-                <div className="grid grid-cols-3 gap-1.5">
-                  <button
-                    type="button"
-                    onClick={() => handleAddPhotoText('display')}
-                    className="flex flex-col items-center gap-1 rounded-md border border-border bg-secondary/30 p-1.5 transition-[transform,background-color,border-color,color] duration-150 hover:border-primary/50 hover:bg-secondary/50 active:scale-[0.98] group"
-                  >
-                    <div className={`${TEXT_TEMPLATE_PREVIEW_SHELL} flex items-center justify-center px-1.5`}>
-                      <span
-                        className="text-[12px] leading-none text-white"
-                        style={{ fontFamily: 'Anton, sans-serif' }}
-                      >
-                        TITLE
-                      </span>
-                    </div>
-                    <span className="text-[9px] text-muted-foreground group-hover:text-foreground">
-                      Display
-                    </span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleAddPhotoText('bold')}
-                    className="flex flex-col items-center gap-1 rounded-md border border-border bg-secondary/30 p-1.5 transition-[transform,background-color,border-color,color] duration-150 hover:border-primary/50 hover:bg-secondary/50 active:scale-[0.98] group"
-                  >
-                    <div className={`${TEXT_TEMPLATE_PREVIEW_SHELL} flex items-center justify-center px-1.5`}>
-                      <span
-                        className="text-[10px] font-bold leading-none text-white"
-                        style={{ fontFamily: 'Inter Tight, sans-serif' }}
-                      >
-                        TITLE
-                      </span>
-                    </div>
-                    <span className="text-[9px] text-muted-foreground group-hover:text-foreground">
-                      Bold
-                    </span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleAddPhotoText('type-line')}
-                    className="flex flex-col items-center gap-1 rounded-md border border-border bg-secondary/30 p-1.5 transition-[transform,background-color,border-color,color] duration-150 hover:border-primary/50 hover:bg-secondary/50 active:scale-[0.98] group"
-                  >
-                    <div className={`${TEXT_TEMPLATE_PREVIEW_SHELL} flex items-center justify-center px-1.5`}>
-                      <span
-                        className="text-[7px] font-bold leading-none text-white"
-                        style={{ fontFamily: 'Inter Tight, sans-serif' }}
-                      >
-                        TYPE BEAT
-                      </span>
-                    </div>
-                    <span className="text-[9px] text-muted-foreground group-hover:text-foreground">
-                      Type line
-                    </span>
-                  </button>
-                </div>
-              </section>
-            </div>
-
             {/* Text Tab */}
             <div
               className={`min-h-0 flex-1 overflow-y-auto p-3 ${activeTab === 'text' ? 'block' : 'hidden'}`}
             >
               <div className="space-y-4">
-                <section className="space-y-2.5 rounded-md border border-border bg-secondary/15 p-2.5">
-                  <div className="flex items-start justify-between gap-2">
-                    <div>
-                      <div className="text-[11px] font-semibold text-foreground">Cover layout</div>
-                      <p className="mt-0.5 text-[9px] leading-relaxed text-muted-foreground">
-                        Build title, type line and branding as three normal editable layers.
-                      </p>
-                    </div>
-                    <span className="shrink-0 rounded border border-border px-1.5 py-0.5 text-[8px] text-muted-foreground">
-                      3 layers
-                    </span>
+                <section>
+                  <div className="mb-2 text-[9px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+                    Producer tags
                   </div>
-
-                  <div className="grid gap-1.5">
-                    <label className="space-y-1 text-[9px] text-muted-foreground">
-                      <span>Title</span>
-                      <input
-                        value={coverTitleDraft}
-                        onChange={(event) => setCoverTitleDraft(event.target.value)}
-                        className="h-8 w-full rounded-md border border-input bg-background/60 px-2 text-xs text-foreground"
-                        placeholder="BEAT TITLE"
-                      />
-                    </label>
-                    <label className="space-y-1 text-[9px] text-muted-foreground">
-                      <span>Subtitle</span>
-                      <input
-                        value={coverSubtitleDraft}
-                        onChange={(event) => setCoverSubtitleDraft(event.target.value)}
-                        className="h-8 w-full rounded-md border border-input bg-background/60 px-2 text-xs text-foreground"
-                        placeholder="ARTIST TYPE BEAT"
-                      />
-                    </label>
-                    <label className="space-y-1 text-[9px] text-muted-foreground">
-                      <span>Branding</span>
-                      <input
-                        value={coverBrandingDraft}
-                        onChange={(event) => setCoverBrandingDraft(event.target.value)}
-                        className="h-8 w-full rounded-md border border-input bg-background/60 px-2 text-xs text-foreground"
-                        placeholder="PROD. NAME"
-                      />
-                    </label>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-1.5">
-                    {BEATVIDEO_COVER_LAYOUT_PRESETS.map((preset) => (
+                  <div className="grid grid-cols-2 gap-2">
+                    {PRODUCER_TEXT_PRESETS.map((preset) => (
                       <button
                         key={preset.id}
                         type="button"
-                        aria-pressed={coverLayoutPresetId === preset.id}
-                        onClick={() => setCoverLayoutPresetId(preset.id)}
-                        className={cn(
-                          'rounded-md border p-2 text-left transition-colors',
-                          coverLayoutPresetId === preset.id
-                            ? 'border-primary bg-primary/10 text-foreground'
-                            : 'border-border bg-background/35 text-muted-foreground hover:text-foreground',
-                        )}
+                        onClick={() => handleAddProducerText(preset.id)}
+                        className="flex min-h-[72px] items-center gap-2 rounded-[3px] bg-[#d1d4ce] p-2.5 text-left transition-colors hover:bg-[#c7cac4]"
                       >
-                        <div className="text-[10px] font-semibold">{preset.label}</div>
-                        <div className="mt-1 text-[8px] leading-tight opacity-75">
-                          {preset.description}
-                        </div>
+                        {renderProducerTextPreview(preset)}
+                        <span className="min-w-0">
+                          <span className="block truncate text-[9px] font-semibold text-foreground">
+                            {preset.label}
+                          </span>
+                          <span className="mt-1 block text-[8px] leading-3 text-muted-foreground">
+                            {preset.description}
+                          </span>
+                        </span>
                       </button>
                     ))}
                   </div>
-
-                  <label className="grid grid-cols-[72px_minmax(0,1fr)] items-center gap-2 text-[9px] text-muted-foreground">
-                    <span>Title motion</span>
-                    <select
-                      value={coverTitleMotion}
-                      onChange={(event) =>
-                        setCoverTitleMotion(event.target.value as BeatvideoCoverTitleMotion)
-                      }
-                      className="h-8 rounded-md border border-input bg-background/60 px-2 text-xs text-foreground"
-                    >
-                      <option value="static">Static</option>
-                      <option value="pulse">Subtle pulse</option>
-                    </select>
-                  </label>
-
-                  <Button
-                    type="button"
-                    size="sm"
-                    className="w-full justify-center"
-                    onClick={handleAddCoverLayout}
-                  >
-                    <Type className="h-3.5 w-3.5" />
-                    Add cover layout
-                  </Button>
-
-                  <p className="text-[8px] leading-relaxed text-muted-foreground">
-                    Title/subtitle use Staatliches. Branding starts with a reliable script fallback
-                    and can be changed with the normal font picker.
-                  </p>
                 </section>
 
-                <div className="space-y-3">
-                  <div className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">
-                    Single text
+                <section className="border-t border-border pt-4">
+                  <div className="mb-2 text-[9px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+                    Titles
                   </div>
-                  {TEXT_TEMPLATE_GROUPS.map((group) => {
-                    const presets = textTemplatesByLayout[group.key]
-                    const showAddText = group.key === 'single'
-
-                    if (!showAddText && presets.length === 0) {
-                      return null
-                    }
-
-                    return (
-                      <div key={group.key} className="space-y-1.5">
-                        <div className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">
-                          {t(group.labelKey)}
-                        </div>
-                        <div className="grid grid-cols-3 gap-1.5">
-                          {showAddText ? (
-                            <button
-                              draggable={true}
-                              onDragStart={handleTemplateDragStart({
-                                itemType: 'text',
-                                label: DEFAULT_TEXT_TEMPLATE_LABEL,
-                              })}
-                              onDragEnd={handleTemplateDragEnd}
-                              onClick={() => {
-                                if (shouldSuppressGeneratedItemClick()) return
-                                handleAddText()
-                              }}
-                              className="flex flex-col items-center gap-1 p-1.5 rounded-md border border-border bg-secondary/30 hover:bg-secondary/50 hover:border-primary/50 transition-[transform,background-color,border-color,color] duration-150 active:scale-[0.98] group"
-                            >
-                              {renderTextTemplatePreview()}
-                              <span className="text-[9px] text-muted-foreground group-hover:text-foreground text-center leading-tight w-full">
-                                {ADD_TEXT_TEMPLATE_LABEL}
-                              </span>
-                            </button>
-                          ) : null}
-                          {presets.map((preset) => (
-                            <button
-                              key={preset.id}
-                              draggable={true}
-                              onDragStart={handleTemplateDragStart({
-                                itemType: 'text',
-                                label: preset.label,
-                                textStylePresetId: preset.id,
-                              })}
-                              onDragEnd={handleTemplateDragEnd}
-                              onClick={() => {
-                                if (shouldSuppressGeneratedItemClick()) return
-                                handleAddText(preset.id)
-                              }}
-                              className={cn(
-                                'flex flex-col items-center gap-1 p-1.5 rounded-md border border-border',
-                                'bg-secondary/30 hover:bg-secondary/50 hover:border-primary/50',
-                                'transition-[transform,background-color,border-color,color] duration-150 active:scale-[0.98] group',
-                              )}
-                            >
-                              {renderTextTemplatePreview(preset)}
-                              <span className="text-[9px] text-muted-foreground group-hover:text-foreground text-center leading-tight w-full">
-                                {preset.label}
-                              </span>
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                    )
-                  })}
-                </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      draggable={true}
+                      onDragStart={handleTemplateDragStart({
+                        itemType: 'text',
+                        label: DEFAULT_TEXT_TEMPLATE_LABEL,
+                      })}
+                      onDragEnd={handleTemplateDragEnd}
+                      onClick={() => {
+                        if (shouldSuppressGeneratedItemClick()) return
+                        handleAddText()
+                      }}
+                      className="rounded-[3px] bg-[#d9dbd6] p-2 text-left transition-colors hover:bg-[#d1d4ce]"
+                    >
+                      {renderTextTemplatePreview()}
+                      <span className="mt-1.5 block text-[9px] font-semibold text-foreground">
+                        Custom text
+                      </span>
+                    </button>
+                    {TEXT_STYLE_PRESETS.filter((preset) =>
+                      VISIBLE_TEXT_PRESET_IDS.has(preset.id),
+                    ).map((preset) => (
+                      <button
+                        key={preset.id}
+                        draggable={true}
+                        onDragStart={handleTemplateDragStart({
+                          itemType: 'text',
+                          label: preset.label,
+                          textStylePresetId: preset.id,
+                        })}
+                        onDragEnd={handleTemplateDragEnd}
+                        onClick={() => {
+                          if (shouldSuppressGeneratedItemClick()) return
+                          handleAddText(preset.id)
+                        }}
+                        className="rounded-[3px] bg-[#d9dbd6] p-2 text-left transition-colors hover:bg-[#d1d4ce]"
+                      >
+                        {renderTextTemplatePreview(preset)}
+                        <span className="mt-1.5 block truncate text-[9px] font-semibold text-foreground">
+                          {preset.label}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                  <p className="mt-3 text-[8px] leading-3 text-muted-foreground">
+                    Click to add. Drag to place. Edit content, type, motion and effects in Inspector.
+                  </p>
+                </section>
               </div>
             </div>
 

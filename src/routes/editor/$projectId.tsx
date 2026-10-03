@@ -1,6 +1,11 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { ProjectNotFoundError } from '@/app/route-error-cause'
 import { resolveBeatvideoProjectMode } from '@/config/beatvideo'
+import {
+  DEFAULT_PROJECT_FPS,
+  DEFAULT_PROJECT_HEIGHT,
+  DEFAULT_PROJECT_WIDTH,
+} from '@/shared/projects/defaults'
 
 export const Route = createFileRoute('/editor/$projectId')({
   // Editor loader data is tiny and migration state must be fresh on reopen.
@@ -20,17 +25,21 @@ export const Route = createFileRoute('/editor/$projectId')({
     }
 
     const storedSchemaVersion = project.schemaVersion ?? 1
+    // The projects list deliberately tolerates legacy/malformed metadata so a
+    // recoverable project stays visible. The editor route must be at least as
+    // defensive; migration/normalization runs during timeline load.
+    const metadata = project.metadata as typeof project.metadata | undefined
 
-    // Only pass metadata needed for Editor initialization (not timeline data)
+    // Only pass metadata needed for Editor initialization (not timeline data).
     return {
       project: {
         id: project.id,
         name: project.name,
         description: project.description,
-        width: project.metadata.width,
-        height: project.metadata.height,
-        fps: project.metadata.fps,
-        backgroundColor: project.metadata.backgroundColor,
+        width: metadata?.width ?? DEFAULT_PROJECT_WIDTH,
+        height: metadata?.height ?? DEFAULT_PROJECT_HEIGHT,
+        fps: metadata?.fps ?? DEFAULT_PROJECT_FPS,
+        backgroundColor: metadata?.backgroundColor,
         beatvideoMode: resolveBeatvideoProjectMode(project.beatvideoMode),
         beatvideoMusic: project.beatvideoMusic,
       },

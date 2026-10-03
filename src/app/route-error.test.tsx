@@ -28,11 +28,13 @@ describe('RouteErrorScreen', () => {
     render(<RouteErrorScreen error={new ProjectNotFoundError('project-123')} reset={vi.fn()} />)
 
     expect(screen.getByRole('heading', { name: "We couldn't find this project" })).toBeTruthy()
-    expect(screen.queryByText('Project not found: project-123')).toBeNull()
+    expect(screen.getByText('Project not found: project-123')).not.toBeVisible()
     expect(screen.getByRole('link', { name: 'Back to projects' }).getAttribute('href')).toBe(
       '/projects',
     )
 
+    fireEvent.click(screen.getByText('Error details'))
+    expect(screen.getByText('Project not found: project-123')).toBeVisible()
     fireEvent.click(screen.getByRole('button', { name: 'Copy error details' }))
 
     await waitFor(() => expect(writeText).toHaveBeenCalledOnce())

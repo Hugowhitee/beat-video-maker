@@ -11,7 +11,7 @@ import {
   DEFAULT_PROJECT_VALUES,
   PROJECT_TEMPLATES,
 } from '../utils/validation'
-import { getProjectFpsOptions } from '../utils/project-fps'
+import { getProjectFpsPickerOptions } from '../utils/project-fps'
 import { ProjectTemplatePicker } from './project-template-picker'
 import { Clapperboard, Image as ImageIcon } from 'lucide-react'
 import { cn } from '@/shared/ui/cn'
@@ -89,7 +89,7 @@ function ProjectFormBase({
   const fps = watch('fps')
   const width = watch('width')
   const height = watch('height')
-  const fpsOptions = useMemo(() => getProjectFpsOptions(fps), [fps])
+  const fpsOptions = useMemo(() => getProjectFpsPickerOptions(fps), [fps])
 
   const handleSelectTemplate = (template: ProjectTemplate) => {
     setSelectedTemplateId(template.id)
@@ -129,7 +129,7 @@ function ProjectFormBase({
             <div className="mb-3 text-[9px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
               Project type
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            <div className="grid grid-cols-2 gap-2">
               {([
                 {
                   id: 'photo' as const,
@@ -157,25 +157,16 @@ function ProjectFormBase({
                         shouldValidate: true,
                       })
                     }
+                    title={modeOption.description}
                     className={cn(
-                      'flex min-h-16 items-start gap-3 rounded-[3px] border px-4 py-3 text-left transition-colors',
+                      'flex h-11 items-center gap-2.5 rounded-[3px] border px-3 text-left transition-colors',
                       selected
                         ? 'border-[#242724] bg-[#242724] text-[#f6f7f3]'
                         : 'border-transparent bg-[#d1d4ce] text-foreground hover:border-border hover:bg-[#c7cac4]',
                     )}
                   >
-                    <Icon className="mt-0.5 h-5 w-5 shrink-0" />
-                    <span>
-                      <strong className="block text-sm font-medium">{modeOption.label}</strong>
-                      <span
-                        className={cn(
-                          'mt-1 block text-[10px] leading-relaxed',
-                          selected ? 'text-[#c7cac4]' : 'text-muted-foreground',
-                        )}
-                      >
-                        {modeOption.description}
-                      </span>
-                    </span>
+                    <Icon className="h-4 w-4 shrink-0" />
+                    <strong className="truncate text-[11px] font-semibold">{modeOption.label}</strong>
                   </button>
                 )
               })}
@@ -293,13 +284,19 @@ function ProjectFormBase({
                 <div className="mb-3 text-[9px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
                   {t('projects.form.frameRate')}
                 </div>
-                <div className="studio-segmented flex h-8 max-w-full overflow-x-auto sm:max-w-[430px]">
+                <div
+                  className={cn(
+                    'studio-segmented grid h-9 w-full gap-px sm:max-w-[430px]',
+                    fpsOptions.length === 5 ? 'grid-cols-5' : 'grid-cols-4',
+                  )}
+                >
                   {fpsOptions.map((preset) => (
                     <button
                       key={preset.value}
                       type="button"
-                      className="studio-segment h-7 min-w-[76px] flex-1 px-2 text-[9px] font-medium"
+                      className="studio-segment h-8 min-w-0 px-1 text-[9px] font-medium"
                       aria-pressed={fps === preset.value}
+                      title={preset.label}
                       onClick={() =>
                         setValue('fps', preset.value, {
                           shouldDirty: true,

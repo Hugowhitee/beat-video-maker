@@ -63,7 +63,6 @@ function NewProject() {
           <span className="text-[10px] font-semibold">BEAT VIDEO</span>
           <span className="text-[10px] font-semibold text-[#c7e85a]">MAKER</span>
         </Link>
-        <span className="ml-[51px] text-[11px] font-medium text-[#bfc4bc]">New project</span>
       </div>
 
       <div className="px-4 py-8 sm:px-8 sm:py-10">
