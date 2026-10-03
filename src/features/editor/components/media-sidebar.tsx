@@ -1101,7 +1101,6 @@ export const MediaSidebar = memo(function MediaSidebar({
     { id: 'media' as const, icon: Film, label: t('editor.mediaSidebar.media') },
     { id: 'beat' as const, icon: AudioLines, label: 'Beat' },
     { id: 'master' as const, icon: Gauge, label: 'Master' },
-    { id: 'overlay' as const, icon: ImagePlus, label: 'Overlay' },
     { id: 'text' as const, icon: Type, label: t('editor.mediaSidebar.text') },
     { id: 'shapes' as const, icon: Pentagon, label: 'Graphics' },
     { id: 'effects' as const, icon: Layers, label: t('editor.mediaSidebar.effects') },
