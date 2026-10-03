@@ -129,7 +129,7 @@ function ProjectFormBase({
             <div className="mb-3 text-[9px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
               Project type
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            <div className="grid grid-cols-2 gap-2">
               {([
                 {
                   id: 'photo' as const,
@@ -157,25 +157,16 @@ function ProjectFormBase({
                         shouldValidate: true,
                       })
                     }
+                    title={modeOption.description}
                     className={cn(
-                      'flex min-h-16 items-start gap-3 rounded-[3px] border px-4 py-3 text-left transition-colors',
+                      'flex h-11 items-center gap-2.5 rounded-[3px] border px-3 text-left transition-colors',
                       selected
                         ? 'border-[#242724] bg-[#242724] text-[#f6f7f3]'
                         : 'border-transparent bg-[#d1d4ce] text-foreground hover:border-border hover:bg-[#c7cac4]',
                     )}
                   >
-                    <Icon className="mt-0.5 h-5 w-5 shrink-0" />
-                    <span>
-                      <strong className="block text-sm font-medium">{modeOption.label}</strong>
-                      <span
-                        className={cn(
-                          'mt-1 block text-[10px] leading-relaxed',
-                          selected ? 'text-[#c7cac4]' : 'text-muted-foreground',
-                        )}
-                      >
-                        {modeOption.description}
-                      </span>
-                    </span>
+                    <Icon className="h-4 w-4 shrink-0" />
+                    <strong className="truncate text-[11px] font-semibold">{modeOption.label}</strong>
                   </button>
                 )
               })}
