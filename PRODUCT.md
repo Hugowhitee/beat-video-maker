@@ -69,6 +69,7 @@ The canonical rule is:
 
 - The canonical timeline owns the time axis, playhead, waveform and click/scrub behavior;
 - Beatvideo analysis is stored in **source-media time** and is mapped through the actual timeline clip, including move, trim, speed and reverse;
+- completed rhythm analysis and explicit grid corrections are persisted against the Beat source revision; reopening Beat or reopening the project reuses that state rather than automatically analyzing again. Source/relevant-analysis-input changes invalidate the affected analysis; explicit Reanalyze remains available;
 - never draw raw analysis seconds as absolute timeline seconds;
 - Beat This beat/downbeat positions are timing **evidence**, not automatically the final grid. For stable programmed music, fit one global tempo + phase/anchor across the track and accept it only when residual error and local tempo drift stay within confidence bounds;
 - coherent source-audio onset evidence may refine the fitted phase so a detector that consistently fires slightly after a kick/transient does not leave the visible grid late. In stable programmed music, coherent low-end/kick evidence may also repair a half-beat phase error when it clearly out-scores the detector baseline. If phase is correct near the start but the grid drifts over time, recurring low-end onsets are a second tempo measurement: robustly fit their slope across multiple song regions and only refine the global BPM when those regions agree. Sparse bass fills, isolated 808 attacks or one local phrase must never retune the whole song;
@@ -120,7 +121,7 @@ The default Master surface is a small ordered insert rack rather than a generic 
 3. **Saturator** — drive/mix/output with a visible transfer curve and bounded oversampling choices.
 4. **Peak limiter** — final peak control with threshold/ceiling/release and visible gain reduction.
 
-A separate **pre-FX Trim** sits above the rack for level staging. **Auto level** analyzes the beat, moves that same visible Trim control toward the target program range and reports measured → projected level; it must back off when peak headroom would require excessive limiting. The project output/master-bus fader is owned only by the real Mixer and is shown read-only from Master where useful. Do not duplicate it as a second volume slider in the mastering panel.
+A separate **pre-FX Trim** sits above the rack for level staging. **Auto level** analyzes the beat, moves that same visible Trim control toward the target program range and reports measured → projected level; it must never add gain when the measured program level is already at or above the target range, and it must back off whenever peak headroom would require excessive limiting. The project output/master-bus fader is owned only by the real Mixer and is shown read-only from Master where useful. Do not duplicate it as a second volume slider in the mastering panel.
 
 Each processor is selectable, bypassable and visibly editable. The mental model may borrow the useful part of a DAW insert rack—ordered slots and one focused plugin editor—without importing a full channel rack, patch graph or arbitrary plugin-host complexity into the common workflow.
 
