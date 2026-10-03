@@ -1,7 +1,12 @@
 // @vitest-environment node
 
 import { describe, expect, it } from 'vite-plus/test'
-import { formatFpsValue, getProjectFpsOptions, resolveAutoMatchProjectFps } from './project-fps'
+import {
+  formatFpsValue,
+  getProjectFpsOptions,
+  getProjectFpsPickerOptions,
+  resolveAutoMatchProjectFps,
+} from './project-fps'
 
 describe('project-fps helpers', () => {
   it('keeps legacy fps visible when editing an older project', () => {
@@ -9,6 +14,29 @@ describe('project-fps helpers', () => {
 
     expect(options.map((option) => option.value)).toEqual([24, 25, 30, 50, 60, 120])
     expect(options.at(-1)?.label).toContain('Legacy')
+  })
+
+  it('keeps the create picker to four scanable choices without dropping an existing rate', () => {
+    expect(getProjectFpsPickerOptions(30).map((option) => option.value)).toEqual([
+      24,
+      25,
+      30,
+      60,
+    ])
+    expect(getProjectFpsPickerOptions(50).map((option) => option.value)).toEqual([
+      24,
+      25,
+      30,
+      60,
+      50,
+    ])
+    expect(getProjectFpsPickerOptions(120).map((option) => option.value)).toEqual([
+      24,
+      25,
+      30,
+      60,
+      120,
+    ])
   })
 
   it('maps common source rates to the closest supported project fps', () => {
