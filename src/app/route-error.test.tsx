@@ -33,6 +33,7 @@ describe('RouteErrorScreen', () => {
       '/projects',
     )
 
+    fireEvent.click(screen.getByText('Error details'))
     fireEvent.click(screen.getByRole('button', { name: 'Copy error details' }))
 
     await waitFor(() => expect(writeText).toHaveBeenCalledOnce())
