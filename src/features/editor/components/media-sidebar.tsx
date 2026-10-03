@@ -108,7 +108,6 @@ const LazyTranscriptEditorPanel = lazy(() =>
 )
 import {
   TEXT_STYLE_PRESETS,
-  type TextStylePresetLayout,
   type TextStylePreset,
 } from '@/shared/typography/text-style-presets'
 import {
@@ -335,15 +334,6 @@ function renderTextTemplatePreview(preset?: TextStylePreset) {
     </div>
   )
 }
-
-const TEXT_TEMPLATE_GROUPS: ReadonlyArray<{
-  key: TextStylePresetLayout
-  labelKey: string
-}> = [
-  { key: 'single', labelKey: 'editor.mediaSidebar.textGroupSingle' },
-  { key: 'two', labelKey: 'editor.mediaSidebar.textGroupTwoSpans' },
-  { key: 'three', labelKey: 'editor.mediaSidebar.textGroupThreeSpans' },
-]
 
 const DEFAULT_TEXT_TEMPLATE_LABEL = 'Text'
 const ADD_TEXT_TEMPLATE_LABEL = 'Add Text'
@@ -1104,19 +1094,7 @@ export const MediaSidebar = memo(function MediaSidebar({
   }, [gpuCategories])
   // Which effect/preset tile is hovered — drives its live sweep animation.
   const [hoveredEffectKey, setHoveredEffectKey] = useState<string | null>(null)
-  const textTemplatesByLayout = useMemo(() => {
-    const grouped = {
-      single: [] as TextStylePreset[],
-      two: [] as TextStylePreset[],
-      three: [] as TextStylePreset[],
-    }
 
-    for (const preset of TEXT_STYLE_PRESETS) {
-      grouped[preset.layout].push(preset)
-    }
-
-    return grouped
-  }, [])
 
   // Category items for the vertical nav
   const categories = [
@@ -1504,77 +1482,58 @@ export const MediaSidebar = memo(function MediaSidebar({
                   </div>
                 </section>
 
-                <div className="space-y-3">
-                  <div className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">
-                    Single text
+                <section className="border-t border-border pt-4">
+                  <div className="mb-2 text-[9px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+                    Titles
                   </div>
-                  {TEXT_TEMPLATE_GROUPS.map((group) => {
-                    const presets = textTemplatesByLayout[group.key].filter((preset) =>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      draggable={true}
+                      onDragStart={handleTemplateDragStart({
+                        itemType: 'text',
+                        label: DEFAULT_TEXT_TEMPLATE_LABEL,
+                      })}
+                      onDragEnd={handleTemplateDragEnd}
+                      onClick={() => {
+                        if (shouldSuppressGeneratedItemClick()) return
+                        handleAddText()
+                      }}
+                      className="rounded-[3px] bg-[#d9dbd6] p-2 text-left transition-colors hover:bg-[#d1d4ce]"
+                    >
+                      {renderTextTemplatePreview()}
+                      <span className="mt-1.5 block text-[9px] font-semibold text-foreground">
+                        Custom text
+                      </span>
+                    </button>
+                    {TEXT_STYLE_PRESETS.filter((preset) =>
                       VISIBLE_TEXT_PRESET_IDS.has(preset.id),
-                    )
-                    const showAddText = group.key === 'single'
-
-                    if (!showAddText && presets.length === 0) {
-                      return null
-                    }
-
-                    return (
-                      <div key={group.key} className="space-y-1.5">
-                        <div className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider">
-                          {t(group.labelKey)}
-                        </div>
-                        <div className="grid grid-cols-3 gap-1.5">
-                          {showAddText ? (
-                            <button
-                              draggable={true}
-                              onDragStart={handleTemplateDragStart({
-                                itemType: 'text',
-                                label: DEFAULT_TEXT_TEMPLATE_LABEL,
-                              })}
-                              onDragEnd={handleTemplateDragEnd}
-                              onClick={() => {
-                                if (shouldSuppressGeneratedItemClick()) return
-                                handleAddText()
-                              }}
-                              className="flex flex-col items-center gap-1 p-1.5 rounded-md border border-border bg-secondary/30 hover:bg-secondary/50 hover:border-primary/50 transition-[transform,background-color,border-color,color] duration-150 active:scale-[0.98] group"
-                            >
-                              {renderTextTemplatePreview()}
-                              <span className="text-[9px] text-muted-foreground group-hover:text-foreground text-center leading-tight w-full">
-                                {ADD_TEXT_TEMPLATE_LABEL}
-                              </span>
-                            </button>
-                          ) : null}
-                          {presets.map((preset) => (
-                            <button
-                              key={preset.id}
-                              draggable={true}
-                              onDragStart={handleTemplateDragStart({
-                                itemType: 'text',
-                                label: preset.label,
-                                textStylePresetId: preset.id,
-                              })}
-                              onDragEnd={handleTemplateDragEnd}
-                              onClick={() => {
-                                if (shouldSuppressGeneratedItemClick()) return
-                                handleAddText(preset.id)
-                              }}
-                              className={cn(
-                                'flex flex-col items-center gap-1 p-1.5 rounded-md border border-border',
-                                'bg-secondary/30 hover:bg-secondary/50 hover:border-primary/50',
-                                'transition-[transform,background-color,border-color,color] duration-150 active:scale-[0.98] group',
-                              )}
-                            >
-                              {renderTextTemplatePreview(preset)}
-                              <span className="text-[9px] text-muted-foreground group-hover:text-foreground text-center leading-tight w-full">
-                                {preset.label}
-                              </span>
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                    )
-                  })}
-                </div>
+                    ).map((preset) => (
+                      <button
+                        key={preset.id}
+                        draggable={true}
+                        onDragStart={handleTemplateDragStart({
+                          itemType: 'text',
+                          label: preset.label,
+                          textStylePresetId: preset.id,
+                        })}
+                        onDragEnd={handleTemplateDragEnd}
+                        onClick={() => {
+                          if (shouldSuppressGeneratedItemClick()) return
+                          handleAddText(preset.id)
+                        }}
+                        className="rounded-[3px] bg-[#d9dbd6] p-2 text-left transition-colors hover:bg-[#d1d4ce]"
+                      >
+                        {renderTextTemplatePreview(preset)}
+                        <span className="mt-1.5 block truncate text-[9px] font-semibold text-foreground">
+                          {preset.label}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                  <p className="mt-3 text-[8px] leading-3 text-muted-foreground">
+                    Click to add. Drag to place. Edit content, type, motion and effects in Inspector.
+                  </p>
+                </section>
               </div>
             </div>
 
