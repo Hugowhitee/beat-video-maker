@@ -336,7 +336,6 @@ function renderTextTemplatePreview(preset?: TextStylePreset) {
 }
 
 const DEFAULT_TEXT_TEMPLATE_LABEL = 'Text'
-const ADD_TEXT_TEMPLATE_LABEL = 'Add Text'
 
 type ProducerTextPresetId =
   | 'corner-mark'
