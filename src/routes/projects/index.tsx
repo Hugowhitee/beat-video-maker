@@ -37,6 +37,11 @@ import { WorkspaceIndicator } from '@/features/workspace-gate'
 import { LanguageSwitcher } from '@/shared/ui/language-switcher'
 import { resolveBeatvideoProjectMode } from '@/config/beatvideo'
 import { useStudioV2DocumentTheme } from '@/shared/ui/use-studio-v2-document-theme'
+import {
+  DEFAULT_PROJECT_FPS,
+  DEFAULT_PROJECT_HEIGHT,
+  DEFAULT_PROJECT_WIDTH,
+} from '@/shared/projects/defaults'
 
 export const Route = createFileRoute('/projects/')({
   component: ProjectsIndex,
@@ -360,9 +365,9 @@ function ProjectsIndex() {
                 name: editingProject.name,
                 description: editingProject.description,
                 beatvideoMode: resolveBeatvideoProjectMode(editingProject.beatvideoMode),
-                width: editingProject.metadata.width,
-                height: editingProject.metadata.height,
-                fps: editingProject.metadata.fps,
+                width: editingProject.metadata?.width ?? DEFAULT_PROJECT_WIDTH,
+                height: editingProject.metadata?.height ?? DEFAULT_PROJECT_HEIGHT,
+                fps: editingProject.metadata?.fps ?? DEFAULT_PROJECT_FPS,
               }}
               isSubmitting={isSubmitting}
             />
