@@ -1,5 +1,4 @@
 import { Component, type ReactNode, type ErrorInfo } from 'react'
-import { Button } from '@/components/ui/button'
 import { AlertTriangle, RefreshCw } from 'lucide-react'
 import { createLogger } from '@/shared/logging/logger'
 import { i18n } from '@/i18n'
@@ -50,34 +49,50 @@ export class ErrorBoundary extends Component<Props, State> {
       const { level = 'component' } = this.props
 
       return (
-        <div className="flex flex-col items-center justify-center p-8 gap-4 text-center">
-          <AlertTriangle className="h-12 w-12 text-destructive" />
-          <div>
-            <h2 className="text-lg font-semibold">
+        <div
+          data-studio-v2="true"
+          className="min-h-[240px] bg-[#d9dbd6] p-6 text-foreground"
+        >
+          <div className="mx-auto max-w-[560px] border-y border-border py-6">
+            <div className="flex items-center gap-2 text-muted-foreground">
+              <AlertTriangle className="h-4 w-4" />
+              <span className="text-[9px] font-semibold uppercase tracking-[0.12em]">
+                Recovery
+              </span>
+            </div>
+            <h2 className="mt-4 text-[20px] font-semibold">
               {level === 'app' && i18n.t('app.errorBoundary.appError')}
               {level === 'feature' && i18n.t('app.errorBoundary.featureError')}
               {level === 'component' && i18n.t('app.errorBoundary.componentError')}
             </h2>
-            <p className="text-sm text-muted-foreground mt-1">
+            <p className="mt-2 break-words text-[10px] leading-4 text-muted-foreground">
               {this.state.error?.message || i18n.t('app.errorBoundary.unexpectedError')}
             </p>
-          </div>
-          <div className="flex gap-2">
-            <Button onClick={this.handleReset} variant="outline">
-              <RefreshCw className="h-4 w-4 mr-2" />
-              {i18n.t('app.errorBoundary.tryAgain')}
-            </Button>
-            {level === 'app' && (
-              <Button onClick={() => window.location.reload()}>
-                {i18n.t('app.errorBoundary.reloadPage')}
-              </Button>
+            <div className="mt-5 flex flex-wrap gap-2">
+              <button
+                type="button"
+                className="studio-primary-action h-9 px-3"
+                onClick={this.handleReset}
+              >
+                <RefreshCw className="h-3.5 w-3.5" />
+                {i18n.t('app.errorBoundary.tryAgain')}
+              </button>
+              {level === 'app' && (
+                <button
+                  type="button"
+                  className="studio-secondary-action h-9 px-3"
+                  onClick={() => window.location.reload()}
+                >
+                  {i18n.t('app.errorBoundary.reloadPage')}
+                </button>
+              )}
+            </div>
+            {import.meta.env.DEV && this.state.error?.stack && (
+              <pre className="mt-4 max-h-48 max-w-full overflow-auto rounded-[3px] bg-[#d1d4ce] p-3 text-left font-mono text-[9px]">
+                {this.state.error.stack}
+              </pre>
             )}
           </div>
-          {import.meta.env.DEV && this.state.error?.stack && (
-            <pre className="mt-4 p-4 bg-muted rounded text-xs text-left overflow-auto max-w-full max-h-48">
-              {this.state.error.stack}
-            </pre>
-          )}
         </div>
       )
     }
