@@ -27,10 +27,10 @@ jobs:
       - run: vp run check
       - run: vp run check:boundaries
       - run: vp run check:deps-contracts
-      - run: vp test run
       - run: vp build
       - name: Verify project tiles and OPFS project open
         run: node scripts/project-open-smoke.mjs
+      - run: vp test run
       - name: Verify GitHub Pages production build
         env:
           GITHUB_PAGES: 'true'
