@@ -39,6 +39,7 @@ import {
 } from '../hooks/use-project-actions'
 import { useProjectThumbnail } from '../hooks/use-project-thumbnail'
 import { resolveBeatvideoProjectMode } from '@/config/beatvideo'
+import { getAspectRatio } from '../utils/validation'
 import {
   DEFAULT_PROJECT_FPS,
   DEFAULT_PROJECT_HEIGHT,
@@ -173,17 +174,7 @@ export function ProjectCard({
   const fps = project?.metadata?.fps || DEFAULT_PROJECT_FPS
 
   const resolution = `${width}×${height}`
-  const aspectRatio = width / height
-  const aspectRatioLabel =
-    Math.abs(aspectRatio - 16 / 9) < 0.01
-      ? '16:9'
-      : Math.abs(aspectRatio - 4 / 3) < 0.01
-        ? '4:3'
-        : Math.abs(aspectRatio - 1) < 0.01
-          ? '1:1'
-          : Math.abs(aspectRatio - 21 / 9) < 0.01
-            ? '21:9'
-            : `${width}:${height}`
+  const aspectRatioLabel = getAspectRatio(width, height)
 
   const projectMode = resolveBeatvideoProjectMode(project.beatvideoMode)
 
