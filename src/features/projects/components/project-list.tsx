@@ -1,7 +1,16 @@
 import { useState, useMemo, useRef, useEffect, useCallback } from 'react'
 import { useTranslation } from 'react-i18next'
 import { toast } from 'sonner'
-import { Search, ArrowUpDown, X, Trash2, AlertTriangle, Plus, Upload } from 'lucide-react'
+import {
+  Search,
+  ArrowUpDown,
+  SlidersHorizontal,
+  X,
+  Trash2,
+  AlertTriangle,
+  Plus,
+  Upload,
+} from 'lucide-react'
 import { Link } from '@tanstack/react-router'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
@@ -65,6 +74,7 @@ export function ProjectList({ onEditProject, onImportProject }: ProjectListProps
   const [anchorId, setAnchorId] = useState<string | null>(null)
   const [showBulkDeleteDialog, setShowBulkDeleteDialog] = useState(false)
   const [isBulkDeleting, setIsBulkDeleting] = useState(false)
+  const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false)
 
   // Marquee state
   const containerRef = useRef<HTMLDivElement>(null)
@@ -334,9 +344,9 @@ export function ProjectList({ onEditProject, onImportProject }: ProjectListProps
     <div className="space-y-4">
       {/* Search and Filters Bar */}
       {!isEmpty && (
-        <div className="grid grid-cols-2 gap-2 rounded-[3px] bg-[#e8e9e5] p-2 sm:flex sm:items-center sm:gap-2">
+        <div className="grid grid-cols-[minmax(0,1fr)_auto_auto] gap-2 rounded-[3px] bg-[#e8e9e5] p-2 sm:flex sm:items-center sm:gap-2">
           {/* Search */}
-          <div className="relative col-span-2 w-full sm:flex-1">
+          <div className="relative col-span-3 w-full sm:col-span-1 sm:flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <Input
               type="text"
@@ -357,7 +367,20 @@ export function ProjectList({ onEditProject, onImportProject }: ProjectListProps
             )}
           </div>
 
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="h-9 gap-1.5 border-border bg-[#d9dbd6] px-3 text-[9px] shadow-none sm:hidden"
+            aria-expanded={mobileFiltersOpen}
+            onClick={() => setMobileFiltersOpen((open) => !open)}
+          >
+            <SlidersHorizontal className="h-3.5 w-3.5" />
+            Filters
+          </Button>
+
           {/* Resolution Filter */}
+          <div className="hidden sm:block">
           <Select
             value={filterResolution || 'all'}
             onValueChange={(value) => setFilterResolution(value === 'all' ? undefined : value)}
@@ -374,8 +397,10 @@ export function ProjectList({ onEditProject, onImportProject }: ProjectListProps
               ))}
             </SelectContent>
           </Select>
+          </div>
 
           {/* FPS Filter */}
+          <div className="hidden sm:block">
           <Select
             value={filterFps?.toString() || 'all'}
             onValueChange={(value) => setFilterFps(value === 'all' ? undefined : Number(value))}
@@ -392,6 +417,7 @@ export function ProjectList({ onEditProject, onImportProject }: ProjectListProps
               ))}
             </SelectContent>
           </Select>
+          </div>
 
           {/* Sort Menu */}
           <DropdownMenu>
@@ -428,9 +454,55 @@ export function ProjectList({ onEditProject, onImportProject }: ProjectListProps
             </DropdownMenuContent>
           </DropdownMenu>
 
+          {mobileFiltersOpen ? (
+            <div className="col-span-3 grid grid-cols-2 gap-2 border-t border-border pt-2 sm:hidden">
+              <Select
+                value={filterResolution || 'all'}
+                onValueChange={(value) =>
+                  setFilterResolution(value === 'all' ? undefined : value)
+                }
+              >
+                <SelectTrigger className="h-9 w-full border-border bg-[#d9dbd6] text-[10px] shadow-none">
+                  <SelectValue placeholder={t('projects.list.allResolutions')} />
+                </SelectTrigger>
+                <SelectContent data-studio-v2="true">
+                  <SelectItem value="all">{t('projects.list.allResolutions')}</SelectItem>
+                  {uniqueResolutions.map((res) => (
+                    <SelectItem key={res} value={res}>
+                      {res}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Select
+                value={filterFps?.toString() || 'all'}
+                onValueChange={(value) =>
+                  setFilterFps(value === 'all' ? undefined : Number(value))
+                }
+              >
+                <SelectTrigger className="h-9 w-full border-border bg-[#d9dbd6] text-[10px] shadow-none">
+                  <SelectValue placeholder={t('projects.list.allFps')} />
+                </SelectTrigger>
+                <SelectContent data-studio-v2="true">
+                  <SelectItem value="all">{t('projects.list.allFps')}</SelectItem>
+                  {uniqueFps.map((fps) => (
+                    <SelectItem key={fps} value={fps.toString()}>
+                      {t('projects.list.fpsOption', { fps })}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          ) : null}
+
           {/* Clear Filters */}
           {hasActiveFilters && (
-            <Button variant="ghost" size="sm" onClick={handleClearFilters}>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="col-span-3 justify-self-start sm:col-span-1"
+              onClick={handleClearFilters}
+            >
               <X className="w-4 h-4 mr-2" />
               {t('projects.list.clearFilters')}
             </Button>
