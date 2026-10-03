@@ -1,10 +1,9 @@
 /**
  * Router-level error screen.
  *
- * Route loaders fail before a component mounts, so the router owns their
- * recovery UI. Expected failures such as a stale project link get a specific
- * path forward, while technical details stay available through a copy action
- * instead of taking over the screen.
+ * Keep recovery inside the same Studio/Figma grammar as the rest of the app.
+ * Route failures can happen before editor UI mounts, so this surface must be
+ * self-contained and useful without falling back to the legacy dark shell.
  */
 
 import { useEffect, useRef, useState } from 'react'
@@ -21,9 +20,8 @@ import {
   RefreshCw,
 } from 'lucide-react'
 
-import { BeatVideoLogo } from '@/components/brand/beat-video-logo'
-import { Button } from '@/components/ui/button'
 import { createLogger } from '@/shared/logging/logger'
+import { useStudioV2DocumentTheme } from '@/shared/ui/use-studio-v2-document-theme'
 import {
   ensureKnownWorkspaceForCurrent,
   getWorkspaceHandleRecord,
@@ -37,7 +35,6 @@ import {
 
 const logger = createLogger('RouteError')
 
-/** Known DOMException names get a plain-language explanation; others don't. */
 const CAUSE_EXPLANATION_KEYS: Record<string, string> = {
   NotAllowedError: 'app.routeError.causePermission',
   NotFoundError: 'app.routeError.causeMissing',
@@ -46,6 +43,7 @@ const CAUSE_EXPLANATION_KEYS: Record<string, string> = {
 }
 
 export function RouteErrorScreen({ error, reset }: ErrorComponentProps) {
+  useStudioV2DocumentTheme()
   const { t } = useTranslation()
   const router = useRouter()
   const [isSwitchingFolder, setIsSwitchingFolder] = useState(false)
@@ -63,6 +61,7 @@ export function RouteErrorScreen({ error, reset }: ErrorComponentProps) {
     : explanationKey
       ? t(explanationKey)
       : t('app.routeError.description')
+  const shortDetail = error instanceof Error ? error.message : String(error)
 
   useEffect(
     () => () => {
@@ -89,11 +88,6 @@ export function RouteErrorScreen({ error, reset }: ErrorComponentProps) {
     copyResetTimer.current = setTimeout(() => setCopyStatus('idle'), 2000)
   }
 
-  /**
-   * Forget the active workspace so `WorkspaceGate` reverts to its pick-folder
-   * state on the next render. This only deletes the handle registry record,
-   * never the user's files.
-   */
   const handleChooseDifferentFolder = async () => {
     setIsSwitchingFolder(true)
     try {
@@ -110,89 +104,107 @@ export function RouteErrorScreen({ error, reset }: ErrorComponentProps) {
   }
 
   return (
-    <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-background px-6 py-12">
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-primary/50 to-transparent"
-      />
+    <div
+      data-studio-v2="true"
+      className="min-h-dvh bg-[#d9dbd6] text-foreground"
+    >
+      <header className="flex h-12 items-center bg-[#242724] px-[18px] text-[#f6f7f3]">
+        <Link to="/projects" className="flex items-baseline gap-1.5">
+          <span className="text-[10px] font-semibold">BEAT VIDEO</span>
+          <span className="text-[10px] font-semibold text-[#c7e85a]">MAKER</span>
+        </Link>
+      </header>
 
-      <div className="w-full max-w-md">
-        <BeatVideoLogo variant="full" size="md" className="mb-6 justify-center" />
-
-        <main className="rounded-2xl border border-border/80 bg-card/70 px-6 py-8 text-center shadow-2xl shadow-black/20 backdrop-blur-sm sm:px-8">
-          <div
-            className={
-              projectNotFound
-                ? 'mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-2xl border border-primary/20 bg-primary/10 text-primary'
-                : 'mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-2xl border border-destructive/20 bg-destructive/10 text-destructive'
-            }
-          >
+      <main className="mx-auto w-full max-w-[720px] px-5 py-12 sm:px-8 sm:py-20">
+        <div className="border-b border-border pb-7">
+          <div className="mb-5 flex items-center gap-3 text-muted-foreground">
             {projectNotFound ? (
-              <FileQuestion className="h-8 w-8" />
+              <FileQuestion className="h-5 w-5" aria-hidden="true" />
             ) : (
-              <AlertTriangle className="h-8 w-8" />
+              <AlertTriangle className="h-5 w-5" aria-hidden="true" />
             )}
+            <span className="text-[9px] font-semibold uppercase tracking-[0.12em]">
+              {projectNotFound ? 'Project unavailable' : 'Loading error'}
+            </span>
           </div>
-
-          <h1 className="text-2xl font-semibold tracking-tight">{title}</h1>
-          <p className="mx-auto mt-2 max-w-sm text-sm leading-6 text-muted-foreground">
+          <h1 className="text-[26px] font-semibold leading-8">{title}</h1>
+          <p className="mt-2 max-w-[560px] text-[11px] leading-5 text-muted-foreground">
             {description}
           </p>
+        </div>
 
-          <div className="mt-7 flex flex-col-reverse justify-center gap-2 sm:flex-row">
-            <Button variant="outline" onClick={handleRetry}>
-              <RefreshCw />
-              {t('app.errorBoundary.tryAgain')}
-            </Button>
+        <div className="flex flex-col gap-3 border-b border-border py-6 sm:flex-row">
+          <button
+            type="button"
+            className="studio-primary-action h-10 justify-center px-4"
+            onClick={handleRetry}
+          >
+            <RefreshCw className="h-3.5 w-3.5" />
+            {t('app.errorBoundary.tryAgain')}
+          </button>
 
-            {projectNotFound ? (
-              <Button asChild>
-                <Link to="/projects">
-                  <ArrowLeft />
-                  {t('app.routeError.backToProjects')}
-                </Link>
-              </Button>
-            ) : (
-              <Button onClick={() => window.location.reload()}>
-                {t('app.errorBoundary.reloadPage')}
-              </Button>
-            )}
-          </div>
+          {projectNotFound ? (
+            <Link
+              to="/projects"
+              className="studio-secondary-action flex h-10 items-center justify-center gap-2 px-4"
+            >
+              <ArrowLeft className="h-3.5 w-3.5" />
+              {t('app.routeError.backToProjects')}
+            </Link>
+          ) : (
+            <button
+              type="button"
+              className="studio-secondary-action h-10 justify-center px-4"
+              onClick={() => window.location.reload()}
+            >
+              {t('app.errorBoundary.reloadPage')}
+            </button>
+          )}
 
-          {failureName && (
-            <Button
-              variant="ghost"
-              size="sm"
-              className="mt-3"
+          {failureName ? (
+            <button
+              type="button"
+              className="studio-secondary-action h-10 justify-center px-4"
               disabled={isSwitchingFolder}
               onClick={handleChooseDifferentFolder}
             >
-              <FolderOpen />
+              <FolderOpen className="h-3.5 w-3.5" />
               {t('projects.workspaceGate.chooseDifferentFolder')}
-            </Button>
-          )}
+            </button>
+          ) : null}
+        </div>
 
-          <div className="mt-6 border-t border-border/70 pt-5">
-            <p className="text-xs leading-5 text-muted-foreground">
+        <details className="group py-5">
+          <summary className="cursor-pointer list-none text-[10px] font-medium text-muted-foreground marker:hidden hover:text-foreground [&::-webkit-details-marker]:hidden">
+            Error details
+          </summary>
+          <div className="mt-3 rounded-[3px] bg-[#d1d4ce] p-3">
+            <p className="break-words font-mono text-[9px] leading-4 text-foreground">
+              {shortDetail}
+            </p>
+            <p className="mt-3 text-[9px] leading-4 text-muted-foreground">
               {t('app.routeError.supportHint')}
             </p>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="mt-1"
+            <button
+              type="button"
+              className="studio-secondary-action mt-3 h-8 px-3"
               aria-live="polite"
               onClick={() => void handleCopyDetails()}
             >
-              {copyStatus === 'copied' ? <Check /> : <Copy />}
+              {copyStatus === 'copied' ? (
+                <Check className="h-3.5 w-3.5" />
+              ) : (
+                <Copy className="h-3.5 w-3.5" />
+              )}
               {copyStatus === 'copied'
                 ? t('app.routeError.detailsCopied')
                 : copyStatus === 'failed'
                   ? t('app.routeError.copyFailed')
                   : t('app.routeError.copyDetails')}
-            </Button>
+            </button>
           </div>
-        </main>
-      </div>
+        </details>
+      </main>
     </div>
   )
 }
