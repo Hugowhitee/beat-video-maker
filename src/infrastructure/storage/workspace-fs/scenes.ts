@@ -24,6 +24,10 @@ export interface SavedScenes {
   sampleIntervalMs?: number
   verificationModel?: string
   cuts: SceneCut[]
+  review?: {
+    cuts?: SceneCut[]
+    ranges?: Record<string, { start: number; end: number }>
+  }
 }
 
 interface SaveScenesInput extends SavedScenes {
@@ -53,6 +57,10 @@ export async function saveScenes(input: SaveScenesInput): Promise<SavedScenes> {
       sampleIntervalMs: input.sampleIntervalMs,
       verificationModel: input.verificationModel,
       cuts: cutsToPayload(input.cuts),
+      review: input.review && {
+        cuts: input.review.cuts && cutsToPayload(input.review.cuts),
+        ranges: input.review.ranges,
+      },
     }
     await writeAiOutput({
       mediaId: input.mediaId,
@@ -73,6 +81,7 @@ export async function saveScenes(input: SaveScenesInput): Promise<SavedScenes> {
       sampleIntervalMs: input.sampleIntervalMs,
       verificationModel: input.verificationModel,
       cuts: input.cuts,
+      review: input.review,
     }
   } catch (error) {
     logger.error(`saveScenes(${input.mediaId}) failed`, error)
