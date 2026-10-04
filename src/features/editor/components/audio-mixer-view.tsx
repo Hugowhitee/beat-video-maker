@@ -69,6 +69,8 @@ interface AudioMixerViewProps {
   headerExtra?: ReactNode
   /** Expanded layout for floating panel — wider strips, bigger meters */
   expanded?: boolean
+  /** Master workspace uses this as a pre-master track mixer, so the post-rack master strip is hidden. */
+  showMasterStrip?: boolean
 }
 
 // ---------------------------------------------------------------------------
@@ -815,7 +817,7 @@ const BusMeter = memo(function BusMeter({
       <div className="flex flex-col items-center h-full w-full rounded-[3px] bg-black/30 shadow-[inset_0_1px_3px_rgba(0,0,0,0.4)] border border-border/20 px-1">
         {/* Label */}
         <div className="text-[10px] uppercase tracking-[0.15em] text-muted-foreground/70 py-1 leading-tight font-mono whitespace-nowrap">
-          Bus 1
+          Master
         </div>
         <div className="flex justify-center py-0.5 shrink-0">
           <button
@@ -826,7 +828,7 @@ const BusMeter = memo(function BusMeter({
                 : 'border border-transparent bg-muted/30 text-muted-foreground/45 hover:bg-primary/10 hover:text-primary'
             } ${!onEqToggle ? 'pointer-events-none opacity-50' : ''}`}
             onClick={onEqToggle}
-            aria-label="EQ Bus 1"
+            aria-label="EQ Master"
             aria-pressed={eqActive}
           >
             EQ
@@ -1007,6 +1009,7 @@ interface MixerBodyProps {
   onTrackEqToggle?: (trackId: string) => void
   onBusEqToggle?: () => void
   busEqEnabled?: boolean
+  showMasterStrip?: boolean
 }
 
 const MixerBody = memo(function MixerBody({
@@ -1026,6 +1029,7 @@ const MixerBody = memo(function MixerBody({
   onTrackEqToggle,
   onBusEqToggle,
   busEqEnabled,
+  showMasterStrip = true,
 }: MixerBodyProps) {
   const stripPx = expanded ? 68 : 52
   // Channel strips + trailing border (scale column is outside the tuckable area)
@@ -1142,18 +1146,21 @@ const MixerBody = memo(function MixerBody({
         </div>
       </div>
 
-      {/* Bus / master strip — ml-auto pins it to the right when tracks are tucked */}
-      <BusMeter
-        masterEstimate={masterEstimate}
-        isPlaying={isPlaying}
-        volumeDb={masterVolumeDb}
-        muted={masterMuted}
-        allItemIds={allItemIds}
-        onVolumeChange={onMasterVolumeChange}
-        onMuteToggle={onMasterMuteToggle}
-        onEqToggle={onBusEqToggle}
-        eqActive={!!busEqEnabled}
-      />
+      {/* The Beatvideo Master workspace uses this as a pre-master track mixer.
+          Generic/advanced mixer surfaces can still expose the post-rack Master strip. */}
+      {showMasterStrip ? (
+        <BusMeter
+          masterEstimate={masterEstimate}
+          isPlaying={isPlaying}
+          volumeDb={masterVolumeDb}
+          muted={masterMuted}
+          allItemIds={allItemIds}
+          onVolumeChange={onMasterVolumeChange}
+          onMuteToggle={onMasterMuteToggle}
+          onEqToggle={onBusEqToggle}
+          eqActive={!!busEqEnabled}
+        />
+      ) : null}
     </div>
   )
 })
@@ -1179,6 +1186,7 @@ export const AudioMixerView = memo(function AudioMixerView({
   busEqEnabled,
   headerExtra,
   expanded,
+  showMasterStrip = true,
 }: AudioMixerViewProps) {
   const { t } = useTranslation()
   const outerClassName = expanded
@@ -1225,6 +1233,7 @@ export const AudioMixerView = memo(function AudioMixerView({
         onTrackEqToggle={onTrackEqToggle}
         onBusEqToggle={onBusEqToggle}
         busEqEnabled={busEqEnabled}
+        showMasterStrip={showMasterStrip}
       />
     </aside>
   )

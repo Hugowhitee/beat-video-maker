@@ -53,11 +53,11 @@ export function MonitorVolumeControl({ buttonStyle }: MonitorVolumeControlProps)
         <PopoverTrigger asChild>
           <button
             type="button"
-            className="-ml-1 flex h-6 w-3.5 items-center justify-center text-muted-foreground transition-colors hover:text-foreground"
+            className="-ml-0.5 flex h-8 w-6 shrink-0 items-center justify-center rounded-sm text-muted-foreground transition-colors hover:bg-muted/40 hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
             aria-label={t('preview.monitor.volume')}
             data-tooltip={muted ? t('preview.monitor.muted') : `${percent}%`}
           >
-            <ChevronUp className="h-2.5 w-2.5" />
+            <ChevronUp className="h-3 w-3" />
           </button>
         </PopoverTrigger>
         <PopoverContent className="w-52 p-2.5" align="center" side="top" sideOffset={6}>

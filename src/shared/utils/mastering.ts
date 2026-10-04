@@ -2,6 +2,7 @@ import type {
   MasterFxSettings,
   MasteringPresetId,
   MasterProcessorId,
+  MasterProcessorInstanceIds,
   ResolvedMasterFxSettings,
 } from '@/types/audio'
 
@@ -33,9 +34,25 @@ export function resolveMasterProcessorOrder(
   return resolved
 }
 
+function resolveMasterProcessorInstanceIds(
+  value: MasterProcessorInstanceIds | undefined,
+  order: readonly MasterProcessorId[],
+): MasterProcessorInstanceIds {
+  const resolved: MasterProcessorInstanceIds = {}
+  for (const processor of order) {
+    const candidate = value?.[processor]?.trim()
+    resolved[processor] = candidate || `master-${processor}`
+  }
+  return resolved
+}
+
 export const DEFAULT_MASTER_FX_SETTINGS: ResolvedMasterFxSettings = {
   enabled: false,
   order: [...DEFAULT_MASTER_PROCESSOR_ORDER],
+  processorInstanceIds: resolveMasterProcessorInstanceIds(
+    undefined,
+    DEFAULT_MASTER_PROCESSOR_ORDER,
+  ),
   inputGainDb: 0,
   compressor: {
     enabled: false,
@@ -73,9 +90,11 @@ export function resolveMasterFxSettings(
   value: MasterFxSettings | undefined,
 ): ResolvedMasterFxSettings {
   const defaults = DEFAULT_MASTER_FX_SETTINGS
+  const order = resolveMasterProcessorOrder(value?.order)
   return {
     enabled: value?.enabled ?? defaults.enabled,
-    order: resolveMasterProcessorOrder(value?.order),
+    order,
+    processorInstanceIds: resolveMasterProcessorInstanceIds(value?.processorInstanceIds, order),
     inputGainDb: clamp(finite(value?.inputGainDb, defaults.inputGainDb), -24, 24),
     compressor: {
       enabled: value?.compressor?.enabled ?? defaults.compressor.enabled,
@@ -296,7 +315,6 @@ export interface ProgramLevelAnalysis {
 
 export const AUTO_LEVEL_TARGET_RMS_DB = -11
 export const AUTO_LEVEL_LIMITER_CEILING_DB = -0.8
-export const AUTO_LEVEL_MAX_LIMITER_REDUCTION_DB = 3
 
 export interface AutoLevelPlan {
   inputGainDb: number
@@ -370,7 +388,6 @@ export function resolveAutoLevelPlan(
   analysis: ProgramLevelAnalysis,
   targetRmsDb = AUTO_LEVEL_TARGET_RMS_DB,
   limiterCeilingDb = AUTO_LEVEL_LIMITER_CEILING_DB,
-  maxLimiterReductionDb = AUTO_LEVEL_MAX_LIMITER_REDUCTION_DB,
 ): AutoLevelPlan {
   if (
     !Number.isFinite(analysis.rmsDb) ||
@@ -388,12 +405,16 @@ export function resolveAutoLevelPlan(
   }
 
   const loudnessGainDb = clamp(targetRmsDb - analysis.rmsDb, -12, 12)
-  // Auto level should not achieve a nominal RMS target by silently asking the
-  // limiter to flatten huge transients. Permit a small, explicit amount of peak
-  // control and reduce the trim when more would be required.
-  const peakLimitedMaxGainDb =
-    limiterCeilingDb + Math.max(0, maxLimiterReductionDb) - analysis.peakDb
-  const inputGainDb = clamp(Math.min(loudnessGainDb, peakLimitedMaxGainDb), -12, 12)
+  // Positive trim must fit inside the source's real sample-peak headroom before
+  // any downstream processor. The limiter is safety/final peak control; its
+  // possible gain reduction is never treated as permission to turn the input up.
+  const peakSafeMaxGainDb = limiterCeilingDb - analysis.peakDb
+  const peakSafeGainDb = Math.min(loudnessGainDb, peakSafeMaxGainDb)
+  // Avoid a meaningless tiny boost for an already healthy source. Never apply
+  // this deadband to attenuation: a source above the safety ceiling still needs
+  // to be brought down even when the correction is small.
+  const candidateGainDb = peakSafeGainDb > 0 && peakSafeGainDb < 0.25 ? 0 : peakSafeGainDb
+  const inputGainDb = clamp(candidateGainDb, -12, 12)
   const projectedRmsDb = analysis.rmsDb + inputGainDb
   const projectedPeakDb = analysis.peakDb + inputGainDb
   const estimatedLimiterReductionDb = Math.max(0, projectedPeakDb - limiterCeilingDb)
@@ -404,7 +425,7 @@ export function resolveAutoLevelPlan(
     projectedRmsDb,
     projectedPeakDb,
     estimatedLimiterReductionDb,
-    limitedByPeak: inputGainDb < loudnessGainDb - 0.001,
+    limitedByPeak: peakSafeMaxGainDb < loudnessGainDb - 0.001,
   }
 }
 

@@ -105,7 +105,7 @@ function getMobileEditorSurfaces(
     return [
       { id: 'tools', label: 'Master' },
       { id: 'preview', label: 'Preview' },
-      { id: 'mixer', label: 'Mixer' },
+      { id: 'mixer', label: 'Mix' },
     ]
   }
   if (workspace === 'color') {
@@ -1054,7 +1054,7 @@ export const LoadedEditor = memo(function LoadedEditor({
         {isMasterWorkspace ? (
           <InteractionLockRegion
             locked={isMaskEditingActive}
-            className="studio-master-column h-full w-[400px] shrink-0 border-l border-border"
+            className="studio-master-column h-full w-[480px] shrink-0 border-l border-border"
           >
             <ErrorBoundary level="feature">
               <BeatvideoMasterPanel />

@@ -215,6 +215,9 @@ export const AudioMeterPanel = memo(function AudioMeterPanel({
   const [eqPanelTarget, setEqPanelTarget] = useState<EqPanelTarget | null>(null)
   const mixerFloating = useEditorStore((s) => s.mixerFloating)
   const setMixerFloating = useEditorStore((s) => s.setMixerFloating)
+  const workspace = useEditorStore((s) => s.workspace)
+  const trackMixOnly = workspace === 'master'
+  const mixerTitle = trackMixOnly ? 'Track mix' : t('editor.audioMeters.mixer')
   const effectiveMixerFloating = mobile ? false : mixerFloating
   const [trackSnapshotVersion, setTrackSnapshotVersion] = useState(0)
   const eqDetachedWindowRef = useRef<Window | null>(null)
@@ -363,7 +366,8 @@ export const AudioMeterPanel = memo(function AudioMeterPanel({
       : Math.pow(10, masterBusDb / 20)
   const isAudioSkimMeterActive = audioSkimmingEnabled && audioSkimMeterLevel !== null && !isPlaying
   const isMeterActive = isPlaying || isAudioSkimMeterActive
-  const playbackGain = isMeterActive && !muted ? effectiveMasterGain * monitorVolume : 0
+  const meterMonitorGain = presentation === 'master-inline' ? 1 : monitorVolume
+  const playbackGain = isMeterActive && !muted ? effectiveMasterGain * meterMonitorGain : 0
 
   const preloadSources = useMemo(() => {
     void liveOverrideVersion
@@ -650,13 +654,14 @@ export const AudioMeterPanel = memo(function AudioMeterPanel({
       }
     }
 
+    if (trackMixOnly) return null
     return {
-      title: 'Bus 1',
-      targetLabel: 'Bus 1',
+      title: 'Master',
+      targetLabel: 'Master',
       busEq: busAudioEq,
       eqEnabled: busAudioEq?.enabled !== false,
     }
-  }, [busAudioEq, eqPanelTarget, mixerSourceTracks])
+  }, [busAudioEq, eqPanelTarget, mixerSourceTracks, trackMixOnly])
 
   useEffect(() => {
     if (eqPanelTarget && !eqPanelDescriptor) {
@@ -969,7 +974,7 @@ export const AudioMeterPanel = memo(function AudioMeterPanel({
             <span className="w-4 inline-flex items-center justify-start">
               {panelMode === 'mixer' && <Check className="h-3.5 w-3.5" />}
             </span>
-            {t('editor.audioMeters.mixer')}
+            {trackMixOnly ? 'Track mix' : t('editor.audioMeters.mixer')}
           </DropdownMenuItem>
         ) : null}
         {!mobile ? (
@@ -1031,7 +1036,7 @@ export const AudioMeterPanel = memo(function AudioMeterPanel({
 
   const floatingMixer = effectiveMixerFloating ? (
     <FloatingPanel
-      title={t('editor.audioMeters.mixer')}
+      title={mixerTitle}
       defaultBounds={FLOATING_MIXER_DEFAULT_BOUNDS}
       minWidth={320}
       minHeight={280}
@@ -1055,6 +1060,7 @@ export const AudioMeterPanel = memo(function AudioMeterPanel({
           onTrackEqToggle={handleTrackEqToggle}
           onBusEqToggle={handleBusEqToggle}
           busEqEnabled={!!busAudioEq && busAudioEq.enabled !== false}
+          showMasterStrip={!trackMixOnly}
           expanded
         />
       </Suspense>
@@ -1107,6 +1113,7 @@ export const AudioMeterPanel = memo(function AudioMeterPanel({
             onTrackEqToggle={handleTrackEqToggle}
             onBusEqToggle={handleBusEqToggle}
             busEqEnabled={!!busAudioEq && busAudioEq.enabled !== false}
+            showMasterStrip={!trackMixOnly}
             headerExtra={modeDropdown}
           />
         </Suspense>

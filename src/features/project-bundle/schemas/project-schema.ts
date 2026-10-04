@@ -740,6 +740,14 @@ const masterProcessorIdSchema = z.enum(['eq', 'compressor', 'saturator', 'limite
 const masterFxSchema = z.object({
   enabled: z.boolean().optional(),
   order: z.array(masterProcessorIdSchema).max(4).optional(),
+  processorInstanceIds: z
+    .object({
+      eq: z.string().min(1).optional(),
+      compressor: z.string().min(1).optional(),
+      saturator: z.string().min(1).optional(),
+      limiter: z.string().min(1).optional(),
+    })
+    .optional(),
   inputGainDb: z.number().min(-24).max(24).optional(),
   compressor: z
     .object({

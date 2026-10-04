@@ -326,8 +326,9 @@ Rack slots are real DSP state:
 - bypass changes actual processing;
 - do not advertise processors with no engine implementation.
 
-Mixer opens from Master as a floating/resizable utility. It owns the project
-output/master-bus fader; Master must not duplicate it.
+Track mix opens contextually from Master as a floating/resizable pre-master utility.
+It balances real audio lanes before the rack. Master owns the post-rack Output trim
+and final meter; do not add a fake Bus 1 strip to the Beatvideo Master workflow.
 
 ## 11. Layout and responsive behavior
 

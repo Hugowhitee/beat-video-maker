@@ -20,4 +20,12 @@ describe('MonitorVolumeControl', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Unmute' }))
     expect(usePlaybackStore.getState().muted).toBe(false)
   })
+
+  it('keeps volume disclosure as a separate reachable transport control', () => {
+    render(<MonitorVolumeControl />)
+
+    const disclosure = screen.getByRole('button', { name: 'Volume' })
+    expect(disclosure).toHaveClass('h-8', 'w-6')
+    expect(screen.getByRole('button', { name: 'Mute' })).not.toBe(disclosure)
+  })
 })

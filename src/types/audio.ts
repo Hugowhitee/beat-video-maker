@@ -93,6 +93,8 @@ export interface ResolvedAudioEqSettings {
 
 export type MasterProcessorId = 'eq' | 'compressor' | 'saturator' | 'limiter'
 
+export type MasterProcessorInstanceIds = Partial<Record<MasterProcessorId, string>>
+
 export interface MasterCompressorSettings {
   enabled?: boolean
   thresholdDb?: number
@@ -126,6 +128,8 @@ export interface MasterFxSettings {
   enabled?: boolean
   /** Ordered master-bus processors. Missing/legacy values resolve to the canonical order. */
   order?: MasterProcessorId[]
+  /** Stable identities for the currently singleton built-in processor slots. */
+  processorInstanceIds?: MasterProcessorInstanceIds
   /** Gain before the rack. Output gain remains project masterBusDb. */
   inputGainDb?: number
   compressor?: MasterCompressorSettings
@@ -136,6 +140,7 @@ export interface MasterFxSettings {
 export interface ResolvedMasterFxSettings {
   enabled: boolean
   order: MasterProcessorId[]
+  processorInstanceIds: MasterProcessorInstanceIds
   inputGainDb: number
   compressor: Required<MasterCompressorSettings>
   saturator: Required<MasterSaturatorSettings>

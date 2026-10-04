@@ -54,11 +54,12 @@ describe('master rack order', () => {
   })
 
   it('keeps a valid custom rack and treats omitted processors as empty slots', () => {
-    expect(
-      resolveMasterFxSettings({
-        order: ['limiter', 'eq', 'limiter'],
-      }).order,
-    ).toEqual(['limiter', 'eq'])
+    const resolved = resolveMasterFxSettings({
+      order: ['limiter', 'eq', 'limiter'],
+      processorInstanceIds: { limiter: 'slot-limit', eq: 'slot-eq' },
+    })
+    expect(resolved.order).toEqual(['limiter', 'eq'])
+    expect(resolved.processorInstanceIds).toEqual({ limiter: 'slot-limit', eq: 'slot-eq' })
   })
 })
 
@@ -89,27 +90,44 @@ describe('program level analysis', () => {
   })
 
   it('returns a bounded input gain for Auto level', () => {
-    expect(resolveAutoLevelInputGainDb({ rmsDb: -17, peakDb: -4, analyzedBlocks: 10 })).toBe(6)
+    expect(resolveAutoLevelInputGainDb({ rmsDb: -17, peakDb: -4, analyzedBlocks: 10 })).toBeCloseTo(3.2, 5)
     expect(resolveAutoLevelInputGainDb({ rmsDb: -40, peakDb: -20, analyzedBlocks: 10 })).toBe(12)
     expect(resolveAutoLevelInputGainDb({ rmsDb: -120, peakDb: -120, analyzedBlocks: 0 })).toBe(0)
   })
 
-  it('hits the target when peak headroom is sufficient', () => {
+  it('uses only real pre-FX peak headroom for positive trim', () => {
     const plan = resolveAutoLevelPlan({ rmsDb: -17, peakDb: -4, analyzedBlocks: 10 })
 
-    expect(plan.inputGainDb).toBe(6)
-    expect(plan.projectedRmsDb).toBe(-11)
-    expect(plan.limitedByPeak).toBe(false)
-    expect(plan.estimatedLimiterReductionDb).toBeCloseTo(2.8, 5)
+    expect(plan.inputGainDb).toBeCloseTo(3.2, 5)
+    expect(plan.projectedRmsDb).toBeCloseTo(-13.8, 5)
+    expect(plan.projectedPeakDb).toBeCloseTo(AUTO_LEVEL_LIMITER_CEILING_DB, 5)
+    expect(plan.limitedByPeak).toBe(true)
+    expect(plan.estimatedLimiterReductionDb).toBeCloseTo(0, 5)
   })
 
-  it('backs off instead of asking the limiter for excessive reduction', () => {
+  it('does not make an already near-ceiling beat louder to chase RMS', () => {
+    const plan = resolveAutoLevelPlan({ rmsDb: -13, peakDb: -0.1, analyzedBlocks: 10 })
+
+    expect(plan.inputGainDb).toBeCloseTo(-0.7, 5)
+    expect(plan.projectedPeakDb).toBeCloseTo(AUTO_LEVEL_LIMITER_CEILING_DB, 5)
+    expect(plan.estimatedLimiterReductionDb).toBeCloseTo(0, 5)
+  })
+
+  it('can leave a healthy mastered source effectively unchanged', () => {
+    const plan = resolveAutoLevelPlan({ rmsDb: -11.5, peakDb: -1, analyzedBlocks: 10 })
+
+    expect(plan.inputGainDb).toBe(0)
+    expect(plan.projectedPeakDb).toBe(-1)
+    expect(plan.estimatedLimiterReductionDb).toBe(0)
+  })
+
+  it('backs off before the limiter instead of budgeting limiter reduction', () => {
     const plan = resolveAutoLevelPlan({ rmsDb: -20, peakDb: -2, analyzedBlocks: 10 })
 
+    expect(plan.inputGainDb).toBeCloseTo(1.2, 5)
     expect(plan.limitedByPeak).toBe(true)
     expect(plan.projectedRmsDb).toBeLessThan(plan.targetRmsDb)
-    expect(plan.estimatedLimiterReductionDb).toBeLessThanOrEqual(3)
-    expect(plan.projectedPeakDb - plan.estimatedLimiterReductionDb)
-      .toBeCloseTo(AUTO_LEVEL_LIMITER_CEILING_DB, 5)
+    expect(plan.projectedPeakDb).toBeCloseTo(AUTO_LEVEL_LIMITER_CEILING_DB, 5)
+    expect(plan.estimatedLimiterReductionDb).toBeCloseTo(0, 5)
   })
 })
