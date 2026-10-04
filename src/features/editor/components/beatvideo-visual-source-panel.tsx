@@ -762,7 +762,7 @@ export function BeatvideoVisualSourcePanel({
       sourcePlayer.setCurrentMediaId(shot.sourceId)
       sourcePlayer.setInPoint(startFrame)
       sourcePlayer.setOutPoint(endFrame)
-      sourcePlayer.setPendingPlay(false)
+      sourcePlayer.setPendingPlay(true)
       sourcePlayer.setPendingSeekFrame(startFrame)
       useEditorStore.getState().setSourcePreviewMediaId(shot.sourceId)
     },

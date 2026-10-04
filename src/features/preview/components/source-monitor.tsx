@@ -724,6 +724,9 @@ function SourcePlaybackControls({
       store.setPendingPlay(false)
       if (shouldPlay) {
         shuttleActiveRef.current = false
+        // When opened from detected Shots, play the marked range rather than
+        // accidentally continuing through the rest of the full source file.
+        replayingRef.current = store.inPoint !== null && store.outPoint !== null
         player.setPlaybackRate(1)
         player.play()
       }
