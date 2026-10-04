@@ -6,6 +6,7 @@ interface StudioResizeRailProps {
   maxWidth: number
   onWidthChange: (width: number) => void
   label: string
+  defaultWidth: number
 }
 
 /**
@@ -19,6 +20,7 @@ export const StudioResizeRail = memo(function StudioResizeRail({
   maxWidth,
   onWidthChange,
   label,
+  defaultWidth,
 }: StudioResizeRailProps) {
   const interaction = useRef<{ id: number; x: number; width: number } | null>(null)
   const clamp = (value: number) => Math.round(Math.max(minWidth, Math.min(maxWidth, value)))
@@ -74,7 +76,7 @@ export const StudioResizeRail = memo(function StudioResizeRail({
         document.body.style.userSelect = ''
       }}
       onKeyDown={handleKeyDown}
-      onDoubleClick={() => onWidthChange(clamp(400))}
+      onDoubleClick={() => onWidthChange(clamp(defaultWidth))}
       className="group relative z-20 h-full w-[10px] shrink-0 cursor-col-resize touch-none bg-transparent outline-none before:pointer-events-none before:absolute before:inset-y-0 before:left-1/2 before:w-px before:-translate-x-1/2 before:bg-[#abb3aa] before:transition-[width,background-color] hover:before:w-[2px] hover:before:bg-[#526955] focus-visible:before:w-[2px] focus-visible:before:bg-[#526955] active:before:w-[2px] active:before:bg-[#526955]"
     >
       <span
