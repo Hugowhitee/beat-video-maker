@@ -16,7 +16,6 @@ import {
   Star,
   Hexagon,
   Heart,
-  Pentagon,
   Blend,
   Pen,
   Captions,
