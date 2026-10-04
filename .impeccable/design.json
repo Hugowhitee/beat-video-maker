@@ -1,7 +1,7 @@
 {
   "schemaVersion": 2,
   "generatedAt": "2026-09-28T00:00:00.000Z",
-  "title": "Design System: FreeCut",
+  "title": "Design System: Beat Video Maker",
   "extensions": {
     "colorMeta": {
       "primary": {
@@ -180,7 +180,7 @@
   ],
   "narrative": {
     "northStar": "The Quiet Instrument",
-    "overview": "FreeCut is a precision tool that recedes. The visual system behaves like a well-machined instrument in a darkened room: graphite panels, restrained chrome, no decoration that doesn't earn its pixels. The footage in the preview is the brightest, most saturated thing on the screen; everything else stays out of its way. Depth is carried by tonal layering, not drop shadows: panels sit at different lightness steps so the eye reads hierarchy from value alone. A single low-chroma Studio Steel is the shell signal for active, selected, focus and snap state, and its rarity is what makes it legible. It rejects the consumer-editor look, the flashy SaaS dashboard, and cramped legacy-NLE chrome; density is high but always clean.",
+    "overview": "Beat Video Maker is a precision tool that recedes. The visual system behaves like a well-machined instrument in a darkened room: graphite panels, restrained chrome, no decoration that doesn't earn its pixels. The footage in the preview is the brightest, most saturated thing on the screen; everything else stays out of its way. Depth is carried by tonal layering, not drop shadows: panels sit at different lightness steps so the eye reads hierarchy from value alone. A single low-chroma Studio Steel is the shell signal for active, selected, focus and snap state, and its rarity is what makes it legible. It rejects the consumer-editor look, the flashy SaaS dashboard, and cramped legacy-NLE chrome; density is high but always clean.",
     "keyCharacteristics": [
       "Dark-only, neutral graphite ramp; value carries hierarchy",
       "One cool Studio Steel signal, used sparingly for active/focus/snap state",
