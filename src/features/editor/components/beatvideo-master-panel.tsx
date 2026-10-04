@@ -157,7 +157,7 @@ function MasterRange({
           onChange={(event) => onChange(Number(event.target.value))}
           className="block h-4 w-full min-w-0 accent-primary"
         />
-        <span className="mt-0.5 grid grid-cols-3 font-mono text-[8px] leading-none text-muted-foreground/60">
+        <span className="mt-0.5 grid grid-cols-3 font-mono text-[10px] leading-none text-muted-foreground/60">
           <span>{formatScale(min)}</span>
           <span className="text-center">{formatScale(scaleMidpoint)}</span>
           <span className="text-right">{formatScale(max)}</span>
@@ -750,13 +750,13 @@ export function BeatvideoMasterPanel() {
               </button>
             </PopoverTrigger>
             <PopoverContent align="start" sideOffset={8} className="w-[min(440px,calc(100vw-24px))] p-3">
-              <div className="text-[9px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+              <div className="text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
                 Master options
               </div>
 
               {savedPresets.length > 0 ? (
                 <div className="mt-3 border-t border-border pt-2">
-                  <div className="mb-1 text-[9px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+                  <div className="mb-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
                     My presets
                   </div>
                   <div className="space-y-1">
@@ -1003,7 +1003,7 @@ export function BeatvideoMasterPanel() {
                   aria-pressed={enabled}
                   title={`${enabled ? 'Bypass' : 'Enable'} ${label}`}
                 >
-                  <span className="text-[8px] font-semibold uppercase">{enabled ? 'On' : 'Off'}</span>
+                  <span className="text-[10px] font-semibold uppercase">{enabled ? 'On' : 'Off'}</span>
                 </button>
               </div>
             )

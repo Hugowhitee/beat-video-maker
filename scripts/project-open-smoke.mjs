@@ -405,8 +405,13 @@ async function main() {
 
     const shotBin = desktopPage.locator('[data-beatvideo-shot-bin]')
     await shotBin.waitFor({ state: 'visible', timeout: 60_000 })
-    const firstShot = shotBin.locator('button[aria-label^="Shot 1 from "]').first()
-    await firstShot.waitFor({ state: 'visible', timeout: 20_000 })
+    const firstShot = shotBin.getByRole('button', { name: /^Shot 1 from .* Open in Source\.$/ }).first()
+    try {
+      await firstShot.waitFor({ state: 'visible', timeout: 20_000 })
+    } catch (error) {
+      const shotState = await shotBin.innerText().catch(() => '(shot bin unavailable)')
+      throw new Error(`First detected shot did not become actionable. Shot bin:\n${shotState}\n\n${error instanceof Error ? error.message : String(error)}`)
+    }
     const originalShotText = await firstShot.innerText()
     await firstShot.click()
 
@@ -494,7 +499,7 @@ async function main() {
     await desktopPage.getByRole('button', { name: 'Detect shots' }).click()
     const reopenedShotBin = desktopPage.locator('[data-beatvideo-shot-bin]')
     await reopenedShotBin.waitFor({ state: 'visible', timeout: 30_000 })
-    const reopenedFirstShot = reopenedShotBin.locator('button[aria-label^="Shot 1 from "]').first()
+    const reopenedFirstShot = reopenedShotBin.getByRole('button', { name: /^Shot 1 from .* Open in Source\.$/ }).first()
     await reopenedFirstShot.waitFor({ state: 'visible', timeout: 20_000 })
     const reopenedShotText = await reopenedFirstShot.innerText()
     if (reopenedShotText !== trimmedShotText) {
