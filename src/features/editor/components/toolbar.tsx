@@ -13,7 +13,6 @@ import { SettingsDialog } from './settings-dialog'
 import { ShortcutsDialog } from './shortcuts-dialog'
 import { UnsavedChangesDialog } from './unsaved-changes-dialog'
 import { WorkspaceSwitcher } from './workspace-switcher'
-import { useEditorStore } from '@/shared/state/editor'
 import { useTimelineCommandStore, useTimelineStore } from '@/features/editor/deps/timeline-store'
 import type { BeatvideoProjectMode } from '@/types/project'
 import { toast } from 'sonner'
@@ -63,7 +62,6 @@ export const Toolbar = memo(function Toolbar({
   const [showUnsavedDialog, setShowUnsavedDialog] = useState(false)
   const [showShortcutsDialog, setShowShortcutsDialog] = useState(false)
   const [showSettingsDialog, setShowSettingsDialog] = useState(false)
-  const workspace = useEditorStore((state) => state.workspace)
   const canUndo = useTimelineCommandStore((state) => state.canUndo)
   const canRedo = useTimelineCommandStore((state) => state.canRedo)
   const undo = useTimelineCommandStore((state) => state.undo)
