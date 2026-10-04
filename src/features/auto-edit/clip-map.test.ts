@@ -1,7 +1,8 @@
 // @vitest-environment node
 
 import { describe, expect, it } from 'vite-plus/test'
-import { buildClipSourceFromSceneCuts } from './clip-map'
+import { buildClipSourceFromSceneCuts, isCurrentAutoEditSceneCache } from './clip-map'
+import { SCENE_DETECTOR_VERSION } from './deps/analysis-contract'
 
 const media = {
   id: 'video-a',
@@ -12,6 +13,13 @@ const media = {
 }
 
 describe('buildClipSourceFromSceneCuts', () => {
+  it('rejects old sparse cuts while preserving the current adaptive or fallback cache', () => {
+    expect(isCurrentAutoEditSceneCache({method: 'histogram', detectorVersion: 2, sampleIntervalMs: 250})).toBe(false)
+    expect(isCurrentAutoEditSceneCache({method: 'adaptive', detectorVersion: SCENE_DETECTOR_VERSION})).toBe(true)
+    expect(isCurrentAutoEditSceneCache({method: 'histogram', detectorVersion: SCENE_DETECTOR_VERSION, sampleIntervalMs: 250})).toBe(true)
+    expect(isCurrentAutoEditSceneCache({method: 'adaptive', detectorVersion: SCENE_DETECTOR_VERSION, verificationModel: 'gemma'})).toBe(false)
+  })
+
   it('treats footage with no detected cuts as one continuous shot', () => {
     const source = buildClipSourceFromSceneCuts(media, [])
     expect(source.shots).toEqual([

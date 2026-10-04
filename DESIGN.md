@@ -202,7 +202,7 @@ Below it, the producer workflow is a separate sequential rail:
 **Beat → Visual → Color → Master**.
 
 The normal producer shell has **no permanent left project-content rail**. Media,
-graphics and sequences belong to the active Visual tools/timeline; beat status and
+overlays, effects and sequences belong to the active Visual tools/timeline; beat status and
 grid review belong to Beat. Do not duplicate those destinations as a second sidebar.
 
 Mixer is not a global destination. It is a floating/resizable utility owned from
@@ -237,7 +237,7 @@ Do not hide it behind media blocks and do not duplicate it inside the Beat lane.
 Normal producer timeline:
 1. Media
 2. Beat
-3. Graphics / Extras only when meaningful
+3. Overlays / Extras only when meaningful
 
 Beat stays directly under Media. Tracks expose real collapse/resize affordances;
 clips fit their lane rather than floating with arbitrary vertical padding.
@@ -336,7 +336,7 @@ Desktop is precision-first. Do not shrink the entire desktop shell onto mobile.
 
 Compact layouts show focused surfaces while keeping the same project state:
 - Beat → Beat / Preview / Inspector
-- Visual → Media / Preview / Inspector
+- Visual → Add / Preview / Edit
 - Color → Color / Preview
 - Master → Master / Preview / Mixer
 
@@ -372,3 +372,5 @@ The Program monitor stays dominant and the playback runtime remains mounted.
 - Product/interaction ownership: `AGENTS.md` and `PRODUCT.md`.
 - Runtime design tokens: `src/index.css`.
 - Editable design exploration/contract: current Beat Video Maker Figma file.
+
+Visual desktop uses one task column with local Add/Edit modes. Canvas background is project configuration in Project settings, not an empty-state Inspector control.

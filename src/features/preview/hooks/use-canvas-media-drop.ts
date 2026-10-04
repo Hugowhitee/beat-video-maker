@@ -313,7 +313,10 @@ export function useCanvasMediaDrop({
           from: placement.from,
           durationInFrames,
         },
-        initialFit: beatvideoMode === 'photo' && mediaType === 'image' ? 'cover' : undefined,
+        initialFit:
+          beatvideoMode === 'photo' && mediaType === 'image'
+            ? 'cover'
+            : mediaType === 'video' ? 'original' : undefined,
       })
 
       const placedItem = preserveInitialPlacement

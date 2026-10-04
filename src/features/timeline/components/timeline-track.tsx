@@ -453,7 +453,7 @@ export const TimelineTrack = memo(function TimelineTrack({ track }: TimelineTrac
               useProjectStore.getState().currentProject?.beatvideoMode === 'photo' &&
               entry.mediaType === 'image'
                 ? 'cover'
-                : undefined,
+                : entry.mediaType === 'video' ? 'original' : undefined,
           })
         },
       )

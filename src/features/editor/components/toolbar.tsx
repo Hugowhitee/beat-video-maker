@@ -13,7 +13,6 @@ import { SettingsDialog } from './settings-dialog'
 import { ShortcutsDialog } from './shortcuts-dialog'
 import { UnsavedChangesDialog } from './unsaved-changes-dialog'
 import { WorkspaceSwitcher } from './workspace-switcher'
-import { useEditorStore } from '@/shared/state/editor'
 import { useTimelineCommandStore, useTimelineStore } from '@/features/editor/deps/timeline-store'
 import type { BeatvideoProjectMode } from '@/types/project'
 import { toast } from 'sonner'
@@ -63,9 +62,6 @@ export const Toolbar = memo(function Toolbar({
   const [showUnsavedDialog, setShowUnsavedDialog] = useState(false)
   const [showShortcutsDialog, setShowShortcutsDialog] = useState(false)
   const [showSettingsDialog, setShowSettingsDialog] = useState(false)
-  const workspace = useEditorStore((state) => state.workspace)
-  const rightSidebarOpen = useEditorStore((state) => state.rightSidebarOpen)
-  const toggleRightSidebar = useEditorStore((state) => state.toggleRightSidebar)
   const canUndo = useTimelineCommandStore((state) => state.canUndo)
   const canRedo = useTimelineCommandStore((state) => state.canRedo)
   const undo = useTimelineCommandStore((state) => state.undo)
@@ -388,7 +384,7 @@ export const Toolbar = memo(function Toolbar({
       <div className="studio-workspacebar flex h-11 shrink-0 items-center bg-[#c7cac4] px-4">
         <WorkspaceSwitcher beatvideoMode={beatvideoMode} />
 
-        <div className="relative ml-auto h-full w-[234px] shrink-0">
+        <div className="relative ml-auto h-full w-[110px] shrink-0">
           <button
             type="button"
             disabled={!canUndo}
@@ -405,16 +401,6 @@ export const Toolbar = memo(function Toolbar({
           >
             Redo
           </button>
-          {workspace === 'edit' ? (
-            <button
-              type="button"
-              onClick={toggleRightSidebar}
-              aria-pressed={rightSidebarOpen}
-              className="studio-workspace-action absolute left-[135px] top-0 flex h-full items-center text-[10px] font-semibold"
-            >
-              Inspector
-            </button>
-          ) : null}
         </div>
       </div>
 

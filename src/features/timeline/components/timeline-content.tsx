@@ -2062,7 +2062,7 @@ export const TimelineContent = memo(function TimelineContent({
         return
       }
 
-      // Advanced FreeCut keeps Alt+scroll lane resizing. In Beatvideo's unified
+      // Advanced editing keeps Alt+scroll lane resizing. In Beatvideo's unified
       // producer stack, vertical scrolling stays conventional and never changes
       // only one media-kind behind the user's back.
       if (event.altKey) {

@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback, memo, useMemo, lazy, Suspense } from 'react'
-import { Columns2 } from 'lucide-react'
+import { Columns2, LockKeyhole } from 'lucide-react'
 import {
   VideoPreview,
   PlaybackControls,
@@ -17,6 +17,7 @@ import { useMaskEditorStore, useItemsStore } from '@/features/editor/deps/previe
 import { useEditorStore } from '@/shared/state/editor'
 import { EDITOR_LAYOUT_CSS_VALUES, getEditorLayout } from '@/config/editor-layout'
 import { InteractionLockRegion } from './interaction-lock-region'
+import { ProgramSeekBar } from './program-seek-bar'
 import { Button } from '@/components/ui/button'
 import { ErrorBoundary } from '@/app/error-boundary'
 import { useTranslation } from 'react-i18next'
@@ -38,7 +39,7 @@ interface PreviewAreaProps {
   compact?: boolean
 }
 
-type PreviewChrome = 'edit' | 'color'
+type PreviewChrome = 'edit' | 'color' | 'view'
 
 const DEFAULT_EMPTY_TIMELINE_SECONDS = 10
 const PREVIEW_RESIZE_MIN_UPDATE_MS = 33
@@ -91,7 +92,7 @@ function PreviewSplitHandle({
   return (
     <div
       onMouseDown={onMouseDown}
-      className="w-1.5 cursor-col-resize hover:bg-primary/50 active:bg-primary/70 bg-border transition-colors flex-shrink-0 relative group"
+      className="group relative w-[10px] shrink-0 cursor-col-resize bg-transparent before:pointer-events-none before:absolute before:inset-y-0 before:left-1/2 before:w-px before:-translate-x-1/2 before:bg-[#aeb6ac] before:transition-[width,background-color] hover:before:w-[2px] hover:before:bg-[#526955] active:before:w-[2px] active:before:bg-[#526955]"
     >
       {showReset && (
         <button
@@ -543,7 +544,12 @@ export const PreviewArea = memo(function PreviewArea({
   }, [])
 
   const hasSidePanels = !!sourcePreviewMediaId || scopesPanelOpen
-  const previewChrome: PreviewChrome = workspace === 'color' ? 'color' : 'edit'
+  // Master shares the Program monitor and transport, but not transform permissions.
+  const previewChrome: PreviewChrome = workspace === 'color'
+    ? 'color'
+    : workspace === 'master'
+      ? 'view'
+      : 'edit'
   const programPanelPercent = Math.max(
     0,
     100 - displayedSourceSplitPercent - displayedScopesSplitPercent,
@@ -613,12 +619,26 @@ export const PreviewArea = memo(function PreviewArea({
             className="flex-1 min-h-0 relative overflow-hidden"
             aria-label="Preview canvas region"
           >
+            {workspace === 'master' ? (
+              <div
+                className="pointer-events-none absolute right-3 top-3 z-30 flex items-center gap-1.5 bg-background/80 px-2 py-1 text-[10px] text-muted-foreground"
+                role="status"
+                aria-label="Master preview is read-only for visual editing"
+              >
+                <LockKeyhole className="h-3 w-3" aria-hidden="true" />
+                Preview only
+              </div>
+            ) : null}
             <ProgramPreviewSurface
               project={liveProject}
               containerSize={containerSize}
               suspendOverlay={isPanelDragging}
               chrome={previewChrome}
             />
+          </div>
+
+          <div className="shrink-0 border-t border-border/70 bg-[#e8e9e5]" aria-label="Program progress">
+            <ProgramSeekBar totalFrames={totalFrames} fps={fps} disabled={isMaskEditingActive} />
           </div>
 
           {isPenModeActive ? (

@@ -209,6 +209,13 @@ describe("createHotkeyExportDocument", () => {
 });
 
 describe("parseHotkeyImportDocument", () => {
+  it("loads existing legacy hotkey files while new exports are branded", () => {
+    expect(HOTKEY_EXPORT_SCHEMA).toBe("beat-video-maker-hotkeys");
+    expect(parseHotkeyImportDocument({ schema: "freecut-hotkeys", version: 1, commands: [
+      { id: "PLAY_PAUSE", binding: "Shift+Space" },
+    ] })).toMatchObject({ overrides: { PLAY_PAUSE: "shift+space" }, sourceVersion: 1 });
+  });
+
   it("imports versioned override payloads and ignores unknown commands", () => {
     expect(
       parseHotkeyImportDocument({

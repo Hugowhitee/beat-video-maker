@@ -35,7 +35,7 @@ export const GLOBAL_COLOR_GRADE_LABEL = 'Global grade'
 export type ColorGradeScope = 'global' | 'clip'
 
 interface ColorGradePanelProps {
-  layout?: 'sidebar' | 'dock'
+  layout?: 'sidebar' | 'dock' | 'vertical-dock'
   scope?: ColorGradeScope
   onScopeChange?: (scope: ColorGradeScope) => void
 }
@@ -226,7 +226,50 @@ export const ColorGradePanel = memo(function ColorGradePanel({
     )
   }
 
-  const sectionClassName = layout === 'dock' ? 'min-h-0 overflow-hidden' : undefined
+  const sectionClassName = layout === 'dock' ? 'min-h-0 overflow-y-auto' : undefined
+
+  // Full-height side version of the *same* Color rack. Keep the color
+  // controls, effect chain and keyframe editor; unlike the wide bottom dock,
+  // a side column can scroll these surfaces vertically without clipping.
+  if (layout === 'vertical-dock') {
+    return (
+      <div className="flex h-full min-h-0 flex-col gap-3">
+        {scopeBar}
+        <div className="min-h-0 flex-1 space-y-3 overflow-y-auto pb-3 [scrollbar-gutter:stable]">
+          <Suspense fallback={null}>
+            <div className="min-w-0 rounded-[3px] border border-border/70 bg-background/35 p-2">
+              <LazyColorGradeSection
+                items={visualItems}
+                layout="sidebar"
+                onCreateAdjustmentLayer={handleCreateAdjustmentLayer}
+              />
+            </div>
+            <div className="min-w-0 rounded-[3px] border border-border/70 bg-background/35 p-2">
+              <LazyEffectsSection
+                items={visualItems}
+                hiddenGpuEffectTypes={COLOR_PANEL_EFFECT_TYPES}
+              />
+            </div>
+            <details className="min-w-0 rounded-[3px] border border-border/70 bg-background/35">
+              <summary className="cursor-pointer px-3 py-2 text-[11px] font-semibold text-foreground">
+                Keyframes
+              </summary>
+              <div className="h-[360px] min-h-0 border-t border-border/70" data-testid="color-keyframes-lane">
+                <KeyframeGraphPanel
+                  isOpen={true}
+                  placement="side"
+                  showCloseButton={false}
+                  onClose={handleKeepKeyframesOpen}
+                  initialVisibleGroupIds={COLOR_KEYFRAME_VISIBLE_GROUPS}
+                  propertyColumnWidth={COLOR_KEYFRAME_PROPERTY_COLUMN_WIDTH}
+                />
+              </div>
+            </details>
+          </Suspense>
+        </div>
+      </div>
+    )
+  }
 
   if (layout === 'dock') {
     return (
@@ -241,7 +284,7 @@ export const ColorGradePanel = memo(function ColorGradePanel({
               onCreateAdjustmentLayer={handleCreateAdjustmentLayer}
             />
           </div>
-          <div className="min-h-0 overflow-hidden rounded-[3px] border border-border/70 bg-background/35">
+          <div className="min-h-0 overflow-y-auto rounded-[3px] border border-border/70 bg-background/35">
             <LazyEffectsSection
               items={visualItems}
               hiddenGpuEffectTypes={COLOR_PANEL_EFFECT_TYPES}
@@ -249,7 +292,7 @@ export const ColorGradePanel = memo(function ColorGradePanel({
             />
           </div>
           <div
-            className="min-h-0 overflow-hidden rounded-[3px] border border-border/70 bg-background/35"
+            className="min-h-0 overflow-y-auto rounded-[3px] border border-border/70 bg-background/35"
             data-testid="color-keyframes-lane"
           >
             <KeyframeGraphPanel

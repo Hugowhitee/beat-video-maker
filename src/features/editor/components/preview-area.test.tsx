@@ -21,6 +21,7 @@ vi.mock('@/features/editor/deps/preview', async () => {
     }) => (
       <div
         data-testid={chrome === 'color' ? 'color-video-preview' : 'video-preview'}
+        data-preview-chrome={chrome ?? 'edit'}
         data-width={project.width}
         data-height={project.height}
         data-fps={project.fps}
@@ -308,6 +309,15 @@ describe('PreviewArea mask editor toolbar', () => {
     )
     expect(screen.getByTestId('playback-controls')).toHaveAttribute('data-total-frames', '240')
     expect(screen.getByTestId('timecode-display')).toHaveAttribute('data-total-frames', '240')
+  })
+
+  it('disables visual transformations in Master but keeps transport accessible', () => {
+    useEditorStore.setState({ workspace: 'master' })
+    render(<PreviewArea project={{ width: 1920, height: 1080, fps: 30 }} />)
+    expect(screen.getByRole('status', { name: /Master preview is read-only/ })).toBeInTheDocument()
+    expect(screen.getByTestId('playback-controls')).toBeInTheDocument()
+    expect(screen.getByTestId('video-preview')).toHaveAttribute('data-preview-chrome', 'view')
+    expect(screen.queryByTestId('alignment-toolbar')).not.toBeInTheDocument()
   })
 
   it('uses color preview chrome without the alignment toolbar in color workspace', () => {

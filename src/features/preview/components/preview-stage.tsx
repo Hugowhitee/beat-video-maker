@@ -289,7 +289,13 @@ export const PreviewStage = memo(function PreviewStage({
     }
   }, [playerSize.height, playerSize.width])
 
-  const isTimelineEmpty = inputProps.tracks.every((track) => track.items.length === 0)
+  // Audio-only projects still need a visible editor canvas affordance. Do not
+  // confuse a real black project background with an unmounted player.
+  const hasVisualContent = inputProps.tracks.some((track) =>
+    track.items.some((item) =>
+      item.type !== 'audio' && item.type !== 'controller' && item.type !== 'adjustment',
+    ),
+  )
   const isSplitGradeComparison = colorGradeComparisonMode === 'split'
   const splitPosition = Math.max(0.05, Math.min(0.95, colorGradeSplitPosition))
   const splitPercent = splitPosition * 100
@@ -345,7 +351,7 @@ export const PreviewStage = memo(function PreviewStage({
   return (
     <div
       ref={backgroundRef}
-      className="w-full h-full bg-video-preview-background relative"
+      className="relative h-full w-full bg-[#313630] [background-image:linear-gradient(to_right,rgba(255,255,255,0.035)_1px,transparent_1px),linear-gradient(to_bottom,rgba(255,255,255,0.035)_1px,transparent_1px)] [background-size:28px_28px]"
       style={{ overflow: needsOverflow ? 'auto' : 'visible' }}
       onClick={onBackgroundClick}
       aria-label={t('preview.stage.videoPreview')}
@@ -374,12 +380,12 @@ export const PreviewStage = memo(function PreviewStage({
             <div
               ref={setPixelSnappedPlayerContainerRef}
               data-player-container
-              className="relative shadow-2xl"
+              className="relative shadow-[0_15px_50px_rgba(0,0,0,0.38)]"
               style={{
                 width: `${playerSize.width}px`,
                 height: `${playerSize.height}px`,
                 transition: 'none',
-                outline: '2px solid hsl(var(--border))',
+                outline: '1px solid #818b7f',
                 outlineOffset: 0,
                 overflow: 'hidden',
                 contain: 'paint',
@@ -392,11 +398,13 @@ export const PreviewStage = memo(function PreviewStage({
                 </div>
               )}
 
-              {!isResolving && isTimelineEmpty && (
-                <div className="absolute inset-0 z-10 flex items-center justify-center bg-black/35 px-6 text-center pointer-events-none">
-                  <div className="max-w-sm rounded-xl border border-white/10 bg-black/50 px-5 py-4 text-white shadow-xl backdrop-blur-sm">
-                    <p className="text-sm font-semibold mb-1">{t('preview.stage.emptyTitle')}</p>
-                    <p className="text-xs text-white/75">{t('preview.stage.emptyDescription')}</p>
+              {!isResolving && !hasVisualContent && (
+                <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center bg-[#151916]/55 px-6 text-center">
+                  <div className="max-w-xs border border-white/15 bg-[#242a25]/90 px-5 py-4 text-white shadow-lg">
+                    <p className="text-xs font-semibold">No visual layers</p>
+                    <p className="mt-1 text-[11px] leading-4 text-white/65">
+                      Add a cover, video or text in Visual. The preview updates here.
+                    </p>
                   </div>
                 </div>
               )}

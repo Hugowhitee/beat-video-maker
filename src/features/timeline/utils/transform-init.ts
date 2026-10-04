@@ -1,6 +1,6 @@
 import type { TransformProperties } from '@/types/transform'
 
-export type InitialTransformFitMode = 'contain' | 'cover'
+export type InitialTransformFitMode = 'original' | 'contain' | 'cover'
 
 /**
  * Compute initial fit-to-canvas transform for an item.
@@ -13,6 +13,11 @@ export function computeInitialTransform(
   canvasHeight: number,
   fitMode: InitialTransformFitMode = 'contain',
 ): TransformProperties {
+  // Manual video placement can preserve native pixel dimensions. Automatic
+  // sequencing and photo covers still explicitly request their fit mode.
+  if (fitMode === 'original') {
+    return { x: 0, y: 0, width: sourceWidth, height: sourceHeight, rotation: 0 }
+  }
   const scaleX = canvasWidth / sourceWidth
   const scaleY = canvasHeight / sourceHeight
   const fitScale = fitMode === 'cover' ? Math.max(scaleX, scaleY) : Math.min(scaleX, scaleY)

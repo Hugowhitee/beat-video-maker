@@ -4,7 +4,12 @@ import type { ItemEffect } from '@/types/effects'
 import type { ShapeItem, TimelineItem } from '@/types/timeline'
 import type { CropSettings } from '@/types/transform'
 import { calculateTransform } from '../utils/transform-calculations'
-import { applySnapping, applyScaleSnapping, type SnapLine } from '../utils/canvas-snap-utils'
+import {
+  applyAnchoredScaleSnapping,
+  applySnapping,
+  applyScaleSnapping,
+  type SnapLine,
+} from '../utils/canvas-snap-utils'
 
 export type ColorGradeComparisonMode = 'off' | 'before' | 'split'
 
@@ -459,14 +464,14 @@ export const useGizmoStore = create<GizmoStoreState & GizmoStoreActions>((set, g
     const effectiveAspectLocked = shiftKey ? !aspectLocked : aspectLocked
 
     // Calculate raw transform (pass !effectiveAspectLocked because calculateTransform expects maintainAspectRatio)
-    // ctrlKey enables corner-anchored scaling instead of center-anchored
+    // Opposite handle stays fixed by default; Ctrl opts into symmetric scaling.
     let newTransform = calculateTransform(
       activeGizmo,
       currentPoint,
       !effectiveAspectLocked,
       canvasSize.width,
       canvasSize.height,
-      ctrlKey,
+      !ctrlKey,
     )
 
     // Apply snapping based on mode (pass current snapLines for hysteresis)
@@ -493,15 +498,26 @@ export const useGizmoStore = create<GizmoStoreState & GizmoStoreActions>((set, g
               canvasScale,
               otherItemBounds,
             )
-          : applyScaleSnapping(
-              newTransform,
-              canvasSize.width,
-              canvasSize.height,
-              currentSnapLines,
-              strokeExpansion,
-              canvasScale,
-              !effectiveAspectLocked ? false : true,
-            )
+          : ctrlKey
+            ? applyScaleSnapping(
+                newTransform,
+                canvasSize.width,
+                canvasSize.height,
+                currentSnapLines,
+                strokeExpansion,
+                canvasScale,
+                effectiveAspectLocked,
+              )
+            : applyAnchoredScaleSnapping(
+                newTransform,
+                activeGizmo.startTransform,
+                activeGizmo.activeHandle!,
+                canvasSize.width,
+                canvasSize.height,
+                currentSnapLines,
+                canvasScale,
+                effectiveAspectLocked,
+              )
       newTransform = snapResult.transform
       snapLines = snapResult.snapLines
     } else {

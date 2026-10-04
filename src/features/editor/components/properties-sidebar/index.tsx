@@ -209,11 +209,13 @@ export const PropertiesSidebar = memo(function PropertiesSidebar({
       ? activeCompositionName
       : null
   const headerLabel =
-    workspace === 'motion' && activeClipHeader
-      ? t('editor.propertiesSidebar.layer', { defaultValue: 'Layer' })
-      : motionCompositionHeader
-        ? t('editor.propertiesSidebar.composition', { defaultValue: 'Composition' })
-        : t('editor.propertiesSidebar.title')
+    studioTaskColumn && workspace === 'edit'
+      ? 'Edit'
+      : workspace === 'motion' && activeClipHeader
+        ? t('editor.propertiesSidebar.layer', { defaultValue: 'Layer' })
+        : motionCompositionHeader
+          ? t('editor.propertiesSidebar.composition', { defaultValue: 'Composition' })
+          : t('editor.propertiesSidebar.title')
   const headerContext = activeClipHeader?.text ?? motionCompositionHeader
   const headerTitle = activeClipHeader?.title ?? motionCompositionHeader ?? undefined
   const producerWorkspace =
@@ -421,9 +423,17 @@ export const PropertiesSidebar = memo(function PropertiesSidebar({
                     </Suspense>
                   </div>
                   {!hasClipSelection && (
-                    <div>
-                      <CanvasPanel />
-                    </div>
+                    studioTaskColumn && workspace === 'edit' ? (
+                      <div className="flex min-h-40 items-center justify-center border border-dashed border-border bg-[#e8e9e5] px-6 text-center">
+                        <span className="text-[10px] leading-4 text-muted-foreground">
+                          Select a visual item to edit.
+                        </span>
+                      </div>
+                    ) : (
+                      <div>
+                        <CanvasPanel />
+                      </div>
+                    )
                   )}
                 </>
               )}

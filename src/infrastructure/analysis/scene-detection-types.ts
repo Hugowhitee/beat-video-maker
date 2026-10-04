@@ -1,6 +1,6 @@
 import type { VerificationModel } from './verification/registry'
 
-export const SCENE_DETECTOR_VERSION = 2
+export const SCENE_DETECTOR_VERSION = 3
 
 export type SceneDetectionMethod = 'histogram' | 'adaptive'
 
@@ -19,7 +19,12 @@ export interface HistogramSceneCutMetrics {
   histogramDistance: number
 }
 
-export type SceneCutMetrics = AdaptiveSceneCutMetrics | HistogramSceneCutMetrics
+/** A boundary explicitly added or reviewed by the editor, not a detector guess. */
+export interface ManualSceneCutMetrics {
+  kind: 'manual'
+}
+
+export type SceneCutMetrics = AdaptiveSceneCutMetrics | HistogramSceneCutMetrics | ManualSceneCutMetrics
 
 export interface SceneCut {
   /** Authoritative presentation time in the source media, in seconds. */

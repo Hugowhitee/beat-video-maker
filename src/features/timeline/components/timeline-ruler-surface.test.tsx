@@ -2,6 +2,7 @@ import { act, render } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vite-plus/test'
 import { _resetZoomStoreForTest, useZoomStore } from '../stores/zoom-store'
 import { getTimelineWidth } from '../utils/timeline-layout'
+import { applyTimelineLiveGeometry, createTimelineTrackContentLayerRef } from '../utils/timeline-live-geometry'
 
 vi.mock('./timeline-markers', () => ({
   IO_LANE_HEIGHT: 12,
@@ -61,5 +62,42 @@ describe('TimelineRulerSurface', () => {
     )
     expect(surface.style.transform).toBe('none')
     expect(view.getByTestId('stable-ruler-markers')).toBe(markers)
+  })
+  it('aligns ruler and track overlays to content width instead of scroll room at every zoom', () => {
+    for (const kind of ['ruler', 'tracks']) {
+      const outer = document.createElement('div')
+      const surface = document.createElement('div')
+      const overlay = document.createElement('div')
+      surface.dataset.timelineCommittedSurface = kind
+      surface.appendChild(overlay)
+      outer.appendChild(surface)
+      const attach = createTimelineTrackContentLayerRef()
+      attach(overlay)
+      applyTimelineLiveGeometry({
+        outer, surface, duration: 10, viewportWidth: 500, livePixelsPerSecond: 100,
+      })
+      expect(surface.style.width).toBe(`${getTimelineWidth({ contentWidth: 1000, viewportWidth: 500 })}px`)
+      expect(overlay.style.width).toBe('1000px')
+      applyTimelineLiveGeometry({
+        outer, surface, duration: 10, viewportWidth: 500, livePixelsPerSecond: 200,
+      })
+      expect(overlay.style.width).toBe('2000px')
+      expect(outer.style.getPropertyValue('--timeline-content-width')).toBe('2000px')
+      attach(null)
+    }
+  })
+
+  it('gives sibling track overlays the content axis even when the surface has scroll room', () => {
+    const outer = document.createElement('div')
+    const surface = document.createElement('div')
+    surface.dataset.timelineCommittedSurface = 'tracks'
+    outer.appendChild(surface)
+    const sibling = document.createElement('div')
+    sibling.style.width = 'var(--timeline-content-width, 100%)'
+    outer.appendChild(sibling)
+    applyTimelineLiveGeometry({outer, surface, duration: 180, viewportWidth: 620, livePixelsPerSecond: 12})
+    expect(outer.style.getPropertyValue('--timeline-content-width')).toBe('2160px')
+    expect(surface.style.width).toBe(`${getTimelineWidth({contentWidth: 2160, viewportWidth: 620})}px`)
+    expect(sibling.style.width).toBe('var(--timeline-content-width, 100%)')
   })
 })

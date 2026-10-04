@@ -101,18 +101,12 @@ vi.mock('./color-grading-dock', () => ({
   ColorGradingDock: () => <div data-testid="color-grading-dock" />,
 }))
 
-vi.mock('./color-timeline-navigator', () => ({
-  ColorTimelineNavigator: () => <div data-testid="color-timeline-navigator" />,
-}))
 
 vi.mock('./compose-workspace/compose-layout', () => ({
   MotionPreviewArea: () => <div data-testid="motion-preview-area" />,
   MotionTimelineDock: () => <div data-testid="motion-timeline-dock" />,
 }))
 
-vi.mock('./project-debug-panel', () => ({
-  ProjectDebugPanel: () => <div data-testid="project-debug-panel" />,
-}))
 
 vi.mock('./interaction-lock-region', () => ({
   InteractionLockRegion: ({ children }: { children: ReactNode }) => <>{children}</>,
@@ -473,7 +467,7 @@ describe('LoadedEditor migration metadata refresh', () => {
     )
   })
 
-  it('mounts the compact color navigator and fixed grading dock in the color workspace', async () => {
+  it('keeps Color preview, real timeline and grade tools scroll-safe without fixed heights', async () => {
     mocks.editorState.workspace = 'color'
     mocks.editorState.propertiesFullColumn = true
 
@@ -496,9 +490,16 @@ describe('LoadedEditor migration metadata refresh', () => {
     )
 
     expect(await screen.findByTestId('color-grading-dock')).toBeInTheDocument()
-    expect(screen.getByTestId('color-timeline-navigator')).toBeInTheDocument()
-    expect(screen.queryByTestId('timeline')).not.toBeInTheDocument()
+    expect(await screen.findByTestId('timeline')).toBeInTheDocument()
+    expect(screen.queryByTestId('color-timeline-navigator')).not.toBeInTheDocument()
     expect(screen.queryByTestId('properties-sidebar')).not.toBeInTheDocument()
+    expect(mocks.resizablePanelGroup).toHaveBeenCalledWith(
+      expect.objectContaining({
+        direction: 'vertical',
+        autoSaveId: 'editor:timeline-layout',
+      }),
+    )
+    expect(screen.getByRole('separator', { name: 'Resize Color controls' })).toBeInTheDocument()
   })
 
   it('uses one reachable editor surface at a time on phone-sized viewports', async () => {
@@ -550,7 +551,7 @@ describe('LoadedEditor migration metadata refresh', () => {
     expect(screen.queryByRole('button', { name: 'Timeline' })).not.toBeInTheDocument()
     expect(dock.querySelectorAll('button')).toHaveLength(3)
 
-    fireEvent.click(screen.getByRole('button', { name: 'Media' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Add' }))
     expect(screen.getByTestId('media-sidebar')).toHaveAttribute('data-mobile', 'true')
     expect(screen.getByTestId('mobile-playback-controls')).toHaveAttribute(
       'data-total-frames',
@@ -565,7 +566,7 @@ describe('LoadedEditor migration metadata refresh', () => {
     expect(screen.getByTestId('preview-area')).toHaveAttribute('data-compact', 'true')
     expect(screen.getByTestId('timeline')).toHaveAttribute('data-compact', 'true')
 
-    fireEvent.click(screen.getByRole('button', { name: 'Inspector' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Edit' }))
     expect(screen.getByTestId('properties-sidebar')).toHaveAttribute('data-mobile', 'true')
     expect(screen.getByTestId('preview-area')).toBeInTheDocument()
 
@@ -576,7 +577,7 @@ describe('LoadedEditor migration metadata refresh', () => {
     expect(dock).toBeInTheDocument()
   })
 
-  it('uses the rail-free producer shell in Master without the generic split handle', async () => {
+  it('uses the shared resizable timeline shell in Master with dedicated master controls', async () => {
     mocks.editorState.workspace = 'master'
 
     render(
@@ -601,7 +602,7 @@ describe('LoadedEditor migration metadata refresh', () => {
     expect(screen.getByTestId('beatvideo-master-panel')).toBeInTheDocument()
     expect(screen.getByTestId('preview-area')).toBeInTheDocument()
     expect(await screen.findByTestId('timeline')).toBeInTheDocument()
-    expect(screen.queryByTestId('resizable-handle')).not.toBeInTheDocument()
+    expect(screen.getByTestId('resizable-handle')).toBeInTheDocument()
     expect(screen.queryByTestId('audio-meter-panel')).not.toBeInTheDocument()
   })
 

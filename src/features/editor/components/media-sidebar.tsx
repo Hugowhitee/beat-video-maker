@@ -16,7 +16,6 @@ import {
   Star,
   Hexagon,
   Heart,
-  Pentagon,
   Blend,
   Pen,
   Captions,
@@ -64,6 +63,7 @@ import {
   getDefaultGeneratedLayerDurationInFrames,
   resolvePhotoPublishingDurationInFrames,
   computeInitialTransform,
+  buildBeatvideoCoverLayoutItems,
 } from '@/features/editor/deps/timeline-utils'
 import {
   addItemsOnNewTracks,
@@ -142,7 +142,10 @@ function getWorkspaceSidebarFallback(workspace: EditorWorkspaceId): EditorSideba
 const TEXT_TEMPLATE_PREVIEW_SHELL =
   'w-full aspect-video rounded-sm border border-border bg-slate-950'
 
-function renderTextTemplatePreview(preset?: TextStylePreset) {
+function renderTextTemplatePreview(
+  preset?: TextStylePreset,
+  sampleOverride?: Partial<TextStylePreset['sample']>,
+) {
   if (!preset) {
     return (
       <div
@@ -156,7 +159,7 @@ function renderTextTemplatePreview(preset?: TextStylePreset) {
     )
   }
 
-  const copy = preset.sample
+  const copy = { ...preset.sample, ...sampleOverride }
 
   if (preset.previewKind === 'clean') {
     return (
@@ -389,26 +392,70 @@ const VISIBLE_TEXT_PRESET_IDS = new Set<TextStylePreset['id']>([
 ])
 
 function renderProducerTextPreview(preset: (typeof PRODUCER_TEXT_PRESETS)[number]) {
+  const displayFont = { fontFamily: "'Staatliches', Impact, sans-serif" }
+  const signatureFont = { fontFamily: "'Tritopani', 'Caveat', cursive" }
   return (
-    <div className="relative h-12 w-14 shrink-0 overflow-hidden rounded-[2px] bg-[#343834]">
-      {preset.id === 'corner-mark' ? (
-        <span className="absolute bottom-2 right-1.5 h-1.5 w-5 rounded-[1px] bg-[#c7e85a]" />
-      ) : preset.id === 'lower-third' ? (
-        <>
-          <span className="absolute bottom-3 left-1.5 h-1 w-8 rounded-[1px] bg-[#f6f7f3]" />
-          <span className="absolute bottom-1.5 left-1.5 h-0.5 w-5 bg-[#bfc4bc]" />
-        </>
-      ) : preset.id === 'center-stamp' ? (
-        <span className="absolute left-2 top-[20px] h-2 w-10 rounded-[1px] bg-[#c7e85a]" />
-      ) : (
-        <>
-          <span className="absolute left-1.5 top-3 h-1.5 w-11 rounded-[1px] bg-[#f6f7f3]" />
-          <span className="absolute left-3 top-6 h-1 w-8 rounded-[1px] bg-[#c7e85a]" />
-        </>
+    <div className="relative aspect-video w-full overflow-hidden border border-[#474d46] bg-[#252923] text-white">
+      {preset.id === 'corner-mark' && (
+        <span className="absolute right-[7%] top-[9%] text-[9px] leading-none tracking-[0.04em]" style={displayFont}>
+          PROD. NAME
+        </span>
+      )}
+      {preset.id === 'lower-third' && (
+        <div className="absolute bottom-[13%] left-[8%] flex flex-col items-start">
+          <span className="text-[13px] leading-none tracking-[0.01em]" style={displayFont}>PROD. NAME</span>
+          <span className="mt-0.5 text-[10px] leading-none text-[#e9f0df]" style={signatureFont}>Beat by Hugo White</span>
+        </div>
+      )}
+      {preset.id === 'center-stamp' && (
+        <span className="absolute inset-0 flex items-center justify-center text-[17px] tracking-[0.025em]" style={displayFont}>
+          HUGOWHITE
+        </span>
+      )}
+      {preset.id === 'beat-title' && (
+        <div className="absolute inset-x-[5%] top-[9%] flex flex-col items-center">
+          <span className="text-[20px] leading-[0.9] tracking-[-0.025em]" style={displayFont}>GLOCK IT</span>
+          <span className="mt-[5%] text-[9px] leading-none text-[#ff5a1f]" style={displayFont}>KEVIN TYPE BEAT</span>
+          <span className="mt-0.5 text-[10px] leading-none text-white" style={signatureFont}>Hugo White</span>
+        </div>
       )}
     </div>
   )
 }
+
+const REACTIVE_EFFECT_PRESET_IDS = new Set<BeatvideoReactiveGraphicPresetId>([
+  'beat-flash',
+  'pulse-frame',
+])
+const REACTIVE_GRAPHIC_PRESET_IDS = new Set<BeatvideoReactiveGraphicPresetId>([
+  'three-band-bars',
+])
+
+function renderReactiveGraphicPreview(presetId: BeatvideoReactiveGraphicPresetId) {
+  return (
+    <div className="relative aspect-video w-full overflow-hidden rounded-[2px] border border-border bg-[#343834]">
+      <div className="absolute inset-0 bg-[linear-gradient(135deg,#3d423d_0%,#202420_100%)]" />
+      {presetId === 'beat-flash' ? (
+        <>
+          <div className="absolute inset-0 bg-white/40" />
+          <div className="absolute inset-x-[18%] top-1/2 h-px -translate-y-1/2 bg-white/80" />
+        </>
+      ) : presetId === 'pulse-frame' ? (
+        <>
+          <div className="absolute inset-[14%] border-2 border-white/90" />
+          <div className="absolute inset-[22%] border border-white/20" />
+        </>
+      ) : (
+        <div className="absolute inset-x-[24%] bottom-[18%] top-[18%] flex items-end justify-center gap-[8%]">
+          <span className="h-[42%] w-[22%] bg-white/75" />
+          <span className="h-[86%] w-[22%] bg-[#c7e85a]" />
+          <span className="h-[62%] w-[22%] bg-white/75" />
+        </div>
+      )}
+    </div>
+  )
+}
+
 const PHOTO_QUICK_EFFECT_IDS = [
   'gpu-grain',
   'gpu-vignette',
@@ -614,104 +661,151 @@ export const MediaSidebar = memo(function MediaSidebar({
     [t],
   )
 
-  const handleAddProducerText = useCallback(
-    (presetId: ProducerTextPresetId) => {
-      const preset = PRODUCER_TEXT_PRESETS.find((candidate) => candidate.id === presetId)
-      if (!preset) return
+  const handleAddProducerText = useCallback((presetId: ProducerTextPresetId) => {
+    const preset = PRODUCER_TEXT_PRESETS.find((candidate) => candidate.id === presetId)
+    if (!preset) return
 
-      const timeline = useTimelineStore.getState()
-      const selection = useSelectionStore.getState()
-      const currentProject = useProjectStore.getState().currentProject
-      const newTrack = createOverlayLayerTrack({
-        tracks: timeline.tracks,
-        activeTrackId: selection.activeTrackId,
-      })
+    const timeline = useTimelineStore.getState()
+    const selection = useSelectionStore.getState()
+    const currentProject = useProjectStore.getState().currentProject
+    const canvasWidth = currentProject?.metadata.width ?? DEFAULT_PROJECT_WIDTH
+    const canvasHeight = currentProject?.metadata.height ?? DEFAULT_PROJECT_HEIGHT
+    const publishDuration = resolvePhotoPublishingDurationInFrames(timeline.fps, {
+      beatvideoMode: currentProject?.beatvideoMode,
+      beatvideoMusic: currentProject?.beatvideoMusic,
+      projectMedia: useMediaLibraryStore.getState().mediaItems,
+      timelineItems: timeline.items,
+    })
+    const forFullBeat = currentProject?.beatvideoMode === 'photo' && publishDuration > 0
+    const durationInFrames = forFullBeat
+      ? publishDuration
+      : getDefaultGeneratedLayerDurationInFrames(timeline.fps)
+    const from = forFullBeat ? 0 : Math.max(0, usePlaybackStore.getState().currentFrame)
+    const placement = (trackId: string) => ({
+      trackId,
+      from,
+      durationInFrames,
+      canvasWidth,
+      canvasHeight,
+      fps: timeline.fps,
+    })
+    const nextTrack = (tracks: typeof timeline.tracks) =>
+      createOverlayLayerTrack({ tracks, activeTrackId: selection.activeTrackId })
 
-      if (!newTrack) {
-        logger.warn('No available track for producer text item')
-        return
+    // A type-beat cover is three real independent timeline text layers, not
+    // one flattened multiline text item or a parallel graphics document.
+    if (presetId === 'beat-title') {
+      let workingTracks = timeline.tracks
+      const ids = new Map<'title' | 'subtitle' | 'branding', string>()
+      for (const role of ['branding', 'subtitle', 'title'] as const) {
+        const planned = nextTrack(workingTracks)
+        if (!planned) return
+        workingTracks = planned.tracks
+        ids.set(role, planned.trackId)
       }
-
-      const canvasWidth = currentProject?.metadata.width ?? DEFAULT_PROJECT_WIDTH
-      const canvasHeight = currentProject?.metadata.height ?? DEFAULT_PROJECT_HEIGHT
-      const publishDuration = resolvePhotoPublishingDurationInFrames(timeline.fps, {
-        beatvideoMode: currentProject?.beatvideoMode,
-        beatvideoMusic: currentProject?.beatvideoMusic,
-        projectMedia: useMediaLibraryStore.getState().mediaItems,
-        timelineItems: timeline.items,
+      const title = ids.get('title')
+      const subtitle = ids.get('subtitle')
+      const branding = ids.get('branding')
+      if (!title || !subtitle || !branding) return
+      const items = buildBeatvideoCoverLayoutItems({
+        presetId: 'hero-stack',
+        content: { title: 'BEAT TITLE', subtitle: 'TYPE BEAT', branding: 'PROD. NAME' },
+        titleMotion: 'static',
+        trackIds: { title, subtitle, branding },
+        from,
+        durationInFrames,
+        canvasWidth,
+        canvasHeight,
+        fps: timeline.fps,
       })
-      const durationInFrames =
-        currentProject?.beatvideoMode === 'photo' && publishDuration > 0
-          ? publishDuration
-          : getDefaultGeneratedLayerDurationInFrames(timeline.fps)
-      const from =
-        currentProject?.beatvideoMode === 'photo' && publishDuration > 0
-          ? 0
-          : Math.max(0, usePlaybackStore.getState().currentFrame)
+      addItemsOnNewTracks(items, workingTracks)
+      selection.setActiveTrack(title)
+      selection.selectItems([items[0]!.id])
+      return
+    }
 
-      const baseItem = createTextTemplateItem({
-        placement: {
-          trackId: newTrack.trackId,
-          from,
-          durationInFrames,
-          canvasWidth,
-          canvasHeight,
-          fps: timeline.fps,
-        },
-        label: preset.label,
-        text: preset.text,
-        textStylePresetId: preset.stylePresetId,
+    // Lower third has an independently editable signature. Its thumbnail and
+    // inserted output now share the same actual two-font composition.
+    if (presetId === 'lower-third') {
+      const creditTrack = nextTrack(timeline.tracks)
+      if (!creditTrack) return
+      const nameTrack = nextTrack(creditTrack.tracks)
+      if (!nameTrack) return
+      const nameBase = createTextTemplateItem({
+        placement: placement(nameTrack.trackId),
+        label: 'Producer name',
+        text: 'PROD. NAME',
       })
-
-      const transform =
-        preset.id === 'corner-mark'
-          ? {
-              x: Math.round(canvasWidth * 0.31),
-              y: Math.round(-canvasHeight * 0.39),
-              width: Math.round(canvasWidth * 0.28),
-              height: Math.round(canvasHeight * 0.08),
-            }
-          : preset.id === 'lower-third'
-            ? {
-                x: Math.round(-canvasWidth * 0.22),
-                y: Math.round(canvasHeight * 0.35),
-                width: Math.round(canvasWidth * 0.46),
-                height: Math.round(canvasHeight * 0.11),
-              }
-            : preset.id === 'center-stamp'
-              ? {
-                  x: 0,
-                  y: 0,
-                  width: Math.round(canvasWidth * 0.54),
-                  height: Math.round(canvasHeight * 0.13),
-                }
-              : {
-                  x: 0,
-                  y: Math.round(-canvasHeight * 0.28),
-                  width: Math.round(canvasWidth * 0.82),
-                  height: Math.round(canvasHeight * 0.18),
-                }
-
-      const textItem: TextItem = {
-        ...baseItem,
-        label: preset.label,
-        text: preset.text,
-        textSpans: undefined,
+      const creditBase = createTextTemplateItem({
+        placement: placement(creditTrack.trackId),
+        label: 'Producer signature',
+        text: 'Beat by Hugo White',
+      })
+      const name: TextItem = {
+        ...nameBase,
+        label: 'Producer name',
+        fontFamily: 'Staatliches', fontWeight: 'normal',
+        color: '#ffffff', fontSize: Math.round(canvasHeight * 0.063),
+        lineHeight: 0.96, textPadding: 0, textSpans: undefined,
+        backgroundColor: undefined, stroke: undefined, textStylePresetId: undefined,
         transform: {
-          ...baseItem.transform,
-          ...transform,
+          ...nameBase.transform,
+          x: Math.round(-canvasWidth * 0.22),
+          y: Math.round(canvasHeight * 0.33),
+          width: Math.round(canvasWidth * 0.46),
+          height: Math.round(canvasHeight * 0.1),
         },
       }
+      const signature: TextItem = {
+        ...creditBase,
+        label: 'Producer signature',
+        fontFamily: 'Caveat', fontWeight: 'normal',
+        color: '#ffffff', fontSize: Math.round(canvasHeight * 0.045),
+        lineHeight: 1, textPadding: 0, textSpans: undefined,
+        backgroundColor: undefined, stroke: undefined, textStylePresetId: undefined,
+        transform: {
+          ...creditBase.transform,
+          x: Math.round(-canvasWidth * 0.22),
+          y: Math.round(canvasHeight * 0.413),
+          width: Math.round(canvasWidth * 0.42),
+          height: Math.round(canvasHeight * 0.075),
+        },
+      }
+      addItemsOnNewTracks([name, signature], nameTrack.tracks)
+      selection.setActiveTrack(nameTrack.trackId)
+      selection.selectItems([name.id])
+      return
+    }
 
-      timeline.addItemOnNewTrack(textItem, newTrack.tracks)
-      selection.setActiveTrack(newTrack.trackId)
-      selection.selectItems([textItem.id])
-      toast.success(`${preset.label} added`, {
-        description: 'Edit it like any other text layer in Inspector.',
-      })
-    },
-    [],
-  )
+    const newTrack = nextTrack(timeline.tracks)
+    if (!newTrack) return
+    const baseItem = createTextTemplateItem({
+      placement: placement(newTrack.trackId),
+      label: preset.label,
+      text: preset.id === 'corner-mark' ? 'PROD. NAME' : 'HUGOWHITE',
+    })
+    const isCorner = preset.id === 'corner-mark'
+    const item: TextItem = {
+      ...baseItem,
+      label: preset.label,
+      fontFamily: 'Staatliches', fontWeight: 'normal',
+      fontSize: Math.round(canvasHeight * (isCorner ? 0.046 : 0.12)),
+      lineHeight: 0.95, letterSpacing: 0,
+      color: '#ffffff', textPadding: 0,
+      backgroundColor: undefined, stroke: undefined,
+      textSpans: undefined, textStylePresetId: undefined,
+      transform: {
+        ...baseItem.transform,
+        x: isCorner ? Math.round(canvasWidth * 0.32) : 0,
+        y: isCorner ? Math.round(-canvasHeight * 0.4) : 0,
+        width: Math.round(canvasWidth * (isCorner ? 0.29 : 0.66)),
+        height: Math.round(canvasHeight * (isCorner ? 0.08 : 0.18)),
+      },
+    }
+    addItemsOnNewTracks([item], newTrack.tracks)
+    selection.setActiveTrack(newTrack.trackId)
+    selection.selectItems([item.id])
+  }, [])
 
   const handleImportPhotoCover = useCallback(async () => {
     if (importingPhotoCover) return
@@ -1100,8 +1194,7 @@ export const MediaSidebar = memo(function MediaSidebar({
     { id: 'media' as const, icon: Film, label: t('editor.mediaSidebar.media') },
     { id: 'beat' as const, icon: AudioLines, label: 'Beat' },
     { id: 'master' as const, icon: Gauge, label: 'Master' },
-    { id: 'text' as const, icon: Type, label: t('editor.mediaSidebar.text') },
-    { id: 'shapes' as const, icon: Pentagon, label: 'Graphics' },
+    { id: 'text' as const, icon: Type, label: 'Overlays' },
     { id: 'effects' as const, icon: Layers, label: t('editor.mediaSidebar.effects') },
     { id: 'transitions' as const, icon: Blend, label: t('editor.mediaSidebar.transitions') },
     { id: 'lottie' as const, icon: Sticker, label: t('lottieBrowser.tabLabel') },
@@ -1113,6 +1206,14 @@ export const MediaSidebar = memo(function MediaSidebar({
       isSidebarTabVisibleForWorkspace(id, workspace),
   )
 
+  const primaryVisualTabs = categories.filter(({ id }) =>
+    id === 'media' || id === 'text' || id === 'effects' || id === 'transitions',
+  )
+  const secondaryVisualTabs = categories.filter(({ id }) =>
+    id === 'lottie' || id === 'transcript' || id === 'ai',
+  )
+  const selectedSecondaryTab = secondaryVisualTabs.find(({ id }) => id === activeTab)
+
   const producerShell =
     workspace === 'beat' ||
     workspace === 'edit' ||
@@ -1120,6 +1221,12 @@ export const MediaSidebar = memo(function MediaSidebar({
     workspace === 'master'
 
   useEffect(() => {
+    // Existing saved selections of the old Graphics tab now open the unified
+    // Overlays surface instead of an invisible, unreachable tab.
+    if (activeTab === 'shapes') {
+      setActiveTab('text')
+      return
+    }
     if (
       !isSidebarTabVisibleForBeatvideoMode(activeTab, beatvideoMode) ||
       !isSidebarTabVisibleForWorkspace(activeTab, workspace)
@@ -1174,7 +1281,7 @@ export const MediaSidebar = memo(function MediaSidebar({
         mobile || studioTaskColumn ? 'w-full flex-1' : 'flex-shrink-0',
       )}
     >
-      {/* The generic FreeCut icon rail remains available outside the focused
+      {/* The advanced editor icon rail remains available outside the focused
           Beatvideo producer flow. Producer workspaces use labeled tabs instead. */}
       {!mobile && !producerShell ? (
       <div
@@ -1384,28 +1491,53 @@ export const MediaSidebar = memo(function MediaSidebar({
             </div>
 
             {producerShell && categories.length > 1 ? (
-              <div className="shrink-0 border-b border-border px-5 py-3">
-                <div
-                  className="studio-segmented flex h-8 w-full min-w-max"
-                  role="tablist"
-                  aria-label="Visual tools"
-                >
-                  {categories.map(({ id, label }) => (
-                    <button
-                      key={id}
-                      type="button"
-                      role="tab"
-                      aria-selected={activeTab === id}
-                      aria-pressed={activeTab === id}
-                      onClick={() => {
-                        setActiveTab(id)
-                        if (id === 'effects') triggerPreviews()
-                      }}
-                      className="studio-segment h-7 min-w-[78px] flex-1 px-2 text-[9px] font-medium"
-                    >
-                      {label}
-                    </button>
-                  ))}
+              <div className="shrink-0 border-b border-border px-4 py-2.5">
+                <div className="flex min-w-0 items-center gap-1.5">
+                  <div
+                    className="studio-segmented grid h-8 min-w-0 flex-1 grid-cols-4"
+                    role="tablist"
+                    aria-label="Visual tools"
+                  >
+                    {primaryVisualTabs.map(({ id, label }) => (
+                      <button
+                        key={id}
+                        type="button"
+                        role="tab"
+                        aria-selected={activeTab === id}
+                        onClick={() => {
+                          setActiveTab(id)
+                          if (id === 'effects') triggerPreviews()
+                        }}
+                        className="studio-segment h-7 min-w-0 truncate px-1 text-[9px] font-medium"
+                      >
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                  {secondaryVisualTabs.length > 0 ? (
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <button
+                          type="button"
+                          aria-label="More Visual tools"
+                          className={cn(
+                            'flex h-8 max-w-[92px] shrink-0 items-center gap-1 border border-border px-2 text-[10px] font-medium hover:bg-[#d1d4ce]',
+                            selectedSecondaryTab && 'bg-[#c9cec6] text-foreground',
+                          )}
+                        >
+                          <span className="min-w-0 truncate">{selectedSecondaryTab?.label ?? 'More'}</span>
+                          <ChevronDown className="h-3 w-3 shrink-0" />
+                        </button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        {secondaryVisualTabs.map(({ id, label }) => (
+                          <DropdownMenuItem key={id} onSelect={() => setActiveTab(id)}>
+                            {label}
+                          </DropdownMenuItem>
+                        ))}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  ) : null}
                 </div>
               </div>
             ) : null}
@@ -1464,16 +1596,14 @@ export const MediaSidebar = memo(function MediaSidebar({
                         key={preset.id}
                         type="button"
                         onClick={() => handleAddProducerText(preset.id)}
-                        className="flex min-h-[72px] items-center gap-2 rounded-[3px] bg-[#d1d4ce] p-2.5 text-left transition-colors hover:bg-[#c7cac4]"
+                        className="rounded-[3px] bg-[#d9dbd6] p-2 text-left transition-colors hover:bg-[#d1d4ce]"
                       >
                         {renderProducerTextPreview(preset)}
-                        <span className="min-w-0">
-                          <span className="block truncate text-[9px] font-semibold text-foreground">
-                            {preset.label}
-                          </span>
-                          <span className="mt-1 block text-[8px] leading-3 text-muted-foreground">
-                            {preset.description}
-                          </span>
+                        <span className="mt-1.5 block truncate text-[9px] font-semibold text-foreground">
+                          {preset.label}
+                        </span>
+                        <span className="mt-0.5 block truncate text-[8px] text-muted-foreground">
+                          {preset.description}
                         </span>
                       </button>
                     ))}
@@ -1533,42 +1663,33 @@ export const MediaSidebar = memo(function MediaSidebar({
                   </p>
                 </section>
               </div>
-            </div>
 
-            {/* Shapes Tab */}
-            <div
-              className={`min-h-0 flex-1 overflow-y-auto p-3 ${activeTab === 'shapes' ? 'block' : 'hidden'}`}
-            >
+              {/* Shapes remain real draggable editable visual layers, but
+                  belong to Overlays alongside titles and producer tags. */}
+              <details className="mt-4 border-t border-border pt-3">
+                <summary className="flex cursor-pointer list-none items-center justify-between text-[10px] font-semibold text-foreground hover:text-primary">
+                  Shapes and reactive graphics
+                  <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
+                </summary>
+                <div className="pt-3">
               <section className="mb-3 border-b border-border pb-3">
                 <div className="mb-2 text-[11px] font-medium text-foreground">
-                  Reactive graphics
+                  Reactive graphic
                 </div>
-                <div className="grid grid-cols-3 border-y border-border">
-                  {BEATVIDEO_REACTIVE_GRAPHIC_PRESETS.map((preset, index) => (
+                <div className="grid grid-cols-2 gap-2">
+                  {BEATVIDEO_REACTIVE_GRAPHIC_PRESETS.filter((preset) =>
+                    REACTIVE_GRAPHIC_PRESET_IDS.has(preset.id),
+                  ).map((preset) => (
                     <button
                       key={preset.id}
                       type="button"
                       onClick={() => handleAddReactiveGraphic(preset.id)}
-                      className={cn(
-                        'flex h-14 flex-col items-center justify-center gap-1 text-[9px] text-muted-foreground transition-colors hover:bg-secondary/30 hover:text-foreground',
-                        index < BEATVIDEO_REACTIVE_GRAPHIC_PRESETS.length - 1 &&
-                          'border-r border-border',
-                      )}
+                      className="rounded-[3px] bg-[#d9dbd6] p-2 text-left transition-colors hover:bg-[#d1d4ce]"
                     >
-                      <span className="flex h-5 w-9 items-end justify-center gap-0.5">
-                        {preset.id === 'beat-flash' ? (
-                          <span className="h-4 w-7 border border-foreground/55 bg-foreground/10" />
-                        ) : preset.id === 'pulse-frame' ? (
-                          <span className="h-4 w-7 border-2 border-foreground/55" />
-                        ) : (
-                          <>
-                            <span className="h-2 w-1.5 bg-foreground/55" />
-                            <span className="h-4 w-1.5 bg-foreground/55" />
-                            <span className="h-3 w-1.5 bg-foreground/55" />
-                          </>
-                        )}
+                      {renderReactiveGraphicPreview(preset.id)}
+                      <span className="mt-1.5 block truncate text-[9px] font-semibold text-foreground">
+                        {preset.label}
                       </span>
-                      <span>{preset.label}</span>
                     </button>
                   ))}
                 </div>
@@ -1784,6 +1905,8 @@ export const MediaSidebar = memo(function MediaSidebar({
                   </span>
                 </button>
               </div>
+                </div>
+              </details>
             </div>
 
             {/* Effects Tab */}
@@ -1791,6 +1914,29 @@ export const MediaSidebar = memo(function MediaSidebar({
               className={`min-h-0 flex-1 overflow-y-auto p-3 ${activeTab === 'effects' ? 'block' : 'hidden'}`}
             >
               <div className="space-y-3">
+                <section>
+                  <div className="mb-2 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+                    Beat reactive
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    {BEATVIDEO_REACTIVE_GRAPHIC_PRESETS.filter((preset) =>
+                      REACTIVE_EFFECT_PRESET_IDS.has(preset.id),
+                    ).map((preset) => (
+                      <button
+                        key={preset.id}
+                        type="button"
+                        onClick={() => handleAddReactiveGraphic(preset.id)}
+                        className="rounded-[3px] border border-border bg-secondary/30 p-2 text-left transition-colors hover:border-primary/50 hover:bg-secondary/50"
+                      >
+                        {renderReactiveGraphicPreview(preset.id)}
+                        <span className="mt-1.5 block truncate text-[9px] font-semibold text-foreground">
+                          {preset.label}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                </section>
+
                 {beatvideoMode === 'photo' ? (
                   <div className="space-y-2">
                     <div className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">

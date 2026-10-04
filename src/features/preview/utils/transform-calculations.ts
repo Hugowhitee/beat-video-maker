@@ -68,7 +68,7 @@ export function prepareScaleStartTransform(
 
 /**
  * Calculate new transform based on current gizmo interaction.
- * @param cornerAnchored - When true, scaling anchors from opposite corner instead of center (Ctrl key)
+ * @param cornerAnchored - Default: keep the opposite edge/corner fixed; false (Ctrl) scales from center.
  */
 export function calculateTransform(
   gizmo: GizmoState,
@@ -76,7 +76,7 @@ export function calculateTransform(
   shiftKey: boolean,
   canvasWidth: number,
   canvasHeight: number,
-  cornerAnchored: boolean = false,
+  cornerAnchored: boolean = true,
 ): Transform {
   switch (gizmo.mode) {
     case 'translate':
@@ -119,8 +119,8 @@ function calculateTranslation(start: Transform, startPoint: Point, currentPoint:
 
 /**
  * Calculate scale based on handle drag.
- * By default, scaling is center-anchored (center stays fixed).
- * When cornerAnchored is true (Ctrl held), the opposite corner/edge stays fixed.
+ * By default the dragged handle moves and the opposite edge/corner stays fixed.
+ * Ctrl switches to symmetric center-based scaling.
  * Handles maintain aspect ratio unless shift is held.
  */
 function calculateScale(
@@ -131,7 +131,7 @@ function calculateScale(
   maintainAspectRatio: boolean,
   canvasWidth: number,
   canvasHeight: number,
-  cornerAnchored: boolean = false,
+  cornerAnchored: boolean = true,
 ): Transform {
   // Get center of the item in canvas coordinates
   const centerX = canvasWidth / 2 + start.x
@@ -253,7 +253,17 @@ function calculateScale(
     }
   }
 
-  // Note: Values are NOT rounded here - rounding happens in snap functions
+  // x/y above are computed in local, unrotated box coordinates. Rotate the
+  // center displacement back into canvas space so even a rotated layer keeps
+  // its opposite handle pinned instead of walking sideways during resize.
+  if (cornerAnchored && start.rotation !== 0) {
+    const radians = (start.rotation * Math.PI) / 180
+    const dx = newX - start.x
+    const dy = newY - start.y
+    newX = start.x + dx * Math.cos(radians) - dy * Math.sin(radians)
+    newY = start.y + dx * Math.sin(radians) + dy * Math.cos(radians)
+  }
+
   return {
     ...start,
     x: newX,

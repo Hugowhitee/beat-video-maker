@@ -15,7 +15,9 @@ function setStyle(style: CSSStyleDeclaration, property: string, value: string) {
   }
 }
 
-const TRACKS_SURFACE_SELECTOR = '[data-timeline-committed-surface="tracks"]'
+// Ruler markers, beat lines and track clips must share the content width; the
+// committed surface itself also includes empty navigation room after the song.
+const TIMELINE_SURFACE_SELECTOR = '[data-timeline-committed-surface]'
 const trackContentLayersBySurface = new WeakMap<HTMLElement, Set<HTMLElement>>()
 const trackContentLayerRegistrations = new WeakMap<HTMLElement, { surface: HTMLElement }>()
 const trackContentWidthBySurface = new WeakMap<HTMLElement, number>()
@@ -34,7 +36,7 @@ function unregisterTrackContentLayer(layer: HTMLElement, registration: { surface
 }
 
 function registerTrackContentLayer(layer: HTMLElement) {
-  const surface = layer.closest<HTMLElement>(TRACKS_SURFACE_SELECTOR)
+  const surface = layer.closest<HTMLElement>(TIMELINE_SURFACE_SELECTOR)
   if (!surface) {
     return () => {}
   }
@@ -117,6 +119,9 @@ export function applyTimelineLiveGeometry({
     viewportWidth: effectiveViewportWidth,
   })
 
+  // Beat/grid overlays are siblings of the committed track surface, so they
+  // inherit their time-axis width from the outer scrolling layer instead.
+  setStyle(outer.style, '--timeline-content-width', `${liveContentWidth}px`)
   setStyle(outer.style, 'width', `${liveWidth}px`)
   setStyle(surface.style, 'width', `${liveWidth}px`)
   setStyle(surface.style, 'transform', 'none')

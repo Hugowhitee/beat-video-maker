@@ -561,9 +561,10 @@ export function BeatvideoMusicPanel() {
   ])
 
   const analyze = useCallback(async () => {
-    if (!selectedMediaId || !currentProject || analyzing) return
+    // React state may still read `analyzing=false` in another effect from the
+    // same render. The controller ref is the synchronous single-flight lock.
+    if (!selectedMediaId || !currentProject || analyzing || abortRef.current) return
 
-    abortRef.current?.abort()
     const controller = new AbortController()
     abortRef.current = controller
     setAnalyzing(true)
