@@ -31,7 +31,6 @@ import {
 } from '@/components/ui/alert-dialog'
 import { Button } from '@/components/ui/button'
 import type { Project } from '@/types/project'
-import { formatRelativeTime } from '../utils/project-helpers'
 import {
   useDeleteProject,
   useDuplicateProject,
@@ -173,7 +172,6 @@ export function ProjectCard({
   const height = project?.metadata?.height || DEFAULT_PROJECT_HEIGHT
   const fps = project?.metadata?.fps || DEFAULT_PROJECT_FPS
 
-  const resolution = `${width}×${height}`
   const aspectRatioLabel = getAspectRatio(width, height)
 
   const projectMode = resolveBeatvideoProjectMode(project.beatvideoMode)
@@ -199,7 +197,7 @@ export function ProjectCard({
         <div className="absolute inset-x-0 top-0 z-20 h-[3px] bg-primary" aria-hidden="true" />
       ) : null}
 
-      <div className="relative m-2 mb-0 min-h-0 flex-[1_1_58%] overflow-hidden rounded-[2px] bg-[#343834]">
+      <div className="relative m-2 mb-0 min-h-0 flex-[1_1_60%] overflow-hidden rounded-[2px] bg-[#343834]">
         {thumbnailUrl ? (
           <img
             key={project.updatedAt}
@@ -222,7 +220,7 @@ export function ProjectCard({
         </button>
       </div>
 
-      <div className="relative flex min-h-0 flex-[0_0_42%] flex-col px-2.5 pb-11 pt-2">
+      <div className="flex min-h-0 flex-[0_0_40%] flex-col px-2.5 py-2">
         <div className="flex min-w-0 items-center gap-1.5">
           <h3 className="truncate text-[12px] font-semibold leading-4 text-foreground">
             {project.name}
@@ -236,74 +234,68 @@ export function ProjectCard({
           <span aria-hidden="true">·</span>
           <span className="shrink-0 font-mono">{fps} fps</span>
         </div>
-        <div className="mt-1 truncate font-mono text-[8px] text-muted-foreground">
-          {resolution}
-        </div>
-        <div className="mt-auto truncate text-[8px] text-muted-foreground">
-          {formatRelativeTime(project.updatedAt)}
-        </div>
-      </div>
 
-      <div className="absolute bottom-2 right-2 flex items-center gap-1">
-        <Button
-          type="button"
-          size="sm"
-          className="studio-secondary-action h-8 px-3"
-          onClick={handleOpenClick}
-        >
-          Open
-        </Button>
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-8 w-8 text-muted-foreground hover:text-foreground"
-              onClick={(e) => {
-                e.preventDefault()
-                e.stopPropagation()
-              }}
-              onMouseDown={(e) => e.stopPropagation()}
-              onDoubleClick={(e) => e.stopPropagation()}
-              aria-label="Project actions"
-            >
-              <MoreVertical className="h-4 w-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-48" data-studio-v2="true">
-            <DropdownMenuItem asChild>
-              <Link
-                to="/editor/$projectId"
-                params={{ projectId: project.id }}
-                className="flex items-center gap-2 cursor-pointer"
+        <div className="mt-auto flex items-center justify-end gap-1">
+          <Button
+            type="button"
+            size="sm"
+            className="studio-secondary-action h-7 px-2.5 text-[9px]"
+            onClick={handleOpenClick}
+          >
+            Open
+          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7 text-muted-foreground hover:text-foreground"
+                onClick={(e) => {
+                  e.preventDefault()
+                  e.stopPropagation()
+                }}
+                onMouseDown={(e) => e.stopPropagation()}
+                onDoubleClick={(e) => e.stopPropagation()}
+                aria-label="Project actions"
               >
-                <PlayCircle className="w-4 h-4" />
-                {t('projects.card.openInEditor')}
-              </Link>
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={handleEdit} className="flex items-center gap-2">
-              <Edit2 className="w-4 h-4" />
-              {t('projects.card.editSettings')}
-            </DropdownMenuItem>
-            <DropdownMenuItem
-              onClick={handleDuplicate}
-              disabled={isDuplicating}
-              className="flex items-center gap-2"
-            >
-              <Copy className="w-4 h-4" />
-              {isDuplicating ? t('projects.card.duplicating') : t('projects.card.duplicate')}
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem
-              onClick={handleDeleteClick}
-              disabled={isDeleting}
-              className="flex items-center gap-2 text-destructive focus:text-destructive"
-            >
-              <Trash2 className="w-4 h-4" />
-              {isDeleting ? t('common.deleting') : t('common.delete')}
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+                <MoreVertical className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-48" data-studio-v2="true">
+              <DropdownMenuItem asChild>
+                <Link
+                  to="/editor/$projectId"
+                  params={{ projectId: project.id }}
+                  className="flex items-center gap-2 cursor-pointer"
+                >
+                  <PlayCircle className="w-4 h-4" />
+                  {t('projects.card.openInEditor')}
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={handleEdit} className="flex items-center gap-2">
+                <Edit2 className="w-4 h-4" />
+                {t('projects.card.editSettings')}
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={handleDuplicate}
+                disabled={isDuplicating}
+                className="flex items-center gap-2"
+              >
+                <Copy className="w-4 h-4" />
+                {isDuplicating ? t('projects.card.duplicating') : t('projects.card.duplicate')}
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                onClick={handleDeleteClick}
+                disabled={isDeleting}
+                className="flex items-center gap-2 text-destructive focus:text-destructive"
+              >
+                <Trash2 className="w-4 h-4" />
+                {isDeleting ? t('common.deleting') : t('common.delete')}
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
       </div>
 
       <AlertDialog
