@@ -19,7 +19,12 @@ export interface HistogramSceneCutMetrics {
   histogramDistance: number
 }
 
-export type SceneCutMetrics = AdaptiveSceneCutMetrics | HistogramSceneCutMetrics
+/** A boundary explicitly added or reviewed by the editor, not a detector guess. */
+export interface ManualSceneCutMetrics {
+  kind: 'manual'
+}
+
+export type SceneCutMetrics = AdaptiveSceneCutMetrics | HistogramSceneCutMetrics | ManualSceneCutMetrics
 
 export interface SceneCut {
   /** Authoritative presentation time in the source media, in seconds. */
