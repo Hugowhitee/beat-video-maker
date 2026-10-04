@@ -87,10 +87,6 @@ vi.mock('./properties-sidebar', () => ({
   ),
 }))
 
-vi.mock('./studio-project-rail', () => ({
-  StudioProjectRail: () => <div data-testid="studio-project-rail" />,
-}))
-
 vi.mock('./beatvideo-master-panel', () => ({
   BeatvideoMasterPanel: () => <div data-testid="beatvideo-master-panel" />,
 }))
@@ -580,7 +576,7 @@ describe('LoadedEditor migration metadata refresh', () => {
     expect(dock).toBeInTheDocument()
   })
 
-  it('uses the fixed Figma three-column shell in Master without the generic split handle', async () => {
+  it('uses the rail-free producer shell in Master without the generic split handle', async () => {
     mocks.editorState.workspace = 'master'
 
     render(
@@ -601,7 +597,7 @@ describe('LoadedEditor migration metadata refresh', () => {
       />,
     )
 
-    expect(screen.getByTestId('studio-project-rail')).toBeInTheDocument()
+    expect(screen.queryByLabelText('Project')).not.toBeInTheDocument()
     expect(screen.getByTestId('beatvideo-master-panel')).toBeInTheDocument()
     expect(screen.getByTestId('preview-area')).toBeInTheDocument()
     expect(await screen.findByTestId('timeline')).toBeInTheDocument()
