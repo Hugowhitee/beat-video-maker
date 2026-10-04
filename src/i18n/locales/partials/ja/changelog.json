@@ -1,16 +1,16 @@
 {
   "changelog": {
-    "homeAria": "Beatvideo Maker ホーム",
+    "homeAria": "Beat Video Maker ホーム",
     "backToHome": "ホームに戻る",
     "releaseNotes": "リリースノート",
-    "title": "Beatvideo Maker の新着情報",
+    "title": "Beat Video Maker の新着情報",
     "description": "新しい編集ツール、ワークフローの改善、修正点を毎週まとめてお届けします。最新のリリースは展開されています。以前の週を展開すると、変更点の一覧を確認できます。",
     "latest": "最新",
     "changeCount_one": "{{count}} 件の変更",
     "changeCount_other": "{{count}} 件の変更",
     "initialRelease": "初回リリース",
     "ctaTitle": "何か作ってみませんか？",
-    "ctaDescription": "Beatvideo Maker を開いて、最新のツールを活用しましょう。",
-    "openBeat Video Maker": "Beatvideo Maker を開く"
+    "ctaDescription": "Beat Video Maker を開いて、最新のツールを活用しましょう。",
+    "openBeat Video Maker": "Beat Video Maker を開く"
   }
 }

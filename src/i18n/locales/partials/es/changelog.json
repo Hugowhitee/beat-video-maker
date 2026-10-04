@@ -1,16 +1,16 @@
 {
   "changelog": {
-    "homeAria": "Inicio de Beatvideo Maker",
+    "homeAria": "Inicio de Beat Video Maker",
     "backToHome": "Volver al inicio",
     "releaseNotes": "Notas de la versión",
-    "title": "Novedades de Beatvideo Maker",
+    "title": "Novedades de Beat Video Maker",
     "description": "Un resumen semanal de nuevas herramientas de edición, mejoras del flujo de trabajo y correcciones. La versión más reciente está abierta; despliega cualquier semana anterior para ver la lista completa de cambios.",
     "latest": "Más reciente",
     "changeCount_one": "{{count}} cambio",
     "changeCount_other": "{{count}} cambios",
     "initialRelease": "Versión inicial",
     "ctaTitle": "¿Listo para crear algo?",
-    "ctaDescription": "Abre Beatvideo Maker y pon a trabajar las herramientas más recientes.",
-    "openBeat Video Maker": "Abrir Beatvideo Maker"
+    "ctaDescription": "Abre Beat Video Maker y pon a trabajar las herramientas más recientes.",
+    "openBeat Video Maker": "Abrir Beat Video Maker"
   }
 }
