@@ -41,6 +41,8 @@ import {
   usePlayer,
 } from '@/features/preview/deps/player-context'
 import { SourceComposition } from './source-composition'
+import { SourceTrimFilmstrip } from './source-trim-filmstrip'
+import { TimeDisplayFormatSelect } from './time-display-format-select'
 import { ShuttleIndicator } from '@/shared/ui/shuttle-indicator'
 import { resolveMediaUrl } from '../utils/media-resolver'
 import {
@@ -538,6 +540,8 @@ function SourceMonitorInner({
 
       {/* Controls bar - same height as program monitor */}
       <SourcePlaybackControls
+        mediaId={mediaId}
+        blobUrl={src || null}
         durationInFrames={durationInFrames}
         fps={fps}
         mediaType={mediaType}
@@ -552,6 +556,8 @@ function SourceMonitorInner({
 // -- Playback controls for the source monitor --
 
 function SourcePlaybackControls({
+  mediaId,
+  blobUrl,
   durationInFrames,
   fps,
   mediaType,
@@ -559,6 +565,8 @@ function SourcePlaybackControls({
   interactive,
   seekFrame,
 }: {
+  mediaId: string
+  blobUrl: string | null
   durationInFrames: number
   fps: number
   mediaType: 'video' | 'audio' | 'image' | 'lottie'
@@ -1222,6 +1230,29 @@ function SourcePlaybackControls({
 
   return (
     <div className="@container flex flex-col shrink-0">
+      {interactive && mediaType === 'video' && (
+        <SourceTrimFilmstrip
+          mediaId={mediaId}
+          blobUrl={blobUrl}
+          durationInFrames={durationInFrames}
+          fps={fps}
+          inPoint={inPoint}
+          outPoint={outPoint}
+          onSeek={(frame) => {
+            player.pause()
+            replayingRef.current = false
+            commitSourceSeek(frame)
+          }}
+          onChangeIn={(frame) => {
+            const store = useSourcePlayerStore.getState()
+            store.setInPoint(clampDraggedSourceInPoint(frame, store.outPoint, lastFrame))
+          }}
+          onChangeOut={(frame) => {
+            const store = useSourcePlayerStore.getState()
+            store.setOutPoint(clampDraggedSourceOutPoint(frame, store.inPoint, durationInFrames))
+          }}
+        />
+      )}
       {/* Seek bar row with I/O region above and editing buttons */}
       <div className="border-t border-border panel-header flex items-center gap-2 px-4 h-7 shrink-0">
         <div className="flex-1 flex flex-col justify-center gap-0.5 min-w-0">
@@ -1343,17 +1374,14 @@ function SourcePlaybackControls({
         style={{ height: EDITOR_LAYOUT_CSS_VALUES.previewControlsHeight }}
       >
         <div className="flex min-w-0 shrink-0 items-center gap-2">
-          <button
-            type="button"
-            className="inline-flex items-center gap-1.5 bg-transparent p-0 font-mono text-[11px] tabular-nums text-left transition-colors select-none text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring rounded-sm shrink-0"
-            onClick={() => setShowFrames((prev) => !prev)}
-          >
+          <div className="inline-flex items-center gap-1.5 font-mono text-xs tabular-nums text-muted-foreground">
             <span ref={currentTimeRef} className="text-foreground font-semibold">
               {formatTime(clock.currentFrame)}
             </span>
             <span className="text-muted-foreground">/</span>
             <span>{formatTime(lastFrame)}</span>
-          </button>
+          </div>
+          <TimeDisplayFormatSelect showFrames={showFrames} onChange={setShowFrames} />
           <ShuttleIndicator
             active={playing && shuttleActiveRef.current}
             playbackRate={playbackRate}

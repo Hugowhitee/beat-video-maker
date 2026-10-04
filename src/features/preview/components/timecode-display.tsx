@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { getResolvedPlaybackFrame, usePlaybackStore } from '@/shared/state/playback'
 import { usePreviewBridgeStore } from '@/shared/state/preview-bridge'
 import { formatTimecodeCompact } from '@/shared/utils/time-utils'
+import { TimeDisplayFormatSelect } from './time-display-format-select'
 
 interface TimecodeDisplayProps {
   fps: number
@@ -100,15 +101,7 @@ export function TimecodeDisplay({ fps, totalFrames }: TimecodeDisplayProps) {
         {showFrames ? formatFrameNumber(lastFrame) : formatTimecodeCompact(lastFrame, fps)}
       </span>
       </div>
-      <select
-        aria-label="Time display format"
-        value={showFrames ? 'frames' : 'timecode'}
-        onChange={(event) => setShowFrames(event.currentTarget.value === 'frames')}
-        className="h-7 min-w-[4.5rem] rounded-sm border border-border bg-muted px-1 text-xs text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
-      >
-        <option value="timecode">TC</option>
-        <option value="frames">Frames</option>
-      </select>
+      <TimeDisplayFormatSelect showFrames={showFrames} onChange={setShowFrames} />
     </div>
   )
 }

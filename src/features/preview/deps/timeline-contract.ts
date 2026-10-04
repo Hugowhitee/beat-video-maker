@@ -40,3 +40,6 @@ export {
 } from '@/features/timeline/contracts/preview'
 
 export const importFilmstripCache = () => import('@/features/timeline/services/filmstrip-cache')
+
+export { useFilmstrip } from '@/features/timeline/contracts/preview'
+export type { FilmstripFrame } from '@/features/timeline/contracts/preview'

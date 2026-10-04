@@ -81,6 +81,10 @@ vi.mock('./source-composition', () => ({
   SourceComposition: () => <div data-testid="source-composition" />,
 }))
 
+vi.mock('./source-trim-filmstrip', () => ({
+  SourceTrimFilmstrip: () => <div data-testid="source-precision-filmstrip" />,
+}))
+
 vi.mock('@/components/ui/tooltip', () => ({
   Tooltip: ({ children }: { children: ReactNode }) => <>{children}</>,
   TooltipTrigger: ({ children }: { children: ReactNode }) => <>{children}</>,
@@ -222,6 +226,11 @@ describe('SourceMonitor current media ownership', () => {
     rendered.unmount()
 
     expect(sourcePlayerStoreState.releaseCurrentMediaId).toHaveBeenCalledWith('media-1')
+  })
+
+  it('renders the precision filmstrip for video source trimming', () => {
+    const rendered = render(<SourceMonitor mediaId="media-1" />)
+    expect(rendered.getByTestId('source-precision-filmstrip')).toBeInTheDocument()
   })
 
   it('batches seek bar drags and commits the final frame on mouseup', async () => {
