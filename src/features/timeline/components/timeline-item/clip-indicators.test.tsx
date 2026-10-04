@@ -39,6 +39,37 @@ describe('ClipIndicators', () => {
     expect(parentClick).not.toHaveBeenCalled()
   })
 
+  it('identifies applied effects, including bypassed effects, and opens editing', () => {
+    const onEffectsOpen = vi.fn()
+    const onParentPointerDown = vi.fn()
+    render(
+      <div onPointerDown={onParentPointerDown}>
+        <ClipIndicators
+          hasKeyframes={false}
+          keyframesExpanded={false}
+          hasMotion={false}
+          appliedEffectCount={3}
+          enabledEffectCount={2}
+          currentSpeed={1}
+          isReversed={false}
+          isStretching={false}
+          stretchFeedback={null}
+          isBroken={false}
+          hasMediaId={false}
+          isMask={false}
+          isShape={false}
+          onEffectsOpen={onEffectsOpen}
+        />
+      </div>,
+    )
+    const button = screen.getByRole('button', { name: 'Edit effects: 2 active, 1 bypassed' })
+    expect(button).toHaveAttribute('title', '3 applied effects · 2 enabled')
+    fireEvent.pointerDown(button, { button: 0 })
+    expect(onParentPointerDown).not.toHaveBeenCalled()
+    fireEvent.click(button)
+    expect(onEffectsOpen).toHaveBeenCalledOnce()
+  })
+
   it('opens animation controls without starting the parent clip gesture', () => {
     const onMotionOpen = vi.fn()
     const parentPointerDown = vi.fn()

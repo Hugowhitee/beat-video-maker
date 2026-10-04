@@ -822,6 +822,8 @@ export const TimelineItem = memo(function TimelineItem({
   })
   const hasDetailBadges =
     hasKeyframes ||
+    hasMotion ||
+    (item.effects?.length ?? 0) > 0 ||
     isBroken ||
     Math.abs(currentSpeed - 1) > SPEED_BADGE_EPSILON ||
     linkedSyncOffsetFrames !== null ||
@@ -1093,6 +1095,8 @@ export const TimelineItem = memo(function TimelineItem({
                 hasKeyframes={hasKeyframes}
                 keyframesExpanded={keyframesExpanded}
                 hasMotion={hasMotion}
+                appliedEffectCount={item.effects?.length ?? 0}
+                enabledEffectCount={item.effects?.filter((effect) => effect.enabled).length ?? 0}
                 currentSpeed={currentSpeed}
                 isReversed={item.isReversed === true}
                 reverseConformStatus={item.reverseConformStatus}
@@ -1104,6 +1108,11 @@ export const TimelineItem = memo(function TimelineItem({
                 isShape={item.type === 'shape'}
                 onKeyframesToggle={() => {
                   useSelectionStore.getState().toggleKeyframeLanes(item.id)
+                }}
+                onEffectsOpen={() => {
+                  useSelectionStore.getState().selectItems([item.id])
+                  useEditorStore.getState().setRightSidebarOpen(true)
+                  useEditorStore.getState().setClipInspectorTab('effects')
                 }}
                 onMotionOpen={() => {
                   useSelectionStore.getState().selectItems([item.id])
