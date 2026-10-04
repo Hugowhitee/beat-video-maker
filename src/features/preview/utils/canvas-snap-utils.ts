@@ -315,6 +315,82 @@ export function applySnapping(
 }
 
 /**
+ * Resize snapping for the usual opposite-edge/corner-anchored interaction.
+ * Unlike symmetric snapping, only the dragged edges are eligible, and the
+ * original opposite side stays pinned after the size is rounded. Rotated
+ * boxes preserve their rotated pivot via calculateScale and avoid misleading
+ * axis-aligned canvas snap targets.
+ */
+export function applyAnchoredScaleSnapping(
+  transform: Transform,
+  start: Transform,
+  handle: import('../types/gizmo').GizmoHandle,
+  canvasWidth: number,
+  canvasHeight: number,
+  currentSnapLines: SnapLine[] = [],
+  canvasScale = 1,
+  maintainAspectRatio = true,
+): SnapResult {
+  if (start.rotation !== 0) {
+    return { transform, snapLines: [] }
+  }
+
+  const west = handle.includes('w')
+  const east = handle.includes('e')
+  const north = handle.includes('n')
+  const south = handle.includes('s')
+  const xDirection = east ? 1 : west ? -1 : 0
+  const yDirection = south ? 1 : north ? -1 : 0
+  const centerX = canvasWidth / 2 + transform.x
+  const centerY = canvasHeight / 2 + transform.y
+  const { enter, exit } = getThresholds(canvasScale)
+  const points = getScaleSnapPoints(canvasWidth, canvasHeight)
+  const xEdge = centerX + (xDirection * transform.width) / 2
+  const yEdge = centerY + (yDirection * transform.height) / 2
+  const xMatch = xDirection
+    ? findBestMatch(points.vertical, [xEdge], new Set(currentSnapLines.filter(
+        (line) => line.type === 'vertical',
+      ).map((line) => line.position)), enter, exit)
+    : null
+  const yMatch = yDirection
+    ? findBestMatch(points.horizontal, [yEdge], new Set(currentSnapLines.filter(
+        (line) => line.type === 'horizontal',
+      ).map((line) => line.position)), enter, exit)
+    : null
+  let width = transform.width
+  let height = transform.height
+  const snapLines: SnapLine[] = []
+  const useX = xMatch && (!yMatch || !maintainAspectRatio || xMatch.distance <= yMatch.distance)
+  const useY = yMatch && (!xMatch || !maintainAspectRatio || yMatch.distance < xMatch.distance)
+
+  if (useX && xMatch) {
+    width += xDirection * (xMatch.snapPoint.pos - xEdge)
+    snapLines.push({ type: 'vertical', position: xMatch.snapPoint.pos, label: xMatch.snapPoint.label })
+  }
+  if (useY && yMatch) {
+    height += yDirection * (yMatch.snapPoint.pos - yEdge)
+    snapLines.push({ type: 'horizontal', position: yMatch.snapPoint.pos, label: yMatch.snapPoint.label })
+  }
+  if (maintainAspectRatio && (useX || useY)) {
+    const ratio = start.width / Math.max(start.height, 1)
+    if (useX) height = width / ratio
+    else width = height * ratio
+  }
+  width = Math.round(Math.max(20, width))
+  height = Math.round(Math.max(20, height))
+  return {
+    transform: {
+      ...transform,
+      width,
+      height,
+      x: start.x + (xDirection * (width - start.width)) / 2,
+      y: start.y + (yDirection * (height - start.height)) / 2,
+    },
+    snapLines,
+  }
+}
+
+/**
  * Apply snapping during scale operations.
  * Snaps item edges to canvas snap points while maintaining aspect ratio.
  * Uses uniform scaling to prevent visual distortion.
