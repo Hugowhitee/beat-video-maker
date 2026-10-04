@@ -71,12 +71,12 @@ export const ColorGradingDock = memo(function ColorGradingDock() {
 
   return (
     <section
-      className="panel-bg flex h-full min-h-0 flex-col border-t border-border"
+      className="panel-bg flex h-full min-h-0 min-w-0 flex-col bg-[#e8e9e5]"
       aria-label={t('editor.colorPanel.dockLabel')}
       data-testid="color-grading-dock"
     >
       <div className="min-h-0 flex-1 overflow-hidden p-2">
-        <ColorGradePanel layout="dock" scope={scope} onScopeChange={setScope} />
+        <ColorGradePanel layout="vertical-dock" scope={scope} onScopeChange={setScope} />
       </div>
     </section>
   )
