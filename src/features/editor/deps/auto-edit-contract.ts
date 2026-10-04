@@ -5,6 +5,8 @@ export {
 } from '@/features/auto-edit/planner'
 export {
   buildClipMapForMedia,
+  reviewClipSourceShots,
+  type ReviewedShotEdit,
   type ClipMapBuildProgress,
 } from '@/features/auto-edit/clip-map'
 export {
