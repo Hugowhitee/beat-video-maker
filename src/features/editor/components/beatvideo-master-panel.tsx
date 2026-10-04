@@ -411,7 +411,13 @@ export function BeatvideoMasterPanel() {
       // bus fader untouched.
       const before = captureSnapshot()
       setBusAudioEq(undefined)
-      setMasterFx(preset.settings)
+      const presetOrder = resolveMasterFxSettings(preset.settings).order
+      setMasterFx({
+        ...preset.settings,
+        processorInstanceIds: Object.fromEntries(
+          presetOrder.map((processor) => [processor, crypto.randomUUID()]),
+        ),
+      })
       setAutoLevelResult(null)
       markChanged()
       useTimelineCommandStore
@@ -424,7 +430,13 @@ export function BeatvideoMasterPanel() {
   const applySavedPreset = useCallback(
     (preset: SavedMasterPreset) => {
       const before = captureSnapshot()
-      setMasterFx(preset.masterFx)
+      const presetOrder = resolveMasterFxSettings(preset.masterFx).order
+      setMasterFx({
+        ...preset.masterFx,
+        processorInstanceIds: Object.fromEntries(
+          presetOrder.map((processor) => [processor, crypto.randomUUID()]),
+        ),
+      })
       setBusAudioEq(preset.busAudioEq)
       setAutoLevelResult(null)
       markChanged()
@@ -522,18 +534,7 @@ export function BeatvideoMasterPanel() {
       setMasterFx({
         ...resolved,
         enabled: true,
-        order: resolved.order.includes('limiter')
-          ? resolved.order
-          : [...resolved.order, 'limiter'],
         inputGainDb: plan.inputGainDb,
-        limiter: {
-          ...resolved.limiter,
-          enabled: true,
-          ceilingDb: Math.min(
-            resolved.limiter.ceilingDb,
-            AUTO_LEVEL_LIMITER_CEILING_DB,
-          ),
-        },
       })
       markChanged()
       useTimelineCommandStore
@@ -621,7 +622,15 @@ export function BeatvideoMasterPanel() {
       if (resolved.order.includes(slot)) return
       const before = captureSnapshot()
       const order = [...resolved.order, slot]
-      const next: MasterFxSettings = { ...resolved, enabled: true, order }
+      const next: MasterFxSettings = {
+        ...resolved,
+        enabled: true,
+        order,
+        processorInstanceIds: {
+          ...resolved.processorInstanceIds,
+          [slot]: crypto.randomUUID(),
+        },
+      }
 
       if (slot === 'eq') {
         setBusAudioEq({ ...(busAudioEq ?? {}), enabled: true })
@@ -648,7 +657,12 @@ export function BeatvideoMasterPanel() {
     (slot: MasterSlot) => {
       const nextOrder = resolved.order.filter((candidate) => candidate !== slot)
       if (nextOrder.length === resolved.order.length) return
-      commitMasterFx({ ...resolved, order: nextOrder }, 'REMOVE_MASTER_PLUGIN')
+      const processorInstanceIds = { ...resolved.processorInstanceIds }
+      delete processorInstanceIds[slot]
+      commitMasterFx(
+        { ...resolved, order: nextOrder, processorInstanceIds },
+        'REMOVE_MASTER_PLUGIN',
+      )
       if (selectedSlot === slot) {
         setSelectedSlot(nextOrder[0] ?? null)
       }
@@ -671,7 +685,7 @@ export function BeatvideoMasterPanel() {
                 Master
               </button>
             </PopoverTrigger>
-            <PopoverContent align="start" sideOffset={8} className="w-[360px] p-3">
+            <PopoverContent align="start" sideOffset={8} className="w-[440px] p-3">
               <div className="text-[9px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
                 Master presets
               </div>
@@ -786,7 +800,7 @@ export function BeatvideoMasterPanel() {
             Finish the beat, then export.
           </div>
         </div>
-        <div className="absolute bottom-0 left-5 h-px w-[360px] bg-border" aria-hidden="true" />
+        <div className="absolute bottom-0 left-5 h-px w-[440px] bg-border" aria-hidden="true" />
       </div>
 
       <div className="relative h-[144px] shrink-0">
@@ -810,7 +824,7 @@ export function BeatvideoMasterPanel() {
             setAutoLevelResult(null)
             patchMaster({ enabled: true, inputGainDb: Number(event.target.value) })
           }}
-          className="studio-master-input-range absolute left-5 top-[74px] h-6 w-[240px]"
+          className="studio-master-input-range absolute left-5 top-[74px] h-6 w-[300px]"
           style={{
             background: `linear-gradient(to right, #242724 0 ${Math.max(0, Math.min(100, ((resolved.inputGainDb + 12) / 24) * 100))}%, #c7cac4 ${Math.max(0, Math.min(100, ((resolved.inputGainDb + 12) / 24) * 100))}% 100%)`,
           }}
@@ -819,7 +833,7 @@ export function BeatvideoMasterPanel() {
         <Button
           type="button"
           size="sm"
-          className="studio-primary-action absolute left-[268px] top-[61px] h-8 w-28 px-0"
+          className="studio-primary-action absolute left-[328px] top-[61px] h-8 w-28 px-0"
           disabled={autoLeveling}
           onClick={() => void autoLevel()}
         >
@@ -828,40 +842,26 @@ export function BeatvideoMasterPanel() {
 
         {autoLevelResult ? (
           <div
-            className="absolute left-5 top-[102px] max-w-[360px] font-mono text-[9px] leading-[17px] text-muted-foreground"
+            className="absolute left-5 top-[102px] max-w-[440px] font-mono text-[9px] leading-[17px] text-muted-foreground"
             data-auto-level-result
           >
             <div>
-              {autoLevelResult.rmsDb.toFixed(1)} dBFS measured
+              Source {autoLevelResult.rmsDb.toFixed(1)} dBFS
               {'  →  '}
-              {autoLevelResult.inputGainDb >= 0 ? '+' : ''}
-              {autoLevelResult.inputGainDb.toFixed(1)} dB trim
+              Trim {autoLevelResult.inputGainDb >= 0 ? '+' : ''}
+              {autoLevelResult.inputGainDb.toFixed(1)} dB
               {'  →  '}
-              {autoLevelResult.projectedRmsDb.toFixed(1)} dBFS projected
-            </div>
-            <div>
-              Peak headroom{' '}
-              {Math.max(
-                0,
-                AUTO_LEVEL_LIMITER_CEILING_DB - autoLevelResult.projectedPeakDb,
-              ).toFixed(1)} dB
-              {autoLevelResult.estimatedLimiterReductionDb > 0.05
-                ? ` · limiter ~${autoLevelResult.estimatedLimiterReductionDb.toFixed(1)} dB`
-                : ''}
+              Peak headroom {Math.max(0, -autoLevelResult.projectedPeakDb).toFixed(1)} dB
             </div>
           </div>
-        ) : (
-          <div className="absolute left-5 top-[102px] text-[9px] leading-[17px] text-muted-foreground">
-            Auto level measures the beat pre-FX and leaves Mixer output unchanged.
-          </div>
-        )}
+        ) : null}
       </div>
 
       <div className="relative h-[300px] shrink-0">
         <div className="absolute left-5 top-[8px] text-[9px] font-semibold uppercase leading-[11px] tracking-[0.14em] text-muted-foreground">
           Inserts
         </div>
-        <div className="absolute left-5 top-[30px] h-[262px] w-[360px]">
+        <div className="absolute left-5 top-[30px] h-[262px] w-[440px]">
           {Array.from({ length: MAX_MASTER_SLOTS }, (_, index) => {
             const id = resolved.order[index]
             if (!id) {
@@ -870,7 +870,7 @@ export function BeatvideoMasterPanel() {
                 <div
                   key={`empty-${index}`}
                   className={cn(
-                    'absolute left-0 h-[46px] w-[360px] min-w-0 rounded-[3px] text-muted-foreground',
+                    'absolute left-0 h-[46px] w-[440px] min-w-0 rounded-[3px] text-muted-foreground',
                     canAdd ? 'bg-[#d9dbd6]' : 'bg-[#d1d4ce]',
                   )}
                   style={{ top: index * 54 }}
@@ -910,7 +910,7 @@ export function BeatvideoMasterPanel() {
 
             return (
               <div
-                key={id}
+                key={resolved.processorInstanceIds[id] ?? id}
                 onDragOver={(event) => {
                   if (!draggingSlot || draggingSlot === id) return
                   event.preventDefault()
@@ -938,7 +938,7 @@ export function BeatvideoMasterPanel() {
                 }}
                 style={{ top: index * 54 }}
                 className={cn(
-                  'group absolute left-0 h-[46px] w-[360px] min-w-0 cursor-grab rounded-[3px] bg-[#d1d4ce] active:cursor-grabbing',
+                  'group absolute left-0 h-[46px] w-[440px] min-w-0 cursor-grab rounded-[3px] bg-[#d1d4ce] active:cursor-grabbing',
                   dragTarget && 'shadow-[inset_0_2px_0_var(--primary)]',
                 )}
                 data-selected={selected ? 'true' : undefined}
@@ -964,7 +964,7 @@ export function BeatvideoMasterPanel() {
                 <button
                   type="button"
                   onClick={() => removeProcessor(id)}
-                  className="absolute bottom-0 left-[294px] top-0 flex w-8 items-center justify-center text-muted-foreground opacity-0 transition-opacity hover:bg-black/[0.04] hover:text-foreground focus:opacity-100 group-hover:opacity-100"
+                  className="absolute bottom-0 left-[374px] top-0 flex w-8 items-center justify-center text-muted-foreground opacity-0 transition-opacity hover:bg-black/[0.04] hover:text-foreground focus:opacity-100 group-hover:opacity-100"
                   aria-label={`Remove ${label}`}
                   title={`Remove ${label}`}
                 >
@@ -974,7 +974,7 @@ export function BeatvideoMasterPanel() {
                   type="button"
                   onClick={() => toggleSlot(id)}
                   className={cn(
-                    'absolute bottom-0 left-[326px] top-0 flex w-[34px] items-center justify-start',
+                    'absolute bottom-0 left-[406px] top-0 flex w-[34px] items-center justify-start',
                     enabled ? 'text-foreground' : 'text-muted-foreground',
                   )}
                   aria-label={`${enabled ? 'Bypass' : 'Enable'} ${label}`}
@@ -989,7 +989,7 @@ export function BeatvideoMasterPanel() {
         </div>
 
         {addEffectOpen ? (
-          <div className="absolute left-5 top-[286px] z-30 max-h-[220px] w-[360px] overflow-y-auto border border-border bg-[#f2f3ef] p-2 shadow-lg">
+          <div className="absolute left-5 top-[286px] z-30 max-h-[220px] w-[440px] overflow-y-auto border border-border bg-[#f2f3ef] p-2 shadow-lg">
             <div className="mb-1 px-1 text-[9px] uppercase tracking-[0.12em] text-muted-foreground">
               Available effects
             </div>
@@ -1040,7 +1040,7 @@ export function BeatvideoMasterPanel() {
                   Selected insert · Compressor
                 </button>
               </PopoverTrigger>
-              <PopoverContent align="start" sideOffset={8} className="w-[360px] p-3">
+              <PopoverContent align="start" sideOffset={8} className="w-[440px] p-3">
                 <div className="space-y-3">
                   <TransferGraph
                     thresholdDb={resolved.compressor.thresholdDb}
@@ -1181,14 +1181,14 @@ export function BeatvideoMasterPanel() {
       </div>
 
       <div className="relative h-[170px] shrink-0 bg-[#e8e9e5]">
-        <div className="absolute left-5 top-0 h-px w-[360px] bg-border" aria-hidden="true" />
+        <div className="absolute left-5 top-0 h-px w-[440px] bg-border" aria-hidden="true" />
         <div className="absolute left-5 top-[18px] text-[9px] font-semibold uppercase leading-[11px] tracking-[0.12em] text-muted-foreground">
           Master out
         </div>
         <div className="absolute left-5 top-[37px] text-[9px] leading-[11px] text-muted-foreground">
           Output level lives in the Mixer.
         </div>
-        <div className="absolute left-[294px] top-[10px]">
+        <div className="absolute left-[374px] top-[10px]">
           <AudioMeterPanel initialMode="meter" allowDockedMixer={false} presentation="master-inline" />
         </div>
         <button

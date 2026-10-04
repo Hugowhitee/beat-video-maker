@@ -1054,7 +1054,7 @@ export const LoadedEditor = memo(function LoadedEditor({
         {isMasterWorkspace ? (
           <InteractionLockRegion
             locked={isMaskEditingActive}
-            className="studio-master-column h-full w-[400px] shrink-0 border-l border-border"
+            className="studio-master-column h-full w-[480px] shrink-0 border-l border-border"
           >
             <ErrorBoundary level="feature">
               <BeatvideoMasterPanel />
