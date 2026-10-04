@@ -333,16 +333,16 @@ export function BeatvideoMasterPanel() {
 
   const activeBuiltInPresetId = useMemo(() => {
     if (busAudioEq !== undefined || Math.abs(masterBusDb) > 0.0001) return null
-    const { processorInstanceIds: _currentInstanceIds, ...currentComparable } = resolved
-    const current = JSON.stringify(currentComparable)
+    const current = JSON.stringify(resolved, (key, value) =>
+      key === 'processorInstanceIds' ? undefined : value,
+    )
     return (
-      MASTERING_PRESETS.find((preset) => {
-        const {
-          processorInstanceIds: _presetInstanceIds,
-          ...presetComparable
-        } = resolveMasterFxSettings(preset.settings)
-        return JSON.stringify(presetComparable) === current
-      })?.id ?? null
+      MASTERING_PRESETS.find(
+        (preset) =>
+          JSON.stringify(resolveMasterFxSettings(preset.settings), (key, value) =>
+            key === 'processorInstanceIds' ? undefined : value,
+          ) === current,
+      )?.id ?? null
     )
   }, [busAudioEq, masterBusDb, resolved])
 
@@ -1029,10 +1029,10 @@ export function BeatvideoMasterPanel() {
                   <span className="absolute left-[10px] top-[10px] font-mono text-[9px] font-semibold leading-[11px] tabular-nums text-muted-foreground">
                     {String(index + 1).padStart(2, '0')}
                   </span>
-                  <span className="absolute left-[42px] top-[8px] max-w-[calc(100%-120px)] truncate text-[11px] font-semibold leading-[13px] text-foreground">
+                  <span className="absolute left-[42px] top-[8px] max-w-[calc(100%_-_120px)] truncate text-[11px] font-semibold leading-[13px] text-foreground">
                     {label}
                   </span>
-                  <span className="absolute left-[42px] top-[25px] max-w-[calc(100%-120px)] truncate text-[9px] font-medium leading-[11px] text-muted-foreground">
+                  <span className="absolute left-[42px] top-[25px] max-w-[calc(100%_-_120px)] truncate text-[9px] font-medium leading-[11px] text-muted-foreground">
                     {id === 'limiter'
                       ? `Ceiling ${resolved.limiter.ceilingDb.toFixed(1)} dB`
                       : hint}
@@ -1275,7 +1275,7 @@ export function BeatvideoMasterPanel() {
           onPointerUp={endOutputGesture}
           onPointerCancel={endOutputGesture}
           onChange={(event) => setOutputTrimLive(Number(event.target.value))}
-          className="studio-master-input-range absolute left-5 top-[82px] h-6 w-[min(300px,calc(100%-150px))]"
+          className="studio-master-input-range absolute left-5 top-[82px] h-6 w-[300px] max-w-[calc(100%_-_150px)]"
           aria-label="Master output trim"
         />
         {Math.abs(masterBusDb) > 0.0001 ? (
