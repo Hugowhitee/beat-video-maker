@@ -206,7 +206,7 @@ export interface DirectPropertyLink {
   timeOffsetFrames: number
 }
 
-/** Deterministic expression source evaluated by FreeCut's sandboxed DSL. */
+/** Deterministic expression source evaluated by the editor's sandboxed DSL. */
 export interface PropertyExpression {
   type: 'expression'
   targetProperty: DirectLinkableProperty
