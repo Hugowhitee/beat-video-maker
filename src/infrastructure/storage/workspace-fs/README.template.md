@@ -1,6 +1,6 @@
-# Beatvideo Maker Workspace
+# Beat Video Maker Workspace
 
-This folder is your Beatvideo Maker project workspace - the app's source of truth
+This folder is your Beat Video Maker project workspace - the app's source of truth
 for projects, media metadata, thumbnails, analysis data, waveforms, and caches.
 
 Everything here is **plain files** you can inspect and back up with normal tools.
@@ -43,16 +43,16 @@ Everything here is **plain files** you can inspect and back up with normal tools
 
 Some internal filenames still use the historical `.freecut-*` prefix. They are kept
 only for safe compatibility with existing workspaces; the product and workspace
-are Beatvideo Maker.
+are Beat Video Maker.
 
 ## Safe to edit?
 
 Everything except media source bytes is safe to inspect. Editing
-`project.json` externally works; Beatvideo Maker picks up changes on next load.
+`project.json` externally works; Beat Video Maker picks up changes on next load.
 
 Binary caches are regeneratable - delete them and the app rebuilds them when needed.
 
 ## Moving the workspace
 
-You can move this folder to a new location. Beatvideo Maker just needs you to
+You can move this folder to a new location. Beat Video Maker just needs you to
 pick it again from the reconnect prompt on next launch.

@@ -102,7 +102,8 @@ export type HotkeyBindingMap = Record<HotkeyKey, string>;
 export type HotkeyOverrideMap = Partial<Record<HotkeyKey, string>>;
 type HotkeyPlatform = "mac" | "windows";
 
-export const HOTKEY_EXPORT_SCHEMA = "freecut-hotkeys";
+export const HOTKEY_EXPORT_SCHEMA = "beat-video-maker-hotkeys";
+const LEGACY_HOTKEY_EXPORT_SCHEMA = "freecut-hotkeys";
 export const HOTKEY_EXPORT_VERSION = 1;
 
 export interface HotkeyExportCommand {
@@ -819,7 +820,7 @@ export function parseHotkeyImportDocument(source: unknown): HotkeyImportResult {
     throw new Error("Invalid hotkey preset format");
   }
 
-  if (source.schema !== HOTKEY_EXPORT_SCHEMA) {
+  if (source.schema !== HOTKEY_EXPORT_SCHEMA && source.schema !== LEGACY_HOTKEY_EXPORT_SCHEMA) {
     return collectImportedOverrides(source);
   }
 
