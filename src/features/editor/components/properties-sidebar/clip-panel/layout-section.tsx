@@ -15,6 +15,7 @@ import {
   useTimelineStore,
 } from '@/features/editor/deps/timeline-store'
 import { resolveTransform, getSourceDimensions } from '@/features/editor/deps/composition-runtime'
+import { computeInitialTransform } from '@/features/editor/deps/timeline-utils'
 import {
   getAutoKeyframeOperation as getAutoKeyframeOp,
   type AutoKeyframeOperation,
@@ -661,6 +662,37 @@ export const LayoutSection = memo(function LayoutSection({
   // Get media items for fallback source dimensions lookup
   const mediaById = useMediaLibraryStore((s) => s.mediaById)
 
+  // Media sizing is a non-destructive editing operation, not an import-time
+  // decision baked into footage. The same controls work after repositioning.
+  const selectableMedia = useMemo(
+    () => items.filter((item) => item.type === 'video' || item.type === 'image'),
+    [items],
+  )
+  const handleMediaSizing = useCallback(
+    (mode: 'original' | 'contain' | 'cover') => {
+      for (const item of selectableMedia) {
+        const source = getSourceDimensions(item) ??
+          (item.mediaId ? mediaById[item.mediaId] : undefined)
+        if (!source?.width || !source?.height) continue
+        const target = computeInitialTransform(
+          source.width,
+          source.height,
+          canvas.width,
+          canvas.height,
+          mode,
+        )
+        onTransformChange([item.id], {
+          x: target.x,
+          y: target.y,
+          width: target.width,
+          height: target.height,
+        })
+      }
+      queueMicrotask(clearTransformUiState)
+    },
+    [selectableMedia, mediaById, canvas, onTransformChange, clearTransformUiState],
+  )
+
   // Reset scale to source dimensions (1:1 scale)
   // For shapes: reset to 1:1 aspect ratio (square based on smaller dimension)
   const handleResetScale = useCallback(() => {
@@ -876,6 +908,31 @@ export const LayoutSection = memo(function LayoutSection({
           </Button>
         </div>
       </PropertyRow>
+
+      {/* Native / Fit / Fill are explicit, editable placement actions. */}
+      {selectableMedia.length > 0 && selectableMedia.length === items.length && (
+        <PropertyRow label="Frame">
+          <div className="grid w-full grid-cols-3 gap-1" role="group" aria-label="Media sizing">
+            {([
+              { id: 'original', label: 'Original', tip: 'Use original pixel dimensions (100%)' },
+              { id: 'contain', label: 'Fit', tip: 'Show the entire image inside the frame' },
+              { id: 'cover', label: 'Fill', tip: 'Fill the frame without stretching' },
+            ] as const).map((action) => (
+              <Button
+                key={action.id}
+                type="button"
+                variant="outline"
+                size="sm"
+                className="h-7 min-w-0 rounded-[2px] px-2 text-[10px] font-medium shadow-none"
+                title={action.tip}
+                onClick={() => handleMediaSizing(action.id)}
+              >
+                {action.label}
+              </Button>
+            ))}
+          </div>
+        </PropertyRow>
+      )}
 
       {/* Rotation */}
       <PropertyRow label={t('editor.layoutSection.rotation')}>
