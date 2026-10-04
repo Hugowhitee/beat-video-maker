@@ -9,7 +9,6 @@ import { ErrorBoundary } from '@/app/error-boundary'
 import { Toolbar } from './toolbar'
 import { MediaSidebar } from './media-sidebar'
 import { BeatvideoMasterPanel } from './beatvideo-master-panel'
-import { StudioProjectRail } from './studio-project-rail'
 import { PropertiesSidebar } from './properties-sidebar'
 import { PreviewArea } from './preview-area'
 import { MotionPreviewArea, MotionTimelineDock } from './compose-workspace/compose-layout'
@@ -918,9 +917,9 @@ export const LoadedEditor = memo(function LoadedEditor({
         <>
       {/* Main Layout: Full-height sidebar + vertical split */}
       <div className="flex-1 flex overflow-hidden">
-        {/* Left Sidebar - Media Library (full column mode) */}
-        {isProducerWorkspace ? <StudioProjectRail /> : null}
-
+        {/* Left Sidebar - Media Library (full column mode). Producer workspaces
+            intentionally have no permanent project rail; their content/actions
+            live in the active task panel, Inspector, or canonical timeline. */}
         {mediaFullColumn && !hidesDefaultSidebars && !isProducerWorkspace && (
           <InteractionLockRegion locked={isMaskEditingActive}>
             <ErrorBoundary level="feature">

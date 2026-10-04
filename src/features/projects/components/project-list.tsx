@@ -589,7 +589,7 @@ export function ProjectList({ onEditProject, onImportProject }: ProjectListProps
         <div>
           <div
             ref={containerRef}
-            className="relative grid min-h-[200px] grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6"
+            className="relative grid min-h-[200px] grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5"
           >
             {filteredProjects.map((project) => (
               <ProjectCard

@@ -211,6 +211,7 @@ Prefer direct manipulation, conventional editor behavior, consistent spacing and
 - the default Beat/Visual/Color/Master path is text-first and progressively disclosed. Do not leave rows of permanent utility icons visible just because the runtime supports the commands;
 - advanced track controls such as disable/solo/lock/sync-lock/close-gaps remain available through contextual menus in the simplified Beatvideo timeline; richer permanent controls may remain in Advanced editor workspaces where they are expected;
 - Settings, shortcuts, render queue and project-bundle export belong under a compact utility menu; the primary toolbar should emphasize project identity, Beat/Visual/Color/Master, Inspector when relevant, Project settings near Save, Save and Export.
+- Do not keep a permanent project-content rail beside the producer workspaces. Media/graphics/sequence actions belong to Visual and the timeline; beat status and grid review belong to Beat. On compact/mobile, this is especially strict: only the focused surface + bottom task dock may be shown.
 
 ## Local-first boundary
 

@@ -18,7 +18,6 @@ import { useTimelineCommandStore, useTimelineStore } from '@/features/editor/dep
 import type { BeatvideoProjectMode } from '@/types/project'
 import { toast } from 'sonner'
 import { useProjectStore } from '@/features/editor/deps/projects-contract'
-import { useMediaLibraryStore } from '@/features/editor/deps/media-library'
 
 const SaveDirtyIndicator = memo(function SaveDirtyIndicator() {
   const isDirty = useTimelineStore((state) => state.isDirty)
@@ -79,9 +78,6 @@ export const Toolbar = memo(function Toolbar({
   const beatvideoMusic = useProjectStore((state) =>
     state.currentProject?.id === projectId ? state.currentProject.beatvideoMusic : undefined,
   )
-  const beatSourceName = useMediaLibraryStore((state) =>
-    beatvideoMusic?.mediaId ? state.mediaById[beatvideoMusic.mediaId]?.fileName ?? null : null,
-  )
   const bpm =
     beatvideoMusic?.bpmOverride ?? beatvideoMusic?.musicMap?.bpm ?? null
   const beatsPerBar = beatvideoMusic?.musicMap?.beatsPerBar ?? 4
@@ -130,15 +126,16 @@ export const Toolbar = memo(function Toolbar({
   if (compact) {
     return (
       <div
-        className="panel-header flex shrink-0 flex-col border-b border-border"
+        className="studio-toolbar flex shrink-0 flex-col border-b border-border"
+        data-compact-toolbar="true"
         role="toolbar"
         aria-label={t('toolbar.ariaLabel')}
       >
-        <div className="flex h-11 min-w-0 items-center gap-1.5 px-2">
+        <div className="studio-topbar flex h-12 min-w-0 items-center gap-1.5 bg-[#242724] px-2 text-[#f6f7f3]">
           <Button
             variant="ghost"
             size="icon"
-            className="h-9 w-9 shrink-0"
+            className="studio-topbar-button h-8 w-8 shrink-0"
             onClick={handleBackClick}
             aria-label={t('toolbar.backToProjectsAria')}
           >
@@ -152,7 +149,7 @@ export const Toolbar = memo(function Toolbar({
             projectName={project?.name}
           />
 
-          <div className="min-w-0 flex-1 px-1">
+          <div className="min-w-[72px] flex-1">
             {editingProjectName ? (
               <input
                 autoFocus
@@ -166,26 +163,40 @@ export const Toolbar = memo(function Toolbar({
                     setEditingProjectName(false)
                   }
                 }}
-                className="h-8 w-full border-0 bg-transparent px-1 text-sm font-medium text-foreground outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                className="h-8 w-full border-0 bg-transparent px-1 text-[12px] font-semibold text-[#f6f7f3] outline-none focus-visible:ring-1 focus-visible:ring-[#c7e85a]"
                 aria-label="Project title"
               />
             ) : (
               <button
                 type="button"
-                className="flex h-8 max-w-full items-center gap-1.5 text-left text-sm font-medium text-foreground"
+                className="flex h-8 max-w-full items-center gap-1.5 text-left text-[12px] font-semibold text-[#f6f7f3]"
                 onClick={() => setEditingProjectName(true)}
                 aria-label="Rename project"
+                title={projectName}
               >
                 <span className="truncate">{projectName}</span>
-                <Pencil className="h-3 w-3 shrink-0 text-muted-foreground" />
+                <Pencil className="h-3 w-3 shrink-0 text-[#bfc4bc]" />
               </button>
             )}
           </div>
 
+          {onProjectSettings ? (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="studio-topbar-button h-8 shrink-0 px-2 text-[9px] font-semibold uppercase"
+              onClick={onProjectSettings}
+              aria-label="Project settings"
+              title="Project settings"
+            >
+              Project
+            </Button>
+          ) : null}
+
           <Button
             variant="ghost"
             size="sm"
-            className="relative h-9 shrink-0 px-2.5"
+            className="studio-topbar-button relative h-8 shrink-0 px-2 text-[9px] font-semibold uppercase"
             onClick={handleSave}
             aria-label={t('toolbar.saveAria')}
           >
@@ -195,7 +206,7 @@ export const Toolbar = memo(function Toolbar({
 
           <Button
             size="sm"
-            className="h-9 shrink-0 px-2.5"
+            className="studio-export-button h-8 shrink-0 px-2 text-[9px] font-semibold uppercase"
             onClick={onExport}
             aria-label={t('toolbar.export')}
           >
@@ -206,20 +217,15 @@ export const Toolbar = memo(function Toolbar({
             <DropdownMenuTrigger asChild>
               <Button
                 variant="ghost"
-                size="sm"
-                className="h-9 shrink-0 gap-1 px-2"
+                size="icon"
+                className="studio-topbar-button h-8 w-8 shrink-0"
                 aria-label="More editor actions"
+                title="More"
               >
-                More
-                <ChevronDown className="h-3 w-3" />
+                <ChevronDown className="h-3.5 w-3.5" />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              {onProjectSettings ? (
-                <DropdownMenuItem onClick={onProjectSettings}>
-                  Project settings
-                </DropdownMenuItem>
-              ) : null}
               <DropdownMenuItem onClick={() => setShowSettingsDialog(true)}>
                 Settings
               </DropdownMenuItem>
@@ -240,7 +246,7 @@ export const Toolbar = memo(function Toolbar({
           </DropdownMenu>
         </div>
 
-        <div className="overflow-x-auto border-t border-border/70 px-1">
+        <div className="overflow-x-auto bg-[#c7cac4] px-1">
           <div className="w-max min-w-full">
             <WorkspaceSwitcher beatvideoMode={beatvideoMode} />
           </div>
@@ -255,14 +261,15 @@ export const Toolbar = memo(function Toolbar({
   return (
     <div
       className="studio-toolbar flex shrink-0 flex-col"
+      data-compact-toolbar="false"
       role="toolbar"
       aria-label={t('toolbar.ariaLabel')}
     >
-      <div className="studio-topbar flex h-12 shrink-0 items-center bg-[#242724] pl-[18px] pr-4 text-[#f6f7f3]">
+      <div className="studio-topbar flex h-12 shrink-0 items-center gap-2 bg-[#242724] pl-[18px] pr-4 text-[#f6f7f3]">
         <button
           type="button"
           onClick={handleBackClick}
-          className="mr-[51px] flex shrink-0 items-baseline text-left"
+          className="mr-8 flex shrink-0 items-baseline text-left"
           aria-label={t('toolbar.backToProjectsAria')}
           title={t('toolbar.backToProjects')}
         >
@@ -277,51 +284,67 @@ export const Toolbar = memo(function Toolbar({
           projectName={project?.name}
         />
 
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
+        <div className="min-w-0 max-w-[360px] flex-1">
+          {editingProjectName ? (
+            <input
+              autoFocus
+              value={projectNameDraft}
+              onChange={(event) => setProjectNameDraft(event.target.value)}
+              onBlur={() => void commitProjectName()}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter') void commitProjectName()
+                if (event.key === 'Escape') {
+                  setProjectNameDraft(projectName)
+                  setEditingProjectName(false)
+                }
+              }}
+              className="h-8 w-full border-0 bg-transparent px-1 text-[11px] font-semibold text-[#f6f7f3] outline-none focus-visible:ring-1 focus-visible:ring-[#c7e85a]"
+              aria-label="Project title"
+            />
+          ) : (
             <button
               type="button"
-              className="min-w-0 flex-1 truncate text-left text-[11px] font-medium text-[#bfc4bc] hover:text-[#f6f7f3]"
-              title={`${beatSourceName ?? projectName} · Project menu`}
-              aria-label="Project menu"
+              className="flex h-8 max-w-full items-center gap-1.5 text-left text-[11px] font-semibold text-[#f6f7f3] hover:text-white"
+              onClick={() => setEditingProjectName(true)}
+              aria-label="Rename project"
+              title={projectName}
             >
-              {beatSourceName ?? projectName}
+              <span className="truncate">{projectName}</span>
+              <Pencil className="h-3 w-3 shrink-0 text-[#bfc4bc]" />
             </button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="start">
-            <DropdownMenuItem onClick={() => void handleSave()}>
-              Save project
-            </DropdownMenuItem>
-            {onProjectSettings ? (
-              <DropdownMenuItem onClick={onProjectSettings}>Project settings</DropdownMenuItem>
-            ) : null}
-            <DropdownMenuItem onClick={() => setShowSettingsDialog(true)}>
-              Settings
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => setShowShortcutsDialog(true)}>
-              Keyboard shortcuts
-            </DropdownMenuItem>
-            {onOpenRenderQueue ? (
-              <DropdownMenuItem onClick={onOpenRenderQueue}>
-                Render queue{renderQueueCount > 0 ? ` (${renderQueueCount})` : ''}
-              </DropdownMenuItem>
-            ) : null}
-            {onExportBundle ? (
-              <DropdownMenuItem onClick={onExportBundle}>
-                Download project ZIP
-              </DropdownMenuItem>
-            ) : null}
-          </DropdownMenuContent>
-        </DropdownMenu>
+          )}
+        </div>
 
-        <div className="flex w-[254px] shrink-0 items-center">
-          <span className="w-[72px] text-left text-[11px] font-medium tabular-nums text-[#d7dbd3]">
+        <div className="ml-auto flex shrink-0 items-center gap-2">
+          <span className="min-w-[68px] text-right text-[10px] font-medium tabular-nums text-[#d7dbd3]">
             {bpm ? `${bpm.toFixed(2).replace(/\.00$/, '')} BPM` : '— BPM'}
           </span>
-          <span className="w-[19px] text-left text-[11px] font-medium tabular-nums text-[#d7dbd3]">
+          <span className="w-[28px] text-left text-[10px] font-medium tabular-nums text-[#d7dbd3]">
             {beatsPerBar}/4
           </span>
-          <span className="w-[71px]" aria-hidden="true" />
+
+          {onProjectSettings ? (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="studio-topbar-button h-[30px] px-3 text-[10px] font-semibold"
+              onClick={onProjectSettings}
+            >
+              Project settings
+            </Button>
+          ) : null}
+
+          <Button
+            variant="ghost"
+            size="sm"
+            className="studio-topbar-button relative h-[30px] px-3 text-[10px] font-semibold"
+            onClick={handleSave}
+            aria-label={t('toolbar.saveAria')}
+          >
+            {t('toolbar.save')}
+            <SaveDirtyIndicator />
+          </Button>
+
           <Button
             size="sm"
             className="studio-export-button h-[30px] w-[92px] px-0 text-[10px] font-semibold uppercase"
@@ -329,6 +352,38 @@ export const Toolbar = memo(function Toolbar({
           >
             {t('toolbar.export')}
           </Button>
+
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="studio-topbar-button h-[30px] w-[30px]"
+                aria-label="More editor actions"
+                title="More"
+              >
+                <ChevronDown className="h-3.5 w-3.5" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => setShowSettingsDialog(true)}>
+                Settings
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setShowShortcutsDialog(true)}>
+                Keyboard shortcuts
+              </DropdownMenuItem>
+              {onOpenRenderQueue ? (
+                <DropdownMenuItem onClick={onOpenRenderQueue}>
+                  Render queue{renderQueueCount > 0 ? ` (${renderQueueCount})` : ''}
+                </DropdownMenuItem>
+              ) : null}
+              {onExportBundle ? (
+                <DropdownMenuItem onClick={onExportBundle}>
+                  Download project ZIP
+                </DropdownMenuItem>
+              ) : null}
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
 

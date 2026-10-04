@@ -1345,7 +1345,7 @@ function SourcePlaybackControls({
             className="inline-flex items-center gap-1.5 bg-transparent p-0 font-mono text-[11px] tabular-nums text-left transition-colors select-none text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring rounded-sm shrink-0"
             onClick={() => setShowFrames((prev) => !prev)}
           >
-            <span ref={currentTimeRef} className="text-primary font-semibold">
+            <span ref={currentTimeRef} className="text-foreground font-semibold">
               {formatTime(clock.currentFrame)}
             </span>
             <span className="text-muted-foreground">/</span>
@@ -1356,7 +1356,7 @@ function SourcePlaybackControls({
             playbackRate={playbackRate}
           />
         </div>
-        <span className="text-[11px] font-mono text-primary/70 shrink-0 hidden @min-[480px]:inline">
+        <span className="text-[11px] font-mono text-muted-foreground shrink-0 hidden @min-[480px]:inline">
           {ioDuration ? `[${ioDuration}]` : ''}
         </span>
 

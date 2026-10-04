@@ -302,7 +302,7 @@ function ProjectsIndex() {
           />
         </div>
 
-        <div className="px-4 pt-8 sm:px-8 sm:pt-10">
+        <div className="px-3 pt-8 sm:px-8 sm:pt-10">
           <div className="border-b border-border pb-6">
             <div className="text-[9px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
               Projects
@@ -318,7 +318,7 @@ function ProjectsIndex() {
 
         {/* Error state */}
         {error && (
-          <div className="px-4 py-4 sm:px-8">
+          <div className="px-3 py-4 sm:px-8">
             <div className="panel-bg border border-destructive/50 rounded-lg p-4 text-destructive">
               <p className="font-medium">{t('projects.errorLoading')}</p>
               <p className="text-sm mt-1">{error}</p>
@@ -327,7 +327,7 @@ function ProjectsIndex() {
         )}
 
         {/* Legacy IDB migration banner — appears only when old data is present and unmigrated */}
-        <div className="px-4 pt-4 space-y-3 sm:px-8 sm:pt-5">
+        <div className="px-3 pt-4 space-y-3 sm:px-8 sm:pt-5">
           <LegacyMigrationBanner onMigrated={loadProjects} />
           {/* Retry banner — appears only when a previous migration left failed items behind */}
           <LegacyMigrationErrors onRetried={loadProjects} />
@@ -335,7 +335,7 @@ function ProjectsIndex() {
 
         {/* Loading state */}
         {showInitialLoadingSpinner ? (
-          <div className="px-4 py-16 flex items-center justify-center sm:px-8">
+          <div className="px-3 py-16 flex items-center justify-center sm:px-8">
             <div className="text-center">
               <div className="w-12 h-12 border-4 border-primary/20 border-t-primary rounded-full animate-spin mx-auto mb-4" />
               <p className="text-muted-foreground">{t('projects.loadingProjects')}</p>
@@ -343,7 +343,7 @@ function ProjectsIndex() {
           </div>
         ) : (
           /* Projects List */
-          <div className="px-4 py-5 sm:px-8 sm:py-6">
+          <div className="px-3 py-5 sm:px-8 sm:py-6">
             <ProjectList onEditProject={handleEditProject} onImportProject={handleImportClick} />
             <TrashSection />
           </div>

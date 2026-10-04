@@ -15,7 +15,7 @@ interface TimecodeDisplayProps {
  * - Click to toggle between SMPTE timecode and frame numbers
  * - Synchronized with playback store via manual subscription (no re-renders during playback)
  * - Tabular numbers for consistent width
- * - Primary color for current time
+ * - High-contrast neutral current time; lime is reserved for state/position signals
  */
 export function TimecodeDisplay({ fps, totalFrames }: TimecodeDisplayProps) {
   const [showFrames, setShowFrames] = useState(false)
@@ -94,7 +94,7 @@ export function TimecodeDisplay({ fps, totalFrames }: TimecodeDisplayProps) {
       style={{ width: reservedDisplayWidth }}
       onClick={() => setShowFrames((prev) => !prev)}
     >
-      <span ref={currentTimeRef} className="text-primary font-semibold">
+      <span ref={currentTimeRef} className="text-foreground font-semibold">
         {showFrames
           ? formatFrameNumber(getVisibleFrame())
           : formatTimecodeCompact(getVisibleFrame(), fps)}
