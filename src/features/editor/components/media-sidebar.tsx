@@ -1195,8 +1195,7 @@ export const MediaSidebar = memo(function MediaSidebar({
     { id: 'media' as const, icon: Film, label: t('editor.mediaSidebar.media') },
     { id: 'beat' as const, icon: AudioLines, label: 'Beat' },
     { id: 'master' as const, icon: Gauge, label: 'Master' },
-    { id: 'text' as const, icon: Type, label: t('editor.mediaSidebar.text') },
-    { id: 'shapes' as const, icon: Pentagon, label: 'Graphics' },
+    { id: 'text' as const, icon: Type, label: 'Overlays' },
     { id: 'effects' as const, icon: Layers, label: t('editor.mediaSidebar.effects') },
     { id: 'transitions' as const, icon: Blend, label: t('editor.mediaSidebar.transitions') },
     { id: 'lottie' as const, icon: Sticker, label: t('lottieBrowser.tabLabel') },
@@ -1215,6 +1214,12 @@ export const MediaSidebar = memo(function MediaSidebar({
     workspace === 'master'
 
   useEffect(() => {
+    // Existing saved selections of the old Graphics tab now open the unified
+    // Overlays surface instead of an invisible, unreachable tab.
+    if (activeTab === 'shapes') {
+      setActiveTab('text')
+      return
+    }
     if (
       !isSidebarTabVisibleForBeatvideoMode(activeTab, beatvideoMode) ||
       !isSidebarTabVisibleForWorkspace(activeTab, workspace)
@@ -1626,12 +1631,15 @@ export const MediaSidebar = memo(function MediaSidebar({
                   </p>
                 </section>
               </div>
-            </div>
 
-            {/* Shapes Tab */}
-            <div
-              className={`min-h-0 flex-1 overflow-y-auto p-3 ${activeTab === 'shapes' ? 'block' : 'hidden'}`}
-            >
+              {/* Shapes remain real draggable editable visual layers, but
+                  belong to Overlays alongside titles and producer tags. */}
+              <details className="mt-4 border-t border-border pt-3">
+                <summary className="flex cursor-pointer list-none items-center justify-between text-[10px] font-semibold text-foreground hover:text-primary">
+                  Shapes and reactive graphics
+                  <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
+                </summary>
+                <div className="pt-3">
               <section className="mb-3 border-b border-border pb-3">
                 <div className="mb-2 text-[11px] font-medium text-foreground">
                   Reactive graphic
@@ -1865,6 +1873,8 @@ export const MediaSidebar = memo(function MediaSidebar({
                   </span>
                 </button>
               </div>
+                </div>
+              </details>
             </div>
 
             {/* Effects Tab */}
