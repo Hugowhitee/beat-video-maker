@@ -171,10 +171,10 @@ export function BeatvideoShotBin({
               >
                 <div className="flex h-7 min-w-0 items-center gap-2 border-b border-border/70 px-2">
                   <span className="h-2 w-2 shrink-0 rounded-[2px] bg-primary/70" aria-hidden="true" />
-                  <span className="min-w-0 flex-1 truncate text-[9px] font-medium text-foreground">
+                  <span className="min-w-0 flex-1 truncate text-[10px] font-medium text-foreground">
                     {source.name}
                   </span>
-                  <span className="shrink-0 font-mono text-[8px] tabular-nums text-muted-foreground">
+                  <span className="shrink-0 font-mono text-[10px] tabular-nums text-muted-foreground">
                     {source.shots.length} shot{source.shots.length === 1 ? '' : 's'}
                     {skippedCount > 0 ? ` · ${skippedCount} skipped` : ''}
                   </span>
@@ -236,10 +236,10 @@ export function BeatvideoShotBin({
                           className="aspect-video w-full"
                         />
                         <div className="flex items-center justify-between gap-1 border-t border-border/60 px-1.5 py-1">
-                          <span className="font-mono text-[8px] text-foreground/80">
+                          <span className="font-mono text-[10px] text-foreground/80">
                             {String(index + 1).padStart(2, '0')}
                           </span>
-                          <span className="font-mono text-[8px] text-muted-foreground">
+                          <span className="font-mono text-[10px] text-muted-foreground">
                             {shot.start.toFixed(1)}–{shot.end.toFixed(1)}s
                           </span>
                           <button
@@ -250,8 +250,8 @@ export function BeatvideoShotBin({
                             }}
                             className={
                               avoided
-                                ? 'text-[8px] font-medium text-amber-300 hover:text-amber-200'
-                                : 'text-[8px] text-muted-foreground hover:text-foreground'
+                                ? 'min-h-6 px-1 text-[10px] font-medium text-amber-300 hover:text-amber-200'
+                                : 'min-h-6 px-1 text-[10px] text-muted-foreground hover:text-foreground'
                             }
                             aria-label={avoided ? 'Use shot on rebuild' : 'Skip shot on rebuild'}
                           >
@@ -267,7 +267,7 @@ export function BeatvideoShotBin({
           })}
         </div>
       ) : (
-        <div className="py-2 text-[9px] text-muted-foreground">No shots detected.</div>
+        <div className="py-2 text-[10px] text-muted-foreground">No shots detected.</div>
       )}
     </div>
   )

@@ -2,6 +2,7 @@ import { useHotkeys } from 'react-hotkeys-hook'
 import { HOTKEY_OPTIONS } from '@/config/hotkeys'
 import { useResolvedHotkeys } from '@/features/editor/deps/settings'
 import { useEditorStore } from '@/shared/state/editor'
+import { useGizmoStore } from '@/features/editor/deps/preview'
 
 import { useSceneBrowserStore } from '@/features/editor/deps/scene-browser'
 
@@ -24,6 +25,7 @@ interface EditorHotkeyCallbacks {
  */
 export function useEditorHotkeys(callbacks: EditorHotkeyCallbacks = {}) {
   const hotkeys = useResolvedHotkeys()
+  const workspace = useEditorStore((state) => state.workspace)
 
   // Save: Cmd/Ctrl+S
   useHotkeys(
@@ -62,6 +64,21 @@ export function useEditorHotkeys(callbacks: EditorHotkeyCallbacks = {}) {
     },
     { ...HOTKEY_OPTIONS, eventListenerOptions: { capture: true } },
     [],
+  )
+
+  // Color Before/After: one preview-only comparison state, active only on the
+  // Color workspace. Split comparison remains a secondary Color-panel mode.
+  useHotkeys(
+    hotkeys.COLOR_COMPARE,
+    (event) => {
+      event.preventDefault()
+      const preview = useGizmoStore.getState()
+      preview.setColorGradeComparisonMode(
+        preview.colorGradeComparisonMode === 'before' ? 'off' : 'before',
+      )
+    },
+    { ...HOTKEY_OPTIONS, enabled: workspace === 'color' },
+    [workspace],
   )
 
   // Workspace switching: Alt+1 (Edit), Alt+2 (Color), Alt+3 (Motion).

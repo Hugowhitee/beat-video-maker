@@ -196,7 +196,7 @@ export const Toolbar = memo(function Toolbar({
             <Button
               variant="ghost"
               size="sm"
-              className="studio-topbar-button h-8 shrink-0 px-2 text-[9px] font-semibold uppercase"
+              className="studio-topbar-button h-8 shrink-0 px-2 text-xs font-semibold uppercase"
               onClick={onProjectSettings}
               aria-label="Project settings"
               title="Project settings"
@@ -208,7 +208,7 @@ export const Toolbar = memo(function Toolbar({
           <Button
             variant="ghost"
             size="sm"
-            className="studio-topbar-button relative h-8 shrink-0 px-2 text-[9px] font-semibold uppercase"
+            className="studio-topbar-button relative h-8 shrink-0 px-2 text-xs font-semibold uppercase"
             onClick={handleSave}
             aria-label={t('toolbar.saveAria')}
           >
@@ -218,7 +218,7 @@ export const Toolbar = memo(function Toolbar({
 
           <Button
             size="sm"
-            className="studio-export-button h-8 shrink-0 px-2 text-[9px] font-semibold uppercase"
+            className="studio-export-button h-8 shrink-0 px-2 text-xs font-semibold uppercase"
             onClick={onExport}
             aria-label={t('toolbar.export')}
           >
@@ -332,7 +332,7 @@ export const Toolbar = memo(function Toolbar({
             <Button
               variant="ghost"
               size="sm"
-              className="studio-topbar-button h-[30px] px-3 text-[10px] font-semibold"
+              className="studio-topbar-button h-[30px] px-3 text-xs font-semibold"
               onClick={onProjectSettings}
             >
               Project settings
@@ -342,7 +342,7 @@ export const Toolbar = memo(function Toolbar({
           <Button
             variant="ghost"
             size="sm"
-            className="studio-topbar-button relative h-[30px] px-3 text-[10px] font-semibold"
+            className="studio-topbar-button relative h-[30px] px-3 text-xs font-semibold"
             onClick={handleSave}
             aria-label={t('toolbar.saveAria')}
           >
@@ -352,7 +352,7 @@ export const Toolbar = memo(function Toolbar({
 
           <Button
             size="sm"
-            className="studio-export-button h-[30px] w-[92px] px-0 text-[10px] font-semibold uppercase"
+            className="studio-export-button h-[30px] w-[92px] px-0 text-xs font-semibold uppercase"
             onClick={onExport}
           >
             {t('toolbar.export')}
@@ -400,7 +400,7 @@ export const Toolbar = memo(function Toolbar({
             type="button"
             disabled={!canUndo}
             onClick={undo}
-            className="studio-workspace-action absolute left-0 top-0 flex h-full items-center text-[10px] font-medium"
+            className="studio-workspace-action absolute left-0 top-0 flex h-full items-center text-xs font-medium"
           >
             Undo
           </button>
@@ -408,7 +408,7 @@ export const Toolbar = memo(function Toolbar({
             type="button"
             disabled={!canRedo}
             onClick={redo}
-            className="studio-workspace-action absolute left-[50px] top-0 flex h-full items-center text-[10px] font-medium"
+            className="studio-workspace-action absolute left-[50px] top-0 flex h-full items-center text-xs font-medium"
           >
             Redo
           </button>
