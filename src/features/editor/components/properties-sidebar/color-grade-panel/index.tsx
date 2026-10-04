@@ -226,7 +226,7 @@ export const ColorGradePanel = memo(function ColorGradePanel({
     )
   }
 
-  const sectionClassName = layout === 'dock' ? 'min-h-0 overflow-hidden' : undefined
+  const sectionClassName = layout === 'dock' ? 'min-h-0 overflow-y-auto' : undefined
 
   if (layout === 'dock') {
     return (
@@ -241,7 +241,7 @@ export const ColorGradePanel = memo(function ColorGradePanel({
               onCreateAdjustmentLayer={handleCreateAdjustmentLayer}
             />
           </div>
-          <div className="min-h-0 overflow-hidden rounded-[3px] border border-border/70 bg-background/35">
+          <div className="min-h-0 overflow-y-auto rounded-[3px] border border-border/70 bg-background/35">
             <LazyEffectsSection
               items={visualItems}
               hiddenGpuEffectTypes={COLOR_PANEL_EFFECT_TYPES}
@@ -249,7 +249,7 @@ export const ColorGradePanel = memo(function ColorGradePanel({
             />
           </div>
           <div
-            className="min-h-0 overflow-hidden rounded-[3px] border border-border/70 bg-background/35"
+            className="min-h-0 overflow-y-auto rounded-[3px] border border-border/70 bg-background/35"
             data-testid="color-keyframes-lane"
           >
             <KeyframeGraphPanel

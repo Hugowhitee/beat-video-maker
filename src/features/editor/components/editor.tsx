@@ -926,15 +926,15 @@ export const LoadedEditor = memo(function LoadedEditor({
 
         {/* Right side: Preview/Properties + Timeline */}
         {isColorWorkspace ? (
-          <div className="flex min-w-0 flex-1 flex-col overflow-hidden bg-[#d9dbd6] px-5 pb-7 pt-[18px]">
-            <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+          <div className="grid min-h-0 min-w-0 flex-1 grid-rows-[minmax(180px,2fr)_minmax(124px,0.8fr)_minmax(260px,1.5fr)] gap-3 overflow-y-auto bg-[#d9dbd6] px-5 pb-5 pt-[18px]">
+            <div className="min-h-0 min-w-0 overflow-hidden">
               <ErrorBoundary level="feature">
                 <PreviewArea project={project} />
               </ErrorBoundary>
             </div>
             <InteractionLockRegion
               locked={isMaskEditingActive}
-              className="mt-3 h-[240px] min-h-[190px] max-h-[250px] shrink-0"
+              className="min-h-0 min-w-0 overflow-hidden"
             >
               <ErrorBoundary level="feature">
                 <Suspense fallback={null}>
@@ -944,7 +944,7 @@ export const LoadedEditor = memo(function LoadedEditor({
             </InteractionLockRegion>
             <InteractionLockRegion
               locked={isMaskEditingActive}
-              className="mt-3 h-[37%] min-h-[288px] max-h-[39vh] shrink-0"
+              className="min-h-0 min-w-0 overflow-hidden"
             >
               <ErrorBoundary level="feature">
                 <Suspense fallback={null}>

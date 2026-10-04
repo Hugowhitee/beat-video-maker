@@ -473,7 +473,7 @@ describe('LoadedEditor migration metadata refresh', () => {
     )
   })
 
-  it('mounts the compact color navigator and fixed grading dock in the color workspace', async () => {
+  it('keeps Color preview, real timeline and grade tools scroll-safe without fixed heights', async () => {
     mocks.editorState.workspace = 'color'
     mocks.editorState.propertiesFullColumn = true
 
@@ -496,8 +496,8 @@ describe('LoadedEditor migration metadata refresh', () => {
     )
 
     expect(await screen.findByTestId('color-grading-dock')).toBeInTheDocument()
-    expect(screen.getByTestId('color-timeline-navigator')).toBeInTheDocument()
-    expect(screen.queryByTestId('timeline')).not.toBeInTheDocument()
+    expect(await screen.findByTestId('timeline')).toBeInTheDocument()
+    expect(screen.queryByTestId('color-timeline-navigator')).not.toBeInTheDocument()
     expect(screen.queryByTestId('properties-sidebar')).not.toBeInTheDocument()
   })
 
