@@ -2,6 +2,7 @@ import { act, renderHook } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vite-plus/test'
 import {
   COMPACT_EDITOR_QUERY,
+  COMPACT_TOUCH_QUERY,
   shouldUseCompactEditorViewport,
   useCompactEditorViewport,
 } from './use-compact-editor-viewport'
@@ -31,7 +32,20 @@ describe('useCompactEditorViewport', () => {
       }),
       removeEventListener: vi.fn(),
     }
-    vi.stubGlobal('matchMedia', vi.fn(() => media))
+    vi.stubGlobal(
+      'matchMedia',
+      vi.fn((query: string) =>
+        query === COMPACT_TOUCH_QUERY
+          ? {
+              ...media,
+              matches: false,
+              media: COMPACT_TOUCH_QUERY,
+              addEventListener: vi.fn(),
+              removeEventListener: vi.fn(),
+            }
+          : media,
+      ),
+    )
 
     const { result } = renderHook(() => useCompactEditorViewport())
     expect(result.current).toBe(true)
@@ -60,10 +74,23 @@ describe('useCompactEditorViewport', () => {
     ).toBe(true)
   })
 
+  it('keeps a touch phone compact when desktop-site mode reports a wide viewport', () => {
+    expect(
+      shouldUseCompactEditorViewport({
+        mediaMatches: false,
+        coarsePointer: true,
+        innerWidth: 980,
+        visualViewportWidth: 980,
+        screenWidth: 980,
+      }),
+    ).toBe(true)
+  })
+
   it('does not force compact mode on a normal desktop viewport', () => {
     expect(
       shouldUseCompactEditorViewport({
         mediaMatches: false,
+        coarsePointer: false,
         innerWidth: 1440,
         visualViewportWidth: 1440,
         screenWidth: 1920,
