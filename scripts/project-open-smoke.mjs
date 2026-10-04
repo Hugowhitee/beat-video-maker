@@ -1,5 +1,6 @@
 import { chromium } from 'playwright'
 import { spawn } from 'node:child_process'
+import { Buffer } from 'node:buffer'
 import path from 'node:path'
 import process from 'node:process'
 
@@ -64,11 +65,61 @@ async function waitForPreview(url, child) {
   throw lastError ?? new Error('preview did not become ready')
 }
 
+async function createWebmFixture(page) {
+  const base64 = await page.evaluate(async () => {
+    if (!globalThis.MediaRecorder) throw new Error('MediaRecorder unavailable in smoke browser')
+    const canvas = document.createElement('canvas')
+    canvas.width = 320
+    canvas.height = 180
+    const ctx = canvas.getContext('2d')
+    if (!ctx) throw new Error('Could not create fixture canvas')
+    const stream = canvas.captureStream(15)
+    const mimeType = MediaRecorder.isTypeSupported('video/webm;codecs=vp8')
+      ? 'video/webm;codecs=vp8'
+      : 'video/webm'
+    const chunks = []
+    const recorder = new MediaRecorder(stream, { mimeType })
+    recorder.ondataavailable = (event) => {
+      if (event.data.size > 0) chunks.push(event.data)
+    }
+    const stopped = new Promise((resolve, reject) => {
+      recorder.onstop = () => resolve()
+      recorder.onerror = () => reject(recorder.error ?? new Error('Fixture recording failed'))
+    })
+
+    recorder.start(100)
+    for (let frame = 0; frame < 24; frame++) {
+      // Stable background + moving object: real frames without synthetic hard cuts.
+      ctx.fillStyle = '#202a26'
+      ctx.fillRect(0, 0, canvas.width, canvas.height)
+      ctx.fillStyle = '#c7e85a'
+      ctx.fillRect(18 + frame * 7, 58, 48, 48)
+      ctx.fillStyle = '#f4f5f1'
+      ctx.font = '20px sans-serif'
+      ctx.fillText('Beat Video Maker', 72, 32)
+      await new Promise((resolve) => setTimeout(resolve, 65))
+    }
+    recorder.stop()
+    await stopped
+    stream.getTracks().forEach((track) => track.stop())
+
+    const blob = new Blob(chunks, { type: 'video/webm' })
+    if (blob.size < 1_000) throw new Error(`Generated WebM fixture is unexpectedly small: ${blob.size}`)
+    return await new Promise((resolve, reject) => {
+      const reader = new FileReader()
+      reader.onload = () => resolve(String(reader.result).split(',')[1] ?? '')
+      reader.onerror = () => reject(reader.error ?? new Error('Could not encode fixture'))
+      reader.readAsDataURL(blob)
+    })
+  })
+  return Buffer.from(base64, 'base64')
+}
+
 async function main() {
   const hardTimeout = setTimeout(() => {
-    console.error('Project open smoke exceeded 150 seconds')
+    console.error('Project open smoke exceeded 240 seconds')
     process.exit(124)
-  }, 150_000)
+  }, 240_000)
 
   const port = 4179
   const baseUrl = `http://127.0.0.1:${port}`
@@ -267,6 +318,10 @@ async function main() {
         value: undefined,
         configurable: true,
       })
+      Object.defineProperty(window, 'showOpenFilePicker', {
+        value: undefined,
+        configurable: true,
+      })
     })
     const desktopPage = await desktopContext.newPage()
     const desktopErrors = []
@@ -278,6 +333,7 @@ async function main() {
     })
     await desktopPage.locator('#name').waitFor({ state: 'visible', timeout: 20_000 })
     await desktopPage.locator('#name').fill('Workspace geometry smoke')
+    await desktopPage.getByRole('button', { name: 'Video', exact: true }).click()
     await desktopPage.locator('button[type="submit"]').click()
     await desktopPage.locator('[role="application"][data-studio-v2="true"]').waitFor({
       state: 'visible', timeout: 30_000,
@@ -329,6 +385,130 @@ async function main() {
       throw new Error(`Desktop workspace errors:\\n${desktopErrors.join('\\n')}`)
     }
     console.log('Workspace UI smoke passed: Master Program/Output and Color controls reachable on laptop viewports')
+
+    // Stateful real-media regression: generate a valid WebM inside Chrome and
+    // drive the same import -> shot review -> Source trim -> timeline edit ->
+    // Undo/Redo -> save/reopen flow as a user. No store seeding or mock media.
+    console.log('Smoke: generating real WebM fixture for editor round-trip')
+    await desktopPage.setViewportSize({ width: 1366, height: 768 })
+    const fixture = await createWebmFixture(desktopPage)
+    await desktopPage.getByRole('tab', { name: 'Visual' }).click()
+
+    const chooserPromise = desktopPage.waitForEvent('filechooser', { timeout: 10_000 })
+    await desktopPage.getByRole('button', { name: /Add footage/i }).click()
+    const chooser = await chooserPromise
+    await chooser.setFiles({
+      name: 'editor-roundtrip-smoke.webm',
+      mimeType: 'video/webm',
+      buffer: fixture,
+    })
+
+    const shotBin = desktopPage.locator('[data-beatvideo-shot-bin]')
+    await shotBin.waitFor({ state: 'visible', timeout: 60_000 })
+    const firstShot = shotBin.locator('button[aria-label^="Shot 1 from "]').first()
+    await firstShot.waitFor({ state: 'visible', timeout: 20_000 })
+    const originalShotText = await firstShot.innerText()
+    await firstShot.click()
+
+    const sourceMonitor = desktopPage.getByTestId('source-monitor')
+    await sourceMonitor.waitFor({ state: 'visible', timeout: 20_000 })
+    await sourceMonitor.getByTestId('source-full-filmstrip').waitFor({
+      state: 'visible',
+      timeout: 30_000,
+    })
+    await sourceMonitor.getByRole('button', { name: 'Play (Space)' }).waitFor({
+      state: 'visible',
+      timeout: 10_000,
+    })
+
+    // Trim one frame on each side through the precision handles. This proves
+    // real Source state changes without relying on hard-coded source duration.
+    const inHandle = sourceMonitor.getByRole('button', { name: 'Source In frame' })
+    const outHandle = sourceMonitor.getByRole('button', { name: 'Source Out frame' })
+    await inHandle.focus()
+    await inHandle.press('ArrowRight')
+    await outHandle.focus()
+    await outHandle.press('ArrowLeft')
+    const saveRange = desktopPage.getByRole('button', { name: 'Save In/Out' })
+    await saveRange.click({ timeout: 10_000 })
+
+    const trimmedShotText = await firstShot.innerText()
+    if (trimmedShotText === originalShotText) {
+      throw new Error(`Shot review did not persist the Source trim: ${trimmedShotText}`)
+    }
+
+    const beforeInsertCount = await desktopPage.locator('[data-timeline-item]').count()
+    await sourceMonitor.getByRole('button', { name: 'Overwrite (.)' }).click()
+    await desktopPage.waitForFunction(
+      (before) => document.querySelectorAll('[data-timeline-item]').length > before,
+      beforeInsertCount,
+      { timeout: 20_000 },
+    )
+    const insertedCount = await desktopPage.locator('[data-timeline-item]').count()
+
+    await desktopPage.keyboard.press('Control+z')
+    await desktopPage.waitForFunction(
+      (expected) => document.querySelectorAll('[data-timeline-item]').length === expected,
+      beforeInsertCount,
+      { timeout: 10_000 },
+    )
+    await desktopPage.keyboard.press('Control+Shift+z')
+    await desktopPage.waitForFunction(
+      (expected) => document.querySelectorAll('[data-timeline-item]').length === expected,
+      insertedCount,
+      { timeout: 10_000 },
+    )
+
+    await desktopPage.getByRole('button', { name: 'Save project' }).click()
+    await desktopPage.getByText('Project saved', { exact: true }).waitFor({
+      state: 'visible',
+      timeout: 20_000,
+    })
+
+    await desktopPage.goto(`${baseUrl}/projects`, {
+      waitUntil: 'domcontentloaded',
+      timeout: 30_000,
+    })
+    const desktopCard = desktopPage
+      .locator('[data-project-card]')
+      .filter({ hasText: 'Workspace geometry smoke' })
+      .first()
+    await desktopCard.waitFor({ state: 'visible', timeout: 20_000 })
+    await desktopCard.getByRole('button', { name: 'Open', exact: true }).click()
+    await desktopPage.locator('[role="application"][data-studio-v2="true"]').waitFor({
+      state: 'visible',
+      timeout: 30_000,
+    })
+    await desktopPage.waitForFunction(
+      (expected) => document.querySelectorAll('[data-timeline-item]').length === expected,
+      insertedCount,
+      { timeout: 20_000 },
+    )
+
+    await desktopPage.getByRole('tab', { name: 'Visual' }).click()
+    await desktopPage.getByText('editor-roundtrip-smoke.webm', { exact: true }).waitFor({
+      state: 'visible',
+      timeout: 20_000,
+    })
+    await desktopPage.getByRole('button', { name: 'Continue to Shots' }).click()
+    await desktopPage.getByRole('button', { name: 'Detect shots' }).click()
+    const reopenedShotBin = desktopPage.locator('[data-beatvideo-shot-bin]')
+    await reopenedShotBin.waitFor({ state: 'visible', timeout: 30_000 })
+    const reopenedFirstShot = reopenedShotBin.locator('button[aria-label^="Shot 1 from "]').first()
+    await reopenedFirstShot.waitFor({ state: 'visible', timeout: 20_000 })
+    const reopenedShotText = await reopenedFirstShot.innerText()
+    if (reopenedShotText !== trimmedShotText) {
+      throw new Error(
+        `Saved shot review changed after reopen. Before: ${JSON.stringify(trimmedShotText)} After: ${JSON.stringify(reopenedShotText)}`,
+      )
+    }
+
+    if (desktopErrors.length) {
+      throw new Error(`Desktop media round-trip errors:\\n${desktopErrors.join('\\n')}`)
+    }
+    console.log(
+      'Real-media editor smoke passed: WebM import, shot trim, Source precision UI, timeline overwrite, Undo/Redo, save and reopen are verified.',
+    )
     await desktopContext.close()
   } finally {
     clearTimeout(hardTimeout)

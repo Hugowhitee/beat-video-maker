@@ -42,6 +42,10 @@ vi.mock('@/features/effects/deps/preview-contract', () => ({
   useThrottledFrame: () => 12,
 }))
 
+vi.mock('@/features/effects/deps/settings', () => ({
+  useResolvedHotkeys: () => ({ COLOR_COMPARE: 'shift+b' }),
+}))
+
 vi.mock('../hooks/use-keyframes-by-item-id', () => ({
   useKeyframesByItemId: () => new Map(),
 }))

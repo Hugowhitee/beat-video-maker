@@ -490,6 +490,7 @@ function SourceMonitorInner({
   return (
     <div
       ref={wrapperRef}
+      data-testid="source-monitor"
       tabIndex={-1}
       className="flex-1 flex flex-col min-w-0 outline-none"
       onMouseEnter={handleMouseEnter}

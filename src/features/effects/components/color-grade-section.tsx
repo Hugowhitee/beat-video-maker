@@ -19,7 +19,8 @@ import { useGizmoStore, useThrottledFrame } from '@/features/effects/deps/previe
 import { useGradeClipboardStore, type GradeClipboardEntry } from '@/shared/state/grade-clipboard'
 import { PropertySection } from '@/shared/ui/property-controls'
 import { cn } from '@/shared/ui/cn'
-import { HOTKEYS, formatHotkeyBinding } from '@/config/hotkeys'
+import { formatHotkeyBinding } from '@/config/hotkeys'
+import { useResolvedHotkeys } from '@/features/effects/deps/settings'
 import { GpuWheelsPanel, GpuCurvesPanel } from './panels'
 import {
   getGpuEffect,
@@ -138,6 +139,7 @@ export const ColorGradeSection = memo(function ColorGradeSection({
   onCreateAdjustmentLayer,
 }: ColorGradeSectionProps) {
   const { t } = useTranslation()
+  const hotkeys = useResolvedHotkeys()
   const addEffects = useTimelineStore((s) => s.addEffects)
   const setItemEffects = useTimelineStore((s) => s.setItemEffects)
   const updateEffect = useTimelineStore((s) => s.updateEffect)
@@ -493,7 +495,7 @@ export const ColorGradeSection = memo(function ColorGradeSection({
     ? t('effects.colorPanel.compareSplitTooltip')
     : t('effects.colorPanel.compareSplitDisabledTooltip')
   const showingBefore = colorGradeComparisonMode === 'before'
-  const compareShortcutLabel = formatHotkeyBinding(HOTKEYS.COLOR_COMPARE)
+  const compareShortcutLabel = formatHotkeyBinding(hotkeys.COLOR_COMPARE)
   const beforeAfterAriaLabel =
     `${t('effects.colorPanel.compareBefore')} / ${t('effects.colorPanel.compareAfter')} · ${compareShortcutLabel}`
 
