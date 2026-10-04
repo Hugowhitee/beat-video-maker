@@ -578,7 +578,7 @@ describe('AudioMixerView', () => {
       '[aria-label="EQ A1"]',
     ) as HTMLButtonElement | null
     const busEqButton = container.querySelector(
-      '[aria-label="EQ Bus 1"]',
+      '[aria-label="EQ Master"]',
     ) as HTMLButtonElement | null
 
     expect(trackEqButton).not.toBeNull()
@@ -633,7 +633,7 @@ describe('AudioMixerView', () => {
       '[aria-label="EQ A1"]',
     ) as HTMLButtonElement | null
     const busEqButton = container.querySelector(
-      '[aria-label="EQ Bus 1"]',
+      '[aria-label="EQ Master"]',
     ) as HTMLButtonElement | null
 
     expect(trackEqButton).not.toBeNull()
