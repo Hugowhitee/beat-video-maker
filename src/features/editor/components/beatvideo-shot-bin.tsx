@@ -130,7 +130,7 @@ export function BeatvideoShotBin({
   const openedShotRef = useRef<string | null>(null)
 
   const previewShotAtPointer = useCallback(
-    (event: PointerEvent<HTMLDivElement>, shot: ClipShot) => {
+    (event: PointerEvent<HTMLElement>, shot: ClipShot) => {
       if (openedShotRef.current === shot.id) return
       const media = mediaById[shot.sourceId]
       if (!media || media.fps <= 0) return
