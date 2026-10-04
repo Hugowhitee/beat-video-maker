@@ -72,7 +72,17 @@ export function resolveProducerTrackLayout(
   const populatedVideoTracks = videoTracks.filter(
     (track) => itemCount(itemsByTrackId, track.id) > 0,
   )
-  const primaryMediaTrack = populatedVideoTracks[0] ?? videoTracks[0] ?? null
+  // An overlay track can precede footage in stack order. Do not mistake a
+  // title/shape for the primary Media lane just because it is populated.
+  const populatedMediaTrack = populatedVideoTracks.find((track) =>
+    (itemsByTrackId[track.id] ?? []).some((item) =>
+      item !== null &&
+      typeof item === 'object' &&
+      'type' in item &&
+      (item.type === 'image' || item.type === 'video' || item.type === 'composition'),
+    ),
+  )
+  const primaryMediaTrack = populatedMediaTrack ?? populatedVideoTracks[0] ?? videoTracks[0] ?? null
   const beatTrack =
     usableTracks.find(
       (track) => getTrackKind(track) === 'audio' && track.name === 'Beat',
@@ -119,4 +129,24 @@ export function resolveCompactProducerTracks(
   itemsByTrackId: Record<string, readonly unknown[] | undefined>,
 ): TimelineTrack[] {
   return resolveProducerTrackLayout(tracks, itemsByTrackId, true).visibleTracks
+}
+
+/**
+ * The ordinary Visual/Color timeline should not hide existing visual layers
+ * when the user selects the underlying footage. Keep empty plumbing hidden,
+ * but reveal populated overlays as the actual editable layer stack.
+ */
+export function shouldExposeProducerExtras(
+  workspace: EditorWorkspaceId,
+  activeTrackId: string | null,
+  extras: readonly TimelineTrack[],
+  itemsByTrackId: Record<string, readonly unknown[] | undefined>,
+): boolean {
+  if (workspace === 'master') return true
+  if (activeTrackId && extras.some((track) => track.id === activeTrackId)) return true
+  if (workspace !== 'edit' && workspace !== 'color') return false
+  return extras.some(
+    (track) =>
+      getTrackKind(track) === 'video' && itemCount(itemsByTrackId, track.id) > 0,
+  )
 }
