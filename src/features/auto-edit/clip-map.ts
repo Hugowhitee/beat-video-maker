@@ -4,6 +4,7 @@ import {
   importSceneDetection,
   readAiOutput,
   saveScenes,
+  saveSceneReview,
   SCENE_DETECTOR_VERSION,
 } from './deps/analysis-contract'
 import { resolveMediaUrl } from './deps/editor-runtime-contract'
@@ -77,6 +78,7 @@ function uniqueUsableCuts(cuts: readonly SceneCutLike[], duration: number) {
 export function buildClipSourceFromSceneCuts(
   media: AutoEditMedia,
   cuts: readonly SceneCutLike[],
+  reviewedRanges: Readonly<Record<string, { start: number; end: number }>> = {},
 ): ClipSource {
   if (!(media.duration > 0)) {
     throw new Error(`Footage "${media.fileName}" has no usable duration.`)
@@ -96,12 +98,19 @@ export function buildClipSourceFromSceneCuts(
     const next = boundaries[index + 1]
     if (!next || next.time <= boundary.time) return []
 
+    const shotId = `${media.id}:shot:${index + 1}`
+    const review = reviewedRanges[shotId]
+    const reviewed = review && Number.isFinite(review.start) && Number.isFinite(review.end) &&
+      review.start >= boundary.time && review.end <= next.time &&
+      review.end - review.start >= MIN_AUTO_EDIT_SHOT_SECONDS
+      ? review
+      : null
     return [
       {
-        id: `${media.id}:shot:${index + 1}`,
+        id: shotId,
         sourceId: media.id,
-        start: boundary.time,
-        end: next.time,
+        start: reviewed?.start ?? boundary.time,
+        end: reviewed?.end ?? next.time,
         motion: 0.5,
         quality: 0.5,
         motionEvidence: 'unavailable' as const,
@@ -121,10 +130,109 @@ export function buildClipSourceFromSceneCuts(
   }
 }
 
-async function loadCachedCuts(mediaId: string): Promise<SceneCutLike[] | null> {
+export type ReviewedShotEdit =
+  | { kind: 'trim'; shotId: string; start: number; end: number }
+  | { kind: 'reset-trim'; shotId: string }
+  | { kind: 'merge-left'; shotId: string }
+  | { kind: 'split'; shotId: string; time: number }
+  | { kind: 'reset-scenes' }
+
+/**
+ * Human corrections live alongside raw detector cuts, not inside the video.
+ * A source revision/detector change naturally invalidates the reviewed cache.
+ */
+export async function reviewClipSourceShots(
+  media: AutoEditMedia,
+  action: ReviewedShotEdit,
+): Promise<ClipSource> {
+  const envelope = await readAiOutput(media.id, 'scenes')
+  if (!envelope || !isCurrentAutoEditSceneCache(envelope.data)) {
+    throw new Error('Detect the source before editing its shot boundaries.')
+  }
+  if (action.kind === 'reset-scenes') {
+    await saveSceneReview(media.id, undefined)
+    return buildClipSourceFromSceneCuts(media, envelope.data.cuts)
+  }
+
+  const cuts = [...(envelope.data.review?.cuts ?? envelope.data.cuts)]
+  const ranges = { ...envelope.data.review?.ranges }
+  const rawSource = buildClipSourceFromSceneCuts(media, cuts)
+  const index = rawSource.shots.findIndex((shot) => shot.id === action.shotId)
+  const shot = rawSource.shots[index]
+  if (!shot) throw new Error('This shot no longer matches the current source revision.')
+  const tolerance = 1 / Math.max(1, media.fps || FALLBACK_VIDEO_FPS)
+
+  if (action.kind === 'trim') {
+    if (!Number.isFinite(action.start) || !Number.isFinite(action.end) ||
+      action.start < shot.start - tolerance || action.end > shot.end + tolerance ||
+      action.end - action.start < MIN_AUTO_EDIT_SHOT_SECONDS) {
+      throw new Error('Keep the selected In/Out range inside this scene.')
+    }
+    const start = Math.max(shot.start, action.start)
+    const end = Math.min(shot.end, action.end)
+    if (end - start < MIN_AUTO_EDIT_SHOT_SECONDS) {
+      throw new Error('This shot is too short after trimming.')
+    }
+    ranges[action.shotId] = { start, end }
+  } else if (action.kind === 'reset-trim') {
+    delete ranges[action.shotId]
+  } else if (action.kind === 'merge-left') {
+    if (index === 0) throw new Error('The first shot has no previous cut to merge.')
+    cuts.splice(index - 1, 1)
+    // IDs currently encode the ordinal shot index. Keep unrelated later trims
+    // attached to their actual media segment after removing a boundary.
+    for (const [key, range] of Object.entries(ranges)) {
+      const n = Number(key.slice(`${media.id}:shot:`.length))
+      if (!key.startsWith(`${media.id}:shot:`) || !Number.isInteger(n)) continue
+      delete ranges[key]
+      if (n < index || n === index || n === index + 1) {
+        if (n < index) ranges[key] = range
+      } else {
+        ranges[`${media.id}:shot:${n - 1}`] = range
+      }
+    }
+  } else if (action.kind === 'split') {
+    if (!Number.isFinite(action.time) ||
+      action.time - shot.start < MIN_AUTO_EDIT_SHOT_SECONDS ||
+      shot.end - action.time < MIN_AUTO_EDIT_SHOT_SECONDS) {
+      throw new Error('Move the Source playhead inside this shot before splitting.')
+    }
+    cuts.splice(index, 0, {
+      time: action.time,
+      type: 'cut',
+      score: 100,
+      confidence: 1,
+      metrics: { kind: 'manual' },
+    })
+    const shifted: typeof ranges = {}
+    for (const [key, range] of Object.entries(ranges)) {
+      const n = Number(key.slice(`${media.id}:shot:`.length))
+      if (!key.startsWith(`${media.id}:shot:`) || !Number.isInteger(n)) continue
+      if (n !== index + 1) shifted[`${media.id}:shot:${n > index + 1 ? n + 1 : n}`] = range
+    }
+    Object.keys(ranges).forEach((key) => delete ranges[key])
+    Object.assign(ranges, shifted)
+  }
+
+  await saveSceneReview(media.id, {
+    cuts: action.kind === 'merge-left' || action.kind === 'split'
+      ? cuts
+      : envelope.data.review?.cuts,
+    ranges,
+  })
+  return buildClipSourceFromSceneCuts(media, cuts, ranges)
+}
+
+async function loadCachedCuts(mediaId: string): Promise<{
+  cuts: SceneCutLike[]
+  ranges: Record<string, { start: number; end: number }>
+} | null> {
   const envelope = await readAiOutput(mediaId, 'scenes').catch(() => undefined)
   if (!envelope || !isCurrentAutoEditSceneCache(envelope.data)) return null
-  return envelope.data.cuts
+  return {
+    cuts: envelope.data.review?.cuts ?? envelope.data.cuts,
+    ranges: envelope.data.review?.ranges ?? {},
+  }
 }
 
 async function loadVideoMetadata(
@@ -260,7 +368,7 @@ export async function buildClipMapForMedia(params: {
     })
 
     const cuts =
-      cachedCuts ??
+      cachedCuts?.cuts ??
       (params.analyzeMissing === false
         ? []
         : await detectCutsForMedia({
@@ -277,7 +385,7 @@ export async function buildClipMapForMedia(params: {
               }),
           }))
 
-    sources.push(buildClipSourceFromSceneCuts(media, cuts))
+    sources.push(buildClipSourceFromSceneCuts(media, cuts, cachedCuts?.ranges))
     params.onProgress?.({
       mediaId: media.id,
       fileName: media.fileName,
