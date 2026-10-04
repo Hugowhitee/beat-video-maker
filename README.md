@@ -1,52 +1,40 @@
 # Beat Video Maker
 
-Beat Video Maker is a local-first editor for turning a beat plus photos or footage into a finished music visual. It combines music-aware editing with a full timeline, real effect previews, motion/keyframes, transitions, color grading, mastering and local export.
+Make videos for your beats, without setting up a full editing project every time.
 
-## Open the app
+**Beat Video Maker** is a browser-based editor for producers. Start with a track and a cover image or footage, make cuts against the music, add text and effects, adjust the color and audio, and export the video. You can make a simple cover video or work directly on the timeline when you need more control.
 
-Primary app: **https://beat-video-maker-live-production.up.railway.app/**
+[**Open Beat Video Maker**](https://beat-video-maker-live-production.up.railway.app/) · [Alternative link](https://hugowhitee.github.io/beat-video-maker/)
 
-GitHub Pages remains a fallback: **https://hugowhitee.github.io/beat-video-maker/**
+## Getting started
 
-Railway serves the production container from `main` through `Dockerfile`, `deploy/nginx.conf.template` and `railway.json`.
+1. **Create a project.** Choose **Photo** for a cover visual or **Video** for footage. You can change the project settings later.
+2. **Beat.** Import your audio, check the detected tempo and musical grid, and correct the timing if needed. Producer tags and watermarks are optional.
+3. **Visual.** Add a cover, video clips, text or overlays. In video projects, you can review detected shots and build an arrangement, or edit clips yourself on the timeline.
+4. **Color.** Adjust the whole video or work on a selected clip.
+5. **Master.** Set the final beat level and work with the EQ, compressor, saturator and limiter.
+6. **Export.** Choose your output settings and render locally.
 
-On first use the browser asks for a local workspace folder. Project files, media metadata, caches and exports stay local; no cloud backend is required for normal editing.
+The player and timeline stay connected across the editing workspaces. Shots, transitions, overlays and generated arrangements use the normal editor clips rather than a separate export-only sequence.
 
-## Producer workflow
+**Check the results of automatic analysis before publishing.** Tempo detection, beat alignment and scene boundaries can need manual correction, particularly with unusual rhythms or fast-moving footage.
 
-The normal project route is:
+## Local workspace
 
-1. **Beat** — import/select the beat, analyze or enter BPM, verify the one canonical musical grid, and manage optional producer tags/watermarks.
-2. **Visual** — add a hero photo or footage, review detected shots, Auto Arrange or build Loop A, then edit real timeline clips.
-3. **Color** — grade the full visual program by default, with clip-local correction available when needed.
-4. **Master** — finish the beat through the ordered EQ/compressor/saturation/limiter rack and open the floating Mixer for channel/output control.
-5. **Export** — render locally for publishing.
+The editor runs in your browser. On first use, choose a local workspace folder. Projects, imported media, analysis caches and exports are stored locally rather than in an account or online project database.
 
-Advanced editing remains available through the same canonical timeline/runtime. Beat Video Maker does not maintain a second hidden editor for automation.
+Use a recent Chromium-based desktop browser for folder access and the full editing workflow. Keep a backup of your workspace if you are working on something you want to preserve.
 
-## Key behavior
+## Run locally
 
-- One timeline/playhead/waveform and one mapped musical timebase drive visible grid markers, snap, Auto Arrange and beat-reactive effects.
-- Effect browsing keeps the real GPU preview pipeline with poster frames and hover previews.
-- Motion presets keep their real animated preview system.
-- Auto Arrange creates normal editable timeline items. Generated clips can be enabled/disabled, trimmed, replaced, transitioned and given Motion/Effects.
-- Multiple footage sources feed one reviewable shot pool while preserving source identity.
-- Loop A is a reusable editable sequence with linked repeats; Make Unique creates deliberate variation.
-- Transitions remain visible/selectable bridges on real cuts.
-- Color defaults to one full-program grade instead of silently duplicating grading across generated clips.
-- The Master rack is real processing state: membership/order persist and preview/export follow the same processor order.
-- The floating Mixer owns the project output fader; Auto Level adjusts pre-FX input trim.
-
-## Development
-
-Requirements: Node 22+ and Vite+.
+Requires **Node.js 22+** and [Vite+](https://viteplus.dev/).
 
 ```bash
 vp install
 vp dev --host
 ```
 
-Normal verification:
+To check a change before merging:
 
 ```bash
 vp run check
@@ -56,16 +44,8 @@ vp test run
 vp build
 ```
 
-The repository also contains headless render/edit verification for broad runtime changes.
+The frontend lives in `src/`. The editor's normal playback, effects, timeline and export systems are shared across Photo and Video projects. `PRODUCT.md` describes the intended product behavior; `AGENTS.md` documents repository conventions.
 
-## Deployment
+Production builds run from `main`. Railway serves the main app through `Dockerfile` and `deploy/nginx.conf.template`; GitHub Pages provides the alternative static build.
 
-GitHub Pages deploys from `main` through `.github/workflows/pages.yml` with SPA fallback for project/editor routes.
-
-The production container serves the same built `dist/` through nginx and keeps the cross-origin-isolation headers required by the editor.
-
-## Ownership and third-party notices
-
-This repository is the canonical Beat Video Maker product and runtime.
-
-Third-party license notices for incorporated open-source code are retained in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+Third-party copyright and license information is in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
