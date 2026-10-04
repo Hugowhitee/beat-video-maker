@@ -630,7 +630,7 @@ export function TransformGizmo({
           e.preventDefault()
           onEditText?.()
         }
-      }
+      }}
     >
       {item.type === 'controller' && (
         <div className="pointer-events-none absolute inset-0" data-testid="null-controller-gizmo">
