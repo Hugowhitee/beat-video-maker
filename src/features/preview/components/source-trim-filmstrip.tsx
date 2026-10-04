@@ -44,7 +44,7 @@ export function SourceTrimFilmstrip({
   const ref = useRef<HTMLDivElement>(null)
   const [zoomIndex, setZoomIndex] = useState(0)
   const [focus, setFocus] = useState<Boundary>('in')
-  const zoom = ZOOM_LEVELS[zoomIndex]
+  const zoom = ZOOM_LEVELS[zoomIndex] ?? 1
   const totalFrames = Math.max(1, durationInFrames)
   const safeFps = Math.max(1, fps)
   const focusedFrame =

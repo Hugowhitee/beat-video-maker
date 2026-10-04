@@ -60,8 +60,10 @@ describe('resolveProducerTrackLayout', () => {
     }
     const layout = resolveProducerTrackLayout([title, subtitle, cover, beat], items, true)
     expect(layout.primaryMediaTrackId).toBe('cover')
+    // Lower track.order renders above higher order in the compositor;
+    // the track headers may not misleadingly put the cover above both titles.
     expect(layout.visibleTracks.map((entry) => entry.id)).toEqual([
-      'cover', 'beat', 'title', 'subtitle',
+      'title', 'subtitle', 'cover', 'beat',
     ])
     expect(shouldExposeProducerExtras('edit', 'cover', layout.extraTracks, items)).toBe(true)
     expect(shouldExposeProducerExtras('color', null, layout.extraTracks, items)).toBe(true)
@@ -116,8 +118,8 @@ describe('resolveProducerTrackLayout', () => {
 
     expect(layout.visibleTracks.map((entry) => entry.id)).toEqual([
       'media',
-      'beat',
       'overlay',
+      'beat',
       'aux',
     ])
     expect(layout.extraTracks.map((entry) => entry.id)).toEqual(['overlay', 'aux'])

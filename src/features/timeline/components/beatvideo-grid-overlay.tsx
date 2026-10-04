@@ -106,7 +106,7 @@ export const BeatvideoGridOverlay = memo(function BeatvideoGridOverlay({
             }}
           >
             {showLabel ? (
-              <span className="absolute bottom-[7px] left-1 whitespace-nowrap bg-background/90 px-1 font-mono text-[9px] font-medium leading-none text-foreground/85">
+              <span className="absolute left-1/2 top-[1px] -translate-x-1/2 whitespace-nowrap bg-background/90 px-1 font-mono text-[10px] font-medium leading-none text-foreground/85">
                 {sectionLabel(section, index)}
               </span>
             ) : null}

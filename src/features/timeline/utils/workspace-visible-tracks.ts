@@ -105,11 +105,19 @@ export function resolveProducerTrackLayout(
       return (left.order ?? 0) - (right.order ?? 0)
     })
 
+  // The simplified producer view may group or hide empty lanes, but it must
+  // never reorder visible video layers relative to the real compositor.
+  // Video is displayed top-to-bottom by canonical track.order; audio follows.
   const visibleTracks = [
     ...(primaryMediaTrack ? [primaryMediaTrack] : []),
     ...(beatTrack ? [beatTrack] : []),
     ...(showExtras ? extraTracks : []),
-  ]
+  ].sort((left, right) => {
+    const leftVideo = getTrackKind(left) === 'video'
+    const rightVideo = getTrackKind(right) === 'video'
+    if (leftVideo !== rightVideo) return leftVideo ? -1 : 1
+    return (left.order ?? 0) - (right.order ?? 0)
+  })
 
   if (visibleTracks.length === 0 && usableTracks.length > 0) {
     visibleTracks.push(usableTracks[0]!)

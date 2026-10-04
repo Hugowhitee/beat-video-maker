@@ -6,7 +6,9 @@ import { applyTimelineLiveGeometry, createTimelineTrackContentLayerRef } from '.
 
 vi.mock('./timeline-markers', () => ({
   IO_LANE_HEIGHT: 12,
-  TimelineMarkers: () => <div data-testid="stable-ruler-markers" />,
+  TimelineMarkers: ({ hideTimecodeLabels }: { hideTimecodeLabels?: boolean }) => (
+    <div data-testid="stable-ruler-markers" data-timecodes-hidden={String(Boolean(hideTimecodeLabels))} />
+  ),
 }))
 
 import { TimelineRulerSurface } from './timeline-ruler-surface'
@@ -18,6 +20,13 @@ describe('TimelineRulerSurface', () => {
 
   afterEach(() => {
     act(() => _resetZoomStoreForTest())
+  })
+
+  it('retains timestamps while showing beat and bar markers in musical mode', () => {
+    const view = render(
+      <TimelineRulerSurface duration={10} containerWidth={500} initialWidth={500} musicalRuler />,
+    )
+    expect(view.getByTestId('stable-ruler-markers')).toHaveAttribute('data-timecodes-hidden', 'false')
   })
 
   it('updates live ruler geometry without scaling its mounted DOM', () => {
