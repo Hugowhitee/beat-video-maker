@@ -95,7 +95,7 @@ function getStudioColumnMaxWidth(): number {
   ))
 }
 function readStudioColumnWidth(workspace: EditorWorkspaceId): number {
-  const fallback = workspace === 'master' ? 480 : 400
+  const fallback = workspace === 'master' || workspace === 'color' ? 480 : 400
   try {
     const stored = Number(window.localStorage.getItem(`editor:studioColumnWidth:${workspace}`))
     return Math.max(STUDIO_COLUMN_MIN_WIDTH, Math.min(
@@ -802,8 +802,8 @@ export const LoadedEditor = memo(function LoadedEditor({
     workspace === 'edit' ||
     workspace === 'color' ||
     workspace === 'master'
-  // Color replaces the default editor shell. Motion deliberately keeps it and
-  // swaps the preview/timeline surfaces while retaining the shared sidebars.
+  // All producer workspaces share Program and timeline geometry. Color keeps
+  // its grading stack in the task column; none duplicates the editor timeline.
   const hidesDefaultSidebars = isColorWorkspace
 
   return (
@@ -960,35 +960,6 @@ export const LoadedEditor = memo(function LoadedEditor({
         )}
 
         {/* Right side: Preview/Properties + Timeline */}
-        {isColorWorkspace ? (
-          <div className="grid min-h-0 min-w-0 flex-1 grid-rows-[minmax(180px,2fr)_minmax(124px,0.8fr)_minmax(260px,1.5fr)] gap-3 overflow-y-auto bg-[#d9dbd6] px-5 pb-5 pt-[18px]">
-            <div className="min-h-0 min-w-0 overflow-hidden">
-              <ErrorBoundary level="feature">
-                <PreviewArea project={project} />
-              </ErrorBoundary>
-            </div>
-            <InteractionLockRegion
-              locked={isMaskEditingActive}
-              className="min-h-0 min-w-0 overflow-hidden"
-            >
-              <ErrorBoundary level="feature">
-                <Suspense fallback={null}>
-                  <LazyTimeline duration={timelineDuration} beatvideoMode={beatvideoMode} />
-                </Suspense>
-              </ErrorBoundary>
-            </InteractionLockRegion>
-            <InteractionLockRegion
-              locked={isMaskEditingActive}
-              className="min-h-0 min-w-0 overflow-hidden"
-            >
-              <ErrorBoundary level="feature">
-                <Suspense fallback={null}>
-                  <LazyColorGradingDock />
-                </Suspense>
-              </ErrorBoundary>
-            </InteractionLockRegion>
-          </div>
-        ) : (
           <ResizablePanelGroup
             direction="vertical"
             className="flex-1 min-w-0"
@@ -1064,9 +1035,30 @@ export const LoadedEditor = memo(function LoadedEditor({
               </InteractionLockRegion>
             </ResizablePanel>
           </ResizablePanelGroup>
-        )}
 
-        {isMasterWorkspace ? (
+        {isColorWorkspace ? (
+          <>
+          <StudioResizeRail
+            label="Resize Color controls"
+            width={visibleStudioColumnWidth}
+            minWidth={STUDIO_COLUMN_MIN_WIDTH}
+            maxWidth={getStudioColumnMaxWidth()}
+            defaultWidth={480}
+            onWidthChange={updateStudioColumnWidth}
+          />
+          <InteractionLockRegion
+            locked={isMaskEditingActive}
+            className="h-full min-w-0 shrink-0 bg-[#e8e9e5]"
+            style={{ width: visibleStudioColumnWidth }}
+          >
+            <ErrorBoundary level="feature">
+              <Suspense fallback={null}>
+                <LazyColorGradingDock />
+              </Suspense>
+            </ErrorBoundary>
+          </InteractionLockRegion>
+          </>
+        ) : isMasterWorkspace ? (
           <>
           <StudioResizeRail
             label="Resize Master controls"
