@@ -93,7 +93,7 @@ export function BeatvideoVisualSourcePanel({
   const [disabledArrangeSourceIds, setDisabledArrangeSourceIds] = useState<string[]>([])
   const [draggingShotId, setDraggingShotId] = useState<string | null>(null)
   const [dragOverSlotKey, setDragOverSlotKey] = useState<string | null>(null)
-  const [sourceStartDrafts, setSourceStartDrafts] = useState<Record<string, number>>({})
+  const [activeSourceSegmentId, setActiveSourceSegmentId] = useState<string | null>(null)
 
   const [lastClipMap, setLastClipMap] = useState<ClipMap | null>(null)
   const [lastPlan, setLastPlan] = useState<EditPlan | null>(null)
@@ -501,7 +501,7 @@ export function BeatvideoVisualSourcePanel({
         const nextPlan = replaceSegmentSource(lastPlan, lastClipMap, segmentId, shotId)
         const result = await applyArrangementSourceRepair(nextPlan)
         if (!result) return
-        setSourceStartDrafts({})
+        setActiveSourceSegmentId(null)
         toast.success(
           lastPlan.mode === 'loop'
             ? 'Loop slot replaced in every repeat'
@@ -562,56 +562,26 @@ export function BeatvideoVisualSourcePanel({
   )
 
   const commitArrangementSourceStart = useCallback(
-    async (
-      segmentId: string,
-      slotKey: string,
-      requestedSourceStart: number,
-    ) => {
+    async (segmentId: string, requestedSourceStart: number) => {
       if (!lastPlan || !lastClipMap || loopBlocksGrouped) return
       const segment = lastPlan.segments.find((candidate) => candidate.id === segmentId)
       if (!segment) return
-
       try {
         const delta = requestedSourceStart - segment.sourceStart
         if (Math.abs(delta) <= 1e-6) {
-          setSourceStartDrafts((current) => {
-            const next = { ...current }
-            delete next[slotKey]
-            return next
-          })
+          setActiveSourceSegmentId(null)
           return
         }
-
-        const nextPlan = slipSegmentSource(
-          lastPlan,
-          lastClipMap,
-          segmentId,
-          delta,
-        )
+        const nextPlan = slipSegmentSource(lastPlan, lastClipMap, segmentId, delta)
         const result = await applyArrangementSourceRepair(nextPlan)
-        if (!result) return
-        setSourceStartDrafts((current) => {
-          const next = { ...current }
-          delete next[slotKey]
-          return next
-        })
+        if (result) setActiveSourceSegmentId(null)
       } catch (error) {
-        setSourceStartDrafts((current) => {
-          const next = { ...current }
-          delete next[slotKey]
-          return next
-        })
         toast.error('Could not adjust this source range', {
           description: error instanceof Error ? error.message : String(error),
         })
       }
     },
-    [
-      applyArrangementSourceRepair,
-      lastClipMap,
-      lastPlan,
-      loopBlocksGrouped,
-    ],
+    [applyArrangementSourceRepair, lastClipMap, lastPlan, loopBlocksGrouped],
   )
 
   const beginArrangementShotDrag = useCallback(
@@ -767,6 +737,48 @@ export function BeatvideoVisualSourcePanel({
       useEditorStore.getState().setSourcePreviewMediaId(shot.sourceId)
     },
     [clearArrangementShotPreview, mediaItems],
+  )
+
+  // Reuse the canonical source monitor for precise video In/Out editing.
+  // Musical timeline boundaries stay fixed when applying the source slip.
+  const beginVisualSourceTrim = useCallback(
+    (segment: EditPlan['segments'][number]) => {
+      openShotInSourceMonitor({
+        sourceId: segment.sourceId,
+        start: segment.sourceStart,
+        end: segment.sourceEnd,
+      })
+      setActiveSourceSegmentId(segment.id)
+    },
+    [openShotInSourceMonitor],
+  )
+
+  const applyVisualSourceTrim = useCallback(
+    (segment: EditPlan['segments'][number]) => {
+      const source = mediaItems.find((media) => media.id === segment.sourceId)
+      const shot = shotById.get(segment.shotId)
+      const state = useSourcePlayerStore.getState()
+      if (!source || !shot || state.currentMediaId !== segment.sourceId ||
+        state.inPoint === null || state.outPoint === null) {
+        toast.warning('Select a valid source range before applying')
+        return
+      }
+      const sourceFps = Math.max(1, source.fps || 30)
+      const inSeconds = state.inPoint / sourceFps
+      const outSeconds = state.outPoint / sourceFps
+      const slotLength = segmentDuration(segment)
+      if (outSeconds - inSeconds < slotLength - 1 / sourceFps) {
+        toast.warning('The selected source range is shorter than this musical clip')
+        return
+      }
+      if (inSeconds < shot.start - 1 / sourceFps ||
+        inSeconds + slotLength > shot.end + 1 / sourceFps) {
+        toast.warning('Keep the source selection inside the detected shot')
+        return
+      }
+      void commitArrangementSourceStart(segment.id, inSeconds)
+    },
+    [commitArrangementSourceStart, mediaItems, shotById],
   )
 
   const focusArrangementSegment = useCallback(
@@ -1045,7 +1057,10 @@ export function BeatvideoVisualSourcePanel({
               excludedShotIds={excludedShotIds}
               draggingShotId={draggingShotId}
               onToggleAvoid={toggleAvoidShot}
-              onOpenShot={openShotInSourceMonitor}
+              onOpenShot={(shot) => {
+                  setActiveSourceSegmentId(null)
+                  openShotInSourceMonitor(shot)
+                }}
               onDragStart={beginArrangementShotDrag}
               onDragEnd={endArrangementShotDrag}
             />
@@ -1303,7 +1318,10 @@ export function BeatvideoVisualSourcePanel({
                 excludedShotIds={excludedShotIds}
                 draggingShotId={draggingShotId}
                 onToggleAvoid={toggleAvoidShot}
-                onOpenShot={openShotInSourceMonitor}
+                onOpenShot={(shot) => {
+                  setActiveSourceSegmentId(null)
+                  openShotInSourceMonitor(shot)
+                }}
                 onDragStart={beginArrangementShotDrag}
                 onDragEnd={endArrangementShotDrag}
               />
@@ -1336,22 +1354,6 @@ export function BeatvideoVisualSourcePanel({
                     const sourceDuration = shot
                       ? (lastClipMap.sources.find((source) => source.id === shot.sourceId)?.duration ?? shot.end)
                       : duration
-                    const sourceMedia = shot
-                      ? mediaItems.find((candidate) => candidate.id === shot.sourceId)
-                      : null
-                    const sourceStep = 1 / Math.max(1, sourceMedia?.fps || 30)
-                    const sourceStartMin = shot?.start ?? segment.sourceStart
-                    const sourceStartMax = shot
-                      ? Math.max(shot.start, shot.end - duration)
-                      : segment.sourceStart
-                    const sourceStartValue = Math.max(
-                      sourceStartMin,
-                      Math.min(
-                        sourceStartMax,
-                        sourceStartDrafts[key] ?? segment.sourceStart,
-                      ),
-                    )
-                    const sourceOffset = sourceStartValue - sourceStartMin
                     const slotItemIds =
                       segment.motifId && segment.motifSlot && lastPlan
                         ? lastPlan.segments
@@ -1466,70 +1468,36 @@ export function BeatvideoVisualSourcePanel({
                           </div>
                         </div>
 
-                        {shot && sourceStartMax > sourceStartMin + 1e-6 ? (
-                          <label
-                            className="block border-t border-border/70 px-1.5 py-1"
-                            onPointerDown={(event) => event.stopPropagation()}
-                          >
-                            <span className="mb-0.5 flex items-center justify-between gap-1 text-[7px] text-muted-foreground">
-                              <span>Source</span>
-                              <span className="font-mono tabular-nums text-foreground/75">
-                                +{sourceOffset.toFixed(2)}s
-                              </span>
-                            </span>
-                            <input
-                              type="range"
-                              min={sourceStartMin}
-                              max={sourceStartMax}
-                              step={sourceStep}
-                              value={sourceStartValue}
-                              className="block h-3 w-full accent-foreground"
-                              aria-label={`Source position for generated clip ${index + 1}`}
-                              onChange={(event) => {
-                                const nextStart = Number(event.currentTarget.value)
-                                setSourceStartDrafts((current) => ({
-                                  ...current,
-                                  [key]: nextStart,
-                                }))
-                                if (sourceMedia && sourceMedia.fps > 0) {
-                                  const previewTime = nextStart + duration / 2
-                                  const playback = usePlaybackStore.getState()
-                                  if (playback.isPlaying) playback.pause()
-                                  playback.setPreviewFrame(null)
-                                  useEditorStore
-                                    .getState()
-                                    .setMediaSkimPreview(
-                                      shot.sourceId,
-                                      Math.max(0, Math.round(previewTime * sourceMedia.fps)),
-                                    )
-                                }
-                              }}
-                              onPointerUp={(event) => {
-                                event.stopPropagation()
-                                clearArrangementShotPreview()
-                                void commitArrangementSourceStart(
-                                  segment.id,
-                                  key,
-                                  Number(event.currentTarget.value),
-                                )
-                              }}
-                              onKeyUp={(event) => {
-                                if (
-                                  event.key === 'ArrowLeft' ||
-                                  event.key === 'ArrowRight' ||
-                                  event.key === 'Home' ||
-                                  event.key === 'End'
-                                ) {
-                                  clearArrangementShotPreview()
-                                  void commitArrangementSourceStart(
-                                    segment.id,
-                                    key,
-                                    Number(event.currentTarget.value),
-                                  )
-                                }
-                              }}
-                            />
-                          </label>
+                        {shot ? (
+                          <div className="border-t border-border/70 px-1.5 py-1.5">
+                            {activeSourceSegmentId === segment.id ? (
+                              <div className="space-y-1.5">
+                                <p className="text-[8px] leading-snug text-muted-foreground">
+                                  Mark In/Out in Source. Duration stays {duration.toFixed(2)}s;
+                                  musical cuts remain fixed.
+                                </p>
+                                <div className="flex items-center gap-1">
+                                  <button type="button"
+                                    className="studio-primary-action h-7 min-w-0 flex-1 px-1 text-[9px]"
+                                    onClick={() => applyVisualSourceTrim(segment)}>
+                                    Apply range
+                                  </button>
+                                  <button type="button"
+                                    className="studio-secondary-action h-7 px-1 text-[9px]"
+                                    onClick={() => setActiveSourceSegmentId(null)}>
+                                    Cancel
+                                  </button>
+                                </div>
+                              </div>
+                            ) : (
+                              <button type="button"
+                                className="studio-secondary-action h-7 w-full px-1 text-[9px]"
+                                aria-label={`Edit source range for generated clip ${index + 1}`}
+                                onClick={() => beginVisualSourceTrim(segment)}>
+                                Trim in Source
+                              </button>
+                            )}
+                          </div>
                         ) : null}
                       </div>
                     )
