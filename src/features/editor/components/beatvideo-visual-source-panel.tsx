@@ -9,7 +9,7 @@ import {
 } from 'react'
 import { useEditorStore } from '@/shared/state/editor'
 import { usePlaybackStore } from '@/shared/state/playback'
-import { ImagePlus } from 'lucide-react'
+import { ChevronDown, ImagePlus } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Switch } from '@/components/ui/switch'
@@ -934,35 +934,36 @@ export function BeatvideoVisualSourcePanel({
 
   return (
     <section className="max-h-[62vh] shrink-0 space-y-4 overflow-y-auto border-b border-border px-5 py-4">
-      <div>
-        <div className="text-[9px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
-          Workflow
+      {/* The editor has one main tool navigation above. Stage changes here
+          are a compact local selector, not another competing tab strip. */}
+      <div className="flex items-center justify-between gap-3 border-b border-border/70 pb-3">
+        <div className="min-w-0">
+          <div className="text-[9px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">
+            Video workflow
+          </div>
+          <p className="mt-0.5 text-[9px] text-muted-foreground">
+            {visualStage === 'footage' ? 'Choose footage' :
+              visualStage === 'shots' ? 'Review source shots' :
+              visualStage === 'arrange' ? 'Build on the beat' : 'Fine-tune the edit'}
+          </p>
         </div>
-        <div className="studio-segmented mt-2 grid h-8 grid-cols-4">
-          {([
-            ['footage', 'Footage'],
-            ['shots', 'Shots'],
-            ['arrange', 'Arrange'],
-            ['sequence', 'Sequence'],
-          ] as const).map(([stage, label]) => {
-            const disabled =
-              (stage === 'shots' && videoCandidates.length === 0) ||
-              (stage === 'arrange' && (!lastClipMap || !timelineGrid)) ||
-              (stage === 'sequence' && lastAppliedItemIds.length === 0 && !loopBlocksGrouped)
-            return (
-              <button
-                key={stage}
-                type="button"
-                className="studio-segment h-7 px-1 text-[8px] font-medium disabled:cursor-not-allowed disabled:opacity-35"
-                aria-pressed={visualStage === stage}
-                disabled={disabled}
-                onClick={() => setVisualStage(stage)}
-              >
-                {label}
-              </button>
-            )
-          })}
-        </div>
+        <label className="relative min-w-[126px] max-w-[165px] flex-1">
+          <span className="sr-only">Video workflow stage</span>
+          <select
+            value={visualStage}
+            aria-label="Video workflow stage"
+            onChange={(event) => setVisualStage(event.currentTarget.value as VisualStage)}
+            className="h-8 w-full appearance-none border border-border bg-[#e1e4de] pl-3 pr-7 text-[10px] font-medium text-foreground hover:border-[#889b87] focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-[#526955]"
+          >
+            <option value="footage">1 · Footage</option>
+            <option value="shots" disabled={videoCandidates.length === 0}>2 · Shots</option>
+            <option value="arrange" disabled={!lastClipMap || !timelineGrid}>3 · Arrange</option>
+            <option value="sequence" disabled={lastAppliedItemIds.length === 0 && !loopBlocksGrouped}>
+              4 · Sequence
+            </option>
+          </select>
+          <ChevronDown className="pointer-events-none absolute right-2 top-1/2 h-3 w-3 -translate-y-1/2 text-muted-foreground" />
+        </label>
       </div>
 
       {visualStage === 'footage' ? (
