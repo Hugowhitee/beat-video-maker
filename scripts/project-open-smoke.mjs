@@ -103,8 +103,9 @@ async function main() {
       args: ['--no-sandbox'],
     })
     const context = await browser.newContext({
-      viewport: { width: 980, height: 900 },
+      viewport: { width: 390, height: 844 },
       hasTouch: true,
+      isMobile: true,
     })
 
     // Reproduce the Brave/mobile fallback used by the deployed app: Brave does
