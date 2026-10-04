@@ -104,6 +104,11 @@ export interface SceneCutPayload {
 }
 
 export interface ScenesPayload {
+  /** Human-approved cuts and trims overlay detector output without overwriting it. */
+  review?: {
+    cuts?: SceneCutPayload[]
+    ranges?: Record<string, { start: number; end: number }>
+  }
   method: 'histogram' | 'adaptive'
   detectorVersion: number
   sampleIntervalMs?: number
