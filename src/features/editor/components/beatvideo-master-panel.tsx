@@ -897,7 +897,7 @@ export function BeatvideoMasterPanel() {
                   )}
                   style={{ top: index * 54 }}
                 >
-                  <span className="absolute left-[10px] top-[10px] font-mono text-[9px] font-semibold leading-[11px] tabular-nums">
+                  <span className="absolute left-[10px] top-[10px] font-mono text-[10px] font-semibold leading-[11px] tabular-nums">
                     {String(index + 1).padStart(2, '0')}
                   </span>
                   {canAdd ? (
@@ -910,12 +910,12 @@ export function BeatvideoMasterPanel() {
                       <span className="absolute left-[42px] top-[8px] text-[11px] font-semibold leading-[13px] text-foreground">
                         +&nbsp; Add processor
                       </span>
-                      <span className="absolute left-[42px] top-[25px] text-[9px] font-medium leading-[11px] text-muted-foreground">
+                      <span className="absolute left-[42px] top-[25px] text-[10px] font-medium leading-[11px] text-muted-foreground">
                         Empty slot
                       </span>
                     </button>
                   ) : (
-                    <span className="absolute left-[42px] top-[15px] text-[9px] text-muted-foreground/55">
+                    <span className="absolute left-[42px] top-[15px] text-[10px] text-muted-foreground/55">
                       Empty slot
                     </span>
                   )}
@@ -971,13 +971,13 @@ export function BeatvideoMasterPanel() {
                   className="absolute inset-0 text-left"
                   title={hint}
                 >
-                  <span className="absolute left-[10px] top-[10px] font-mono text-[9px] font-semibold leading-[11px] tabular-nums text-muted-foreground">
+                  <span className="absolute left-[10px] top-[10px] font-mono text-[10px] font-semibold leading-[11px] tabular-nums text-muted-foreground">
                     {String(index + 1).padStart(2, '0')}
                   </span>
                   <span className="absolute left-[42px] top-[8px] max-w-[calc(100%_-_120px)] truncate text-[11px] font-semibold leading-[13px] text-foreground">
                     {label}
                   </span>
-                  <span className="absolute left-[42px] top-[25px] max-w-[calc(100%_-_120px)] truncate text-[9px] font-medium leading-[11px] text-muted-foreground">
+                  <span className="absolute left-[42px] top-[25px] max-w-[calc(100%_-_120px)] truncate text-[10px] font-medium leading-[11px] text-muted-foreground">
                     {id === 'limiter'
                       ? `Ceiling ${resolved.limiter.ceilingDb.toFixed(1)} dB`
                       : hint}
@@ -1012,7 +1012,7 @@ export function BeatvideoMasterPanel() {
 
         {addEffectOpen ? (
           <div className="absolute left-5 right-5 top-[238px] z-30 max-h-[220px] overflow-y-auto border border-border bg-[#f2f3ef] p-2 shadow-lg">
-            <div className="mb-1 px-1 text-[9px] uppercase tracking-[0.12em] text-muted-foreground">
+            <div className="mb-1 px-1 text-[10px] uppercase tracking-[0.12em] text-muted-foreground">
               Available processors
             </div>
             {availableProcessors.length > 0 ? (
@@ -1056,7 +1056,7 @@ export function BeatvideoMasterPanel() {
               <PopoverTrigger asChild>
                 <button
                   type="button"
-                  className="block text-[9px] font-semibold leading-[11px] text-muted-foreground"
+                  className="block text-[10px] font-semibold leading-[11px] text-muted-foreground"
                   title="Compressor advanced controls"
                 >
                   Compressor · Advanced
@@ -1266,7 +1266,7 @@ export function BeatvideoMasterPanel() {
 
       <div className="relative h-[170px] shrink-0 bg-[#e8e9e5]" data-testid="master-output-controls">
         <div className="absolute left-5 right-5 top-0 h-px bg-border" aria-hidden="true" />
-        <div className="absolute left-5 top-[18px] text-[9px] font-semibold uppercase leading-[11px] tracking-[0.12em] text-muted-foreground">
+        <div className="absolute left-5 top-[18px] text-[10px] font-semibold uppercase leading-[11px] tracking-[0.12em] text-muted-foreground">
           Master out
         </div>
         <div className="absolute left-5 top-[38px] font-mono text-[18px] font-semibold leading-6 tabular-nums text-foreground">

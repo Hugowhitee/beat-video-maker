@@ -432,9 +432,15 @@ async function main() {
     const inHandle = sourceMonitor.getByRole('button', { name: 'Source In frame' })
     const outHandle = sourceMonitor.getByRole('button', { name: 'Source Out frame' })
     await inHandle.focus()
-    for (let step = 0; step < 4; step++) await inHandle.press('ArrowRight')
+    for (let step = 0; step < 4; step++) {
+      await inHandle.press('ArrowRight')
+      await desktopPage.waitForTimeout(50)
+    }
     await outHandle.focus()
-    for (let step = 0; step < 4; step++) await outHandle.press('ArrowLeft')
+    for (let step = 0; step < 4; step++) {
+      await outHandle.press('ArrowLeft')
+      await desktopPage.waitForTimeout(50)
+    }
     const saveRange = desktopPage.getByRole('button', { name: 'Save In/Out' })
     await saveRange.click({ timeout: 10_000 })
 

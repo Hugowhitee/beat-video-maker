@@ -1286,7 +1286,7 @@ export function BeatvideoMusicPanel() {
         </div>
 
         <section className="space-y-3">
-          <label className="block text-[9px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+          <label className="block text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
             Source
           </label>
           {candidates.length > 0 ? (
@@ -1306,7 +1306,7 @@ export function BeatvideoMusicPanel() {
                       </option>
                     ))}
                   </select>
-                  <div className="mt-1 text-[9px] text-muted-foreground">
+                  <div className="mt-1 text-[10px] text-muted-foreground">
                     {selectedMedia
                       ? `${Math.max(0, selectedMedia.duration).toFixed(1)} s · ${selectedMedia.mimeType.replace('audio/', '').toUpperCase()}`
                       : 'Audio source'}
@@ -1342,7 +1342,7 @@ export function BeatvideoMusicPanel() {
             <details className="border-t border-border/70 pt-2">
               <summary className="flex cursor-pointer list-none items-center justify-between gap-2 text-[10px] font-medium text-muted-foreground marker:hidden [&::-webkit-details-marker]:hidden">
                 <span>File metadata</span>
-                <span className="max-w-36 truncate font-mono text-[9px] font-normal">
+                <span className="max-w-36 truncate font-mono text-[10px] font-normal">
                   {selectedMedia.fileName}
                 </span>
               </summary>
@@ -1660,7 +1660,7 @@ export function BeatvideoMusicPanel() {
         <details className="border-t border-border pt-4">
           <summary className="flex cursor-pointer list-none items-center justify-between gap-2 text-[11px] font-semibold text-foreground marker:hidden [&::-webkit-details-marker]:hidden">
             <span>Producer audio</span>
-            <span className="text-[9px] font-normal text-muted-foreground">Optional</span>
+            <span className="text-[10px] font-normal text-muted-foreground">Optional</span>
           </summary>
           <div className="mt-3 space-y-3">
           <div className="grid grid-cols-2 gap-1.5">
@@ -1675,7 +1675,7 @@ export function BeatvideoMusicPanel() {
               }`}
             >
               <span className="block text-[11px] font-semibold">Producer tag</span>
-              <span className="mt-0.5 block text-[9px] leading-tight opacity-75">
+              <span className="mt-0.5 block text-[10px] leading-tight opacity-75">
                 Place once at playhead
               </span>
             </button>
@@ -1690,7 +1690,7 @@ export function BeatvideoMusicPanel() {
               }`}
             >
               <span className="block text-[11px] font-semibold">Watermark</span>
-              <span className="mt-0.5 block text-[9px] leading-tight opacity-75">
+              <span className="mt-0.5 block text-[10px] leading-tight opacity-75">
                 Repeat across bars
               </span>
             </button>
@@ -1713,7 +1713,7 @@ export function BeatvideoMusicPanel() {
                   : 'Import watermark'}
             </Button>
 
-            <p className="text-[9px] leading-relaxed text-muted-foreground">
+            <p className="text-[10px] leading-relaxed text-muted-foreground">
               {tagTool === 'producer'
                 ? 'One-shot producer tags go on their own Producer tags track.'
                 : 'Repeated protection tags use a separate Watermarks track and never replace the producer tag.'}
