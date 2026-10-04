@@ -133,6 +133,7 @@ export function BeatvideoMusicPanel() {
   const setWorkspace = useEditorStore((state) => state.setWorkspace)
   const currentProject = useProjectStore((state) => state.currentProject)
   const items = useItemsStore((state) => state.items)
+  const tracks = useItemsStore((state) => state.tracks)
   const currentFrame = usePlaybackStore((state) => state.currentFrame)
   const fps = useTimelineSettingsStore((state) => state.fps)
   const beatGridVisible = useTimelineSettingsStore((state) => state.beatGridVisible)
@@ -513,6 +514,51 @@ export function BeatvideoMusicPanel() {
       selectedMediaId,
     ],
   )
+
+  const beatPlacementReady = useMemo(() => {
+    if (!analysis?.mediaId || analysis.mediaId !== selectedMediaId) return false
+    const beatTrackId = tracks.find(
+      (track) => track.kind === 'audio' && track.name === 'Beat',
+    )?.id
+    if (!beatTrackId) return false
+    return items.some(
+      (item) =>
+        item.trackId === beatTrackId &&
+        item.type === 'audio' &&
+        item.mediaId === selectedMediaId,
+    )
+  }, [analysis?.mediaId, items, selectedMediaId, tracks])
+
+  // Cached analysis can make the Beat surface say “Grid ready” immediately.
+  // Keep timeline state equally canonical: reopen/replace must self-heal the
+  // dedicated Beat lane instead of leaving analysis without audible media.
+  useEffect(() => {
+    if (
+      !currentProject ||
+      !selectedMediaId ||
+      analysis?.mediaId !== selectedMediaId ||
+      beatPlacementReady
+    ) {
+      return
+    }
+
+    let active = true
+    void ensureBeatPlacement(selectedMediaId).catch((error) => {
+      if (!active) return
+      toast.error('Could not place the project beat', {
+        description: error instanceof Error ? error.message : String(error),
+      })
+    })
+    return () => {
+      active = false
+    }
+  }, [
+    analysis?.mediaId,
+    beatPlacementReady,
+    currentProject,
+    ensureBeatPlacement,
+    selectedMediaId,
+  ])
 
   const analyze = useCallback(async () => {
     if (!selectedMediaId || !currentProject || analyzing) return
