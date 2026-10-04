@@ -735,6 +735,7 @@ export function BeatvideoMasterPanel() {
 
   return (
     <div className="flex h-full min-h-0 flex-col bg-[#e8e9e5]">
+      <div className="min-h-0 flex-1 overflow-y-auto" data-testid="master-chain-scroll-region">
       <div className="relative h-[100px] shrink-0 px-5 pt-[16px]">
         <div className="flex min-w-0 items-start justify-between gap-3">
           <div className="min-w-0">
@@ -1093,7 +1094,7 @@ export function BeatvideoMasterPanel() {
         ) : null}
       </div>
 
-      <div className="min-h-[190px] flex-1 overflow-y-auto border-t border-border bg-[#e8e9e5] p-5">
+      <div className="min-h-[190px] border-t border-border bg-[#e8e9e5] p-5">
         {selectedSlot === 'eq' ? (
           <AudioEqPanelContent
             targetLabel="Master"
@@ -1257,7 +1258,9 @@ export function BeatvideoMasterPanel() {
 
       </div>
 
-      <div className="relative h-[170px] shrink-0 bg-[#e8e9e5]">
+      </div>
+
+      <div className="relative h-[170px] shrink-0 bg-[#e8e9e5]" data-testid="master-output-controls">
         <div className="absolute left-5 right-5 top-0 h-px bg-border" aria-hidden="true" />
         <div className="absolute left-5 top-[18px] text-[9px] font-semibold uppercase leading-[11px] tracking-[0.12em] text-muted-foreground">
           Master out
