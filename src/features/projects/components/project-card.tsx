@@ -211,13 +211,6 @@ export function ProjectCard({
             Preview
           </div>
         )}
-        <button
-          type="button"
-          onClick={handleOpenClick}
-          className="absolute inset-0 flex items-center justify-center bg-black/0 text-[10px] font-semibold text-white opacity-0 transition-opacity hover:bg-black/45 hover:opacity-100 focus:bg-black/45 focus:opacity-100"
-        >
-          Open
-        </button>
       </div>
 
       <div className="flex min-h-0 flex-[0_0_40%] flex-col px-2.5 py-2">
