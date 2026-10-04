@@ -110,6 +110,7 @@ export function BeatvideoShotBin({
   clipMap,
   excludedShotIds,
   draggingShotId,
+  selectedShotId,
   onToggleAvoid,
   onOpenShot,
   onDragStart,
@@ -118,6 +119,7 @@ export function BeatvideoShotBin({
   clipMap: ClipMap
   excludedShotIds: readonly string[]
   draggingShotId: string | null
+  selectedShotId?: string | null
   onToggleAvoid: (shotId: string) => void
   onOpenShot: (shot: ClipShot) => void
   onDragStart: (event: DragEvent<HTMLElement>, shotId: string) => void
@@ -221,8 +223,8 @@ export function BeatvideoShotBin({
                           }
                         }}
                         className={`group relative w-28 shrink-0 cursor-grab border bg-background outline-none active:cursor-grabbing focus-visible:border-primary ${
-                          dragging
-                            ? 'border-primary'
+                          dragging || selectedShotId === shot.id
+                            ? 'border-primary ring-1 ring-primary/50'
                             : avoided
                               ? 'border-border/50 opacity-50'
                               : 'border-border/80 hover:border-primary/45'
