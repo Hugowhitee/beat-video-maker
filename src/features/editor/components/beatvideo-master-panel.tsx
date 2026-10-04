@@ -18,7 +18,6 @@ import {
 import { usePlaybackStore } from '@/shared/state/playback'
 import { useEditorStore } from '@/shared/state/editor'
 import {
-  AUTO_LEVEL_LIMITER_CEILING_DB,
   MASTERING_PRESETS,
   analyzeProgramLevel,
   createSaturationCurve,

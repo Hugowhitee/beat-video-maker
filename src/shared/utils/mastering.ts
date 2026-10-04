@@ -2,7 +2,7 @@ import type {
   MasterFxSettings,
   MasteringPresetId,
   MasterProcessorId,
-  type MasterProcessorInstanceIds,
+  MasterProcessorInstanceIds,
   ResolvedMasterFxSettings,
 } from '@/types/audio'
 
