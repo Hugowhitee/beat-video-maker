@@ -201,6 +201,10 @@ Global top bar owns project-level actions only:
 Below it, the producer workflow is a separate sequential rail:
 **Beat → Visual → Color → Master**.
 
+The normal producer shell has **no permanent left project-content rail**. Media,
+graphics and sequences belong to the active Visual tools/timeline; beat status and
+grid review belong to Beat. Do not duplicate those destinations as a second sidebar.
+
 Mixer is not a global destination. It is a floating/resizable utility owned from
 Master.
 
