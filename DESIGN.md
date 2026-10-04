@@ -336,7 +336,7 @@ Desktop is precision-first. Do not shrink the entire desktop shell onto mobile.
 
 Compact layouts show focused surfaces while keeping the same project state:
 - Beat → Beat / Preview / Inspector
-- Visual → Media / Preview / Inspector
+- Visual → Add / Preview / Edit
 - Color → Color / Preview
 - Master → Master / Preview / Mixer
 
@@ -372,3 +372,5 @@ The Program monitor stays dominant and the playback runtime remains mounted.
 - Product/interaction ownership: `AGENTS.md` and `PRODUCT.md`.
 - Runtime design tokens: `src/index.css`.
 - Editable design exploration/contract: current Beat Video Maker Figma file.
+
+Visual desktop uses one task column with local Add/Edit modes. Canvas background is project configuration in Project settings, not an empty-state Inspector control.

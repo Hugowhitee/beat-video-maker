@@ -125,9 +125,9 @@ function getMobileEditorSurfaces(
     ]
   }
   return [
-    { id: 'tools', label: 'Media' },
+    { id: 'tools', label: 'Add' },
     { id: 'preview', label: 'Preview' },
-    { id: 'inspector', label: 'Inspector' },
+    { id: 'inspector', label: 'Edit' },
   ]
 }
 
@@ -463,6 +463,7 @@ export const LoadedEditor = memo(function LoadedEditor({
   const mediaFullColumn = useEditorStore((s) => s.mediaFullColumn)
   const workspace = useEditorStore((s) => s.workspace)
   const rightSidebarOpen = useEditorStore((s) => s.rightSidebarOpen)
+  const setRightSidebarOpen = useEditorStore((s) => s.setRightSidebarOpen)
   const compactViewport = useCompactEditorViewport()
   const [mobileSurface, setMobileSurface] = useState<MobileEditorSurface>(() =>
     defaultMobileEditorSurface(workspace),
@@ -1065,13 +1066,43 @@ export const LoadedEditor = memo(function LoadedEditor({
             locked={isMaskEditingActive}
             className="studio-task-column h-full w-[400px] shrink-0 border-l border-border bg-[#e8e9e5]"
           >
-            <ErrorBoundary level="feature">
-              {workspace === 'edit' && rightSidebarOpen ? (
-                <PropertiesSidebar studioTaskColumn />
-              ) : (
+            {workspace === 'edit' ? (
+              <div className="flex h-full min-h-0 flex-col">
+                <div className="shrink-0 border-b border-border bg-[#e8e9e5] px-3 py-2">
+                  <div className="studio-segmented grid h-8 grid-cols-2">
+                    <button
+                      type="button"
+                      className="studio-segment h-8 text-[10px] font-semibold"
+                      aria-pressed={!rightSidebarOpen}
+                      onClick={() => setRightSidebarOpen(false)}
+                    >
+                      Add
+                    </button>
+                    <button
+                      type="button"
+                      className="studio-segment h-8 text-[10px] font-semibold"
+                      aria-pressed={rightSidebarOpen}
+                      onClick={() => setRightSidebarOpen(true)}
+                    >
+                      Edit
+                    </button>
+                  </div>
+                </div>
+                <div className="min-h-0 flex-1">
+                  <ErrorBoundary level="feature">
+                    {rightSidebarOpen ? (
+                      <PropertiesSidebar studioTaskColumn />
+                    ) : (
+                      <MediaSidebar beatvideoMode={beatvideoMode} studioTaskColumn />
+                    )}
+                  </ErrorBoundary>
+                </div>
+              </div>
+            ) : (
+              <ErrorBoundary level="feature">
                 <MediaSidebar beatvideoMode={beatvideoMode} studioTaskColumn />
-              )}
-            </ErrorBoundary>
+              </ErrorBoundary>
+            )}
           </InteractionLockRegion>
         ) : null}
 

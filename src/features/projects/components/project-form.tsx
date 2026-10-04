@@ -89,6 +89,7 @@ function ProjectFormBase({
   const fps = watch('fps')
   const width = watch('width')
   const height = watch('height')
+  const backgroundColor = watch('backgroundColor') ?? '#000000'
   const fpsOptions = useMemo(() => getProjectFpsPickerOptions(fps), [fps])
 
   const handleSelectTemplate = (template: ProjectTemplate) => {
@@ -221,6 +222,43 @@ function ProjectFormBase({
                       <p className="mt-1.5 text-[10px] text-destructive">{errors.description.message}</p>
                     )}
                   </div>
+
+                  {isEditing ? (
+                    <div className="mt-4 border-t border-border pt-4">
+                      <label
+                        htmlFor="backgroundColor"
+                        className="mb-2 block text-[10px] font-medium text-foreground"
+                      >
+                        Canvas background
+                      </label>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="color"
+                          value={backgroundColor}
+                          onChange={(event) =>
+                            setValue('backgroundColor', event.target.value, {
+                              shouldDirty: true,
+                              shouldValidate: true,
+                            })
+                          }
+                          className="h-9 w-11 cursor-pointer rounded-[3px] border border-input bg-[#d9dbd6] p-1"
+                          aria-label="Canvas background color"
+                        />
+                        <input
+                          id="backgroundColor"
+                          type="text"
+                          {...register('backgroundColor')}
+                          className="h-9 min-w-0 flex-1 rounded-[3px] border border-input bg-[#d9dbd6] px-3 font-mono text-[10px] text-foreground uppercase focus:outline-none focus:ring-1 focus:ring-ring"
+                          placeholder="#000000"
+                        />
+                      </div>
+                      {errors.backgroundColor && (
+                        <p className="mt-1.5 text-[10px] text-destructive">
+                          {errors.backgroundColor.message}
+                        </p>
+                      )}
+                    </div>
+                  ) : null}
                 </details>
               </div>
             </div>
