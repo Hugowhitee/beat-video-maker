@@ -344,9 +344,9 @@ export function ProjectList({ onEditProject, onImportProject }: ProjectListProps
     <div className="space-y-4">
       {/* Search and Filters Bar */}
       {!isEmpty && (
-        <div className="grid grid-cols-[minmax(0,1fr)_auto_auto] gap-2 rounded-[3px] bg-[#e8e9e5] p-2 sm:flex sm:items-center sm:gap-2">
+        <div className="grid grid-cols-[minmax(0,1fr)_auto_auto] gap-2 rounded-[3px] bg-[#e8e9e5] p-2 lg:ml-auto lg:flex lg:w-fit lg:items-center">
           {/* Search */}
-          <div className="relative col-span-3 w-full sm:col-span-1 sm:flex-1">
+          <div className="relative col-span-3 w-full lg:col-span-1 lg:w-[clamp(240px,28vw,360px)] lg:flex-none">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
             <Input
               type="text"

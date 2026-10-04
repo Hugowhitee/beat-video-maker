@@ -2,6 +2,7 @@ import {
   useCallback,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type DragEvent,
   type PointerEvent,
@@ -110,6 +111,7 @@ export function BeatvideoShotBin({
   excludedShotIds,
   draggingShotId,
   onToggleAvoid,
+  onOpenShot,
   onDragStart,
   onDragEnd,
 }: {
@@ -117,14 +119,17 @@ export function BeatvideoShotBin({
   excludedShotIds: readonly string[]
   draggingShotId: string | null
   onToggleAvoid: (shotId: string) => void
+  onOpenShot: (shot: ClipShot) => void
   onDragStart: (event: DragEvent<HTMLElement>, shotId: string) => void
   onDragEnd: () => void
 }) {
   const mediaById = useMediaLibraryStore((state) => state.mediaById)
   const setMediaSkimPreview = useEditorStore((state) => state.setMediaSkimPreview)
+  const openedShotRef = useRef<string | null>(null)
 
   const previewShotAtPointer = useCallback(
     (event: PointerEvent<HTMLDivElement>, shot: ClipShot) => {
+      if (openedShotRef.current === shot.id) return
       const media = mediaById[shot.sourceId]
       if (!media || media.fps <= 0) return
 
@@ -184,10 +189,18 @@ export function BeatvideoShotBin({
                         draggable
                         tabIndex={0}
                         aria-label={`Shot ${index + 1} from ${source.name}. Drag onto a sequence slot.`}
-                        title="Hover to scrub · drag onto a sequence slot"
+                        title="Click to play and trim in Source · drag onto a sequence clip"
+                        onClick={() => {
+                          openedShotRef.current = shot.id
+                          clearShotPreview()
+                          onOpenShot(shot)
+                        }}
                         onPointerEnter={(event) => previewShotAtPointer(event, shot)}
                         onPointerMove={(event) => previewShotAtPointer(event, shot)}
-                        onPointerLeave={clearShotPreview}
+                        onPointerLeave={() => {
+                          openedShotRef.current = null
+                          clearShotPreview()
+                        }}
                         onDragStart={(event) => {
                           clearShotPreview()
                           onDragStart(event, shot.id)
@@ -199,7 +212,13 @@ export function BeatvideoShotBin({
                         onKeyDown={(event) => {
                           if (event.key !== 'Enter' && event.key !== ' ') return
                           event.preventDefault()
-                          onToggleAvoid(shot.id)
+                          if (event.key === 'Enter') {
+                            openedShotRef.current = shot.id
+                            clearShotPreview()
+                            onOpenShot(shot)
+                          } else {
+                            onToggleAvoid(shot.id)
+                          }
                         }}
                         className={`group relative w-28 shrink-0 cursor-grab border bg-background outline-none active:cursor-grabbing focus-visible:border-primary ${
                           dragging

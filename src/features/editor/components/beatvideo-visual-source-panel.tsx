@@ -43,6 +43,7 @@ import { useSelectionStore } from '@/shared/state/selection'
 import type { BeatvideoProjectMode } from '@/types/project'
 import type { MusicMap } from '@/types/beatvideo'
 import { BeatvideoShotBin, BeatvideoShotFrame } from './beatvideo-shot-bin'
+import { useSourcePlayerStore } from '@/shared/state/source-player'
 import {
   ARRANGEMENT_SHOT_DRAG_MIME,
   decodeArrangementShotDragPayload,
@@ -743,6 +744,31 @@ export function BeatvideoVisualSourcePanel({
     useEditorStore.getState().setMediaSkimPreview(null)
   }, [])
 
+  const openShotInSourceMonitor = useCallback(
+    (shot: { sourceId: string; start: number; end: number }) => {
+      const source = mediaItems.find((item) => item.id === shot.sourceId)
+      if (!source) return
+      const fps = Math.max(1, source.fps || 30)
+      const startFrame = Math.max(0, Math.round(shot.start * fps))
+      const endFrame = Math.max(startFrame + 1, Math.round(shot.end * fps))
+
+      const program = usePlaybackStore.getState()
+      if (program.isPlaying) program.pause()
+      clearArrangementShotPreview()
+
+      // Source monitor already provides real video playback, frame seeking and
+      // draggable In/Out handles. Reuse it instead of a second shot player.
+      const sourcePlayer = useSourcePlayerStore.getState()
+      sourcePlayer.setCurrentMediaId(shot.sourceId)
+      sourcePlayer.setInPoint(startFrame)
+      sourcePlayer.setOutPoint(endFrame)
+      sourcePlayer.setPendingPlay(false)
+      sourcePlayer.setPendingSeekFrame(startFrame)
+      useEditorStore.getState().setSourcePreviewMediaId(shot.sourceId)
+    },
+    [clearArrangementShotPreview, mediaItems],
+  )
+
   const focusArrangementSegment = useCallback(
     (segment: EditPlan['segments'][number]) => {
       const itemId = lastItemIdBySegmentId[segment.id]
@@ -1019,6 +1045,7 @@ export function BeatvideoVisualSourcePanel({
               excludedShotIds={excludedShotIds}
               draggingShotId={draggingShotId}
               onToggleAvoid={toggleAvoidShot}
+              onOpenShot={openShotInSourceMonitor}
               onDragStart={beginArrangementShotDrag}
               onDragEnd={endArrangementShotDrag}
             />
@@ -1265,13 +1292,31 @@ export function BeatvideoVisualSourcePanel({
             </div>
           </div>
 
+          {visualStage === 'sequence' && !loopBlocksGrouped && lastClipMap ? (
+            <div className="border-t border-border pt-2">
+              <div className="mb-1.5 flex items-center justify-between gap-2">
+                <span className="text-[10px] font-medium text-foreground">Source shots</span>
+                <span className="text-[9px] text-muted-foreground">Click to preview · drag to replace</span>
+              </div>
+              <BeatvideoShotBin
+                clipMap={lastClipMap}
+                excludedShotIds={excludedShotIds}
+                draggingShotId={draggingShotId}
+                onToggleAvoid={toggleAvoidShot}
+                onOpenShot={openShotInSourceMonitor}
+                onDragStart={beginArrangementShotDrag}
+                onDragEnd={endArrangementShotDrag}
+              />
+            </div>
+          ) : null}
+
           {visualStage === 'sequence' && editableArrangementSlots.length > 0 && lastClipMap ? (
             <div className="border-t border-border pt-2">
               <div className="mb-1.5 flex items-end justify-between gap-2">
                 <div>
                   <div className="text-[10px] font-medium text-foreground">Sequence</div>
                   <div className="text-[8px] text-muted-foreground">
-                    Drag to replace · Source slider slips footage · click preview selects cut
+                    Drag a source shot above to replace · select a clip to edit on the timeline
                   </div>
                 </div>
                 <span className="font-mono text-[9px] text-muted-foreground">

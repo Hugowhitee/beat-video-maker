@@ -5,6 +5,7 @@ import { useTimelineSettingsStore } from '../stores/timeline-settings-store'
 import { useZoomStore } from '../stores/zoom-store'
 import { resolveBeatvideoTimelineGrid } from '../utils/beatvideo-timeline-grid'
 import { resolveBeatGridMarkers } from '../utils/beatvideo-grid-resolution'
+import { createTimelineTrackContentLayerRef } from '../utils/timeline-live-geometry'
 import type { MusicSection } from '@/types/beatvideo'
 
 interface BeatvideoGridOverlayProps {
@@ -45,6 +46,7 @@ export const BeatvideoGridOverlay = memo(function BeatvideoGridOverlay({
   const beatGridVisible = useTimelineSettingsStore((state) => state.beatGridVisible)
   const beatGridResolution = useTimelineSettingsStore((state) => state.beatGridResolution)
   const pixelsPerSecond = useZoomStore((state) => state.pixelsPerSecond)
+  const contentLayerRef = useMemo(createTimelineTrackContentLayerRef, [])
 
   const timelineGrid = useMemo(
     () =>
@@ -72,13 +74,14 @@ export const BeatvideoGridOverlay = memo(function BeatvideoGridOverlay({
 
   return (
     <div
+      ref={contentLayerRef}
       aria-hidden="true"
       data-beatvideo-grid-overlay={variant}
       data-beatvideo-grid-placement={timelineGrid.placement.id}
       className={
         variant === 'ruler'
-          ? 'pointer-events-none absolute inset-0 z-[25] overflow-hidden'
-          : 'pointer-events-none absolute inset-0 z-[8] overflow-hidden'
+          ? 'pointer-events-none absolute left-0 top-0 h-full z-[25] overflow-hidden'
+          : 'pointer-events-none absolute left-0 top-0 h-full z-[8] overflow-hidden'
       }
     >
       {grid.sections.map((section, index) => {
