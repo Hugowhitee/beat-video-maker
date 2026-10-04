@@ -218,6 +218,15 @@ describe('ColorGradePanel', () => {
     })
   })
 
+  it('keeps the full Color graph/effects accessible in the narrow shared sidebar', async () => {
+    render(<ColorGradePanel layout="vertical-dock" />)
+    const section = await screen.findByTestId('color-grade-section', {}, { timeout: 5000 })
+    expect(section).toHaveAttribute('data-layout', 'sidebar')
+    expect(screen.getByText('Keyframes')).toBeInTheDocument()
+    expect(screen.getByTestId('color-keyframes-lane')).toBeInTheDocument()
+    expect(screen.getByTestId('keyframe-graph-panel')).toHaveAttribute('data-initial-groups', 'effects')
+  })
+
   it('keeps the sidebar variant stacked without the dock graph lane', async () => {
     render(<ColorGradePanel />)
 
