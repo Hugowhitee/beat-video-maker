@@ -1,29 +1,26 @@
 # Beat Video Maker
 
-Make videos for your beats, without setting up a full editing project every time.
+Make a cover video or edit footage around your beat, right in the browser.
 
-**Beat Video Maker** is a browser-based editor for producers. Start with a track and a cover image or footage, make cuts against the music, add text and effects, adjust the color and audio, and export the video. You can make a simple cover video or work directly on the timeline when you need more control.
+**[Open Beat Video Maker](https://beat-video-maker-live-production.up.railway.app/)** · [Alternative site](https://hugowhitee.github.io/beat-video-maker/)
 
-[**Open Beat Video Maker**](https://beat-video-maker-live-production.up.railway.app/) · [Alternative link](https://hugowhitee.github.io/beat-video-maker/)
+## Make a video
 
-## Getting started
+Create a **Photo** project for cover artwork or a **Video** project for footage. You can still change the clips, effects and timing manually.
 
-1. **Create a project.** Choose **Photo** for a cover visual or **Video** for footage. You can change the project settings later.
-2. **Beat.** Import your audio, check the detected tempo and musical grid, and correct the timing if needed. Producer tags and watermarks are optional.
-3. **Visual.** Add a cover, video clips, text or overlays. In video projects, you can review detected shots and build an arrangement, or edit clips yourself on the timeline.
-4. **Color.** Adjust the whole video or work on a selected clip.
-5. **Master.** Set the final beat level and work with the EQ, compressor, saturator and limiter.
-6. **Export.** Choose your output settings and render locally.
+1. **Beat** — Import the track and check the detected tempo, downbeat and beat grid against the audio. Correct it when needed.
+2. **Visual** — Add a cover or footage. Review detected shots, arrange cuts to the beat or edit them yourself on the timeline. Add text and overlays as individual editable layers.
+3. **Color** — Grade the full video or selected clips.
+4. **Master** — Balance the audio and adjust the mastering chain.
+5. **Export** — Choose the output settings and render the video.
 
-The player and timeline stay connected across the editing workspaces. Shots, transitions, overlays and generated arrangements use the normal editor clips rather than a separate export-only sequence.
+Automatic beat analysis and shot detection need review before publishing, particularly with unusual rhythms or fast-cut footage. They don't override your manual edits.
 
-**Check the results of automatic analysis before publishing.** Tempo detection, beat alignment and scene boundaries can need manual correction, particularly with unusual rhythms or fast-moving footage.
+## Workspace
 
-## Local workspace
+The editor stores projects and imported media locally in your browser workspace, not in an online account. When prompted, select a folder for your files. Keep a backup of work you want to preserve.
 
-The editor runs in your browser. On first use, choose a local workspace folder. Projects, imported media, analysis caches and exports are stored locally rather than in an account or online project database.
-
-Use a recent Chromium-based desktop browser for folder access and the full editing workflow. Keep a backup of your workspace if you are working on something you want to preserve.
+For folder access and the full editing workflow, use a recent Chromium-based desktop browser.
 
 ## Run locally
 
@@ -34,7 +31,7 @@ vp install
 vp dev --host
 ```
 
-To check a change before merging:
+Before merging editor changes:
 
 ```bash
 vp run check
@@ -44,8 +41,6 @@ vp test run
 vp build
 ```
 
-The frontend lives in `src/`. The editor's normal playback, effects, timeline and export systems are shared across Photo and Video projects. `PRODUCT.md` describes the intended product behavior; `AGENTS.md` documents repository conventions.
+The browser editor is in `src/`; headless render and automation tools are in `headless/`. See [PRODUCT.md](PRODUCT.md) for product behavior, [DESIGN.md](DESIGN.md) for interface decisions and [AGENTS.md](AGENTS.md) for repository conventions.
 
-Production builds run from `main`. Railway serves the main app through `Dockerfile` and `deploy/nginx.conf.template`; GitHub Pages provides the alternative static build.
-
-Third-party copyright and license information is in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+The production site is deployed from `main` through Railway. GitHub Pages provides a static alternative. See [LICENSE](LICENSE) and [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md) for license and attribution details.
