@@ -13,6 +13,39 @@ function sleep(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms))
 }
 
+function signalProcessTree(child, signal) {
+  if (child.exitCode !== null) return
+  if (process.platform !== 'win32' && child.pid) {
+    try {
+      process.kill(-child.pid, signal)
+      return
+    } catch {
+      // Fall through to the direct child when the process group already exited.
+    }
+  }
+  child.kill(signal)
+}
+
+async function stopPreview(preview) {
+  if (preview.exitCode === null) {
+    signalProcessTree(preview, 'SIGTERM')
+    const exited = await Promise.race([
+      new Promise((resolve) => preview.once('exit', () => resolve(true))),
+      sleep(3_000).then(() => false),
+    ])
+    if (!exited && preview.exitCode === null) {
+      signalProcessTree(preview, 'SIGKILL')
+      await Promise.race([
+        new Promise((resolve) => preview.once('exit', resolve)),
+        sleep(2_000),
+      ])
+    }
+  }
+  preview.stdout?.destroy()
+  preview.stderr?.destroy()
+  preview.unref()
+}
+
 async function waitForPreview(url, child) {
   let lastError
   for (let attempt = 0; attempt < 80; attempt++) {
@@ -46,6 +79,7 @@ async function main() {
       cwd: repoRoot,
       stdio: ['ignore', 'pipe', 'pipe'],
       env: process.env,
+      detached: process.platform !== 'win32',
     },
   )
 
@@ -174,14 +208,8 @@ async function main() {
   } finally {
     clearTimeout(hardTimeout)
     if (browser) await browser.close().catch(() => {})
-    if (preview.exitCode === null) {
-      preview.kill('SIGTERM')
-      await Promise.race([
-        new Promise((resolve) => preview.once('exit', resolve)),
-        sleep(5_000),
-      ])
-    }
-    if (preview.exitCode && preview.exitCode !== 0) {
+    await stopPreview(preview)
+    if (preview.exitCode && preview.exitCode !== 0 && preview.exitCode !== 143) {
       process.stderr.write(previewOutput)
     }
   }
