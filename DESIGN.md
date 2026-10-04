@@ -202,7 +202,7 @@ Below it, the producer workflow is a separate sequential rail:
 **Beat → Visual → Color → Master**.
 
 The normal producer shell has **no permanent left project-content rail**. Media,
-graphics and sequences belong to the active Visual tools/timeline; beat status and
+overlays, effects and sequences belong to the active Visual tools/timeline; beat status and
 grid review belong to Beat. Do not duplicate those destinations as a second sidebar.
 
 Mixer is not a global destination. It is a floating/resizable utility owned from
@@ -237,7 +237,7 @@ Do not hide it behind media blocks and do not duplicate it inside the Beat lane.
 Normal producer timeline:
 1. Media
 2. Beat
-3. Graphics / Extras only when meaningful
+3. Overlays / Extras only when meaningful
 
 Beat stays directly under Media. Tracks expose real collapse/resize affordances;
 clips fit their lane rather than floating with arbitrary vertical padding.

@@ -32,7 +32,7 @@ Photo mode is the fastest path for a beat visual:
 - beat audio drives the musical grid;
 - Beat, Visual, Color and Master are the primary workflow pages;
 - Visual begins with an explicit **Visual source** action: add/replace the hero still in Photo, or add footage in Video; imported footage may be prepared for scene-aware Auto Arrange immediately;
-- Visual uses one visible task column with local **Add / Edit** modes: Add contains Media, Text, Graphics and Effects; Edit contains the selected layer's transform, motion, effects and audio-reactive parameters. Do not promote Edit/Inspector to a second global workspace or toolbar destination;
+- Visual uses one visible task column with local **Add / Edit** modes: Add contains Media, Overlays, Effects and Transitions, with less-used tools under More; Edit contains the selected layer's transform, motion, effects and audio-reactive parameters. Do not promote Edit/Inspector to a second global workspace or toolbar destination;
 - Color remains a focused grading workspace; motion/composition internals remain available through Advanced editing when needed but are not a normal top-level Beatvideo navigation step;
 - generic video-only controls stay out of the normal path.
 
@@ -211,7 +211,7 @@ Prefer direct manipulation, conventional editor behavior, consistent spacing and
 - the default Beat/Visual/Color/Master path is text-first and progressively disclosed. Do not leave rows of permanent utility icons visible just because the runtime supports the commands;
 - advanced track controls such as disable/solo/lock/sync-lock/close-gaps remain available through contextual menus in the simplified Beatvideo timeline; richer permanent controls may remain in Advanced editor workspaces where they are expected;
 - Settings, shortcuts, render queue and project-bundle export belong under a compact utility menu; the primary toolbar should emphasize project identity, Beat/Visual/Color/Master, Project settings near Save, Save and Export. Selected-layer editing stays inside Visual rather than becoming a toolbar destination.
-- Do not keep a permanent project-content rail beside the producer workspaces. Media/graphics/sequence actions belong to Visual and the timeline; beat status and grid review belong to Beat. On compact/mobile, this is especially strict: only the focused surface + bottom task dock may be shown.
+- Do not keep a permanent project-content rail beside the producer workspaces. Media/Overlays/sequence actions belong to Visual and the timeline; beat status and grid review belong to Beat. On compact/mobile, this is especially strict: only the focused surface + bottom task dock may be shown.
 
 ## Local-first boundary
 
