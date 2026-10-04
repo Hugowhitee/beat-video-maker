@@ -81,11 +81,6 @@ const LazyProjectSettingsDialog = lazy(() =>
 const LazyColorGradingDock = lazy(() =>
   import('./color-grading-dock').then(({ ColorGradingDock }) => ({ default: ColorGradingDock })),
 )
-const LazyColorTimelineNavigator = lazy(() =>
-  import('./color-timeline-navigator').then(({ ColorTimelineNavigator }) => ({
-    default: ColorTimelineNavigator,
-  })),
-)
 import { useStudioV2DocumentTheme } from '@/shared/ui/use-studio-v2-document-theme'
 
 const EDITOR_PROJECT_ROUTE_ID = '/editor/$projectId'
@@ -936,11 +931,16 @@ export const LoadedEditor = memo(function LoadedEditor({
                 <PreviewArea project={project} />
               </ErrorBoundary>
             </div>
-            <div className="mt-3 shrink-0">
-              <Suspense fallback={null}>
-                <LazyColorTimelineNavigator />
-              </Suspense>
-            </div>
+            <InteractionLockRegion
+              locked={isMaskEditingActive}
+              className="mt-3 h-[240px] min-h-[190px] max-h-[250px] shrink-0"
+            >
+              <ErrorBoundary level="feature">
+                <Suspense fallback={null}>
+                  <LazyTimeline duration={timelineDuration} beatvideoMode={beatvideoMode} />
+                </Suspense>
+              </ErrorBoundary>
+            </InteractionLockRegion>
             <InteractionLockRegion
               locked={isMaskEditingActive}
               className="mt-3 h-[37%] min-h-[288px] max-h-[39vh] shrink-0"

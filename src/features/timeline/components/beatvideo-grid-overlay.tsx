@@ -26,7 +26,7 @@ function sectionColor(section: MusicSection, index: number, variant: 'ruler' | '
     section.kind === 'outro' ? 25 :
     [225, 285, 170, 55][index % 4] ?? 225
   const chroma = section.kind === 'unknown' ? 0.045 : 0.07
-  const alpha = variant === 'ruler' ? 0.24 : 0.055
+  const alpha = variant === 'ruler' ? 0.3 : 0.065
   return `oklch(0.7 ${chroma} ${hue} / ${alpha})`
 }
 
@@ -92,8 +92,8 @@ export const BeatvideoGridOverlay = memo(function BeatvideoGridOverlay({
             key={section.id}
             className={
               variant === 'ruler'
-                ? 'absolute bottom-0 h-[6px] border-l border-primary/20'
-                : 'absolute inset-y-0 border-l border-primary/10'
+                ? 'absolute bottom-0 h-[6px] border-l border-primary/30'
+                : 'absolute inset-y-0 border-l border-primary/14'
             }
             style={{
               left: `${left}%`,
@@ -102,7 +102,7 @@ export const BeatvideoGridOverlay = memo(function BeatvideoGridOverlay({
             }}
           >
             {showLabel ? (
-              <span className="absolute bottom-[7px] left-1 whitespace-nowrap bg-background/80 px-1 font-mono text-[9px] leading-none text-foreground/70">
+              <span className="absolute bottom-[7px] left-1 whitespace-nowrap bg-background/90 px-1 font-mono text-[9px] font-medium leading-none text-foreground/85">
                 {sectionLabel(section, index)}
               </span>
             ) : null}
@@ -132,12 +132,12 @@ export const BeatvideoGridOverlay = memo(function BeatvideoGridOverlay({
                 isBarOne
                   ? 'h-full w-[2px] bg-primary/95'
                   : kind === 'subdivision'
-                    ? 'h-full w-px bg-foreground/[0.055]'
+                    ? 'h-full w-px bg-foreground/[0.09]'
                     : isPhraseBar
-                      ? 'h-full w-[2px] bg-primary/55'
+                      ? 'h-full w-[2px] bg-primary/65'
                       : kind === 'bar'
-                        ? 'h-full w-px bg-primary/35'
-                        : 'h-full w-px bg-foreground/16'
+                        ? 'h-full w-px bg-primary/45'
+                        : 'h-full w-px bg-foreground/24'
               }
             />
             {showBarLabel ? (
@@ -145,7 +145,7 @@ export const BeatvideoGridOverlay = memo(function BeatvideoGridOverlay({
                 className={
                   isBarOne
                     ? 'absolute left-1 top-1 bg-primary px-1 py-0.5 font-mono text-[10px] font-semibold leading-none text-primary-foreground'
-                    : 'absolute left-1 top-1 bg-background/80 px-1 py-0.5 font-mono text-[10px] leading-none text-foreground/70'
+                    : 'absolute left-1 top-1 bg-background/90 px-1 py-0.5 font-mono text-[10px] font-medium leading-none text-foreground/85'
                 }
               >
                 {barNumber}

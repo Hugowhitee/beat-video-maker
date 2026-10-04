@@ -83,6 +83,7 @@ export const TimelineRulerSurface = memo(function TimelineRulerSurface({
         <TimelineMarkers
           duration={duration}
           hideTimecodeLabels={musicalRuler && hasBeatGrid}
+          tone={musicalRuler ? 'light' : 'dark'}
         />
         <BeatvideoGridOverlay duration={duration} variant="ruler" />
       </div>

@@ -1,5 +1,31 @@
 import { formatTimecode, secondsToFrames } from '@/shared/utils/time-utils'
 
+export type TimelineRulerTone = 'dark' | 'light'
+
+export interface TimelineRulerPalette {
+  major: string
+  minor: string
+  label: string
+  labelShadow: string
+}
+
+export function getTimelineRulerPalette(tone: TimelineRulerTone): TimelineRulerPalette {
+  if (tone === 'light') {
+    return {
+      major: 'rgba(23, 25, 23, 0.42)',
+      minor: 'rgba(23, 25, 23, 0.20)',
+      label: 'rgba(23, 25, 23, 0.82)',
+      labelShadow: 'none',
+    }
+  }
+  return {
+    major: 'rgba(255, 255, 255, 0.30)',
+    minor: 'rgba(255, 255, 255, 0.14)',
+    label: 'rgba(255, 255, 255, 0.60)',
+    labelShadow: '0 1px 2px rgba(0, 0, 0, 0.45)',
+  }
+}
+
 interface TimelineRulerInterval {
   intervalInSeconds: number
   minorTicks: number
@@ -37,6 +63,7 @@ export function drawTimelineRulerViewportCanvas({
   pixelsPerSecond,
   fps,
   hideTimecodeLabels = false,
+  tone = 'dark',
 }: {
   canvas: HTMLCanvasElement
   scrollLeft: number
@@ -45,6 +72,7 @@ export function drawTimelineRulerViewportCanvas({
   pixelsPerSecond: number
   fps: number
   hideTimecodeLabels?: boolean
+  tone?: TimelineRulerTone
 }): void {
   if (viewportWidth <= 0 || canvasHeight <= 0 || pixelsPerSecond <= 0) return
   const context = canvas.getContext('2d')
@@ -76,8 +104,10 @@ export function drawTimelineRulerViewportCanvas({
     visibleMarkerCount < MAX_VISIBLE_MINOR_MARKERS &&
     minorSpacing >= MIN_MINOR_TICK_SPACING_PX
 
+  const palette = getTimelineRulerPalette(tone)
+
   context.lineWidth = 1 / devicePixelRatio
-  context.strokeStyle = 'rgba(255, 255, 255, 0.30)'
+  context.strokeStyle = palette.major
   context.beginPath()
   for (let index = firstIndex; index <= lastIndex; index++) {
     const x = alignToDevicePixel(index * markerWidth - scrollLeft, devicePixelRatio)
@@ -88,7 +118,7 @@ export function drawTimelineRulerViewportCanvas({
   context.stroke()
 
   if (showMinorTicks) {
-    context.strokeStyle = 'rgba(255, 255, 255, 0.14)'
+    context.strokeStyle = palette.minor
     context.beginPath()
     for (let index = firstIndex; index <= lastIndex; index++) {
       const majorX = index * markerWidth - scrollLeft
@@ -103,7 +133,7 @@ export function drawTimelineRulerViewportCanvas({
   }
 
   if (!hideTimecodeLabels) {
-    context.fillStyle = 'rgba(255, 255, 255, 0.60)'
+    context.fillStyle = palette.label
     const styles = getComputedStyle(canvas)
     context.font = `${styles.fontWeight} ${styles.fontSize} ${styles.fontFamily}`
     context.textBaseline = 'top'

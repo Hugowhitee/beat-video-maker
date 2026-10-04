@@ -34,12 +34,17 @@ import { EDITOR_LAYOUT_CSS_VALUES, getEditorLayout } from '@/config/editor-layou
 import { sanitizeInOutPoints } from '../utils/in-out-points'
 import { frameToPixelsNow, pixelsToFrameNow } from '../utils/zoom-conversions'
 import { getEdgeScrollDelta, getPlayheadEdgeScrollVelocity } from '../utils/playhead-edge-scroll'
-import { drawTimelineRulerViewportCanvas } from './timeline-ruler-viewport-canvas'
+import {
+  drawTimelineRulerViewportCanvas,
+  getTimelineRulerPalette,
+  type TimelineRulerTone,
+} from './timeline-ruler-viewport-canvas'
 
 interface TimelineMarkersProps {
   duration: number // Total timeline duration in seconds
   width?: number // Explicit width in pixels (optional)
   hideTimecodeLabels?: boolean
+  tone?: TimelineRulerTone
 }
 
 interface MarkerInterval {
@@ -198,6 +203,7 @@ function drawTile(
   markerConfig: MarkerInterval,
   timeToPixels: (time: number) => number,
   totalWidth: number,
+  tone: TimelineRulerTone,
 ) {
   const ctx = canvas.getContext('2d')
   if (!ctx) return
@@ -215,6 +221,8 @@ function drawTile(
 
   // Clear
   ctx.clearRect(0, 0, actualTileWidth, canvasHeight)
+
+  const palette = getTimelineRulerPalette(tone)
 
   // Use pre-computed marker interval (intervalInSeconds is already set correctly in config)
   const intervalInSeconds = markerConfig.intervalInSeconds
@@ -245,7 +253,7 @@ function drawTile(
     // Major tick mark - bottom-anchored, only draw if within tile bounds
     if (x >= 0 && x <= actualTileWidth) {
       const lineX = Math.round(x) + 0.5
-      ctx.strokeStyle = 'rgba(255, 255, 255, 0.30)'
+      ctx.strokeStyle = palette.major
       ctx.lineWidth = 1
       ctx.beginPath()
       ctx.moveTo(lineX, majorTickTop)
@@ -259,7 +267,7 @@ function drawTile(
       const lastTickX = x + tickSpacing * (markerConfig.minorTicks - 1)
       if (lastTickX < 0 || x > actualTileWidth) continue
 
-      ctx.strokeStyle = 'rgba(255, 255, 255, 0.14)'
+      ctx.strokeStyle = palette.minor
       ctx.lineWidth = 1
 
       for (let j = 1; j < markerConfig.minorTicks; j++) {
@@ -312,8 +320,10 @@ function syncLabels(
   viewportWidth: number,
   quantizedPPS: number,
   fps: number,
+  tone: TimelineRulerTone,
 ) {
   const markerConfig = calculateMarkerInterval(quantizedPPS)
+  const palette = getTimelineRulerPalette(tone)
   const intervalInSeconds = markerConfig.intervalInSeconds
   const markerWidthPx = intervalInSeconds * quantizedPPS
 
@@ -341,11 +351,12 @@ function syncLabels(
     const isNew = !span
     if (!span) {
       span = document.createElement('span')
-      span.className = 'absolute text-xs text-white/60 select-none whitespace-nowrap'
+      span.className = 'absolute text-xs select-none whitespace-nowrap'
       span.style.top = '2px'
       span.style.fontFamily = 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace'
       span.style.fontFeatureSettings = '"tnum"'
-      span.style.textShadow = '0 1px 2px rgba(0, 0, 0, 0.45)'
+      span.style.color = palette.label
+      span.style.textShadow = palette.labelShadow
       span.style.zIndex = '24'
       container.appendChild(span)
       pool.set(i, span)
@@ -388,6 +399,7 @@ export const TimelineMarkers = memo(function TimelineMarkers({
   duration,
   width,
   hideTimecodeLabels = false,
+  tone = 'dark',
 }: TimelineMarkersProps) {
   perfMarkRender('TimelineMarkers')
   const editorDensity = useSettingsStore((s) => s.editorDensity)
@@ -621,6 +633,7 @@ export const TimelineMarkers = memo(function TimelineMarkers({
         pixelsPerSecond: useZoomStore.getState().pixelsPerSecond,
         fps: fpsRef.current,
         hideTimecodeLabels,
+        tone,
       })
       return
     }
@@ -692,7 +705,7 @@ export const TimelineMarkers = memo(function TimelineMarkers({
         if (ctx) ctx.drawImage(cachedBitmap, 0, 0)
         canvas.dataset.ck = tileCacheKey
       } else {
-        drawTile(canvas, tileIndex, TILE_WIDTH, ch, markerConfig, renderTimeToPixels, dw)
+        drawTile(canvas, tileIndex, TILE_WIDTH, ch, markerConfig, renderTimeToPixels, dw, tone)
         canvas.dataset.ck = tileCacheKey
         createImageBitmap(canvas)
           .then((bitmap) => {
@@ -727,7 +740,7 @@ export const TimelineMarkers = memo(function TimelineMarkers({
             const adjKey = tileKeyFor(adj)
             if (tileCache.has(adjKey)) continue
             const offscreen = document.createElement('canvas')
-            drawTile(offscreen, adj, TILE_WIDTH, ch, markerConfig, renderTimeToPixels, dw)
+            drawTile(offscreen, adj, TILE_WIDTH, ch, markerConfig, renderTimeToPixels, dw, tone)
             createImageBitmap(offscreen)
               .then((bitmap) => {
                 if (tileCacheRef.current === tileCache) tileCache.set(adjKey, bitmap)
@@ -742,11 +755,11 @@ export const TimelineMarkers = memo(function TimelineMarkers({
 
     // â”€â”€ Labels â”€â”€
     if (labelsContainer && !hideTimecodeLabels) {
-      syncLabels(labelsContainer, labelPoolRef.current, sl, vw, qPPS, fpsRef.current)
+      syncLabels(labelsContainer, labelPoolRef.current, sl, vw, qPPS, fpsRef.current, tone)
     } else {
       clearLabelPool(labelPoolRef.current)
     }
-  }, [hideTimecodeLabels])
+  }, [hideTimecodeLabels, tone])
   syncRulerScrollRef.current = syncRulerScroll
 
   // Redraw only the small visible tile/label pool at live zoom. Tick spacing
@@ -1156,7 +1169,7 @@ export const TimelineMarkers = memo(function TimelineMarkers({
       onMouseMove={handleRulerMouseMove}
       onMouseLeave={handleRulerMouseLeave}
       style={{
-        background: 'oklch(0.22 0 0 / 0.22)',
+        background: tone === 'light' ? '#e5e7e2' : 'oklch(0.22 0 0 / 0.22)',
         userSelect: 'none',
         touchAction: 'none',
         cursor: 'ew-resize',
@@ -1187,7 +1200,11 @@ export const TimelineMarkers = memo(function TimelineMarkers({
       {/* IO lane backdrop + divider so the in/out bar reads as its own track
           rather than floating over the ruler ticks. */}
       <div
-        className="absolute left-0 right-0 top-0 border-b border-border/70 bg-black/25 pointer-events-none"
+        className={
+          tone === 'light'
+            ? 'absolute left-0 right-0 top-0 border-b border-border/70 bg-black/[0.045] pointer-events-none'
+            : 'absolute left-0 right-0 top-0 border-b border-border/70 bg-black/25 pointer-events-none'
+        }
         style={{ height: IO_LANE_HEIGHT, zIndex: 8 }}
       />
 

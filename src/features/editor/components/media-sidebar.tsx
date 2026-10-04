@@ -142,7 +142,10 @@ function getWorkspaceSidebarFallback(workspace: EditorWorkspaceId): EditorSideba
 const TEXT_TEMPLATE_PREVIEW_SHELL =
   'w-full aspect-video rounded-sm border border-border bg-slate-950'
 
-function renderTextTemplatePreview(preset?: TextStylePreset) {
+function renderTextTemplatePreview(
+  preset?: TextStylePreset,
+  sampleOverride?: Partial<TextStylePreset['sample']>,
+) {
   if (!preset) {
     return (
       <div
@@ -156,7 +159,7 @@ function renderTextTemplatePreview(preset?: TextStylePreset) {
     )
   }
 
-  const copy = preset.sample
+  const copy = { ...preset.sample, ...sampleOverride }
 
   if (preset.previewKind === 'clean') {
     return (
@@ -389,26 +392,52 @@ const VISIBLE_TEXT_PRESET_IDS = new Set<TextStylePreset['id']>([
 ])
 
 function renderProducerTextPreview(preset: (typeof PRODUCER_TEXT_PRESETS)[number]) {
+  const stylePreset = TEXT_STYLE_PRESETS.find((candidate) => candidate.id === preset.stylePresetId)
+  if (!stylePreset) return renderTextTemplatePreview()
+
+  const sample =
+    preset.id === 'beat-title'
+      ? { title: 'BEAT TITLE', subtitle: 'PROD. NAME' }
+      : preset.id === 'lower-third'
+        ? { title: 'PROD. NAME', subtitle: 'BEAT BY' }
+        : { title: 'PROD. NAME' }
+
+  return renderTextTemplatePreview(stylePreset, sample)
+}
+
+const REACTIVE_EFFECT_PRESET_IDS = new Set<BeatvideoReactiveGraphicPresetId>([
+  'beat-flash',
+  'pulse-frame',
+])
+const REACTIVE_GRAPHIC_PRESET_IDS = new Set<BeatvideoReactiveGraphicPresetId>([
+  'three-band-bars',
+])
+
+function renderReactiveGraphicPreview(presetId: BeatvideoReactiveGraphicPresetId) {
   return (
-    <div className="relative h-12 w-14 shrink-0 overflow-hidden rounded-[2px] bg-[#343834]">
-      {preset.id === 'corner-mark' ? (
-        <span className="absolute bottom-2 right-1.5 h-1.5 w-5 rounded-[1px] bg-[#c7e85a]" />
-      ) : preset.id === 'lower-third' ? (
+    <div className="relative aspect-video w-full overflow-hidden rounded-[2px] border border-border bg-[#343834]">
+      <div className="absolute inset-0 bg-[linear-gradient(135deg,#3d423d_0%,#202420_100%)]" />
+      {presetId === 'beat-flash' ? (
         <>
-          <span className="absolute bottom-3 left-1.5 h-1 w-8 rounded-[1px] bg-[#f6f7f3]" />
-          <span className="absolute bottom-1.5 left-1.5 h-0.5 w-5 bg-[#bfc4bc]" />
+          <div className="absolute inset-0 bg-white/40" />
+          <div className="absolute inset-x-[18%] top-1/2 h-px -translate-y-1/2 bg-white/80" />
         </>
-      ) : preset.id === 'center-stamp' ? (
-        <span className="absolute left-2 top-[20px] h-2 w-10 rounded-[1px] bg-[#c7e85a]" />
+      ) : presetId === 'pulse-frame' ? (
+        <>
+          <div className="absolute inset-[14%] border-2 border-white/90" />
+          <div className="absolute inset-[22%] border border-white/20" />
+        </>
       ) : (
-        <>
-          <span className="absolute left-1.5 top-3 h-1.5 w-11 rounded-[1px] bg-[#f6f7f3]" />
-          <span className="absolute left-3 top-6 h-1 w-8 rounded-[1px] bg-[#c7e85a]" />
-        </>
+        <div className="absolute inset-x-[24%] bottom-[18%] top-[18%] flex items-end justify-center gap-[8%]">
+          <span className="h-[42%] w-[22%] bg-white/75" />
+          <span className="h-[86%] w-[22%] bg-[#c7e85a]" />
+          <span className="h-[62%] w-[22%] bg-white/75" />
+        </div>
       )}
     </div>
   )
 }
+
 const PHOTO_QUICK_EFFECT_IDS = [
   'gpu-grain',
   'gpu-vignette',
@@ -1464,16 +1493,14 @@ export const MediaSidebar = memo(function MediaSidebar({
                         key={preset.id}
                         type="button"
                         onClick={() => handleAddProducerText(preset.id)}
-                        className="flex min-h-[72px] items-center gap-2 rounded-[3px] bg-[#d1d4ce] p-2.5 text-left transition-colors hover:bg-[#c7cac4]"
+                        className="rounded-[3px] bg-[#d9dbd6] p-2 text-left transition-colors hover:bg-[#d1d4ce]"
                       >
                         {renderProducerTextPreview(preset)}
-                        <span className="min-w-0">
-                          <span className="block truncate text-[9px] font-semibold text-foreground">
-                            {preset.label}
-                          </span>
-                          <span className="mt-1 block text-[8px] leading-3 text-muted-foreground">
-                            {preset.description}
-                          </span>
+                        <span className="mt-1.5 block truncate text-[9px] font-semibold text-foreground">
+                          {preset.label}
+                        </span>
+                        <span className="mt-0.5 block truncate text-[8px] text-muted-foreground">
+                          {preset.description}
                         </span>
                       </button>
                     ))}
@@ -1541,34 +1568,22 @@ export const MediaSidebar = memo(function MediaSidebar({
             >
               <section className="mb-3 border-b border-border pb-3">
                 <div className="mb-2 text-[11px] font-medium text-foreground">
-                  Reactive graphics
+                  Reactive graphic
                 </div>
-                <div className="grid grid-cols-3 border-y border-border">
-                  {BEATVIDEO_REACTIVE_GRAPHIC_PRESETS.map((preset, index) => (
+                <div className="grid grid-cols-2 gap-2">
+                  {BEATVIDEO_REACTIVE_GRAPHIC_PRESETS.filter((preset) =>
+                    REACTIVE_GRAPHIC_PRESET_IDS.has(preset.id),
+                  ).map((preset) => (
                     <button
                       key={preset.id}
                       type="button"
                       onClick={() => handleAddReactiveGraphic(preset.id)}
-                      className={cn(
-                        'flex h-14 flex-col items-center justify-center gap-1 text-[9px] text-muted-foreground transition-colors hover:bg-secondary/30 hover:text-foreground',
-                        index < BEATVIDEO_REACTIVE_GRAPHIC_PRESETS.length - 1 &&
-                          'border-r border-border',
-                      )}
+                      className="rounded-[3px] bg-[#d9dbd6] p-2 text-left transition-colors hover:bg-[#d1d4ce]"
                     >
-                      <span className="flex h-5 w-9 items-end justify-center gap-0.5">
-                        {preset.id === 'beat-flash' ? (
-                          <span className="h-4 w-7 border border-foreground/55 bg-foreground/10" />
-                        ) : preset.id === 'pulse-frame' ? (
-                          <span className="h-4 w-7 border-2 border-foreground/55" />
-                        ) : (
-                          <>
-                            <span className="h-2 w-1.5 bg-foreground/55" />
-                            <span className="h-4 w-1.5 bg-foreground/55" />
-                            <span className="h-3 w-1.5 bg-foreground/55" />
-                          </>
-                        )}
+                      {renderReactiveGraphicPreview(preset.id)}
+                      <span className="mt-1.5 block truncate text-[9px] font-semibold text-foreground">
+                        {preset.label}
                       </span>
-                      <span>{preset.label}</span>
                     </button>
                   ))}
                 </div>
@@ -1791,6 +1806,29 @@ export const MediaSidebar = memo(function MediaSidebar({
               className={`min-h-0 flex-1 overflow-y-auto p-3 ${activeTab === 'effects' ? 'block' : 'hidden'}`}
             >
               <div className="space-y-3">
+                <section>
+                  <div className="mb-2 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+                    Beat reactive
+                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    {BEATVIDEO_REACTIVE_GRAPHIC_PRESETS.filter((preset) =>
+                      REACTIVE_EFFECT_PRESET_IDS.has(preset.id),
+                    ).map((preset) => (
+                      <button
+                        key={preset.id}
+                        type="button"
+                        onClick={() => handleAddReactiveGraphic(preset.id)}
+                        className="rounded-[3px] border border-border bg-secondary/30 p-2 text-left transition-colors hover:border-primary/50 hover:bg-secondary/50"
+                      >
+                        {renderReactiveGraphicPreview(preset.id)}
+                        <span className="mt-1.5 block truncate text-[9px] font-semibold text-foreground">
+                          {preset.label}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
+                </section>
+
                 {beatvideoMode === 'photo' ? (
                   <div className="space-y-2">
                     <div className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">

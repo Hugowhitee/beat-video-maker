@@ -109,7 +109,10 @@ export const Timeline = memo(function Timeline({
   const editorLayout = getEditorLayout(editorDensity)
   const workspace = useEditorStore((s) => s.workspace)
   const simplifiedBeatvideoTimeline =
-    workspace === 'beat' || workspace === 'edit' || workspace === 'master'
+    workspace === 'beat' ||
+    workspace === 'edit' ||
+    workspace === 'color' ||
+    workspace === 'master'
   const {
     tracks,
     addTrack,
