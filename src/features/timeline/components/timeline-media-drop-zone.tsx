@@ -348,7 +348,7 @@ export const TimelineMediaDropZone = memo(function TimelineMediaDropZone({
               useProjectStore.getState().currentProject?.beatvideoMode === 'photo' &&
               entry.mediaType === 'image'
                 ? 'cover'
-                : undefined,
+                : entry.mediaType === 'video' ? 'original' : undefined,
           })
         },
       )
