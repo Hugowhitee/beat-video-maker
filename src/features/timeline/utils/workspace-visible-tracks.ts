@@ -57,7 +57,7 @@ function isProducerUtilityTrack(
  *   Beat
  *   Extras (only when expanded)
  *
- * Empty V/A plumbing stays available in state for generic FreeCut operations,
+ * Empty V/A plumbing stays available in state for general editing operations,
  * but it is not permanent Beatvideo UI. Existing content is never deleted.
  */
 export function resolveProducerTrackLayout(
