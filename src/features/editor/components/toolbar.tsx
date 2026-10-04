@@ -127,6 +127,7 @@ export const Toolbar = memo(function Toolbar({
     return (
       <div
         className="studio-toolbar flex shrink-0 flex-col border-b border-border"
+        data-compact-toolbar="true"
         role="toolbar"
         aria-label={t('toolbar.ariaLabel')}
       >
@@ -260,6 +261,7 @@ export const Toolbar = memo(function Toolbar({
   return (
     <div
       className="studio-toolbar flex shrink-0 flex-col"
+      data-compact-toolbar="false"
       role="toolbar"
       aria-label={t('toolbar.ariaLabel')}
     >
