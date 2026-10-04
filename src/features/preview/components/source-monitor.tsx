@@ -1243,6 +1243,11 @@ function SourcePlaybackControls({
             replayingRef.current = false
             commitSourceSeek(frame)
           }}
+          onPreview={(frame) => {
+            player.pause()
+            replayingRef.current = false
+            useSourcePlayerStore.getState().setPreviewSourceFrame(frame)
+          }}
           onChangeIn={(frame) => {
             const store = useSourcePlayerStore.getState()
             store.setInPoint(clampDraggedSourceInPoint(frame, store.outPoint, lastFrame))

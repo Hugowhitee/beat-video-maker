@@ -18,6 +18,7 @@ interface SourceTrimFilmstripProps {
   inPoint: number | null
   outPoint: number | null
   onSeek: (frame: number) => void
+  onPreview: (frame: number) => void
   onChangeIn: (frame: number) => void
   onChangeOut: (frame: number) => void
 }
@@ -38,6 +39,7 @@ export function SourceTrimFilmstrip({
   inPoint,
   outPoint,
   onSeek,
+  onPreview,
   onChangeIn,
   onChangeOut,
 }: SourceTrimFilmstripProps) {
@@ -47,12 +49,19 @@ export function SourceTrimFilmstrip({
   const zoom = ZOOM_LEVELS[zoomIndex] ?? 1
   const totalFrames = Math.max(1, durationInFrames)
   const safeFps = Math.max(1, fps)
-  const focusedFrame =
-    focus === 'in' ? (inPoint ?? 0) : Math.max(0, (outPoint ?? totalFrames) - 1)
+  // Fix the window while a boundary is dragged: a moving ruler makes
+  // frame-exact trimming impossible.
+  const [focusFrame, setFocusFrame] = useState(() => inPoint ?? 0)
   const window = useMemo(
-    () => resolveSourceFilmstripWindow(totalFrames, zoom, focusedFrame),
-    [totalFrames, zoom, focusedFrame],
+    () => resolveSourceFilmstripWindow(totalFrames, zoom, focusFrame),
+    [totalFrames, zoom, focusFrame],
   )
+  const focusBoundary = (boundary: Boundary) => {
+    setFocus(boundary)
+    setFocusFrame(
+      boundary === 'in' ? (inPoint ?? 0) : Math.max(0, (outPoint ?? totalFrames) - 1),
+    )
+  }
   const slots = useMemo(
     () =>
       Array.from({ length: SLOT_COUNT }, (_, slot) =>
@@ -84,6 +93,7 @@ export function SourceTrimFilmstrip({
     targetFrameIndices,
   })
   const frameUrls = useMemo(() => new Map<number, string>(frames?.map((frame) => [frame.index, frame.url] as const)), [frames])
+  const lastDragPreviewFrameRef = useRef<number | null>(null)
   const from = inPoint ?? 0
   const to = outPoint ?? totalFrames
   const inPct = framePercentInSourceWindow(window, from)
@@ -106,6 +116,9 @@ export function SourceTrimFilmstrip({
     if (frame === null) return
     if (boundary === 'in') onChangeIn(frame)
     else onChangeOut(frame)
+    const includedFrame = boundary === 'out' ? Math.max(0, frame - 1) : frame
+    lastDragPreviewFrameRef.current = includedFrame
+    onPreview(includedFrame)
   }
 
   const handleBoundaryPointerDown = (
@@ -116,6 +129,7 @@ export function SourceTrimFilmstrip({
     event.preventDefault()
     event.currentTarget.setPointerCapture(event.pointerId)
     event.currentTarget.dataset.dragging = boundary
+    lastDragPreviewFrameRef.current = null
   }
   const handleBoundaryPointerMove = (event: ReactPointerEvent<HTMLButtonElement>) => {
     const boundary = event.currentTarget.dataset.dragging
@@ -124,10 +138,13 @@ export function SourceTrimFilmstrip({
     }
   }
   const handleBoundaryPointerUp = (event: ReactPointerEvent<HTMLButtonElement>) => {
+    const lastPreview = lastDragPreviewFrameRef.current
+    lastDragPreviewFrameRef.current = null
     delete event.currentTarget.dataset.dragging
     if (event.currentTarget.hasPointerCapture(event.pointerId)) {
       event.currentTarget.releasePointerCapture(event.pointerId)
     }
+    if (lastPreview !== null) onSeek(lastPreview)
   }
   const handleBoundaryKeyDown = (
     event: React.KeyboardEvent<HTMLButtonElement>,
@@ -137,8 +154,15 @@ export function SourceTrimFilmstrip({
     event.stopPropagation()
     event.preventDefault()
     const change = event.key === 'ArrowRight' ? 1 : -1
-    if (boundary === 'in') onChangeIn((inPoint ?? 0) + change)
-    else onChangeOut((outPoint ?? totalFrames) + change)
+    if (boundary === 'in') {
+      const next = Math.max(0, Math.min(totalFrames - 1, (inPoint ?? 0) + change))
+      onChangeIn(next)
+      onSeek(next)
+    } else {
+      const next = Math.max(1, Math.min(totalFrames, (outPoint ?? totalFrames) + change))
+      onChangeOut(next)
+      onSeek(next - 1)
+    }
   }
 
   const marker = (boundary: Boundary, frame: number, percent: number) => {
@@ -176,7 +200,7 @@ export function SourceTrimFilmstrip({
             size="sm"
             className="h-8 px-2 text-xs"
             aria-pressed={focus === 'in'}
-            onClick={() => setFocus('in')}
+            onClick={() => focusBoundary('in')}
           >In</Button>
           <Button
             type="button"
@@ -184,7 +208,7 @@ export function SourceTrimFilmstrip({
             size="sm"
             className="h-8 px-2 text-xs"
             aria-pressed={focus === 'out'}
-            onClick={() => setFocus('out')}
+            onClick={() => focusBoundary('out')}
           >Out</Button>
           <Button
             type="button"
@@ -246,7 +270,11 @@ export function SourceTrimFilmstrip({
       </div>
       <div className="flex justify-between gap-2 font-mono text-xs tabular-nums text-muted-foreground">
         <span>{(window.start / safeFps).toFixed(2)}s</span>
-        <span>{isLoading ? 'Loading frames…' : 'Drag In/Out handles · Arrow keys for ±1 frame'}</span>
+        <span className="truncate">
+          {isLoading
+            ? 'Loading frames…'
+            : `In ${(from / safeFps).toFixed(2)}s · Out ${(to / safeFps).toFixed(2)}s · drag or use ← →`}
+        </span>
         <span>{(window.end / safeFps).toFixed(2)}s</span>
       </div>
     </div>
