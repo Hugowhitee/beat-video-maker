@@ -42,7 +42,7 @@ import { AudioMeterPanel } from './audio-meter-panel'
 
 type MasterSlot = MasterProcessorId
 
-const MAX_MASTER_SLOTS = 5
+const MAX_MASTER_SLOTS = 4
 
 const SLOT_META: ReadonlyArray<{
   id: MasterSlot
@@ -65,6 +65,7 @@ interface SavedMasterPreset {
   name: string
   masterFx: MasterFxSettings
   busAudioEq?: AudioEqSettings
+  masterBusDb?: number
 }
 
 function loadSavedMasterPresets(): SavedMasterPreset[] {
@@ -92,6 +93,10 @@ function loadSavedMasterPresets(): SavedMasterPreset[] {
         busAudioEq:
           candidate.busAudioEq && typeof candidate.busAudioEq === 'object'
             ? candidate.busAudioEq as AudioEqSettings
+            : undefined,
+        masterBusDb:
+          typeof candidate.masterBusDb === 'number' && Number.isFinite(candidate.masterBusDb)
+            ? candidate.masterBusDb
             : undefined,
       }]
     })
@@ -298,6 +303,8 @@ export function BeatvideoMasterPanel() {
   const setMasterFx = usePlaybackStore((state) => state.setMasterFx)
   const busAudioEq = usePlaybackStore((state) => state.busAudioEq)
   const setBusAudioEq = usePlaybackStore((state) => state.setBusAudioEq)
+  const masterBusDb = usePlaybackStore((state) => state.masterBusDb)
+  const setMasterBusDb = usePlaybackStore((state) => state.setMasterBusDb)
   const currentProject = useProjectStore((state) => state.currentProject)
   const mixerFloating = useEditorStore((state) => state.mixerFloating)
   const toggleMixerFloating = useEditorStore((state) => state.toggleMixerFloating)
@@ -308,6 +315,7 @@ export function BeatvideoMasterPanel() {
   const [addEffectOpen, setAddEffectOpen] = useState(false)
   const [reduction, setReduction] = useState({ compressorDb: 0, limiterDb: 0 })
   const gestureSnapshotRef = useRef<ReturnType<typeof captureSnapshot> | null>(null)
+  const outputGestureSnapshotRef = useRef<ReturnType<typeof captureSnapshot> | null>(null)
   const [savedPresets, setSavedPresets] = useState<SavedMasterPreset[]>(loadSavedMasterPresets)
   const [savingPreset, setSavingPreset] = useState(false)
   const [presetName, setPresetName] = useState('')
@@ -324,15 +332,19 @@ export function BeatvideoMasterPanel() {
   } | null>(null)
 
   const activeBuiltInPresetId = useMemo(() => {
-    if (busAudioEq !== undefined) return null
-    const current = JSON.stringify(resolved)
+    if (busAudioEq !== undefined || Math.abs(masterBusDb) > 0.0001) return null
+    const { processorInstanceIds: _currentInstanceIds, ...currentComparable } = resolved
+    const current = JSON.stringify(currentComparable)
     return (
-      MASTERING_PRESETS.find(
-        (preset) =>
-          JSON.stringify(resolveMasterFxSettings(preset.settings)) === current,
-      )?.id ?? null
+      MASTERING_PRESETS.find((preset) => {
+        const {
+          processorInstanceIds: _presetInstanceIds,
+          ...presetComparable
+        } = resolveMasterFxSettings(preset.settings)
+        return JSON.stringify(presetComparable) === current
+      })?.id ?? null
     )
-  }, [busAudioEq, resolved])
+  }, [busAudioEq, masterBusDb, resolved])
 
   const availableProcessors = useMemo(
     () => SLOT_META.filter((meta) => !resolved.order.includes(meta.id)),
@@ -385,6 +397,28 @@ export function BeatvideoMasterPanel() {
       .addUndoEntry({ type: 'UPDATE_MASTER_FX', payload: {} }, before)
   }, [])
 
+  const beginOutputGesture = useCallback(() => {
+    outputGestureSnapshotRef.current ??= captureSnapshot()
+  }, [])
+
+  const endOutputGesture = useCallback(() => {
+    const before = outputGestureSnapshotRef.current
+    outputGestureSnapshotRef.current = null
+    if (!before) return
+    useTimelineCommandStore
+      .getState()
+      .addUndoEntry({ type: 'UPDATE_MASTER_OUTPUT', payload: {} }, before)
+  }, [])
+
+  const setOutputTrimLive = useCallback(
+    (db: number) => {
+      setMasterBusDb(Math.max(-24, Math.min(12, db)))
+      markChanged()
+      setAutoLevelResult(null)
+    },
+    [markChanged, setMasterBusDb],
+  )
+
   const liveSettings = useCallback(
     (next: MasterFxSettings) => {
       setMasterFx(next)
@@ -410,6 +444,7 @@ export function BeatvideoMasterPanel() {
       // bus fader untouched.
       const before = captureSnapshot()
       setBusAudioEq(undefined)
+      setMasterBusDb(0)
       const presetOrder = resolveMasterFxSettings(preset.settings).order
       setMasterFx({
         ...preset.settings,
@@ -423,7 +458,7 @@ export function BeatvideoMasterPanel() {
         .getState()
         .addUndoEntry({ type: 'APPLY_MASTER_PRESET', payload: { presetId } }, before)
     },
-    [markChanged, setBusAudioEq, setMasterFx],
+    [markChanged, setBusAudioEq, setMasterBusDb, setMasterFx],
   )
 
   const applySavedPreset = useCallback(
@@ -437,13 +472,14 @@ export function BeatvideoMasterPanel() {
         ),
       })
       setBusAudioEq(preset.busAudioEq)
+      setMasterBusDb(preset.masterBusDb ?? 0)
       setAutoLevelResult(null)
       markChanged()
       useTimelineCommandStore
         .getState()
         .addUndoEntry({ type: 'APPLY_MASTER_PRESET', payload: { presetId: preset.id } }, before)
     },
-    [markChanged, setBusAudioEq, setMasterFx],
+    [markChanged, setBusAudioEq, setMasterBusDb, setMasterFx],
   )
 
   const saveCurrentPreset = useCallback(() => {
@@ -463,6 +499,7 @@ export function BeatvideoMasterPanel() {
         limiter: { ...resolved.limiter },
       },
       busAudioEq: busAudioEq ? { ...busAudioEq } : undefined,
+      masterBusDb,
     }
     const next = existing
       ? savedPresets.map((preset) => preset.id === existing.id ? nextPreset : preset)
@@ -471,7 +508,7 @@ export function BeatvideoMasterPanel() {
     setSavedPresets(next)
     setPresetName('')
     setSavingPreset(false)
-  }, [busAudioEq, presetName, resolved, savedPresets])
+  }, [busAudioEq, masterBusDb, presetName, resolved, savedPresets])
 
   const removeSavedPreset = useCallback((presetId: string) => {
     setSavedPresets((current) => {
@@ -523,13 +560,37 @@ export function BeatvideoMasterPanel() {
         { length: buffer.numberOfChannels },
         (_, channel) => buffer.getChannelData(channel),
       )
-      const level = analyzeProgramLevel(channels, buffer.sampleRate)
-      if (level.analyzedBlocks === 0 || level.rmsDb <= -100) {
+      const sourceLevel = analyzeProgramLevel(channels, buffer.sampleRate)
+      if (sourceLevel.analyzedBlocks === 0 || sourceLevel.rmsDb <= -100) {
         throw new Error('No usable audio level was detected')
+      }
+
+      // The track mixer is pre-master. Include the canonical Beat clip + track
+      // gain so Auto level measures the signal that actually reaches Master.
+      const timeline = useTimelineStore.getState()
+      const beatItem = timeline.items.find(
+        (item) =>
+          (item.type === 'audio' || item.type === 'video') &&
+          item.mediaId === mediaId,
+      )
+      const beatTrack = beatItem
+        ? timeline.tracks.find((track) => track.id === beatItem.trackId)
+        : undefined
+      if (beatTrack?.muted) {
+        throw new Error('Unmute the Beat track before Auto level')
+      }
+      const preMasterGainDb = (beatTrack?.volume ?? 0) + (beatItem?.volume ?? 0)
+      const level = {
+        ...sourceLevel,
+        rmsDb: sourceLevel.rmsDb + preMasterGainDb,
+        peakDb: sourceLevel.peakDb + preMasterGainDb,
       }
 
       const plan = resolveAutoLevelPlan(level)
       const before = captureSnapshot()
+      // Auto level owns gain staging into the rack. Keep the final Master
+      // output at unity so a hidden post-rack offset cannot invalidate it.
+      setMasterBusDb(0)
       setMasterFx({
         ...resolved,
         enabled: true,
@@ -559,6 +620,7 @@ export function BeatvideoMasterPanel() {
     currentProject?.beatvideoMusic?.mediaId,
     markChanged,
     resolved,
+    setMasterBusDb,
     setMasterFx,
   ])
 
@@ -566,12 +628,13 @@ export function BeatvideoMasterPanel() {
     const before = captureSnapshot()
     setMasterFx(undefined)
     setBusAudioEq(undefined)
+    setMasterBusDb(0)
     setAutoLevelResult(null)
     markChanged()
     useTimelineCommandStore
       .getState()
       .addUndoEntry({ type: 'RESET_MASTER_CHAIN', payload: {} }, before)
-  }, [markChanged, setBusAudioEq, setMasterFx])
+  }, [markChanged, setBusAudioEq, setMasterBusDb, setMasterFx])
 
   const slotEnabled = useCallback(
     (slot: MasterSlot) => {
@@ -672,8 +735,9 @@ export function BeatvideoMasterPanel() {
 
   return (
     <div className="flex h-full min-h-0 flex-col bg-[#e8e9e5]">
-      <div className="relative flex h-[62px] shrink-0 items-start px-5 pt-[18px]">
-        <div className="min-w-0">
+      <div className="relative h-[100px] shrink-0 px-5 pt-[16px]">
+        <div className="flex min-w-0 items-start justify-between gap-3">
+          <div className="min-w-0">
           <Popover>
             <PopoverTrigger asChild>
               <button
@@ -684,23 +748,9 @@ export function BeatvideoMasterPanel() {
                 Master
               </button>
             </PopoverTrigger>
-            <PopoverContent align="start" sideOffset={8} className="w-[440px] p-3">
+            <PopoverContent align="start" sideOffset={8} className="w-[min(440px,calc(100vw-24px))] p-3">
               <div className="text-[9px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
-                Master presets
-              </div>
-              <div className="studio-segmented mt-2 grid grid-cols-3">
-                {MASTERING_PRESETS.map((preset) => (
-                  <button
-                    key={preset.id}
-                    type="button"
-                    onClick={() => applyPreset(preset.id)}
-                    aria-pressed={activeBuiltInPresetId === preset.id}
-                    className="studio-segment h-7 px-2 text-[10px] font-medium"
-                    title={preset.description}
-                  >
-                    {preset.label}
-                  </button>
-                ))}
+                Master options
               </div>
 
               {savedPresets.length > 0 ? (
@@ -795,11 +845,39 @@ export function BeatvideoMasterPanel() {
               </div>
             </PopoverContent>
           </Popover>
-          <div className="mt-[8px] text-[10px] leading-3 text-muted-foreground">
+          <div className="mt-[6px] text-[10px] leading-3 text-muted-foreground">
             Finish the beat, then export.
           </div>
+          </div>
+          <button
+            type="button"
+            onClick={toggleMixerFloating}
+            aria-pressed={mixerFloating}
+            className="studio-secondary-action h-7 shrink-0 px-2 text-[10px]"
+            title="Balance Beat, producer tags and watermark audio before Master"
+          >
+            {mixerFloating ? 'Close mix' : 'Track mix'}
+          </button>
         </div>
-        <div className="absolute bottom-0 left-5 h-px w-[440px] bg-border" aria-hidden="true" />
+
+        <div className="absolute left-5 top-[50px] text-[9px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+          Presets
+        </div>
+        <div className="studio-segmented absolute left-5 right-5 top-[68px] grid grid-cols-3 sm:grid-cols-6">
+          {MASTERING_PRESETS.map((preset) => (
+            <button
+              key={preset.id}
+              type="button"
+              onClick={() => applyPreset(preset.id)}
+              aria-pressed={activeBuiltInPresetId === preset.id}
+              className="studio-segment h-7 min-w-0 px-1 text-[9px] font-medium"
+              title={preset.description}
+            >
+              <span className="truncate">{preset.label}</span>
+            </button>
+          ))}
+        </div>
+        <div className="absolute bottom-0 left-5 right-5 h-px bg-border" aria-hidden="true" />
       </div>
 
       <div className="relative h-[144px] shrink-0">
@@ -856,11 +934,11 @@ export function BeatvideoMasterPanel() {
         ) : null}
       </div>
 
-      <div className="relative h-[300px] shrink-0">
+      <div className="relative h-[246px] shrink-0">
         <div className="absolute left-5 top-[8px] text-[9px] font-semibold uppercase leading-[11px] tracking-[0.14em] text-muted-foreground">
           Inserts
         </div>
-        <div className="absolute left-5 top-[30px] h-[262px] w-[440px]">
+        <div className="absolute left-5 right-5 top-[30px] h-[216px]">
           {Array.from({ length: MAX_MASTER_SLOTS }, (_, index) => {
             const id = resolved.order[index]
             if (!id) {
@@ -869,7 +947,7 @@ export function BeatvideoMasterPanel() {
                 <div
                   key={`empty-${index}`}
                   className={cn(
-                    'absolute left-0 h-[46px] w-[440px] min-w-0 rounded-[3px] text-muted-foreground',
+                    'absolute left-0 h-[46px] w-full min-w-0 rounded-[3px] text-muted-foreground',
                     canAdd ? 'bg-[#d9dbd6]' : 'bg-[#d1d4ce]',
                   )}
                   style={{ top: index * 54 }}
@@ -885,7 +963,7 @@ export function BeatvideoMasterPanel() {
                       aria-expanded={addEffectOpen}
                     >
                       <span className="absolute left-[42px] top-[8px] text-[11px] font-semibold leading-[13px] text-foreground">
-                        +&nbsp; Add effect
+                        +&nbsp; Add processor
                       </span>
                       <span className="absolute left-[42px] top-[25px] text-[9px] font-medium leading-[11px] text-muted-foreground">
                         Empty slot
@@ -937,7 +1015,7 @@ export function BeatvideoMasterPanel() {
                 }}
                 style={{ top: index * 54 }}
                 className={cn(
-                  'group absolute left-0 h-[46px] w-[440px] min-w-0 cursor-grab rounded-[3px] bg-[#d1d4ce] active:cursor-grabbing',
+                  'group absolute left-0 h-[46px] w-full min-w-0 cursor-grab rounded-[3px] bg-[#d1d4ce] active:cursor-grabbing',
                   dragTarget && 'shadow-[inset_0_2px_0_var(--primary)]',
                 )}
                 data-selected={selected ? 'true' : undefined}
@@ -951,10 +1029,10 @@ export function BeatvideoMasterPanel() {
                   <span className="absolute left-[10px] top-[10px] font-mono text-[9px] font-semibold leading-[11px] tabular-nums text-muted-foreground">
                     {String(index + 1).padStart(2, '0')}
                   </span>
-                  <span className="absolute left-[42px] top-[8px] max-w-[220px] truncate text-[11px] font-semibold leading-[13px] text-foreground">
+                  <span className="absolute left-[42px] top-[8px] max-w-[calc(100%-120px)] truncate text-[11px] font-semibold leading-[13px] text-foreground">
                     {label}
                   </span>
-                  <span className="absolute left-[42px] top-[25px] max-w-[220px] truncate text-[9px] font-medium leading-[11px] text-muted-foreground">
+                  <span className="absolute left-[42px] top-[25px] max-w-[calc(100%-120px)] truncate text-[9px] font-medium leading-[11px] text-muted-foreground">
                     {id === 'limiter'
                       ? `Ceiling ${resolved.limiter.ceilingDb.toFixed(1)} dB`
                       : hint}
@@ -963,7 +1041,7 @@ export function BeatvideoMasterPanel() {
                 <button
                   type="button"
                   onClick={() => removeProcessor(id)}
-                  className="absolute bottom-0 left-[374px] top-0 flex w-8 items-center justify-center text-muted-foreground opacity-0 transition-opacity hover:bg-black/[0.04] hover:text-foreground focus:opacity-100 group-hover:opacity-100"
+                  className="absolute bottom-0 right-[34px] top-0 flex w-8 items-center justify-center text-muted-foreground opacity-0 transition-opacity hover:bg-black/[0.04] hover:text-foreground focus:opacity-100 group-hover:opacity-100"
                   aria-label={`Remove ${label}`}
                   title={`Remove ${label}`}
                 >
@@ -973,7 +1051,7 @@ export function BeatvideoMasterPanel() {
                   type="button"
                   onClick={() => toggleSlot(id)}
                   className={cn(
-                    'absolute bottom-0 left-[406px] top-0 flex w-[34px] items-center justify-start',
+                    'absolute bottom-0 right-0 top-0 flex w-[34px] items-center justify-start',
                     enabled ? 'text-foreground' : 'text-muted-foreground',
                   )}
                   aria-label={`${enabled ? 'Bypass' : 'Enable'} ${label}`}
@@ -988,9 +1066,9 @@ export function BeatvideoMasterPanel() {
         </div>
 
         {addEffectOpen ? (
-          <div className="absolute left-5 top-[286px] z-30 max-h-[220px] w-[440px] overflow-y-auto border border-border bg-[#f2f3ef] p-2 shadow-lg">
+          <div className="absolute left-5 right-5 top-[238px] z-30 max-h-[220px] overflow-y-auto border border-border bg-[#f2f3ef] p-2 shadow-lg">
             <div className="mb-1 px-1 text-[9px] uppercase tracking-[0.12em] text-muted-foreground">
-              Available effects
+              Available processors
             </div>
             {availableProcessors.length > 0 ? (
               <div className="grid grid-cols-1 gap-1">
@@ -1008,7 +1086,7 @@ export function BeatvideoMasterPanel() {
               </div>
             ) : (
               <div className="px-1 py-2 text-[10px] text-muted-foreground">
-                All available master effects are already loaded.
+                All available master processors are already loaded.
               </div>
             )}
           </div>
@@ -1180,24 +1258,46 @@ export function BeatvideoMasterPanel() {
       </div>
 
       <div className="relative h-[170px] shrink-0 bg-[#e8e9e5]">
-        <div className="absolute left-5 top-0 h-px w-[440px] bg-border" aria-hidden="true" />
+        <div className="absolute left-5 right-5 top-0 h-px bg-border" aria-hidden="true" />
         <div className="absolute left-5 top-[18px] text-[9px] font-semibold uppercase leading-[11px] tracking-[0.12em] text-muted-foreground">
           Master out
         </div>
-        <div className="absolute left-5 top-[37px] text-[9px] leading-[11px] text-muted-foreground">
-          Output level lives in the Mixer.
+        <div className="absolute left-5 top-[38px] font-mono text-[18px] font-semibold leading-6 tabular-nums text-foreground">
+          {masterBusDb >= 0 ? '+' : ''}{masterBusDb.toFixed(1)} dB
         </div>
-        <div className="absolute left-[374px] top-[10px]">
+        <input
+          type="range"
+          min={-24}
+          max={12}
+          step={0.1}
+          value={Math.max(-24, Math.min(12, masterBusDb))}
+          onPointerDown={beginOutputGesture}
+          onPointerUp={endOutputGesture}
+          onPointerCancel={endOutputGesture}
+          onChange={(event) => setOutputTrimLive(Number(event.target.value))}
+          className="studio-master-input-range absolute left-5 top-[82px] h-6 w-[min(300px,calc(100%-150px))]"
+          aria-label="Master output trim"
+        />
+        {Math.abs(masterBusDb) > 0.0001 ? (
+          <button
+            type="button"
+            onClick={() => {
+              const before = captureSnapshot()
+              setMasterBusDb(0)
+              markChanged()
+              setAutoLevelResult(null)
+              useTimelineCommandStore
+                .getState()
+                .addUndoEntry({ type: 'RESET_MASTER_OUTPUT', payload: {} }, before)
+            }}
+            className="studio-secondary-action absolute left-5 top-[124px] h-7 px-2 text-[10px]"
+          >
+            Reset output
+          </button>
+        ) : null}
+        <div className="absolute right-5 top-[10px]">
           <AudioMeterPanel initialMode="meter" allowDockedMixer={false} presentation="master-inline" />
         </div>
-        <button
-          type="button"
-          onClick={toggleMixerFloating}
-          aria-pressed={mixerFloating}
-          className="studio-primary-action absolute left-5 top-[96px] h-9 w-64"
-        >
-          {mixerFloating ? 'Close Mixer' : 'Open Mixer'}
-        </button>
       </div>
     </div>
   )

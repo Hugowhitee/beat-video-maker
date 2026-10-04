@@ -105,7 +105,7 @@ function getMobileEditorSurfaces(
     return [
       { id: 'tools', label: 'Master' },
       { id: 'preview', label: 'Preview' },
-      { id: 'mixer', label: 'Mixer' },
+      { id: 'mixer', label: 'Mix' },
     ]
   }
   if (workspace === 'color') {

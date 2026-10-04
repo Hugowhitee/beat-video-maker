@@ -66,8 +66,6 @@ export const Toolbar = memo(function Toolbar({
   const workspace = useEditorStore((state) => state.workspace)
   const rightSidebarOpen = useEditorStore((state) => state.rightSidebarOpen)
   const toggleRightSidebar = useEditorStore((state) => state.toggleRightSidebar)
-  const mixerFloating = useEditorStore((state) => state.mixerFloating)
-  const toggleMixerFloating = useEditorStore((state) => state.toggleMixerFloating)
   const canUndo = useTimelineCommandStore((state) => state.canUndo)
   const canRedo = useTimelineCommandStore((state) => state.canRedo)
   const undo = useTimelineCommandStore((state) => state.undo)
@@ -415,16 +413,6 @@ export const Toolbar = memo(function Toolbar({
               className="studio-workspace-action absolute left-[135px] top-0 flex h-full items-center text-[10px] font-semibold"
             >
               Inspector
-            </button>
-          ) : null}
-          {workspace === 'master' ? (
-            <button
-              type="button"
-              onClick={toggleMixerFloating}
-              aria-pressed={mixerFloating}
-              className="studio-workspace-action absolute left-[135px] top-0 flex h-full items-center text-[10px] font-semibold text-foreground"
-            >
-              Mixer ↗
             </button>
           ) : null}
         </div>
