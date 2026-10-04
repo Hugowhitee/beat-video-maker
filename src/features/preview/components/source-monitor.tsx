@@ -1250,12 +1250,16 @@ function SourcePlaybackControls({
           }}
           onChangeIn={(frame) => {
             const store = useSourcePlayerStore.getState()
-            store.setInPoint(clampDraggedSourceInPoint(frame, store.outPoint, lastFrame))
+            const accepted = clampDraggedSourceInPoint(frame, store.outPoint, lastFrame)
+            store.setInPoint(accepted)
+            return accepted
           }}
           onChangeOut={(frame) => {
             const store = useSourcePlayerStore.getState()
-            store.setOutPoint(clampDraggedSourceOutPoint(frame, store.inPoint, durationInFrames))
-          }}
+            const accepted = clampDraggedSourceOutPoint(frame, store.inPoint, durationInFrames)
+            store.setOutPoint(accepted)
+            return accepted
+          }
         />
       )}
       {/* Seek bar row with I/O region above and editing buttons */}

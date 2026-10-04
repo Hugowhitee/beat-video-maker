@@ -28,8 +28,8 @@ describe('SourceTrimFilmstrip', () => {
   it('keeps a fixed time window while dragging and shows source preview frames', () => {
     const onSeek = vi.fn()
     const onPreview = vi.fn()
-    const onChangeIn = vi.fn()
-    const onChangeOut = vi.fn()
+    const onChangeIn = vi.fn((frame: number) => frame)
+    const onChangeOut = vi.fn((frame: number) => frame)
     const view = render(
       <SourceTrimFilmstrip
         {...base}
@@ -73,8 +73,8 @@ describe('SourceTrimFilmstrip', () => {
   it('previews the inclusive final frame for an exclusive Out and supports keyboard steps', () => {
     const onSeek = vi.fn()
     const onPreview = vi.fn()
-    const onChangeIn = vi.fn()
-    const onChangeOut = vi.fn()
+    const onChangeIn = vi.fn((frame: number) => frame)
+    const onChangeOut = vi.fn((frame: number) => frame)
     render(
       <SourceTrimFilmstrip
         {...base}

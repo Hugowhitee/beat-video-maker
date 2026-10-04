@@ -19,8 +19,8 @@ interface SourceTrimFilmstripProps {
   outPoint: number | null
   onSeek: (frame: number) => void
   onPreview: (frame: number) => void
-  onChangeIn: (frame: number) => void
-  onChangeOut: (frame: number) => void
+  onChangeIn: (frame: number) => number
+  onChangeOut: (frame: number) => number
 }
 
 const SLOT_COUNT = 14
@@ -114,9 +114,9 @@ export function SourceTrimFilmstrip({
   const updateBoundary = (boundary: Boundary, clientX: number) => {
     const frame = frameFromPointer(clientX, boundary === 'out')
     if (frame === null) return
-    if (boundary === 'in') onChangeIn(frame)
-    else onChangeOut(frame)
-    const includedFrame = boundary === 'out' ? Math.max(0, frame - 1) : frame
+    // Preview exactly the frame accepted by the canonical In/Out clamping.
+    const accepted = boundary === 'in' ? onChangeIn(frame) : onChangeOut(frame)
+    const includedFrame = boundary === 'out' ? Math.max(0, accepted - 1) : accepted
     lastDragPreviewFrameRef.current = includedFrame
     onPreview(includedFrame)
   }
@@ -129,7 +129,9 @@ export function SourceTrimFilmstrip({
     event.preventDefault()
     event.currentTarget.setPointerCapture(event.pointerId)
     event.currentTarget.dataset.dragging = boundary
-    lastDragPreviewFrameRef.current = null
+    const current = boundary === 'in' ? (inPoint ?? 0) : Math.max(0, (outPoint ?? totalFrames) - 1)
+    lastDragPreviewFrameRef.current = current
+    onPreview(current)
   }
   const handleBoundaryPointerMove = (event: ReactPointerEvent<HTMLButtonElement>) => {
     const boundary = event.currentTarget.dataset.dragging
@@ -156,12 +158,10 @@ export function SourceTrimFilmstrip({
     const change = event.key === 'ArrowRight' ? 1 : -1
     if (boundary === 'in') {
       const next = Math.max(0, Math.min(totalFrames - 1, (inPoint ?? 0) + change))
-      onChangeIn(next)
-      onSeek(next)
+      onSeek(onChangeIn(next))
     } else {
       const next = Math.max(1, Math.min(totalFrames, (outPoint ?? totalFrames) + change))
-      onChangeOut(next)
-      onSeek(next - 1)
+      onSeek(Math.max(0, onChangeOut(next) - 1))
     }
   }
 
