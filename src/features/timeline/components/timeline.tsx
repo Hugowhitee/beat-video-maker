@@ -64,6 +64,7 @@ import { getDefaultActiveTrackId } from '../utils/default-active-track'
 import {
   resolveProducerTrackLayout,
   resolveWorkspaceVisibleTracks,
+  shouldExposeProducerExtras,
 } from '../utils/workspace-visible-tracks'
 import { KeyframeGraphPanel } from './keyframe-graph-panel'
 import { createRafCoalescedCallback } from '../utils/raf-coalesced-callback'
@@ -143,13 +144,12 @@ export const Timeline = memo(function Timeline({
         : null,
     [itemsByTrackId, simplifiedBeatvideoTimeline, workspaceTracks],
   )
-  const producerExtraTrackIds = useMemo(
-    () => new Set(producerTrackLayout?.extraTracks.map((track) => track.id) ?? []),
-    [producerTrackLayout],
+  const showProducerExtras = shouldExposeProducerExtras(
+    workspace,
+    activeTrackId,
+    producerTrackLayout?.extraTracks ?? [],
+    itemsByTrackId,
   )
-  const showProducerExtras =
-    workspace === 'master' ||
-    (activeTrackId !== null && producerExtraTrackIds.has(activeTrackId))
   const visibleTracks = useMemo(() => {
     if (!simplifiedBeatvideoTimeline) return workspaceTracks
     return resolveProducerTrackLayout(
