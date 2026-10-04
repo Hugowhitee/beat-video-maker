@@ -101,18 +101,12 @@ vi.mock('./color-grading-dock', () => ({
   ColorGradingDock: () => <div data-testid="color-grading-dock" />,
 }))
 
-vi.mock('./color-timeline-navigator', () => ({
-  ColorTimelineNavigator: () => <div data-testid="color-timeline-navigator" />,
-}))
 
 vi.mock('./compose-workspace/compose-layout', () => ({
   MotionPreviewArea: () => <div data-testid="motion-preview-area" />,
   MotionTimelineDock: () => <div data-testid="motion-timeline-dock" />,
 }))
 
-vi.mock('./project-debug-panel', () => ({
-  ProjectDebugPanel: () => <div data-testid="project-debug-panel" />,
-}))
 
 vi.mock('./interaction-lock-region', () => ({
   InteractionLockRegion: ({ children }: { children: ReactNode }) => <>{children}</>,
