@@ -254,6 +254,66 @@ async function main() {
     console.log(
       `Project UI smoke passed: compact phone editor, desktop-site fallback, project settings, and ${box.width.toFixed(0)}px square tiles are all verified.`,
     )
+
+    // Desktop regression: the fixed-height Master and Color panels historically
+    // clipped on common laptop viewports, while source Program/timeline remained
+    // usable. Check actual rendered geometry, not just component existence.
+    const desktopContext = await browser.newContext({
+      viewport: { width: 1366, height: 768 },
+      screen: { width: 1366, height: 768 },
+    })
+    await desktopContext.addInitScript(() => {
+      Object.defineProperty(window, 'showDirectoryPicker', {
+        value: undefined,
+        configurable: true,
+      })
+    })
+    const desktopPage = await desktopContext.newPage()
+    const desktopErrors = []
+    desktopPage.on('pageerror', (error) => desktopErrors.push(error.stack || error.message))
+
+    await desktopPage.goto(`${baseUrl}/projects/new`, {
+      waitUntil: 'domcontentloaded',
+      timeout: 30_000,
+    })
+    await desktopPage.locator('#name').waitFor({ state: 'visible', timeout: 20_000 })
+    await desktopPage.locator('#name').fill('Workspace geometry smoke')
+    await desktopPage.locator('button[type="submit"]').click()
+    await desktopPage.locator('[role="application"][data-studio-v2="true"]').waitFor({
+      state: 'visible', timeout: 30_000,
+    })
+
+    for (const viewport of [
+      { width: 1366, height: 768 },
+      { width: 1280, height: 720 },
+    ]) {
+      await desktopPage.setViewportSize(viewport)
+      await desktopPage.getByRole('tab', { name: 'Master' }).click()
+      const output = desktopPage.getByTestId('master-output-controls')
+      const program = desktopPage.locator('[data-program-monitor]')
+      await output.waitFor({ state: 'visible' })
+      const outputBox = await output.boundingBox()
+      const programBox = await program.boundingBox()
+      if (!outputBox || !programBox ||
+        outputBox.y < 0 || outputBox.y + outputBox.height > viewport.height + 2 ||
+        programBox.height < 135 || programBox.width < 240) {
+        throw new Error(`Master clipped or Program collapsed at ${viewport.width}×${viewport.height}: ${JSON.stringify({ outputBox, programBox })}`)
+      }
+      await desktopPage.getByRole('tab', { name: 'Color' }).click()
+      const grade = desktopPage.getByTestId('color-grading-dock')
+      await grade.waitFor({ state: 'attached' })
+      await grade.scrollIntoViewIfNeeded()
+      const gradeBox = await grade.boundingBox()
+      if (!gradeBox || gradeBox.width < 280 || gradeBox.height < 200 ||
+        gradeBox.y + gradeBox.height > viewport.height + 2) {
+        throw new Error(`Color grading controls inaccessible at ${viewport.width}×${viewport.height}: ${JSON.stringify(gradeBox)}`)
+      }
+    }
+    if (desktopErrors.length) {
+      throw new Error(`Desktop workspace errors:\\n${desktopErrors.join('\\n')}`)
+    }
+    console.log('Workspace UI smoke passed: Master Program/Output and Color controls reachable on laptop viewports')
+    await desktopContext.close()
   } finally {
     clearTimeout(hardTimeout)
     if (browser) await browser.close().catch(() => {})
