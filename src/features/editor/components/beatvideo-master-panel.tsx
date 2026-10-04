@@ -23,6 +23,7 @@ import {
   createSaturationCurve,
   resolveAutoLevelPlan,
   resolveMasterFxSettings,
+  withPreservedMasterInputGain,
 } from '@/shared/utils/mastering'
 import { getSparseAudioEqSettings } from '@/shared/utils/audio-eq'
 import type {
@@ -332,19 +333,19 @@ export function BeatvideoMasterPanel() {
   } | null>(null)
 
   const activeBuiltInPresetId = useMemo(() => {
-    if (busAudioEq !== undefined || Math.abs(masterBusDb) > 0.0001) return null
+    if (busAudioEq !== undefined) return null
     const current = JSON.stringify(resolved, (key, value) =>
-      key === 'processorInstanceIds' ? undefined : value,
+      (key === 'processorInstanceIds' || key === 'inputGainDb') ? undefined : value,
     )
     return (
       MASTERING_PRESETS.find(
         (preset) =>
           JSON.stringify(resolveMasterFxSettings(preset.settings), (key, value) =>
-            key === 'processorInstanceIds' ? undefined : value,
+            (key === 'processorInstanceIds' || key === 'inputGainDb') ? undefined : value,
           ) === current,
       )?.id ?? null
     )
-  }, [busAudioEq, masterBusDb, resolved])
+  }, [busAudioEq, resolved]
 
   const availableProcessors = useMemo(
     () => SLOT_META.filter((meta) => !resolved.order.includes(meta.id)),
@@ -444,10 +445,9 @@ export function BeatvideoMasterPanel() {
       // bus fader untouched.
       const before = captureSnapshot()
       setBusAudioEq(undefined)
-      setMasterBusDb(0)
       const presetOrder = resolveMasterFxSettings(preset.settings).order
       setMasterFx({
-        ...preset.settings,
+        ...withPreservedMasterInputGain(resolved, preset.settings),
         processorInstanceIds: Object.fromEntries(
           presetOrder.map((processor) => [processor, crypto.randomUUID()]),
         ),
@@ -458,7 +458,7 @@ export function BeatvideoMasterPanel() {
         .getState()
         .addUndoEntry({ type: 'APPLY_MASTER_PRESET', payload: { presetId } }, before)
     },
-    [markChanged, setBusAudioEq, setMasterBusDb, setMasterFx],
+    [markChanged, resolved, setBusAudioEq, setMasterFx],
   )
 
   const applySavedPreset = useCallback(
@@ -466,20 +466,20 @@ export function BeatvideoMasterPanel() {
       const before = captureSnapshot()
       const presetOrder = resolveMasterFxSettings(preset.masterFx).order
       setMasterFx({
-        ...preset.masterFx,
+        ...withPreservedMasterInputGain(resolved, preset.masterFx),
         processorInstanceIds: Object.fromEntries(
           presetOrder.map((processor) => [processor, crypto.randomUUID()]),
         ),
       })
       setBusAudioEq(preset.busAudioEq)
-      setMasterBusDb(preset.masterBusDb ?? 0)
+      // Restoring rack presets must not edit the independently owned output trim.
       setAutoLevelResult(null)
       markChanged()
       useTimelineCommandStore
         .getState()
         .addUndoEntry({ type: 'APPLY_MASTER_PRESET', payload: { presetId: preset.id } }, before)
     },
-    [markChanged, setBusAudioEq, setMasterBusDb, setMasterFx],
+    [markChanged, resolved, setBusAudioEq, setMasterFx],
   )
 
   const saveCurrentPreset = useCallback(() => {

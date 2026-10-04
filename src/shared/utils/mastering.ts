@@ -153,6 +153,14 @@ export function resolveMasterFxSettings(
   }
 }
 
+/** Processor presets are recipes, not input gain-staging commands. */
+export function withPreservedMasterInputGain(
+  current: MasterFxSettings | undefined,
+  recipe: MasterFxSettings,
+): MasterFxSettings {
+  return { ...recipe, inputGainDb: resolveMasterFxSettings(current).inputGainDb }
+}
+
 export function isMasterFxActive(value: MasterFxSettings | undefined): boolean {
   const resolved = resolveMasterFxSettings(value)
   const processors = new Set(resolved.order)

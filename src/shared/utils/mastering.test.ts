@@ -9,6 +9,7 @@ import {
   resolveAutoLevelInputGainDb,
   resolveAutoLevelPlan,
   resolveMasterFxSettings,
+  withPreservedMasterInputGain,
 } from './mastering'
 
 function sampleCurve(curve: Float32Array, x: number): number {
@@ -64,6 +65,14 @@ describe('master rack order', () => {
 })
 
 describe('mastering presets', () => {
+  it('preserves independently applied Auto Level input trim when the rack changes', () => {
+    const recipe = getMasteringPreset('clean').settings
+    const updated = withPreservedMasterInputGain({ inputGainDb: -3.5 }, recipe)
+    expect(updated.inputGainDb).toBe(-3.5)
+    expect(updated.order).toEqual(recipe.order)
+    expect(updated.compressor?.enabled).toBe(recipe.compressor?.enabled)
+  })
+
   it('keeps the legacy preset id compatible while exposing a genre-neutral recipe', () => {
     const preset = getMasteringPreset('detroit')
     expect(preset.id).toBe('detroit')

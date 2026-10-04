@@ -953,27 +953,6 @@ export const LoadedEditor = memo(function LoadedEditor({
               </ErrorBoundary>
             </InteractionLockRegion>
           </div>
-        ) : isMasterWorkspace ? (
-          <div className="flex min-w-0 flex-1 flex-col overflow-hidden bg-[#d9dbd6]">
-            <div className="h-[476px] shrink-0 px-5 pt-[18px]">
-              <InteractionLockRegion locked={isMaskEditingActive} className="h-[442px]">
-                <ErrorBoundary level="feature">
-                  <PreviewArea project={project} />
-                </ErrorBoundary>
-              </InteractionLockRegion>
-            </div>
-            <InteractionLockRegion
-              locked={isMaskEditingActive}
-              className="h-[384px] shrink-0 px-5"
-            >
-              <ErrorBoundary level="feature">
-                <Suspense fallback={null}>
-                  <LazyTimeline duration={timelineDuration} beatvideoMode={beatvideoMode} />
-                </Suspense>
-              </ErrorBoundary>
-            </InteractionLockRegion>
-            <div className="h-7 shrink-0" aria-hidden="true" />
-          </div>
         ) : (
           <ResizablePanelGroup
             direction="vertical"

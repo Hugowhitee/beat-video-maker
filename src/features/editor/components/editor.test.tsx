@@ -576,7 +576,7 @@ describe('LoadedEditor migration metadata refresh', () => {
     expect(dock).toBeInTheDocument()
   })
 
-  it('uses the rail-free producer shell in Master without the generic split handle', async () => {
+  it('uses the shared resizable timeline shell in Master with dedicated master controls', async () => {
     mocks.editorState.workspace = 'master'
 
     render(
@@ -601,7 +601,7 @@ describe('LoadedEditor migration metadata refresh', () => {
     expect(screen.getByTestId('beatvideo-master-panel')).toBeInTheDocument()
     expect(screen.getByTestId('preview-area')).toBeInTheDocument()
     expect(await screen.findByTestId('timeline')).toBeInTheDocument()
-    expect(screen.queryByTestId('resizable-handle')).not.toBeInTheDocument()
+    expect(screen.getByTestId('resizable-handle')).toBeInTheDocument()
     expect(screen.queryByTestId('audio-meter-panel')).not.toBeInTheDocument()
   })
 

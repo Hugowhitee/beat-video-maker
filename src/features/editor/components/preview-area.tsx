@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback, memo, useMemo, lazy, Suspense } from 'react'
-import { Columns2 } from 'lucide-react'
+import { Columns2, LockKeyhole } from 'lucide-react'
 import {
   VideoPreview,
   PlaybackControls,
@@ -38,7 +38,7 @@ interface PreviewAreaProps {
   compact?: boolean
 }
 
-type PreviewChrome = 'edit' | 'color'
+type PreviewChrome = 'edit' | 'color' | 'view'
 
 const DEFAULT_EMPTY_TIMELINE_SECONDS = 10
 const PREVIEW_RESIZE_MIN_UPDATE_MS = 33
@@ -543,7 +543,12 @@ export const PreviewArea = memo(function PreviewArea({
   }, [])
 
   const hasSidePanels = !!sourcePreviewMediaId || scopesPanelOpen
-  const previewChrome: PreviewChrome = workspace === 'color' ? 'color' : 'edit'
+  // Master shares the Program monitor and transport, but not transform permissions.
+  const previewChrome: PreviewChrome = workspace === 'color'
+    ? 'color'
+    : workspace === 'master'
+      ? 'view'
+      : 'edit'
   const programPanelPercent = Math.max(
     0,
     100 - displayedSourceSplitPercent - displayedScopesSplitPercent,
@@ -613,6 +618,16 @@ export const PreviewArea = memo(function PreviewArea({
             className="flex-1 min-h-0 relative overflow-hidden"
             aria-label="Preview canvas region"
           >
+            {workspace === 'master' ? (
+              <div
+                className="pointer-events-none absolute right-3 top-3 z-30 flex items-center gap-1.5 bg-background/80 px-2 py-1 text-[10px] text-muted-foreground"
+                role="status"
+                aria-label="Master preview is read-only for visual editing"
+              >
+                <LockKeyhole className="h-3 w-3" aria-hidden="true" />
+                Preview only
+              </div>
+            ) : null}
             <ProgramPreviewSurface
               project={liveProject}
               containerSize={containerSize}

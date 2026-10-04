@@ -69,7 +69,7 @@ interface VideoPreviewProps {
   chrome?: PreviewOverlayChrome
 }
 
-type PreviewOverlayChrome = 'edit' | 'color'
+type PreviewOverlayChrome = 'edit' | 'color' | 'view'
 
 interface PreviewItemsSnapshot {
   items: TimelineItem[]
