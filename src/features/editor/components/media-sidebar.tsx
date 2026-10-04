@@ -662,104 +662,151 @@ export const MediaSidebar = memo(function MediaSidebar({
     [t],
   )
 
-  const handleAddProducerText = useCallback(
-    (presetId: ProducerTextPresetId) => {
-      const preset = PRODUCER_TEXT_PRESETS.find((candidate) => candidate.id === presetId)
-      if (!preset) return
+  const handleAddProducerText = useCallback((presetId: ProducerTextPresetId) => {
+    const preset = PRODUCER_TEXT_PRESETS.find((candidate) => candidate.id === presetId)
+    if (!preset) return
 
-      const timeline = useTimelineStore.getState()
-      const selection = useSelectionStore.getState()
-      const currentProject = useProjectStore.getState().currentProject
-      const newTrack = createOverlayLayerTrack({
-        tracks: timeline.tracks,
-        activeTrackId: selection.activeTrackId,
-      })
+    const timeline = useTimelineStore.getState()
+    const selection = useSelectionStore.getState()
+    const currentProject = useProjectStore.getState().currentProject
+    const canvasWidth = currentProject?.metadata.width ?? DEFAULT_PROJECT_WIDTH
+    const canvasHeight = currentProject?.metadata.height ?? DEFAULT_PROJECT_HEIGHT
+    const publishDuration = resolvePhotoPublishingDurationInFrames(timeline.fps, {
+      beatvideoMode: currentProject?.beatvideoMode,
+      beatvideoMusic: currentProject?.beatvideoMusic,
+      projectMedia: useMediaLibraryStore.getState().mediaItems,
+      timelineItems: timeline.items,
+    })
+    const forFullBeat = currentProject?.beatvideoMode === 'photo' && publishDuration > 0
+    const durationInFrames = forFullBeat
+      ? publishDuration
+      : getDefaultGeneratedLayerDurationInFrames(timeline.fps)
+    const from = forFullBeat ? 0 : Math.max(0, usePlaybackStore.getState().currentFrame)
+    const placement = (trackId: string) => ({
+      trackId,
+      from,
+      durationInFrames,
+      canvasWidth,
+      canvasHeight,
+      fps: timeline.fps,
+    })
+    const nextTrack = (tracks: typeof timeline.tracks) =>
+      createOverlayLayerTrack({ tracks, activeTrackId: selection.activeTrackId })
 
-      if (!newTrack) {
-        logger.warn('No available track for producer text item')
-        return
+    // A type-beat cover is three real independent timeline text layers, not
+    // one flattened multiline text item or a parallel graphics document.
+    if (presetId === 'beat-title') {
+      let workingTracks = timeline.tracks
+      const ids = new Map<'title' | 'subtitle' | 'branding', string>()
+      for (const role of ['branding', 'subtitle', 'title'] as const) {
+        const planned = nextTrack(workingTracks)
+        if (!planned) return
+        workingTracks = planned.tracks
+        ids.set(role, planned.trackId)
       }
-
-      const canvasWidth = currentProject?.metadata.width ?? DEFAULT_PROJECT_WIDTH
-      const canvasHeight = currentProject?.metadata.height ?? DEFAULT_PROJECT_HEIGHT
-      const publishDuration = resolvePhotoPublishingDurationInFrames(timeline.fps, {
-        beatvideoMode: currentProject?.beatvideoMode,
-        beatvideoMusic: currentProject?.beatvideoMusic,
-        projectMedia: useMediaLibraryStore.getState().mediaItems,
-        timelineItems: timeline.items,
+      const title = ids.get('title')
+      const subtitle = ids.get('subtitle')
+      const branding = ids.get('branding')
+      if (!title || !subtitle || !branding) return
+      const items = buildBeatvideoCoverLayoutItems({
+        presetId: 'hero-stack',
+        content: { title: 'BEAT TITLE', subtitle: 'TYPE BEAT', branding: 'PROD. NAME' },
+        titleMotion: 'static',
+        trackIds: { title, subtitle, branding },
+        from,
+        durationInFrames,
+        canvasWidth,
+        canvasHeight,
+        fps: timeline.fps,
       })
-      const durationInFrames =
-        currentProject?.beatvideoMode === 'photo' && publishDuration > 0
-          ? publishDuration
-          : getDefaultGeneratedLayerDurationInFrames(timeline.fps)
-      const from =
-        currentProject?.beatvideoMode === 'photo' && publishDuration > 0
-          ? 0
-          : Math.max(0, usePlaybackStore.getState().currentFrame)
+      addItemsOnNewTracks(items, workingTracks)
+      selection.setActiveTrack(title)
+      selection.selectItems([items[0]!.id])
+      return
+    }
 
-      const baseItem = createTextTemplateItem({
-        placement: {
-          trackId: newTrack.trackId,
-          from,
-          durationInFrames,
-          canvasWidth,
-          canvasHeight,
-          fps: timeline.fps,
-        },
-        label: preset.label,
-        text: preset.text,
-        textStylePresetId: preset.stylePresetId,
+    // Lower third has an independently editable signature. Its thumbnail and
+    // inserted output now share the same actual two-font composition.
+    if (presetId === 'lower-third') {
+      const creditTrack = nextTrack(timeline.tracks)
+      if (!creditTrack) return
+      const nameTrack = nextTrack(creditTrack.tracks)
+      if (!nameTrack) return
+      const nameBase = createTextTemplateItem({
+        placement: placement(nameTrack.trackId),
+        label: 'Producer name',
+        text: 'PROD. NAME',
       })
-
-      const transform =
-        preset.id === 'corner-mark'
-          ? {
-              x: Math.round(canvasWidth * 0.31),
-              y: Math.round(-canvasHeight * 0.39),
-              width: Math.round(canvasWidth * 0.28),
-              height: Math.round(canvasHeight * 0.08),
-            }
-          : preset.id === 'lower-third'
-            ? {
-                x: Math.round(-canvasWidth * 0.22),
-                y: Math.round(canvasHeight * 0.35),
-                width: Math.round(canvasWidth * 0.46),
-                height: Math.round(canvasHeight * 0.11),
-              }
-            : preset.id === 'center-stamp'
-              ? {
-                  x: 0,
-                  y: 0,
-                  width: Math.round(canvasWidth * 0.54),
-                  height: Math.round(canvasHeight * 0.13),
-                }
-              : {
-                  x: 0,
-                  y: Math.round(-canvasHeight * 0.28),
-                  width: Math.round(canvasWidth * 0.82),
-                  height: Math.round(canvasHeight * 0.18),
-                }
-
-      const textItem: TextItem = {
-        ...baseItem,
-        label: preset.label,
-        text: preset.text,
-        textSpans: undefined,
+      const creditBase = createTextTemplateItem({
+        placement: placement(creditTrack.trackId),
+        label: 'Producer signature',
+        text: 'Beat by Hugo White',
+      })
+      const name: TextItem = {
+        ...nameBase,
+        label: 'Producer name',
+        fontFamily: 'Staatliches', fontWeight: 'normal',
+        color: '#ffffff', fontSize: Math.round(canvasHeight * 0.063),
+        lineHeight: 0.96, textPadding: 0, textSpans: undefined,
+        backgroundColor: undefined, stroke: undefined, textStylePresetId: undefined,
         transform: {
-          ...baseItem.transform,
-          ...transform,
+          ...nameBase.transform,
+          x: Math.round(-canvasWidth * 0.22),
+          y: Math.round(canvasHeight * 0.33),
+          width: Math.round(canvasWidth * 0.46),
+          height: Math.round(canvasHeight * 0.1),
         },
       }
+      const signature: TextItem = {
+        ...creditBase,
+        label: 'Producer signature',
+        fontFamily: 'Caveat', fontWeight: 'normal',
+        color: '#ffffff', fontSize: Math.round(canvasHeight * 0.045),
+        lineHeight: 1, textPadding: 0, textSpans: undefined,
+        backgroundColor: undefined, stroke: undefined, textStylePresetId: undefined,
+        transform: {
+          ...creditBase.transform,
+          x: Math.round(-canvasWidth * 0.22),
+          y: Math.round(canvasHeight * 0.413),
+          width: Math.round(canvasWidth * 0.42),
+          height: Math.round(canvasHeight * 0.075),
+        },
+      }
+      addItemsOnNewTracks([name, signature], nameTrack.tracks)
+      selection.setActiveTrack(nameTrack.trackId)
+      selection.selectItems([name.id])
+      return
+    }
 
-      timeline.addItemOnNewTrack(textItem, newTrack.tracks)
-      selection.setActiveTrack(newTrack.trackId)
-      selection.selectItems([textItem.id])
-      toast.success(`${preset.label} added`, {
-        description: 'Edit it like any other text layer in Inspector.',
-      })
-    },
-    [],
-  )
+    const newTrack = nextTrack(timeline.tracks)
+    if (!newTrack) return
+    const baseItem = createTextTemplateItem({
+      placement: placement(newTrack.trackId),
+      label: preset.label,
+      text: preset.id === 'corner-mark' ? 'PROD. NAME' : 'HUGOWHITE',
+    })
+    const isCorner = preset.id === 'corner-mark'
+    const item: TextItem = {
+      ...baseItem,
+      label: preset.label,
+      fontFamily: 'Staatliches', fontWeight: 'normal',
+      fontSize: Math.round(canvasHeight * (isCorner ? 0.046 : 0.12)),
+      lineHeight: 0.95, letterSpacing: 0,
+      color: '#ffffff', textPadding: 0,
+      backgroundColor: undefined, stroke: undefined,
+      textSpans: undefined, textStylePresetId: undefined,
+      transform: {
+        ...baseItem.transform,
+        x: isCorner ? Math.round(canvasWidth * 0.32) : 0,
+        y: isCorner ? Math.round(-canvasHeight * 0.4) : 0,
+        width: Math.round(canvasWidth * (isCorner ? 0.29 : 0.66)),
+        height: Math.round(canvasHeight * (isCorner ? 0.08 : 0.18)),
+      },
+    }
+    addItemsOnNewTracks([item], newTrack.tracks)
+    selection.setActiveTrack(newTrack.trackId)
+    selection.selectItems([item.id])
+  }, [])
 
   const handleImportPhotoCover = useCallback(async () => {
     if (importingPhotoCover) return
