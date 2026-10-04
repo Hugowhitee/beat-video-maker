@@ -4,6 +4,7 @@ import {
   resolveCompactProducerTracks,
   resolveProducerTrackLayout,
   resolveWorkspaceVisibleTracks,
+  shouldExposeProducerExtras,
 } from './workspace-visible-tracks'
 
 function track(id: string, kind: 'audio' | 'video'): TimelineTrack {
@@ -46,6 +47,34 @@ describe('resolveWorkspaceVisibleTracks', () => {
 })
 
 describe('resolveProducerTrackLayout', () => {
+  it('keeps footage as Media even when multiple text layers precede it', () => {
+    const title = { ...track('title', 'video'), name: 'Cover title', order: -2 }
+    const subtitle = { ...track('subtitle', 'video'), name: 'Cover subtitle', order: -1 }
+    const cover = { ...track('cover', 'video'), name: 'Cover', order: 0 }
+    const beat = { ...track('beat', 'audio'), name: 'Beat', order: 1 }
+    const items = {
+      title: [{ type: 'text', text: 'GLOCK IT' }],
+      subtitle: [{ type: 'text', text: 'KEVIN TYPE BEAT' }],
+      cover: [{ type: 'image' }],
+      beat: [{ type: 'audio' }],
+    }
+    const layout = resolveProducerTrackLayout([title, subtitle, cover, beat], items, true)
+    expect(layout.primaryMediaTrackId).toBe('cover')
+    expect(layout.visibleTracks.map((entry) => entry.id)).toEqual([
+      'cover', 'beat', 'title', 'subtitle',
+    ])
+    expect(shouldExposeProducerExtras('edit', 'cover', layout.extraTracks, items)).toBe(true)
+    expect(shouldExposeProducerExtras('color', null, layout.extraTracks, items)).toBe(true)
+    expect(shouldExposeProducerExtras('beat', 'cover', layout.extraTracks, items)).toBe(false)
+  })
+
+  it('does not turn empty utility lanes into visible layers', () => {
+    const generic = { ...track('generic', 'video'), name: 'V2' }
+    const tag = { ...track('tag', 'audio'), name: 'Producer tags' }
+    const layout = resolveProducerTrackLayout([generic, tag], {}, false)
+    expect(shouldExposeProducerExtras('edit', null, layout.extraTracks, {})).toBe(false)
+  })
+
   it('keeps Media first and Beat directly beneath it while blank generic lanes stay hidden', () => {
     const video = { ...track('video', 'video'), name: 'V1', order: 0 }
     const genericAudio = { ...track('audio', 'audio'), name: 'A1', order: 1 }
