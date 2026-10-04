@@ -119,6 +119,9 @@ export function applyTimelineLiveGeometry({
     viewportWidth: effectiveViewportWidth,
   })
 
+  // Beat/grid overlays are siblings of the committed track surface, so they
+  // inherit their time-axis width from the outer scrolling layer instead.
+  setStyle(outer.style, '--timeline-content-width', `${liveContentWidth}px`)
   setStyle(outer.style, 'width', `${liveWidth}px`)
   setStyle(surface.style, 'width', `${liveWidth}px`)
   setStyle(surface.style, 'transform', 'none')

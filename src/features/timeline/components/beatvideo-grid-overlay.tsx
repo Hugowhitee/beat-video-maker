@@ -74,7 +74,8 @@ export const BeatvideoGridOverlay = memo(function BeatvideoGridOverlay({
 
   return (
     <div
-      ref={contentLayerRef}
+      ref={variant === 'ruler' ? contentLayerRef : undefined}
+      style={variant === 'tracks' ? { width: 'var(--timeline-content-width, 100%)' } : undefined}
       aria-hidden="true"
       data-beatvideo-grid-overlay={variant}
       data-beatvideo-grid-placement={timelineGrid.placement.id}

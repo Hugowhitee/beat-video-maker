@@ -82,7 +82,22 @@ describe('TimelineRulerSurface', () => {
         outer, surface, duration: 10, viewportWidth: 500, livePixelsPerSecond: 200,
       })
       expect(overlay.style.width).toBe('2000px')
+      expect(outer.style.getPropertyValue('--timeline-content-width')).toBe('2000px')
       attach(null)
     }
+  })
+
+  it('gives sibling track overlays the content axis even when the surface has scroll room', () => {
+    const outer = document.createElement('div')
+    const surface = document.createElement('div')
+    surface.dataset.timelineCommittedSurface = 'tracks'
+    outer.appendChild(surface)
+    const sibling = document.createElement('div')
+    sibling.style.width = 'var(--timeline-content-width, 100%)'
+    outer.appendChild(sibling)
+    applyTimelineLiveGeometry({outer, surface, duration: 180, viewportWidth: 620, livePixelsPerSecond: 12})
+    expect(outer.style.getPropertyValue('--timeline-content-width')).toBe('2160px')
+    expect(surface.style.width).toBe(`${getTimelineWidth({contentWidth: 2160, viewportWidth: 620})}px`)
+    expect(sibling.style.width).toBe('var(--timeline-content-width, 100%)')
   })
 })
