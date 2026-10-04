@@ -70,6 +70,31 @@ describe('SourceTrimFilmstrip', () => {
     expect(onSeek).toHaveBeenLastCalledWith(830)
   })
 
+  it('keeps the complete uncut source available while the precision view zooms', () => {
+    const onSeek = vi.fn()
+    const view = render(
+      <SourceTrimFilmstrip
+        {...base}
+        onSeek={onSeek}
+        onPreview={vi.fn()}
+        onChangeIn={(frame) => frame}
+        onChangeOut={(frame) => frame}
+      />,
+    )
+    const original = view.getByTestId('source-full-filmstrip')
+    expect(original).toHaveAttribute('aria-label', 'Full original source filmstrip')
+    expect(view.getByText('Full source · unchanged')).toBeInTheDocument()
+    vi.spyOn(original, 'getBoundingClientRect').mockReturnValue({
+      x: 0, y: 0, left: 0, top: 0, right: 400, bottom: 36,
+      width: 400, height: 36, toJSON: () => ({}),
+    })
+    fireEvent.pointerDown(original, { clientX: 100 })
+    expect(onSeek).toHaveBeenCalledWith(300)
+    fireEvent.click(screen.getByRole('button', { name: 'Zoom in source filmstrip' }))
+    expect(view.getByTestId('source-full-filmstrip')).toBeInTheDocument()
+    expect(view.getByTestId('source-filmstrip-zoom-track')).toBeInTheDocument()
+  })
+
   it('previews the inclusive final frame for an exclusive Out and supports keyboard steps', () => {
     const onSeek = vi.fn()
     const onPreview = vi.fn()

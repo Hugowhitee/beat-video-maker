@@ -299,6 +299,22 @@ async function main() {
         programBox.height < 135 || programBox.width < 240) {
         throw new Error(`Master clipped or Program collapsed at ${viewport.width}×${viewport.height}: ${JSON.stringify({ outputBox, programBox })}`)
       }
+      // Actual Chrome geometry: the plugin editor and Input/Auto section
+      // must be reachable without pushing the post-master Output off screen.
+      const inputSection = desktopPage.getByTestId('master-auto-level-section')
+      await inputSection.scrollIntoViewIfNeeded()
+      const trim = inputSection.getByRole('slider', { name: 'Input trim' })
+      const autoLevelButton = inputSection.getByRole('button', { name: 'Auto level' })
+      const trimBox = await trim.boundingBox()
+      const autoLevelBox = await autoLevelButton.boundingBox()
+      const stillFixedOutputBox = await output.boundingBox()
+      if (!trimBox || !autoLevelBox || !stillFixedOutputBox ||
+        trimBox.width < 80 || trimBox.x < 0 || trimBox.x + trimBox.width > viewport.width + 2 ||
+        autoLevelBox.x < 0 || autoLevelBox.x + autoLevelBox.width > viewport.width + 2 ||
+        autoLevelBox.y + autoLevelBox.height > stillFixedOutputBox.y + 2 ||
+        stillFixedOutputBox.y + stillFixedOutputBox.height > viewport.height + 2) {
+        throw new Error(`Master plugin/Auto level layout clipped at ${viewport.width}×${viewport.height}: ${JSON.stringify({ trimBox, autoLevelBox, stillFixedOutputBox })}`)
+      }
       await desktopPage.getByRole('tab', { name: 'Color' }).click()
       const grade = desktopPage.getByTestId('color-grading-dock')
       await grade.waitFor({ state: 'attached' })

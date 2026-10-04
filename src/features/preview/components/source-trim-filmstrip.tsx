@@ -24,6 +24,7 @@ interface SourceTrimFilmstripProps {
 }
 
 const SLOT_COUNT = 14
+const OVERVIEW_SLOTS = 18
 const ZOOM_LEVELS = [1, 2, 4, 8, 16, 32] as const
 
 /**
@@ -44,6 +45,7 @@ export function SourceTrimFilmstrip({
   onChangeOut,
 }: SourceTrimFilmstripProps) {
   const ref = useRef<HTMLDivElement>(null)
+  const fullSourceRef = useRef<HTMLDivElement>(null)
   const [zoomIndex, setZoomIndex] = useState(0)
   const [focus, setFocus] = useState<Boundary>('in')
   const zoom = ZOOM_LEVELS[zoomIndex] ?? 1
@@ -78,7 +80,25 @@ export function SourceTrimFilmstrip({
       ),
     [safeFps, totalFrames, window],
   )
-  const targetFrameIndices = useMemo(() => Array.from(new Set(slots)), [slots])
+  const overviewSlots = useMemo(
+    () =>
+      Array.from({ length: OVERVIEW_SLOTS }, (_, slot) =>
+        Math.max(
+          0,
+          Math.min(
+            Math.ceil(totalFrames / safeFps) - 1,
+            Math.floor(((slot + 0.5) / OVERVIEW_SLOTS) * (totalFrames / safeFps)),
+          ),
+        ),
+      ),
+    [safeFps, totalFrames],
+  )
+  // Reuse the existing one-frame-per-second cache for both views. The full
+  // source never disappears or gets destructively cropped when zoom changes.
+  const targetFrameIndices = useMemo(
+    () => Array.from(new Set([...overviewSlots, ...slots])),
+    [overviewSlots, slots],
+  )
   const priorityWindow = useMemo(() => ({
     startTime: window.start / safeFps,
     endTime: window.end / safeFps,
@@ -100,6 +120,19 @@ export function SourceTrimFilmstrip({
   const outPct = framePercentInSourceWindow(window, to)
   const leftDim = Math.min(inPct, outPct)
   const rightDim = 100 - Math.max(inPct, outPct)
+  const fullInPct = ((inPoint ?? 0) / totalFrames) * 100
+  const fullOutPct = ((outPoint ?? totalFrames) / totalFrames) * 100
+  const visibleWindowLeftPct = (window.start / totalFrames) * 100
+  const visibleWindowWidthPct = ((window.end - window.start) / totalFrames) * 100
+
+  const focusOverviewAt = (clientX: number) => {
+    const bounds = fullSourceRef.current?.getBoundingClientRect()
+    if (!bounds || bounds.width <= 0) return
+    const ratio = Math.max(0, Math.min(1, (clientX - bounds.left) / bounds.width))
+    const frame = Math.min(totalFrames - 1, Math.round(ratio * (totalFrames - 1)))
+    setFocusFrame(frame)
+    onSeek(frame)
+  }
 
   const frameFromPointer = (clientX: number, exclusiveEnd = false) => {
     const bounds = ref.current?.getBoundingClientRect()
@@ -230,6 +263,52 @@ export function SourceTrimFilmstrip({
             onClick={() => setZoomIndex((previous) => Math.min(ZOOM_LEVELS.length - 1, previous + 1))}
           ><Plus className="h-4 w-4" /></Button>
         </div>
+      </div>
+      <div className="flex items-center justify-between gap-2 font-mono text-xs text-muted-foreground">
+        <span>Full source · unchanged</span>
+        <span>{(totalFrames / safeFps).toFixed(2)}s</span>
+      </div>
+      <div
+        ref={fullSourceRef}
+        role="group"
+        aria-label="Full original source filmstrip"
+        tabIndex={0}
+        data-testid="source-full-filmstrip"
+        className="relative h-9 cursor-crosshair touch-pan-y select-none overflow-hidden rounded-sm border border-border bg-muted"
+        onPointerDown={(event) => focusOverviewAt(event.clientX)}
+        onKeyDown={(event) => {
+          if (event.key !== 'Home' && event.key !== 'End') return
+          event.preventDefault()
+          const frame = event.key === 'Home' ? 0 : totalFrames - 1
+          setFocusFrame(frame)
+          onSeek(frame)
+        }}
+      >
+        <div className="pointer-events-none absolute inset-0 flex">
+          {overviewSlots.map((index, slot) => (
+            <div key={slot} className="min-w-0 flex-1 border-r border-background/30">
+              {frameUrls.get(index) ? (
+                <img src={frameUrls.get(index)} alt="" draggable={false} className="h-full w-full object-cover" />
+              ) : (
+                <div aria-hidden="true" className="h-full w-full bg-muted" />
+              )}
+            </div>
+          ))}
+        </div>
+        {/* Source In/Out remain visible in the full, uncut context. */}
+        <div className="pointer-events-none absolute inset-y-0 left-0 bg-black/45"
+          style={{ width: fullInPct + '%' }} />
+        <div className="pointer-events-none absolute inset-y-0 right-0 bg-black/45"
+          style={{ width: (100 - fullOutPct) + '%' }} />
+        <div className="pointer-events-none absolute inset-y-0 border-x-2 border-primary"
+          style={{
+            left: visibleWindowLeftPct + '%',
+            width: visibleWindowWidthPct + '%',
+            backgroundColor: 'rgba(255,255,255,0.04)',
+          }} />
+      </div>
+      <div className="text-xs font-medium text-foreground">
+        Precision range <span className="font-mono text-muted-foreground">{zoom}×</span>
       </div>
       <div
         ref={ref}

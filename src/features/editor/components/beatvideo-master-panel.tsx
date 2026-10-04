@@ -846,9 +846,7 @@ export function BeatvideoMasterPanel() {
               </div>
             </PopoverContent>
           </Popover>
-          <div className="mt-[6px] text-[10px] leading-3 text-muted-foreground">
-            Finish the beat, then export.
-          </div>
+
           </div>
           <button
             type="button"
@@ -861,7 +859,7 @@ export function BeatvideoMasterPanel() {
           </button>
         </div>
 
-        <div className="absolute left-5 top-[50px] text-[9px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+        <div className="absolute left-5 top-[50px] text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
           Presets
         </div>
         <div className="studio-segmented absolute left-5 right-5 top-[68px] grid grid-cols-3 sm:grid-cols-6">
@@ -871,7 +869,7 @@ export function BeatvideoMasterPanel() {
               type="button"
               onClick={() => applyPreset(preset.id)}
               aria-pressed={activeBuiltInPresetId === preset.id}
-              className="studio-segment h-7 min-w-0 px-1 text-[9px] font-medium"
+              className="studio-segment h-8 min-w-0 px-1 text-[11px] font-medium"
               title={preset.description}
             >
               <span className="truncate">{preset.label}</span>
@@ -881,63 +879,9 @@ export function BeatvideoMasterPanel() {
         <div className="absolute bottom-0 left-5 right-5 h-px bg-border" aria-hidden="true" />
       </div>
 
-      <div className="relative h-[144px] shrink-0">
-        <div className="absolute left-5 top-[15px] text-[9px] font-semibold uppercase leading-[11px] tracking-[0.12em] text-muted-foreground">
-          Input
-        </div>
-        <div className="absolute left-5 top-[36px] text-[20px] font-semibold leading-6 tabular-nums text-foreground">
-          {resolved.inputGainDb >= 0 ? '+' : ''}{resolved.inputGainDb.toFixed(1)} dB
-        </div>
-
-        <input
-          type="range"
-          min={-12}
-          max={12}
-          step={0.1}
-          value={resolved.inputGainDb}
-          onPointerDown={beginGesture}
-          onPointerUp={endGesture}
-          onPointerCancel={endGesture}
-          onChange={(event) => {
-            setAutoLevelResult(null)
-            patchMaster({ enabled: true, inputGainDb: Number(event.target.value) })
-          }}
-          className="studio-master-input-range absolute left-5 top-[74px] h-6 w-[300px]"
-          style={{
-            background: `linear-gradient(to right, #242724 0 ${Math.max(0, Math.min(100, ((resolved.inputGainDb + 12) / 24) * 100))}%, #c7cac4 ${Math.max(0, Math.min(100, ((resolved.inputGainDb + 12) / 24) * 100))}% 100%)`,
-          }}
-          aria-label="Input trim"
-        />
-        <Button
-          type="button"
-          size="sm"
-          className="studio-primary-action absolute left-[328px] top-[61px] h-8 w-28 px-0"
-          disabled={autoLeveling}
-          onClick={() => void autoLevel()}
-        >
-          {autoLeveling ? 'Analyzing…' : 'Auto level'}
-        </Button>
-
-        {autoLevelResult ? (
-          <div
-            className="absolute left-5 top-[102px] max-w-[440px] font-mono text-[9px] leading-[17px] text-muted-foreground"
-            data-auto-level-result
-          >
-            <div>
-              Source {autoLevelResult.rmsDb.toFixed(1)} dBFS
-              {'  →  '}
-              Trim {autoLevelResult.inputGainDb >= 0 ? '+' : ''}
-              {autoLevelResult.inputGainDb.toFixed(1)} dB
-              {'  →  '}
-              Peak headroom {Math.max(0, -autoLevelResult.projectedPeakDb).toFixed(1)} dB
-            </div>
-          </div>
-        ) : null}
-      </div>
-
       <div className="relative h-[246px] shrink-0">
-        <div className="absolute left-5 top-[8px] text-[9px] font-semibold uppercase leading-[11px] tracking-[0.14em] text-muted-foreground">
-          Inserts
+        <div className="absolute left-5 top-[8px] text-[11px] font-semibold uppercase leading-[11px] tracking-[0.14em] text-muted-foreground">
+          Plugins
         </div>
         <div className="absolute left-5 right-5 top-[30px] h-[216px]">
           {Array.from({ length: MAX_MASTER_SLOTS }, (_, index) => {
@@ -1115,7 +1059,7 @@ export function BeatvideoMasterPanel() {
                   className="block text-[9px] font-semibold leading-[11px] text-muted-foreground"
                   title="Compressor advanced controls"
                 >
-                  Selected insert · Compressor
+                  Compressor · Advanced
                 </button>
               </PopoverTrigger>
               <PopoverContent align="start" sideOffset={8} className="w-[440px] p-3">
@@ -1256,6 +1200,66 @@ export function BeatvideoMasterPanel() {
           </div>
         ) : null}
 
+      </div>
+
+      {/* Gain staging is last in the plugin-workflow scroll area, while
+          the post-master Output and real meter stay visible below. */}
+      <div
+        className="shrink-0 border-t border-border px-5 py-4"
+        data-testid="master-auto-level-section"
+      >
+        <div className="flex min-w-0 flex-wrap items-center justify-between gap-3">
+          <div>
+            <div className="text-xs font-semibold text-foreground">Auto level</div>
+            <div className="mt-1 text-xs text-muted-foreground">Input trim · before plugins</div>
+          </div>
+          <Button
+            type="button"
+            size="sm"
+            className="studio-primary-action h-9 shrink-0 px-3 text-xs"
+            disabled={autoLeveling}
+            onClick={() => void autoLevel()}
+          >
+            {autoLeveling ? 'Analyzing…' : 'Auto level'}
+          </Button>
+        </div>
+        <div className="mt-3 flex min-w-0 items-center gap-3">
+          <input
+            type="range"
+            min={-12}
+            max={12}
+            step={0.1}
+            value={resolved.inputGainDb}
+            onPointerDown={beginGesture}
+            onPointerUp={endGesture}
+            onPointerCancel={endGesture}
+            onChange={(event) => {
+              setAutoLevelResult(null)
+              patchMaster({ enabled: true, inputGainDb: Number(event.target.value) })
+            }}
+            className="studio-master-input-range h-7 min-w-0 flex-1"
+            style={{
+              background: `linear-gradient(to right, #242724 0 ${Math.max(0, Math.min(100, ((resolved.inputGainDb + 12) / 24) * 100))}%, #c7cac4 ${Math.max(0, Math.min(100, ((resolved.inputGainDb + 12) / 24) * 100))}% 100%)`,
+            }}
+            aria-label="Input trim"
+          />
+          <output className="w-16 shrink-0 text-right font-mono text-xs font-semibold tabular-nums text-foreground">
+            {resolved.inputGainDb >= 0 ? '+' : ''}{resolved.inputGainDb.toFixed(1)} dB
+          </output>
+        </div>
+        {autoLevelResult && (
+          <div
+            className="mt-3 border-t border-border pt-2 font-mono text-xs leading-5 text-muted-foreground"
+            data-auto-level-result
+          >
+            Source {autoLevelResult.rmsDb.toFixed(1)} dBFS
+            {' → '}
+            Trim {autoLevelResult.inputGainDb >= 0 ? '+' : ''}
+            {autoLevelResult.inputGainDb.toFixed(1)} dB
+            {' → '}
+            Peak headroom {Math.max(0, -autoLevelResult.projectedPeakDb).toFixed(1)} dB
+          </div>
+        )}
       </div>
 
       </div>
