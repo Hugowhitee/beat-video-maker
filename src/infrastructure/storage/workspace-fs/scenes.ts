@@ -13,7 +13,7 @@
 import type { SceneCut } from '@/infrastructure/analysis/scene-detection-types'
 import { createLogger } from '@/shared/logging/logger'
 
-import { writeAiOutput, deleteAiOutput } from './ai-outputs'
+import { writeAiOutput, readAiOutput, deleteAiOutput } from './ai-outputs'
 import type { ScenesPayload, SceneCutPayload } from './ai-outputs'
 
 const logger = createLogger('WorkspaceFS:Scenes')
@@ -87,6 +87,24 @@ export async function saveScenes(input: SaveScenesInput): Promise<SavedScenes> {
     logger.error(`saveScenes(${input.mediaId}) failed`, error)
     throw new Error(`Failed to save scenes: ${input.mediaId}`)
   }
+}
+
+
+/** Store non-destructive manual review edits without modifying detector evidence. */
+export async function saveSceneReview(
+  mediaId: string,
+  review: ScenesPayload['review'],
+): Promise<void> {
+  const source = await readAiOutput(mediaId, 'scenes')
+  if (!source) throw new Error('Detect this footage before reviewing cuts')
+  await writeAiOutput({
+    mediaId,
+    kind: 'scenes',
+    service: source.service,
+    model: source.model,
+    params: source.params,
+    data: { ...source.data, review },
+  })
 }
 
 export async function deleteScenes(mediaId: string): Promise<void> {
