@@ -345,7 +345,7 @@ export function BeatvideoMasterPanel() {
           ) === current,
       )?.id ?? null
     )
-  }, [busAudioEq, resolved]
+  }, [busAudioEq, resolved])
 
   const availableProcessors = useMemo(
     () => SLOT_META.filter((meta) => !resolved.order.includes(meta.id)),
