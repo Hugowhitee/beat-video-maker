@@ -1,6 +1,6 @@
 import type { VerificationModel } from './verification/registry'
 
-export const SCENE_DETECTOR_VERSION = 2
+export const SCENE_DETECTOR_VERSION = 3
 
 export type SceneDetectionMethod = 'histogram' | 'adaptive'
 

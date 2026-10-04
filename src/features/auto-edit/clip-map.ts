@@ -10,6 +10,20 @@ import { resolveMediaUrl } from './deps/editor-runtime-contract'
 
 const FALLBACK_VIDEO_FPS = 30
 const MIN_AUTO_EDIT_SHOT_SECONDS = 0.18
+const HISTOGRAM_FALLBACK_INTERVAL_MS = 250
+
+// Adaptive per-frame classification is more reliable for music-video motion
+// and has source-frame timestamps; never silently invoke the large VLM verifier.
+export function isCurrentAutoEditSceneCache(data: {
+  method: string
+  detectorVersion: number
+  sampleIntervalMs?: number
+  verificationModel?: string
+}): boolean {
+  if (data.detectorVersion !== SCENE_DETECTOR_VERSION || data.verificationModel) return false
+  return data.method === 'adaptive' ||
+    (data.method === 'histogram' && data.sampleIntervalMs === HISTOGRAM_FALLBACK_INTERVAL_MS)
+}
 
 type AutoEditMedia = Pick<
   MediaMetadata,
@@ -109,7 +123,7 @@ export function buildClipSourceFromSceneCuts(
 
 async function loadCachedCuts(mediaId: string): Promise<SceneCutLike[] | null> {
   const envelope = await readAiOutput(mediaId, 'scenes').catch(() => undefined)
-  if (!envelope) return null
+  if (!envelope || !isCurrentAutoEditSceneCache(envelope.data)) return null
   return envelope.data.cuts
 }
 
@@ -166,23 +180,46 @@ async function detectCutsForMedia(params: {
 
   try {
     const { detectScenes } = await importSceneDetection()
-    const cuts = await detectScenes(video, {
-      method: 'histogram',
-      mediaId: media.id,
-      sourceFps: media.fps || FALLBACK_VIDEO_FPS,
-      signal,
-      onProgress: (progress) => onAnalysisProgress?.(progress.percent),
-    })
+    let method: 'adaptive' | 'histogram' = 'adaptive'
+    let cuts: Awaited<ReturnType<typeof detectScenes>>
+    const onProgress = (progress: {percent: number}) => onAnalysisProgress?.(progress.percent)
+    try {
+      cuts = await detectScenes(video, {
+        method: 'adaptive',
+        // The deterministic frame analyzer needs no AI model download.
+        verificationModel: null,
+        mediaId: media.id,
+        sourceFps: media.fps || FALLBACK_VIDEO_FPS,
+        signal,
+        onProgress,
+      })
+    } catch (error) {
+      if (signal?.aborted || (error instanceof DOMException && error.name === 'AbortError')) {
+        throw error
+      }
+      // Unsupported codecs/WebCodecs: keep footage usable via the existing
+      // fast histogram detector; cache the actual method, not the desired one.
+      method = 'histogram'
+      cuts = await detectScenes(video, {
+        method: 'histogram',
+        sampleIntervalMs: HISTOGRAM_FALLBACK_INTERVAL_MS,
+        verificationModel: null,
+        mediaId: media.id,
+        sourceFps: media.fps || FALLBACK_VIDEO_FPS,
+        signal,
+        onProgress,
+      })
+    }
 
-    // Save even an empty result: "one continuous shot" is useful evidence and
-    // should not force a repeat analysis every time Auto Arrange is pressed.
+    // An empty result is valid: one continuous shot. Persist detector revision
+    // and exact method so reopening never silently mixes old/coarse timings.
     await saveScenes({
       mediaId: media.id,
-      service: 'scene-detect-histogram',
-      model: 'histogram',
-      method: 'histogram',
+      service: `scene-detect-${method}`,
+      model: method,
+      method,
       detectorVersion: SCENE_DETECTOR_VERSION,
-      sampleIntervalMs: 250,
+      sampleIntervalMs: method === 'histogram' ? HISTOGRAM_FALLBACK_INTERVAL_MS : undefined,
       cuts,
     })
 
