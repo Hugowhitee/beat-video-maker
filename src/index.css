@@ -421,8 +421,11 @@ body.canvas-translate-cursor-not-allowed * {
   --sidebar-ring: #c7e85a;
   --studio-positive: #93b82f;
   --studio-warning: #a46f22;
+  /* One readable text scale for controls throughout the producer shell. */
+  --studio-control-font-size: 0.75rem;
+  --studio-segment-font-size: 0.6875rem;
   color-scheme: light;
-  font-family: Inter, 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-family: 'IBM Plex Sans', Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
 }
 
 [data-studio-v2='true'] .studio-topbar {
@@ -430,6 +433,7 @@ body.canvas-translate-cursor-not-allowed * {
 }
 
 [data-studio-v2='true'] .studio-topbar-button {
+  font-size: var(--studio-control-font-size);
   border: 1px solid transparent;
   border-radius: 4px;
   background: transparent;
@@ -445,6 +449,7 @@ body.canvas-translate-cursor-not-allowed * {
 }
 
 [data-studio-v2='true'] .studio-export-button {
+  font-size: var(--studio-control-font-size);
   border: 0;
   border-radius: 4px;
   background: #c7e85a;
@@ -490,6 +495,7 @@ body.canvas-translate-cursor-not-allowed * {
 }
 
 [data-studio-v2='true'] .studio-segment {
+  font-size: var(--studio-segment-font-size);
   position: relative;
   border: 0;
   border-radius: 2px;
@@ -592,7 +598,7 @@ body.canvas-translate-cursor-not-allowed * {
   border-radius: 3px;
   background: #242724;
   color: #f6f7f3;
-  font-size: 10px;
+  font-size: var(--studio-control-font-size);
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.04em;
@@ -622,12 +628,34 @@ body.canvas-translate-cursor-not-allowed * {
   border-radius: 4px;
   background: #d9dbd6;
   color: #242724;
-  font-size: 10px;
+  font-size: var(--studio-control-font-size);
   font-weight: 600;
 }
 
 [data-studio-v2='true'] .studio-secondary-action:hover {
   background: #cfd2cc;
+}
+
+/* Shared keyboard and disabled behavior for the same action semantics. */
+[data-studio-v2='true'] :is(
+  .studio-topbar-button,
+  .studio-export-button,
+  .studio-primary-action,
+  .studio-secondary-action,
+  .studio-segment
+):focus-visible {
+  outline: 2px solid var(--ring);
+  outline-offset: 2px;
+}
+
+[data-studio-v2='true'] :is(
+  .studio-export-button,
+  .studio-primary-action,
+  .studio-secondary-action,
+  .studio-segment
+):disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
 }
 
 [data-studio-v2='true'] [data-studio-timeline-toolbar] button,
