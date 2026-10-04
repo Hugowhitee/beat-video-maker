@@ -1,3 +1,3 @@
-/** Browser-only thumbnail hook for the Source preview. */
-export { useFilmstrip } from '@/features/timeline/contracts/filmstrip'
-export type { FilmstripFrame } from '@/features/timeline/contracts/filmstrip'
+/** Browser-only thumbnail hook; local facade for the Source preview. */
+export { useFilmstrip } from './filmstrip-contract'
+export type { FilmstripFrame } from './filmstrip-contract'
