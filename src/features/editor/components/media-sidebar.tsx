@@ -1207,6 +1207,14 @@ export const MediaSidebar = memo(function MediaSidebar({
       isSidebarTabVisibleForWorkspace(id, workspace),
   )
 
+  const primaryVisualTabs = categories.filter(({ id }) =>
+    id === 'media' || id === 'text' || id === 'effects' || id === 'transitions',
+  )
+  const secondaryVisualTabs = categories.filter(({ id }) =>
+    id === 'lottie' || id === 'transcript' || id === 'ai',
+  )
+  const selectedSecondaryTab = secondaryVisualTabs.find(({ id }) => id === activeTab)
+
   const producerShell =
     workspace === 'beat' ||
     workspace === 'edit' ||
@@ -1484,28 +1492,53 @@ export const MediaSidebar = memo(function MediaSidebar({
             </div>
 
             {producerShell && categories.length > 1 ? (
-              <div className="shrink-0 border-b border-border px-5 py-3">
-                <div
-                  className="studio-segmented flex h-8 w-full min-w-max"
-                  role="tablist"
-                  aria-label="Visual tools"
-                >
-                  {categories.map(({ id, label }) => (
-                    <button
-                      key={id}
-                      type="button"
-                      role="tab"
-                      aria-selected={activeTab === id}
-                      aria-pressed={activeTab === id}
-                      onClick={() => {
-                        setActiveTab(id)
-                        if (id === 'effects') triggerPreviews()
-                      }}
-                      className="studio-segment h-7 min-w-[78px] flex-1 px-2 text-[9px] font-medium"
-                    >
-                      {label}
-                    </button>
-                  ))}
+              <div className="shrink-0 border-b border-border px-4 py-2.5">
+                <div className="flex min-w-0 items-center gap-1.5">
+                  <div
+                    className="studio-segmented grid h-8 min-w-0 flex-1 grid-cols-4"
+                    role="tablist"
+                    aria-label="Visual tools"
+                  >
+                    {primaryVisualTabs.map(({ id, label }) => (
+                      <button
+                        key={id}
+                        type="button"
+                        role="tab"
+                        aria-selected={activeTab === id}
+                        onClick={() => {
+                          setActiveTab(id)
+                          if (id === 'effects') triggerPreviews()
+                        }}
+                        className="studio-segment h-7 min-w-0 truncate px-1 text-[9px] font-medium"
+                      >
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                  {secondaryVisualTabs.length > 0 ? (
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <button
+                          type="button"
+                          aria-label="More Visual tools"
+                          className={cn(
+                            'flex h-8 max-w-[92px] shrink-0 items-center gap-1 border border-border px-2 text-[10px] font-medium hover:bg-[#d1d4ce]',
+                            selectedSecondaryTab && 'bg-[#c9cec6] text-foreground',
+                          )}
+                        >
+                          <span className="min-w-0 truncate">{selectedSecondaryTab?.label ?? 'More'}</span>
+                          <ChevronDown className="h-3 w-3 shrink-0" />
+                        </button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        {secondaryVisualTabs.map(({ id, label }) => (
+                          <DropdownMenuItem key={id} onSelect={() => setActiveTab(id)}>
+                            {label}
+                          </DropdownMenuItem>
+                        ))}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  ) : null}
                 </div>
               </div>
             ) : null}
