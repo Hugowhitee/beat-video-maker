@@ -64,6 +64,7 @@ import {
   getDefaultGeneratedLayerDurationInFrames,
   resolvePhotoPublishingDurationInFrames,
   computeInitialTransform,
+  buildBeatvideoCoverLayoutItems,
 } from '@/features/editor/deps/timeline-utils'
 import {
   addItemsOnNewTracks,
@@ -392,17 +393,35 @@ const VISIBLE_TEXT_PRESET_IDS = new Set<TextStylePreset['id']>([
 ])
 
 function renderProducerTextPreview(preset: (typeof PRODUCER_TEXT_PRESETS)[number]) {
-  const stylePreset = TEXT_STYLE_PRESETS.find((candidate) => candidate.id === preset.stylePresetId)
-  if (!stylePreset) return renderTextTemplatePreview()
-
-  const sample =
-    preset.id === 'beat-title'
-      ? { title: 'BEAT TITLE', subtitle: 'PROD. NAME' }
-      : preset.id === 'lower-third'
-        ? { title: 'PROD. NAME', subtitle: 'BEAT BY' }
-        : { title: 'PROD. NAME' }
-
-  return renderTextTemplatePreview(stylePreset, sample)
+  const displayFont = { fontFamily: "'Staatliches', Impact, sans-serif" }
+  const signatureFont = { fontFamily: "'Tritopani', 'Caveat', cursive" }
+  return (
+    <div className="relative aspect-video w-full overflow-hidden border border-[#474d46] bg-[#252923] text-white">
+      {preset.id === 'corner-mark' && (
+        <span className="absolute right-[7%] top-[9%] text-[9px] leading-none tracking-[0.04em]" style={displayFont}>
+          PROD. NAME
+        </span>
+      )}
+      {preset.id === 'lower-third' && (
+        <div className="absolute bottom-[13%] left-[8%] flex flex-col items-start">
+          <span className="text-[13px] leading-none tracking-[0.01em]" style={displayFont}>PROD. NAME</span>
+          <span className="mt-0.5 text-[10px] leading-none text-[#e9f0df]" style={signatureFont}>Beat by Hugo White</span>
+        </div>
+      )}
+      {preset.id === 'center-stamp' && (
+        <span className="absolute inset-0 flex items-center justify-center text-[17px] tracking-[0.025em]" style={displayFont}>
+          HUGOWHITE
+        </span>
+      )}
+      {preset.id === 'beat-title' && (
+        <div className="absolute inset-x-[5%] top-[9%] flex flex-col items-center">
+          <span className="text-[20px] leading-[0.9] tracking-[-0.025em]" style={displayFont}>GLOCK IT</span>
+          <span className="mt-[5%] text-[9px] leading-none text-[#ff5a1f]" style={displayFont}>KEVIN TYPE BEAT</span>
+          <span className="mt-0.5 text-[10px] leading-none text-white" style={signatureFont}>Hugo White</span>
+        </div>
+      )}
+    </div>
+  )
 }
 
 const REACTIVE_EFFECT_PRESET_IDS = new Set<BeatvideoReactiveGraphicPresetId>([
