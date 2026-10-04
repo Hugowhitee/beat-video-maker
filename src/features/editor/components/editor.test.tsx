@@ -557,7 +557,7 @@ describe('LoadedEditor migration metadata refresh', () => {
     expect(screen.queryByRole('button', { name: 'Timeline' })).not.toBeInTheDocument()
     expect(dock.querySelectorAll('button')).toHaveLength(3)
 
-    fireEvent.click(screen.getByRole('button', { name: 'Media' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Add' }))
     expect(screen.getByTestId('media-sidebar')).toHaveAttribute('data-mobile', 'true')
     expect(screen.getByTestId('mobile-playback-controls')).toHaveAttribute(
       'data-total-frames',
@@ -572,7 +572,7 @@ describe('LoadedEditor migration metadata refresh', () => {
     expect(screen.getByTestId('preview-area')).toHaveAttribute('data-compact', 'true')
     expect(screen.getByTestId('timeline')).toHaveAttribute('data-compact', 'true')
 
-    fireEvent.click(screen.getByRole('button', { name: 'Inspector' }))
+    fireEvent.click(screen.getByRole('button', { name: 'Edit' }))
     expect(screen.getByTestId('properties-sidebar')).toHaveAttribute('data-mobile', 'true')
     expect(screen.getByTestId('preview-area')).toBeInTheDocument()
 
