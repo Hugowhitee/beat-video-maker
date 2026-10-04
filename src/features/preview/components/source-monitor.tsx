@@ -1259,7 +1259,7 @@ function SourcePlaybackControls({
             const accepted = clampDraggedSourceOutPoint(frame, store.inPoint, durationInFrames)
             store.setOutPoint(accepted)
             return accepted
-          }
+          }}
         />
       )}
       {/* Seek bar row with I/O region above and editing buttons */}
