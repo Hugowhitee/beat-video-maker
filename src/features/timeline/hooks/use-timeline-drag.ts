@@ -457,7 +457,7 @@ export function useTimelineDrag(
   // Track Alt key state for duplication mode (dynamic toggle during drag)
   const isAltDragRef = useRef(false)
   // Ctrl/Cmd is the Beatvideo-friendly temporary snap bypass. Alt is already
-  // reserved by FreeCut for duplicate-drag, so overloading it would be ambiguous.
+  // reserved for duplicate-drag, so overloading it would be ambiguous.
   const snapBypassRef = useRef(false)
 
   const dragInputRef = useRef<TimelineDragInput>({ mode: 'mouse', pointerId: null })

@@ -1281,7 +1281,7 @@ export const MediaSidebar = memo(function MediaSidebar({
         mobile || studioTaskColumn ? 'w-full flex-1' : 'flex-shrink-0',
       )}
     >
-      {/* The generic FreeCut icon rail remains available outside the focused
+      {/* The advanced editor icon rail remains available outside the focused
           Beatvideo producer flow. Producer workspaces use labeled tabs instead. */}
       {!mobile && !producerShell ? (
       <div

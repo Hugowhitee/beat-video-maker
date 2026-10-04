@@ -907,7 +907,7 @@ export const EffectsSection = memo(function EffectsSection({
     }
   }, [pickerOpen, closePicker])
 
-  // Put common beat-video effects first without hiding the full FreeCut catalog.
+  // Put common beat-video effects first without hiding the full editor catalog.
   // Search always covers the complete catalog; the default picker avoids
   // repeating quick effects again inside their normal category.
   const quickEffectDefinitions = useMemo(() => {
