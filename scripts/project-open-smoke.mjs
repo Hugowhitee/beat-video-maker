@@ -412,7 +412,8 @@ async function main() {
       const shotState = await shotBin.innerText().catch(() => '(shot bin unavailable)')
       throw new Error(`First detected shot did not become actionable. Shot bin:\n${shotState}\n\n${error instanceof Error ? error.message : String(error)}`)
     }
-    const originalShotText = await firstShot.innerText()
+    const firstShotRange = shotBin.locator('[data-beatvideo-shot-open]').first()
+    const originalShotText = await firstShotRange.innerText()
     await firstShot.click()
 
     const sourceMonitor = desktopPage.getByTestId('source-monitor')
@@ -437,7 +438,7 @@ async function main() {
     const saveRange = desktopPage.getByRole('button', { name: 'Save In/Out' })
     await saveRange.click({ timeout: 10_000 })
 
-    const trimmedShotText = await firstShot.innerText()
+    const trimmedShotText = await firstShotRange.innerText()
     if (trimmedShotText === originalShotText) {
       throw new Error(`Shot review did not persist the Source trim: ${trimmedShotText}`)
     }
@@ -501,7 +502,8 @@ async function main() {
     await reopenedShotBin.waitFor({ state: 'visible', timeout: 30_000 })
     const reopenedFirstShot = reopenedShotBin.getByRole('button', { name: /^Shot 1 from .* Open in Source\.$/ }).first()
     await reopenedFirstShot.waitFor({ state: 'visible', timeout: 20_000 })
-    const reopenedShotText = await reopenedFirstShot.innerText()
+    const reopenedShotRange = reopenedShotBin.locator('[data-beatvideo-shot-open]').first()
+    const reopenedShotText = await reopenedShotRange.innerText()
     if (reopenedShotText !== trimmedShotText) {
       throw new Error(
         `Saved shot review changed after reopen. Before: ${JSON.stringify(trimmedShotText)} After: ${JSON.stringify(reopenedShotText)}`,
