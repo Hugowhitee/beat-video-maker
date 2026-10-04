@@ -19,6 +19,7 @@ import { useExclusiveCanvasEditor } from '../hooks/use-exclusive-canvas-editor'
 import { TransformGizmo } from './transform-gizmo'
 import { GroupGizmo } from './group-gizmo'
 import { SelectableItem } from './selectable-item'
+import { InlineCanvasTextEditor } from './inline-canvas-text-editor'
 import { MotionPathOverlay } from './motion-path-overlay'
 import { SnapGuides } from './snap-guides'
 import {
@@ -53,7 +54,7 @@ import {
   type AutoKeyframeOperation,
 } from '@/features/preview/deps/keyframes'
 import type { ItemKeyframes, SpatialBezierTangents } from '@/types/keyframe'
-import type { TimelineItem } from '@/types/timeline'
+import type { TextItem, TimelineItem } from '@/types/timeline'
 import type { BeatvideoMusicAnalysis } from '@/types/beatvideo'
 import type { BeatvideoProjectMode } from '@/types/project'
 import type { BoundingBox, CoordinateParams, Transform, Point } from '../types/gizmo'
@@ -361,6 +362,15 @@ export function GizmoOverlay({
     spatialEffect: isSpatialEffectEditing,
     active: isExclusiveCanvasEditorActive,
   } = useExclusiveCanvasEditor()
+  const [editingTextItemId, setEditingTextItemId] = useState<string | null>(null)
+  const beginTextEditing = useCallback(
+    (itemId: string) => {
+      if (isPlaying || isExclusiveCanvasEditorActive) return
+      selectItems([itemId])
+      setEditingTextItemId(itemId)
+    },
+    [isExclusiveCanvasEditorActive, isPlaying, selectItems],
+  )
   const startTranslate = useGizmoStore((s) => s.startTranslate)
   const updateInteraction = useGizmoStore((s) => s.updateInteraction)
   const endInteraction = useGizmoStore((s) => s.endInteraction)
@@ -1348,6 +1358,13 @@ export function GizmoOverlay({
     ],
   )
 
+  const editingTextItem = visibleItems.find(
+    (item): item is TextItem => item.id === editingTextItemId && item.type === 'text',
+  )
+  const editingTextResolvedTransform = editingTextItem
+    ? visualTransformsMap.get(editingTextItem.id)
+    : null
+
   // Don't render if no coordinate params (container not measured yet)
   if (!coordParams) {
     return null
@@ -1488,6 +1505,7 @@ export function GizmoOverlay({
                 }}
                 coordParams={coordParams}
                 onSelect={(e) => handleItemClick(item.id, e)}
+                onDoubleClick={item.type === 'text' ? () => beginTextEditing(item.id) : undefined}
                 onDragStart={(e, transform) => handleItemDragStart(item.id, e, transform)}
                 translateBlocked={!!positionLinkFeedback}
                 translateBlockedLabel={positionLinkFeedback?.label}
@@ -1503,6 +1521,11 @@ export function GizmoOverlay({
             item={selectedItems[0]}
             coordParams={coordParams}
             onTransformStart={handleTransformStart}
+            onEditText={
+              selectedItems[0].type === 'text'
+                ? () => beginTextEditing(selectedItems[0]!.id)
+                : undefined
+            }
             onTransformEnd={(transform, operation) =>
               handleTransformEnd(selectedItems[0]!.id, transform, operation)
             }
@@ -1532,6 +1555,20 @@ export function GizmoOverlay({
             }}
           />
         ) : null}
+
+        {/* A direct text edit drafts over the canonical compositor, not a new layer. */}
+        {!isPlaying &&
+          !isExclusiveCanvasEditorActive &&
+          editingTextItem &&
+          editingTextResolvedTransform && (
+            <InlineCanvasTextEditor
+              key={editingTextItem.id}
+              item={editingTextItem}
+              transform={editingTextResolvedTransform}
+              coordParams={coordParams}
+              onFinished={() => setEditingTextItemId(null)}
+            />
+          )}
 
         {/* Snap guides shown during drag */}
         {!isExclusiveCanvasEditorActive && (

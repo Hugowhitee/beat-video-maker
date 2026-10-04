@@ -10,6 +10,7 @@ interface SelectableItemProps {
   coordParams: CoordinateParams
   isSelected?: boolean
   onSelect: (e: React.MouseEvent) => void
+  onDoubleClick?: () => void
   /** Called on mousedown to start dragging immediately */
   onDragStart?: (e: React.MouseEvent, transform: Transform) => void
   /** Linked Position owns translation, but the item remains selectable. */
@@ -30,6 +31,7 @@ export function SelectableItem({
   coordParams,
   isSelected = false,
   onSelect,
+  onDoubleClick,
   onDragStart,
   translateBlocked = false,
   translateBlockedLabel,
@@ -109,7 +111,10 @@ export function SelectableItem({
       aria-label={translateBlocked ? translateBlockedLabel : undefined}
       title={translateBlocked ? translateBlockedLabel : undefined}
       onMouseDown={handleMouseDown}
-      onDoubleClick={(e) => e.stopPropagation()}
+      onDoubleClick={(e) => {
+        e.stopPropagation()
+        onDoubleClick?.()
+      }}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     />
