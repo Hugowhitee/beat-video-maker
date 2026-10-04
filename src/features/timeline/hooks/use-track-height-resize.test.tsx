@@ -35,6 +35,9 @@ function Harness() {
       <button type="button" onMouseDown={(event) => handleTrackResizeStart(event, 'v1')}>
         Resize V1
       </button>
+      <button type="button" onMouseDown={(event) => handleTrackResizeStart(event, 'v1', true)}>
+        Resize producer V1
+      </button>
       <button type="button" onDoubleClick={(event) => handleTrackResizeReset(event, 'v1')}>
         Reset V1
       </button>
@@ -80,6 +83,16 @@ describe('useTrackHeightResize', () => {
 
     const expectedHeight = DEFAULT_TRACK_HEIGHT - 10
     expect(trackHeights()).toEqual([expectedHeight, expectedHeight, expectedHeight])
+  })
+
+  it('resizes producer rows downward from their bottom separator', () => {
+    render(<Harness />)
+    fireEvent.mouseDown(screen.getByRole('button', { name: 'Resize producer V1' }), {
+      clientY: 100,
+    })
+    fireEvent.mouseMove(document, { clientY: 110 })
+    fireEvent.mouseUp(document, { clientY: 110 })
+    expect(trackHeights()[0]).toBe(DEFAULT_TRACK_HEIGHT + 10)
   })
 
   it('resizing is a local view change: no undo entry, project stays clean', () => {

@@ -990,18 +990,12 @@ export const Timeline = memo(function Timeline({
             return (
               <RowFrame
                 key={track.id}
-                onResizeMouseDown={
-                  simplifiedBeatvideoTimeline
-                    ? undefined
-                    : (event) => handleTrackResizeStart(event, track.id)
-                }
-                onResizeDoubleClick={
-                  simplifiedBeatvideoTimeline
-                    ? undefined
-                    : (event) => handleTrackResizeReset(event, track.id)
-                }
+                onResizeMouseDown={(event) =>
+                   handleTrackResizeStart(event, track.id, simplifiedBeatvideoTimeline)
+                 }
+                 onResizeDoubleClick={(event) => handleTrackResizeReset(event, track.id)}
                 resizeHandleLabel={`Resize ${track.name} height`}
-                resizeHandlePosition={getTrackKind(track) === 'video' ? 'top' : 'bottom'}
+                resizeHandlePosition={simplifiedBeatvideoTimeline || getTrackKind(track) === 'audio' ? 'bottom' : 'top'}
               >
                 <TrackHeader
                   track={track}

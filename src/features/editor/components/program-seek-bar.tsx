@@ -1,6 +1,7 @@
 import { memo } from 'react'
 import { usePlaybackStore } from '@/shared/state/playback'
 import { usePreviewBridgeStore } from '@/shared/state/preview-bridge'
+import { useTimelineViewportStore } from '@/features/editor/deps/timeline-store-contract'
 
 function formatClock(frame: number, fps: number): string {
   const seconds = Math.floor(frame / Math.max(1, fps))
@@ -28,9 +29,9 @@ export const ProgramSeekBar = memo(function ProgramSeekBar({
   const seek = (frame: number) => {
     usePlaybackStore.getState().setPreviewFrame(null)
     usePreviewBridgeStore.getState().setDisplayedFrame(null)
-    usePlaybackStore.getState().setCurrentFrame(
-      Math.max(0, Math.min(maxFrame, Math.round(frame))),
-    )
+    const targetFrame = Math.max(0, Math.min(maxFrame, Math.round(frame)))
+    usePlaybackStore.getState().setCurrentFrame(targetFrame)
+    useTimelineViewportStore.getState().requestScrollToFrame(targetFrame)
   }
 
   return (

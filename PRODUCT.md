@@ -223,3 +223,12 @@ The current repository is the product authority. Preserve mature in-repo timelin
 
 Third-party license obligations live in `THIRD_PARTY_NOTICES.md`.
 - **Canvas background:** project canvas/background color is project configuration and belongs in Project settings beside format/output settings. The empty Visual Edit surface must not duplicate it as an Inspector-only control.
+
+
+## Shared editor interaction invariants
+
+- Program seek and transport use canonical playback, clear transient skim state, and reveal the target frame in the existing timeline viewport without changing zoom or adding a second transport.
+- Timecode and frame counts use an explicit labelled format control; clicking the readout does not silently change its meaning.
+- Beat/Visual/Color/Master producer rows retain canonical resize/reset, with bottom-edge dragging growing the row naturally. Height remains non-destructive view state.
+- Detected shots open paused with actual In/Out ranges. Source-shot trim, sequence slip and timeline trim remain distinct operations, with canonical persistence and export owners.
+- Simplified Media/Beat/Extras navigation must not misrepresent compositor stacking order.

@@ -39,28 +39,29 @@ describe('TimecodeDisplay', () => {
   it('keeps the same reserved width when toggling between SMPTE and frames', () => {
     render(<TimecodeDisplay fps={30} totalFrames={1000} />)
 
-    const button = screen.getByRole('button')
-    const [currentTime, , totalTime] = button.querySelectorAll('span')
+    const control = screen.getByRole('combobox', { name: 'Time display format' })
+    const readout = control.previousElementSibling as HTMLElement
+    const [currentTime, , totalTime] = readout.querySelectorAll('span')
 
-    expect(button).toHaveStyle({ width: 'calc(17ch + 0.75rem)' })
-    expect(button).toHaveTextContent('00:00:12')
-    expect(button).toHaveTextContent('00:33:09')
+    expect(readout).toHaveStyle({ width: 'calc(17ch + 0.75rem)' })
+    expect(readout).toHaveTextContent('00:00:12')
+    expect(readout).toHaveTextContent('00:33:09')
     expect(currentTime).toHaveClass('text-foreground')
     expect(currentTime).not.toHaveClass('text-primary')
 
-    fireEvent.click(button)
+    fireEvent.change(control, { target: { value: 'frames' } })
 
-    expect(button).toHaveStyle({ width: 'calc(17ch + 0.75rem)' })
+    expect(readout).toHaveStyle({ width: 'calc(17ch + 0.75rem)' })
     expect(currentTime).not.toHaveStyle({ width: '11ch' })
     expect(totalTime).not.toHaveStyle({ width: '11ch' })
-    expect(button).toHaveTextContent('0012')
-    expect(button).toHaveTextContent('0999')
+    expect(readout).toHaveTextContent('0012')
+    expect(readout).toHaveTextContent('0999')
   })
 
   it('reserves enough width for hour-long SMPTE values', () => {
     render(<TimecodeDisplay fps={30} totalFrames={180_001} />)
 
-    expect(screen.getByRole('button')).toHaveStyle({
+    expect(screen.getByRole('combobox').previousElementSibling).toHaveStyle({
       width: 'calc(23ch + 0.75rem)',
     })
   })
@@ -68,18 +69,18 @@ describe('TimecodeDisplay', () => {
   it('shows the skim preview frame in the timecode readout', () => {
     render(<TimecodeDisplay fps={30} totalFrames={1000} />)
 
-    const button = screen.getByRole('button')
-    expect(button).toHaveTextContent('00:00:12')
+    const readout = screen.getByRole('combobox').previousElementSibling as HTMLElement
+    expect(readout).toHaveTextContent('00:00:12')
 
     usePlaybackStore.getState().setPreviewFrame(48)
 
-    expect(button).toHaveTextContent('00:01:18')
+    expect(readout).toHaveTextContent('00:01:18')
   })
 
   it('prefers the displayed overlay frame when fast scrub owns presentation', () => {
     render(<TimecodeDisplay fps={30} totalFrames={1000} />)
 
-    const button = screen.getByRole('button')
+    const readout = screen.getByRole('combobox').previousElementSibling as HTMLElement
     usePlaybackStore.setState({
       currentFrame: 12,
       currentFrameEpoch: 1,
@@ -88,6 +89,6 @@ describe('TimecodeDisplay', () => {
     })
     usePreviewBridgeStore.getState().setDisplayedFrame(50)
 
-    expect(button).toHaveTextContent('00:01:20')
+    expect(readout).toHaveTextContent('00:01:20')
   })
 })
