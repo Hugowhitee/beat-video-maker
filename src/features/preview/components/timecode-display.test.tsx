@@ -45,6 +45,8 @@ describe('TimecodeDisplay', () => {
     expect(button).toHaveStyle({ width: 'calc(17ch + 0.75rem)' })
     expect(button).toHaveTextContent('00:00:12')
     expect(button).toHaveTextContent('00:33:09')
+    expect(currentTime).toHaveClass('text-foreground')
+    expect(currentTime).not.toHaveClass('text-primary')
 
     fireEvent.click(button)
 
