@@ -51,7 +51,14 @@ function readCompactViewport(mediaMatches: boolean): boolean {
 }
 
 export function useCompactEditorViewport(): boolean {
-  const [compact, setCompact] = useState(false)
+  const [compact, setCompact] = useState(() => {
+    if (typeof window === 'undefined') return false
+    const mediaMatches =
+      typeof window.matchMedia === 'function'
+        ? window.matchMedia(COMPACT_EDITOR_QUERY).matches
+        : false
+    return readCompactViewport(mediaMatches)
+  })
 
   useEffect(() => {
     const query =
