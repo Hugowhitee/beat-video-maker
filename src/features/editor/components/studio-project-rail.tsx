@@ -1,4 +1,4 @@
-import { memo, useEffect, useState } from 'react'
+import { memo, useEffect, useMemo, useState } from 'react'
 import { toast } from 'sonner'
 import { useEditorStore } from '@/shared/state/editor'
 import { useProjectStore } from '@/features/editor/deps/projects-contract'
@@ -56,8 +56,14 @@ export const StudioProjectRail = memo(function StudioProjectRail() {
   const project = useProjectStore((state) => state.currentProject)
   const mediaCount = useMediaLibraryStore((state) => state.mediaItems.length)
   const sequenceCount = project?.timeline?.topLevelSequenceIds?.length ?? 0
-  const sequences = useCompositionsStore((state) =>
-    state.compositions.filter((composition) => composition.editorKind === 'sequence'),
+  // Zustand selectors are consumed through React.useSyncExternalStore. Returning
+  // a freshly-filtered array from the selector creates a new snapshot on every
+  // read and can trigger React's "Maximum update depth exceeded" guard as soon
+  // as the editor mounts. Subscribe to the canonical array, then derive locally.
+  const compositions = useCompositionsStore((state) => state.compositions)
+  const sequences = useMemo(
+    () => compositions.filter((composition) => composition.editorKind === 'sequence'),
+    [compositions],
   )
   const switchToSequence = useCompositionNavigationStore((state) => state.switchToSequence)
   const graphicsCount = useItemsStore(
