@@ -499,6 +499,13 @@ describe('LoadedEditor migration metadata refresh', () => {
     expect(await screen.findByTestId('timeline')).toBeInTheDocument()
     expect(screen.queryByTestId('color-timeline-navigator')).not.toBeInTheDocument()
     expect(screen.queryByTestId('properties-sidebar')).not.toBeInTheDocument()
+    expect(mocks.resizablePanelGroup).toHaveBeenCalledWith(
+      expect.objectContaining({
+        direction: 'vertical',
+        autoSaveId: 'editor:timeline-layout',
+      }),
+    )
+    expect(screen.getByRole('separator', { name: 'Resize Color controls' })).toBeInTheDocument()
   })
 
   it('uses one reachable editor surface at a time on phone-sized viewports', async () => {
