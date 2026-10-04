@@ -1356,7 +1356,7 @@ function SourcePlaybackControls({
             playbackRate={playbackRate}
           />
         </div>
-        <span className="text-[11px] font-mono text-primary/70 shrink-0 hidden @min-[480px]:inline">
+        <span className="text-[11px] font-mono text-muted-foreground shrink-0 hidden @min-[480px]:inline">
           {ioDuration ? `[${ioDuration}]` : ''}
         </span>
 
