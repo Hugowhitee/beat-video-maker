@@ -2,7 +2,7 @@ import { useMemo, useRef, useState } from 'react'
 import type { PointerEvent as ReactPointerEvent } from 'react'
 import { Minus, Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { useFilmstrip } from '@/features/preview/deps/timeline-contract'
+import { useFilmstrip } from '@/features/preview/deps/filmstrip'
 import {
   frameFromSourceStripRatio,
   framePercentInSourceWindow,

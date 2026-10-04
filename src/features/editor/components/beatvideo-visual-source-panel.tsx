@@ -45,6 +45,7 @@ import { useSelectionStore } from '@/shared/state/selection'
 import type { BeatvideoProjectMode } from '@/types/project'
 import type { MusicMap } from '@/types/beatvideo'
 import { BeatvideoShotBin, BeatvideoShotFrame } from './beatvideo-shot-bin'
+import { BeatvideoShotReviewControls } from './beatvideo-shot-review-controls'
 import { useSourcePlayerStore } from '@/shared/state/source-player'
 import {
   ARRANGEMENT_SHOT_DRAG_MIME,
@@ -95,6 +96,9 @@ export function BeatvideoVisualSourcePanel({
   const [disabledArrangeSourceIds, setDisabledArrangeSourceIds] = useState<string[]>([])
   const [draggingShotId, setDraggingShotId] = useState<string | null>(null)
   const [selectedSourceShotId, setSelectedSourceShotId] = useState<string | null>(null)
+  const sourcePlayerMediaId = useSourcePlayerStore((state) => state.currentMediaId)
+  const sourceInPoint = useSourcePlayerStore((state) => state.inPoint)
+  const sourceOutPoint = useSourcePlayerStore((state) => state.outPoint)
   const [reviewingShots, setReviewingShots] = useState(false)
   const [dragOverSlotKey, setDragOverSlotKey] = useState<string | null>(null)
   const [activeSourceSegmentId, setActiveSourceSegmentId] = useState<string | null>(null)
@@ -166,6 +170,19 @@ export function BeatvideoVisualSourcePanel({
   )
 
   const selectedSourceShot = selectedSourceShotId ? shotById.get(selectedSourceShotId) : null
+  const selectedShotMedia = selectedSourceShot
+    ? videoCandidates.find((media) => media.id === selectedSourceShot.sourceId)
+    : null
+  const selectedShotFps = Math.max(1, selectedShotMedia?.fps || 30)
+  const selectedShotSourceOpen = Boolean(
+    selectedSourceShot && sourcePlayerMediaId === selectedSourceShot.sourceId &&
+      sourceInPoint !== null && sourceOutPoint !== null,
+  )
+  const selectedShotRangeDirty = Boolean(
+    selectedSourceShot && selectedShotSourceOpen &&
+      (sourceInPoint !== Math.round(selectedSourceShot.start * selectedShotFps) ||
+        sourceOutPoint !== Math.round(selectedSourceShot.end * selectedShotFps)),
+  )
 
   const editableArrangementSlots = useMemo(() => {
     if (!lastPlan || !lastClipMap || loopBlocksGrouped) return []
@@ -764,11 +781,29 @@ export function BeatvideoVisualSourcePanel({
         sources: current.sources.map((candidate) =>
           candidate.id === source.id ? nextSource : candidate),
       }))
-      if (action.kind === 'merge-left') {
-        const n = Number(action.shotId.split(':').at(-1))
-        setSelectedSourceShotId(`${source.id}:shot:${Math.max(1, n - 1)}`)
-      } else if (action.kind === 'reset-scenes') {
-        setSelectedSourceShotId(null)
+      const nextSelectedShotId = action.kind === 'merge-left'
+        ? `${source.id}:shot:${Math.max(1, Number(action.shotId.split(':').at(-1)) - 1)}`
+        : action.kind === 'reset-scenes' ? null : shot.id
+      if (action.kind === 'merge-left' || action.kind === 'reset-scenes') {
+        setSelectedSourceShotId(nextSelectedShotId)
+      }
+
+      // Review persistence is the owner of saved source boundaries. Refresh
+      // the active Source monitor after Save, Reset, Split or Merge so an old
+      // draft never masquerades as a newly saved result.
+      const player = useSourcePlayerStore.getState()
+      if (player.currentMediaId === source.id) {
+        const savedShot = nextSource.shots.find((candidate) => candidate.id === nextSelectedShotId)
+        if (savedShot) {
+          const sourceFps = Math.max(1, source.fps || 30)
+          const firstFrame = Math.max(0, Math.round(savedShot.start * sourceFps))
+          const afterLastFrame = Math.max(firstFrame + 1, Math.round(savedShot.end * sourceFps))
+          player.setInPoint(firstFrame)
+          player.setOutPoint(afterLastFrame)
+          player.setPendingSeekFrame(firstFrame)
+        } else if (action.kind === 'reset-scenes') {
+          player.clearInOutPoints()
+        }
       }
       toast.success('Source shots updated')
     } catch (error) {
@@ -797,6 +832,20 @@ export function BeatvideoVisualSourcePanel({
       end: player.outPoint / sourceFps,
     })
   }, [handleReviewSourceShot, selectedSourceShot, videoCandidates])
+
+  const cancelSelectedShotInOut = useCallback(() => {
+    if (!selectedSourceShot) return
+    const source = videoCandidates.find((media) => media.id === selectedSourceShot.sourceId)
+    const player = useSourcePlayerStore.getState()
+    if (!source || player.currentMediaId !== source.id) return
+    const sourceFps = Math.max(1, source.fps || 30)
+    const originalStartFrame = Math.max(0, Math.round(selectedSourceShot.start * sourceFps))
+    const originalEndFrame = Math.max(originalStartFrame + 1, Math.round(selectedSourceShot.end * sourceFps))
+    player.setInPoint(originalStartFrame)
+    player.setOutPoint(originalEndFrame)
+    player.setPreviewSourceFrame(null)
+    player.setPendingSeekFrame(originalStartFrame)
+  }, [selectedSourceShot, videoCandidates])
 
   const splitSelectedShotAtPlayhead = useCallback(() => {
     if (!selectedSourceShot) return
@@ -976,6 +1025,28 @@ export function BeatvideoVisualSourcePanel({
     }
   }, [selectedLoopMediaId, timelineGrid, videoCandidates])
 
+  // One review control set in Shots and Sequence. The draft is kept only in
+  // the existing source player; persisted edits belong to reviewClipSourceShots.
+  const shotReviewControls = lastClipMap && selectedSourceShot ? (
+    <BeatvideoShotReviewControls
+      name={selectedSourceShot.sourceName}
+      id={selectedSourceShot.id}
+      busy={reviewingShots}
+      dirty={selectedShotRangeDirty}
+      sourceOpen={selectedShotSourceOpen}
+      onSave={saveSelectedShotInOut}
+      onCancel={cancelSelectedShotInOut}
+      onSplit={splitSelectedShotAtPlayhead}
+      onMergeLeft={() => void handleReviewSourceShot({
+        kind: 'merge-left', shotId: selectedSourceShot.id,
+      })}
+      onResetTrim={() => void handleReviewSourceShot({
+        kind: 'reset-trim', shotId: selectedSourceShot.id,
+      })}
+      onResetAll={() => void handleReviewSourceShot({ kind: 'reset-scenes' })}
+    />
+  ) : null
+
   if (beatvideoMode === 'photo') {
     return (
       <section className="space-y-2 border-b border-border bg-secondary/10 px-3 py-3">
@@ -1118,12 +1189,12 @@ export function BeatvideoVisualSourcePanel({
             <Button
               type="button"
               size="sm"
-              variant="ghost"
-              className="h-7 shrink-0 px-2 text-[10px]"
+              variant={lastClipMap ? 'outline' : 'default'}
+              className="h-9 min-w-[92px] shrink-0 px-3 text-xs"
               disabled={preparingFootage || autoArranging || importingFootage}
               onClick={() => void prepareCurrentFootage()}
             >
-              {preparingFootage ? 'Detecting…' : lastClipMap ? 'Refresh' : 'Detect'}
+              {preparingFootage ? 'Detecting shots…' : lastClipMap ? 'Redetect shots' : 'Detect shots'}
             </Button>
           </div>
           {lastClipMap ? (
@@ -1146,37 +1217,7 @@ export function BeatvideoVisualSourcePanel({
               Detect shots to inspect the automatic split before building an edit.
             </div>
           )}
-          {lastClipMap && selectedSourceShot ? (
-            <div className="space-y-2 border-t border-border/70 pt-2" aria-label="Selected shot review">
-              <p className="truncate text-[10px] font-semibold text-foreground">
-                {selectedSourceShot.sourceName} · Shot {selectedSourceShot.id.split(':').at(-1)}
-              </p>
-              <p className="text-[9px] leading-relaxed text-muted-foreground">
-                Preview in Source, adjust In/Out handles, or move the playhead to cut.
-              </p>
-              <div className="grid grid-cols-2 gap-1.5">
-                <Button type="button" size="sm" variant="outline" disabled={reviewingShots}
-                  onClick={saveSelectedShotInOut}>Save In / Out</Button>
-                <Button type="button" size="sm" variant="outline" disabled={reviewingShots}
-                  onClick={splitSelectedShotAtPlayhead}>Split at playhead</Button>
-                <Button type="button" size="sm" variant="outline"
-                  disabled={reviewingShots || selectedSourceShot.id.endsWith(':shot:1')}
-                  onClick={() => void handleReviewSourceShot({
-                    kind: 'merge-left', shotId: selectedSourceShot.id,
-                  })}>Merge left</Button>
-                <Button type="button" size="sm" variant="ghost" disabled={reviewingShots}
-                  onClick={() => void handleReviewSourceShot({
-                    kind: 'reset-trim', shotId: selectedSourceShot.id,
-                  })}>Reset trim</Button>
-              </div>
-              <button type="button"
-                className="text-[9px] text-muted-foreground underline-offset-2 hover:underline"
-                disabled={reviewingShots}
-                onClick={() => void handleReviewSourceShot({ kind: 'reset-scenes' })}>
-                Reset all manual shot corrections
-              </button>
-            </div>
-          ) : null}
+          {shotReviewControls}
           {lastClipMap ? (
             <button
               type="button"
@@ -1435,6 +1476,7 @@ export function BeatvideoVisualSourcePanel({
                 onDragStart={beginArrangementShotDrag}
                 onDragEnd={endArrangementShotDrag}
               />
+              {shotReviewControls}
             </div>
           ) : null}
 

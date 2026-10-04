@@ -41,7 +41,3 @@ export {
 } from '../utils/sub-composition-preview'
 export { createScrubThrottleState, shouldCommitScrubFrame } from '../utils/scrub-throttle'
 export { useWaveform } from '../hooks/use-waveform'
-
-// The Source Monitor reuses the same thumbnail extraction/cache as timeline clips.
-export { useFilmstrip } from '../hooks/use-filmstrip'
-export type { FilmstripFrame } from '../hooks/use-filmstrip'
