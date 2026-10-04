@@ -21,7 +21,9 @@ import {
   createSingleClipLoopPlan,
   offsetEditPlanTimeline,
   replaceSegmentSource,
+  reviewClipSourceShots,
   slipSegmentSource,
+  type ReviewedShotEdit,
   type ClipMap,
   type ClipMapBuildProgress,
   type EditPace,
@@ -92,6 +94,8 @@ export function BeatvideoVisualSourcePanel({
   const [excludedShotIds, setExcludedShotIds] = useState<string[]>([])
   const [disabledArrangeSourceIds, setDisabledArrangeSourceIds] = useState<string[]>([])
   const [draggingShotId, setDraggingShotId] = useState<string | null>(null)
+  const [selectedSourceShotId, setSelectedSourceShotId] = useState<string | null>(null)
+  const [reviewingShots, setReviewingShots] = useState(false)
   const [dragOverSlotKey, setDragOverSlotKey] = useState<string | null>(null)
   const [activeSourceSegmentId, setActiveSourceSegmentId] = useState<string | null>(null)
 
@@ -160,6 +164,8 @@ export function BeatvideoVisualSourcePanel({
       ),
     [lastClipMap],
   )
+
+  const selectedSourceShot = selectedSourceShotId ? shotById.get(selectedSourceShotId) : null
 
   const editableArrangementSlots = useMemo(() => {
     if (!lastPlan || !lastClipMap || loopBlocksGrouped) return []
@@ -256,6 +262,7 @@ export function BeatvideoVisualSourcePanel({
         onProgress: describeProgress,
       })
       setLastClipMap(clipMap)
+      setSelectedSourceShotId(null)
       setVisualStage('shots')
       toast.success(
         videos.length === 1
@@ -301,6 +308,7 @@ export function BeatvideoVisualSourcePanel({
         onProgress: describeProgress,
       })
       setLastClipMap(clipMap)
+      setSelectedSourceShotId(null)
       setVisualStage('shots')
       const validShotIds = new Set(
         clipMap.sources.flatMap((source) => source.shots.map((shot) => shot.id)),
@@ -739,6 +747,71 @@ export function BeatvideoVisualSourcePanel({
     [clearArrangementShotPreview, mediaItems],
   )
 
+  const handleReviewSourceShot = useCallback(async (action: ReviewedShotEdit) => {
+    if (preparingFootage || autoArranging || reviewingShots) return
+    const shot = action.kind === 'reset-scenes'
+      ? selectedSourceShot
+      : shotById.get(action.shotId)
+    if (!shot) return
+    const source = videoCandidates.find((candidate) => candidate.id === shot.sourceId)
+    if (!source) return
+    setReviewingShots(true)
+    try {
+      const nextSource = await reviewClipSourceShots(source, action)
+      setLastClipMap((current) => current && ({
+        ...current,
+        sources: current.sources.map((candidate) =>
+          candidate.id === source.id ? nextSource : candidate),
+      }))
+      if (action.kind === 'merge-left') {
+        const n = Number(action.shotId.split(':').at(-1))
+        setSelectedSourceShotId(`${source.id}:shot:${Math.max(1, n - 1)}`)
+      } else if (action.kind === 'reset-scenes') {
+        setSelectedSourceShotId(null)
+      }
+      toast.success('Source shots updated')
+    } catch (error) {
+      toast.error('Could not save shot correction', {
+        description: error instanceof Error ? error.message : String(error),
+      })
+    } finally {
+      setReviewingShots(false)
+    }
+  }, [autoArranging, preparingFootage, reviewingShots, selectedSourceShot, shotById, videoCandidates])
+
+  const saveSelectedShotInOut = useCallback(() => {
+    if (!selectedSourceShot) return
+    const source = videoCandidates.find((media) => media.id === selectedSourceShot.sourceId)
+    const player = useSourcePlayerStore.getState()
+    if (!source || player.currentMediaId !== source.id ||
+      player.inPoint === null || player.outPoint === null) {
+      toast.warning('Open the shot and set In/Out in the Source player first.')
+      return
+    }
+    const sourceFps = Math.max(1, source.fps || 30)
+    void handleReviewSourceShot({
+      kind: 'trim',
+      shotId: selectedSourceShot.id,
+      start: player.inPoint / sourceFps,
+      end: player.outPoint / sourceFps,
+    })
+  }, [handleReviewSourceShot, selectedSourceShot, videoCandidates])
+
+  const splitSelectedShotAtPlayhead = useCallback(() => {
+    if (!selectedSourceShot) return
+    const source = videoCandidates.find((media) => media.id === selectedSourceShot.sourceId)
+    const player = useSourcePlayerStore.getState()
+    if (!source || player.currentMediaId !== source.id) {
+      toast.warning('Open the shot in Source before splitting.')
+      return
+    }
+    void handleReviewSourceShot({
+      kind: 'split',
+      shotId: selectedSourceShot.id,
+      time: player.currentSourceFrame / Math.max(1, source.fps || 30),
+    })
+  }, [handleReviewSourceShot, selectedSourceShot, videoCandidates])
+
   // Reuse the canonical source monitor for precise video In/Out editing.
   // Musical timeline boundaries stay fixed when applying the source slip.
   const beginVisualSourceTrim = useCallback(
@@ -1057,9 +1130,11 @@ export function BeatvideoVisualSourcePanel({
               clipMap={lastClipMap}
               excludedShotIds={excludedShotIds}
               draggingShotId={draggingShotId}
+              selectedShotId={selectedSourceShotId}
               onToggleAvoid={toggleAvoidShot}
               onOpenShot={(shot) => {
                   setActiveSourceSegmentId(null)
+                  setSelectedSourceShotId(shot.id)
                   openShotInSourceMonitor(shot)
                 }}
               onDragStart={beginArrangementShotDrag}
@@ -1070,6 +1145,37 @@ export function BeatvideoVisualSourcePanel({
               Detect shots to inspect the automatic split before building an edit.
             </div>
           )}
+          {lastClipMap && selectedSourceShot ? (
+            <div className="space-y-2 border-t border-border/70 pt-2" aria-label="Selected shot review">
+              <p className="truncate text-[10px] font-semibold text-foreground">
+                {selectedSourceShot.sourceName} · Shot {selectedSourceShot.id.split(':').at(-1)}
+              </p>
+              <p className="text-[9px] leading-relaxed text-muted-foreground">
+                Preview in Source, adjust In/Out handles, or move the playhead to cut.
+              </p>
+              <div className="grid grid-cols-2 gap-1.5">
+                <Button type="button" size="sm" variant="outline" disabled={reviewingShots}
+                  onClick={saveSelectedShotInOut}>Save In / Out</Button>
+                <Button type="button" size="sm" variant="outline" disabled={reviewingShots}
+                  onClick={splitSelectedShotAtPlayhead}>Split at playhead</Button>
+                <Button type="button" size="sm" variant="outline"
+                  disabled={reviewingShots || selectedSourceShot.id.endsWith(':shot:1')}
+                  onClick={() => void handleReviewSourceShot({
+                    kind: 'merge-left', shotId: selectedSourceShot.id,
+                  })}>Merge left</Button>
+                <Button type="button" size="sm" variant="ghost" disabled={reviewingShots}
+                  onClick={() => void handleReviewSourceShot({
+                    kind: 'reset-trim', shotId: selectedSourceShot.id,
+                  })}>Reset trim</Button>
+              </div>
+              <button type="button"
+                className="text-[9px] text-muted-foreground underline-offset-2 hover:underline"
+                disabled={reviewingShots}
+                onClick={() => void handleReviewSourceShot({ kind: 'reset-scenes' })}>
+                Reset all manual shot corrections
+              </button>
+            </div>
+          ) : null}
           {lastClipMap ? (
             <button
               type="button"
@@ -1318,9 +1424,11 @@ export function BeatvideoVisualSourcePanel({
                 clipMap={lastClipMap}
                 excludedShotIds={excludedShotIds}
                 draggingShotId={draggingShotId}
+              selectedShotId={selectedSourceShotId}
                 onToggleAvoid={toggleAvoidShot}
                 onOpenShot={(shot) => {
                   setActiveSourceSegmentId(null)
+                  setSelectedSourceShotId(shot.id)
                   openShotInSourceMonitor(shot)
                 }}
                 onDragStart={beginArrangementShotDrag}
