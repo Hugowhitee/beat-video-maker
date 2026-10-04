@@ -155,6 +155,10 @@ async function main() {
         state: 'visible',
         timeout: 10_000,
       })
+      await page.getByRole('button', { name: 'Rename project' }).waitFor({
+        state: 'visible',
+        timeout: 10_000,
+      })
       const overflow = await page.evaluate(() => ({
         innerWidth: window.innerWidth,
         scrollWidth: document.documentElement.scrollWidth,
