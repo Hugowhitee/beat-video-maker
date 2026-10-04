@@ -309,6 +309,34 @@ describe('TimelineContent playback selection behavior', () => {
     expect(scrollWidthRead).not.toHaveBeenCalled()
   })
 
+  it('publishes the same viewport/waveform axis when Program seeks to a distant frame', async () => {
+    const { container } = render(<TimelineContent duration={30} tracks={[VIDEO_TRACK]} />)
+    const scrollContainer = container.querySelector('[data-timeline-scroll-container]')
+    if (!(scrollContainer instanceof HTMLDivElement)) {
+      throw new Error('Expected timeline scroll container')
+    }
+    Object.defineProperty(scrollContainer, 'clientWidth', { configurable: true, value: 400 })
+    useZoomStore.getState().setZoomLevelSynchronized(1)
+    const liveScroll = vi.fn()
+    scrollContainer.addEventListener(TIMELINE_LIVE_SCROLL_EVENT, liveScroll)
+
+    act(() => {
+      useTimelineViewportStore.getState().requestScrollToFrame(150)
+    })
+    await waitFor(() => {
+      expect(scrollContainer.scrollLeft).toBeCloseTo((150 / 30) * 100 - 200)
+    })
+    expect(useTimelineViewportStore.getState().pendingScrollToFrame).toBeNull()
+    expect(useTimelineViewportStore.getState().scrollLeft).toBeCloseTo(scrollContainer.scrollLeft)
+    expect(liveScroll).toHaveBeenCalledOnce()
+
+    // Revealing an already visible frame doesn't churn the waveform layer.
+    act(() => {
+      useTimelineViewportStore.getState().requestScrollToFrame(149)
+    })
+    expect(liveScroll).toHaveBeenCalledOnce()
+  })
+
   it('centers an explicitly requested correction frame even when it was already visible', async () => {
     const { container } = render(<TimelineContent duration={30} tracks={[VIDEO_TRACK]} />)
     const scrollContainer = container.querySelector('[data-timeline-scroll-container]')
