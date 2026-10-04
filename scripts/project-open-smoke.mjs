@@ -171,8 +171,8 @@ async function main() {
     console.log(
       `Project UI smoke passed: create/open/reopen works and tile ratio is ${ratio.toFixed(2)}.`,
     )
-    clearTimeout(hardTimeout)
   } finally {
+    clearTimeout(hardTimeout)
     if (browser) await browser.close().catch(() => {})
     if (preview.exitCode === null) {
       preview.kill('SIGTERM')
