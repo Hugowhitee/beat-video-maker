@@ -11,6 +11,7 @@ import { MediaSidebar } from './media-sidebar'
 import { BeatvideoMasterPanel } from './beatvideo-master-panel'
 import { PropertiesSidebar } from './properties-sidebar'
 import { PreviewArea } from './preview-area'
+import { StudioResizeRail } from './studio-resize-rail'
 import { MotionPreviewArea, MotionTimelineDock } from './compose-workspace/compose-layout'
 import { InteractionLockRegion } from './interaction-lock-region'
 import { AudioMeterPanel } from './audio-meter-panel'
@@ -84,6 +85,26 @@ const LazyColorGradingDock = lazy(() =>
 import { useStudioV2DocumentTheme } from '@/shared/ui/use-studio-v2-document-theme'
 
 const EDITOR_PROJECT_ROUTE_ID = '/editor/$projectId'
+
+const STUDIO_COLUMN_MIN_WIDTH = 320
+const STUDIO_COLUMN_MAX_WIDTH = 640
+function getStudioColumnMaxWidth(): number {
+  if (typeof window === 'undefined') return STUDIO_COLUMN_MAX_WIDTH
+  return Math.max(STUDIO_COLUMN_MIN_WIDTH, Math.min(
+    STUDIO_COLUMN_MAX_WIDTH, window.innerWidth - 520,
+  ))
+}
+function readStudioColumnWidth(workspace: EditorWorkspaceId): number {
+  const fallback = workspace === 'master' ? 480 : 400
+  try {
+    const stored = Number(window.localStorage.getItem(`editor:studioColumnWidth:${workspace}`))
+    return Math.max(STUDIO_COLUMN_MIN_WIDTH, Math.min(
+      getStudioColumnMaxWidth(), Number.isFinite(stored) && stored > 0 ? stored : fallback,
+    ))
+  } catch {
+    return fallback
+  }
+}
 
 type MobileEditorSurface = 'tools' | 'preview' | 'inspector' | 'timeline' | 'mixer' | 'color'
 
@@ -464,6 +485,20 @@ export const LoadedEditor = memo(function LoadedEditor({
   const workspace = useEditorStore((s) => s.workspace)
   const rightSidebarOpen = useEditorStore((s) => s.rightSidebarOpen)
   const setRightSidebarOpen = useEditorStore((s) => s.setRightSidebarOpen)
+  const [studioColumnWidth, setStudioColumnWidth] = useState(() => readStudioColumnWidth(workspace))
+  const updateStudioColumnWidth = useCallback((width: number) => {
+    const clamped = Math.max(STUDIO_COLUMN_MIN_WIDTH, Math.min(getStudioColumnMaxWidth(), width))
+    setStudioColumnWidth(clamped)
+    try {
+      window.localStorage.setItem(`editor:studioColumnWidth:${workspace}`, String(clamped))
+    } catch {
+      /* Persisting a layout preference must not block the editor. */
+    }
+  }, [workspace])
+  useEffect(() => {
+    setStudioColumnWidth(readStudioColumnWidth(workspace))
+  }, [workspace])
+  const visibleStudioColumnWidth = Math.min(studioColumnWidth, getStudioColumnMaxWidth())
   const compactViewport = useCompactEditorViewport()
   const [mobileSurface, setMobileSurface] = useState<MobileEditorSurface>(() =>
     defaultMobileEditorSurface(workspace),
@@ -996,8 +1031,8 @@ export const LoadedEditor = memo(function LoadedEditor({
             </ResizablePanel>
 
             <ResizableHandle
-              withHandle
-              className={`data-[panel-group-direction=vertical]:h-3 data-[panel-group-direction=vertical]:bg-transparent data-[panel-group-direction=vertical]:before:pointer-events-none data-[panel-group-direction=vertical]:before:absolute data-[panel-group-direction=vertical]:before:inset-x-0 data-[panel-group-direction=vertical]:before:top-1/2 data-[panel-group-direction=vertical]:before:h-px data-[panel-group-direction=vertical]:before:-translate-y-1/2 data-[panel-group-direction=vertical]:before:bg-border ${
+              aria-label="Resize preview and timeline"
+              className={`group data-[panel-group-direction=vertical]:h-[10px] data-[panel-group-direction=vertical]:cursor-row-resize data-[panel-group-direction=vertical]:bg-transparent data-[panel-group-direction=vertical]:before:pointer-events-none data-[panel-group-direction=vertical]:before:absolute data-[panel-group-direction=vertical]:before:inset-x-0 data-[panel-group-direction=vertical]:before:top-1/2 data-[panel-group-direction=vertical]:before:h-px data-[panel-group-direction=vertical]:before:-translate-y-1/2 data-[panel-group-direction=vertical]:before:bg-[#aeb6ac] data-[panel-group-direction=vertical]:hover:before:h-[2px] data-[panel-group-direction=vertical]:hover:before:bg-[#526955] data-[panel-group-direction=vertical]:focus-visible:before:h-[2px] data-[panel-group-direction=vertical]:focus-visible:before:bg-[#526955] data-[panel-group-direction=vertical]:data-[resize-handle-active]:before:bg-[#526955] ${
                 isMaskEditingActive ? 'pointer-events-none opacity-60' : ''
               }`}
             />
@@ -1032,18 +1067,39 @@ export const LoadedEditor = memo(function LoadedEditor({
         )}
 
         {isMasterWorkspace ? (
+          <>
+          <StudioResizeRail
+            label="Resize Master controls"
+            width={visibleStudioColumnWidth}
+            minWidth={STUDIO_COLUMN_MIN_WIDTH}
+            maxWidth={getStudioColumnMaxWidth()}
+            defaultWidth={480}
+            onWidthChange={updateStudioColumnWidth}
+          />
           <InteractionLockRegion
             locked={isMaskEditingActive}
-            className="studio-master-column h-full w-[480px] shrink-0 border-l border-border"
+            className="studio-master-column h-full shrink-0"
+            style={{ width: visibleStudioColumnWidth }}
           >
             <ErrorBoundary level="feature">
               <BeatvideoMasterPanel />
             </ErrorBoundary>
           </InteractionLockRegion>
+          </>
         ) : workspace === 'beat' || workspace === 'edit' ? (
+          <>
+          <StudioResizeRail
+            label={workspace === 'beat' ? 'Resize Beat controls' : 'Resize Visual tools'}
+            width={visibleStudioColumnWidth}
+            minWidth={STUDIO_COLUMN_MIN_WIDTH}
+            maxWidth={getStudioColumnMaxWidth()}
+            defaultWidth={400}
+            onWidthChange={updateStudioColumnWidth}
+          />
           <InteractionLockRegion
             locked={isMaskEditingActive}
-            className="studio-task-column h-full w-[400px] shrink-0 border-l border-border bg-[#e8e9e5]"
+            className="studio-task-column h-full shrink-0 bg-[#e8e9e5]"
+            style={{ width: visibleStudioColumnWidth }}
           >
             {workspace === 'edit' ? (
               <div className="flex h-full min-h-0 flex-col">
@@ -1083,6 +1139,7 @@ export const LoadedEditor = memo(function LoadedEditor({
               </ErrorBoundary>
             )}
           </InteractionLockRegion>
+          </>
         ) : null}
 
         {/* Right Sidebar - Properties (full column mode) */}
