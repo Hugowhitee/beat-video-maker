@@ -17,6 +17,7 @@ import { useMaskEditorStore, useItemsStore } from '@/features/editor/deps/previe
 import { useEditorStore } from '@/shared/state/editor'
 import { EDITOR_LAYOUT_CSS_VALUES, getEditorLayout } from '@/config/editor-layout'
 import { InteractionLockRegion } from './interaction-lock-region'
+import { ProgramSeekBar } from './program-seek-bar'
 import { Button } from '@/components/ui/button'
 import { ErrorBoundary } from '@/app/error-boundary'
 import { useTranslation } from 'react-i18next'
@@ -91,7 +92,7 @@ function PreviewSplitHandle({
   return (
     <div
       onMouseDown={onMouseDown}
-      className="w-1.5 cursor-col-resize hover:bg-primary/50 active:bg-primary/70 bg-border transition-colors flex-shrink-0 relative group"
+      className="group relative w-[10px] shrink-0 cursor-col-resize bg-transparent before:pointer-events-none before:absolute before:inset-y-0 before:left-1/2 before:w-px before:-translate-x-1/2 before:bg-[#aeb6ac] before:transition-[width,background-color] hover:before:w-[2px] hover:before:bg-[#526955] active:before:w-[2px] active:before:bg-[#526955]"
     >
       {showReset && (
         <button
@@ -634,6 +635,10 @@ export const PreviewArea = memo(function PreviewArea({
               suspendOverlay={isPanelDragging}
               chrome={previewChrome}
             />
+          </div>
+
+          <div className="shrink-0 border-t border-border/70 bg-[#e8e9e5]" aria-label="Program progress">
+            <ProgramSeekBar totalFrames={totalFrames} fps={fps} disabled={isMaskEditingActive} />
           </div>
 
           {isPenModeActive ? (
