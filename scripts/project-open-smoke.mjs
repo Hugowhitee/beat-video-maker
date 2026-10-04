@@ -104,6 +104,7 @@ async function main() {
     })
     const context = await browser.newContext({
       viewport: { width: 390, height: 844 },
+      screen: { width: 390, height: 844 },
       hasTouch: true,
       isMobile: true,
     })
@@ -148,6 +149,22 @@ async function main() {
     ])
 
     console.log(`Smoke: create -> editor result: ${result}`)
+    if (result === 'editor') {
+      await page.locator('[data-compact-toolbar="true"]').waitFor({ state: 'visible', timeout: 10_000 })
+      await page.getByRole('button', { name: 'Project settings' }).waitFor({
+        state: 'visible',
+        timeout: 10_000,
+      })
+      const overflow = await page.evaluate(() => ({
+        innerWidth: window.innerWidth,
+        scrollWidth: document.documentElement.scrollWidth,
+      }))
+      if (overflow.scrollWidth > overflow.innerWidth + 2) {
+        throw new Error(
+          `Phone editor has horizontal overflow: viewport ${overflow.innerWidth}px, document ${overflow.scrollWidth}px`,
+        )
+      }
+    }
     if (result !== 'editor') {
       const details = await page.locator('body').innerText().catch(() => '')
       throw new Error(
@@ -180,6 +197,11 @@ async function main() {
         `Project tile is not square/almost-square: ${box.width.toFixed(1)}×${box.height.toFixed(1)} (ratio ${ratio.toFixed(2)})`,
       )
     }
+    if (box.width < 175) {
+      throw new Error(
+        `Project tile is still too small on a 390px phone viewport: ${box.width.toFixed(1)}px`,
+      )
+    }
 
     await card.getByRole('button', { name: 'Open', exact: true }).click()
     console.log('Smoke: clicked Open; waiting for reopened editor')
@@ -190,6 +212,28 @@ async function main() {
     ])
 
     console.log(`Smoke: reopen result: ${reopenResult}; page errors: ${pageErrors.length}`)
+    if (reopenResult === 'editor') {
+      await page.locator('[data-compact-toolbar="true"]').waitFor({ state: 'visible', timeout: 10_000 })
+
+      // Reproduce a phone browser requesting a desktop-sized layout viewport.
+      // screen.width stays 390 CSS px while the layout viewport becomes 980.
+      await page.setViewportSize({ width: 980, height: 844 })
+      await page.reload({ waitUntil: 'domcontentloaded', timeout: 30_000 })
+      await editor.waitFor({ state: 'visible', timeout: 30_000 })
+      await page.locator('[data-compact-toolbar="true"]').waitFor({ state: 'visible', timeout: 10_000 })
+
+      const desktopSiteState = await page.evaluate(() => ({
+        innerWidth: window.innerWidth,
+        screenWidth: window.screen.width,
+        compactToolbar: Boolean(document.querySelector('[data-compact-toolbar="true"]')),
+        projectRail: Boolean(document.querySelector('.studio-project-rail')),
+      }))
+      if (!desktopSiteState.compactToolbar || desktopSiteState.projectRail) {
+        throw new Error(
+          `Desktop-site phone regression: ${JSON.stringify(desktopSiteState)}`,
+        )
+      }
+    }
     if (reopenResult !== 'editor' || pageErrors.length > 0) {
       const details = await page.locator('body').innerText().catch(() => '')
       throw new Error(
@@ -204,7 +248,7 @@ async function main() {
     }
 
     console.log(
-      `Project UI smoke passed: create/open/reopen works and tile ratio is ${ratio.toFixed(2)}.`,
+      `Project UI smoke passed: compact phone editor, desktop-site fallback, project settings, and ${box.width.toFixed(0)}px square tiles are all verified.`,
     )
   } finally {
     clearTimeout(hardTimeout)
