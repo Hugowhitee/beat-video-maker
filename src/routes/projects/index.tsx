@@ -281,14 +281,14 @@ function ProjectsIndex() {
             </div>
             <button
               type="button"
-              className="h-full text-[9px] font-semibold uppercase tracking-[0.04em] text-[#c7cac4] hover:text-white"
+              className="h-full text-[10px] font-semibold uppercase tracking-[0.04em] text-[#c7cac4] hover:text-white"
               onClick={handleImportClick}
             >
               {t('projects.importProject')}
             </button>
             <Link
               to="/projects/new"
-              className="flex h-[30px] items-center rounded-[4px] bg-[#c7e85a] px-4 text-[9px] font-semibold uppercase tracking-[0.04em] text-[#242724]"
+              className="flex h-[30px] items-center rounded-[4px] bg-[#c7e85a] px-4 text-[10px] font-semibold uppercase tracking-[0.04em] text-[#242724]"
             >
               {t('projects.newProject')}
             </Link>
@@ -304,7 +304,7 @@ function ProjectsIndex() {
 
         <div className="px-3 pt-8 sm:px-8 sm:pt-10">
           <div className="border-b border-border pb-6">
-            <div className="text-[9px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+            <div className="text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
               Projects
             </div>
             <h1 className="mt-2 text-[26px] font-semibold leading-8 text-foreground">

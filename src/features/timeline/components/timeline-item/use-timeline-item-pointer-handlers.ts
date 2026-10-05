@@ -193,6 +193,16 @@ export function useTimelineItemPointerHandlers({
       } else {
         selectItems(targetIds)
       }
+
+      const editor = useEditorStore.getState()
+      if (editor.workspace === 'edit') {
+        const selectedIds = useSelectionStore.getState().selectedItemIds
+        const selectedIdSet = new Set(selectedIds)
+        const hasVisualSelection = items.some(
+          (candidate) => selectedIdSet.has(candidate.id) && candidate.type !== 'audio',
+        )
+        if (hasVisualSelection) editor.setRightSidebarOpen(true)
+      }
     },
     [activeToolRef, dragWasActiveRef, trackLocked, item.from, item.id, smartTrimIntentRef],
   )

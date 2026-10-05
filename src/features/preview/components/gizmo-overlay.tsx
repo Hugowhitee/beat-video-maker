@@ -4,6 +4,7 @@ import { createPortal } from 'react-dom'
 import { toast } from 'sonner'
 import { useShallow } from 'zustand/react/shallow'
 import { useSelectionStore } from '@/shared/state/selection'
+import { useEditorStore } from '@/shared/state/editor'
 import { useSettingsStore } from '@/features/preview/deps/settings'
 import {
   useItemsStore,
@@ -1228,7 +1229,12 @@ export function GizmoOverlay({
         // Clicking on an unselected item: select it
         selectItems([itemId])
       }
-      // If single selected item is clicked again, do nothing (keeps selection)
+      // If single selected item is clicked again, do nothing (keeps selection).
+      // Visual Program and timeline share the same canonical Edit task surface.
+      const editor = useEditorStore.getState()
+      if (editor.workspace === 'edit' && useSelectionStore.getState().selectedItemIds.length > 0) {
+        editor.setRightSidebarOpen(true)
+      }
     },
     [isExclusiveCanvasEditorActive, selectItems, selectedItemIds, selectedItemIdsSet],
   )
@@ -1289,8 +1295,10 @@ export function GizmoOverlay({
           items: itemsAtPoint,
         })
       } else if (itemsAtPoint.length === 1) {
-        // Single item: just select it
+        // Single item: just select it and reveal the same Visual Edit owner.
         selectItems([itemsAtPoint[0]!.id])
+        const editor = useEditorStore.getState()
+        if (editor.workspace === 'edit') editor.setRightSidebarOpen(true)
       }
     },
     [coordParams, findAllItemsAtPoint, isExclusiveCanvasEditorActive, selectItems],
@@ -1300,6 +1308,8 @@ export function GizmoOverlay({
   const handleContextMenuSelect = useCallback(
     (itemId: string) => {
       selectItems([itemId])
+      const editor = useEditorStore.getState()
+      if (editor.workspace === 'edit') editor.setRightSidebarOpen(true)
       setContextMenu(null)
     },
     [selectItems],
