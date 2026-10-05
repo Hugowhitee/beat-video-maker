@@ -1012,6 +1012,11 @@ export function BeatvideoMusicPanel() {
       return
     }
 
+    // Manual timing is an explicit user decision. Stop any automatic analysis
+    // so a later model result cannot overwrite the fixed grid the user chose.
+    pendingAutoAnalyzeMediaIdRef.current = null
+    abortRef.current?.abort()
+
     try {
       await ensureBeatPlacement(selectedMediaId)
     } catch (error) {
@@ -1382,6 +1387,43 @@ export function BeatvideoMusicPanel() {
             </button>
           ) : null}
 
+          {selectedMedia && !effectiveAnalysis ? (
+            <div
+              className="space-y-2 rounded-[3px] border border-border/70 bg-[#e8e9e5] p-3"
+              data-testid="beat-fixed-bpm-setup"
+            >
+              <div className="flex items-center gap-1.5">
+                <input
+                  type="number"
+                  min={40}
+                  max={300}
+                  step={0.01}
+                  value={bpmDraft}
+                  placeholder="BPM"
+                  disabled={!selectedMediaId || importingBeat}
+                  onChange={(event) => setBpmDraft(event.target.value)}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter') void applyBpm()
+                  }}
+                  className="h-8 min-w-0 flex-1 rounded-md border border-input bg-background px-2 font-mono text-xs text-foreground"
+                  aria-label="Manual fixed BPM"
+                />
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  disabled={!selectedMediaId || importingBeat || bpmDraft.trim() === ''}
+                  onClick={() => void applyBpm()}
+                >
+                  Use fixed BPM
+                </Button>
+              </div>
+              <p className="text-[10px] leading-relaxed text-muted-foreground">
+                Know the tempo already? Set a stable grid immediately; this cancels automatic analysis for this source.
+              </p>
+            </div>
+          ) : null}
+
           {analyzing && progress ? (
             <div className="space-y-1.5">
               <div className="flex items-center justify-between text-[10px] text-muted-foreground">
@@ -1603,7 +1645,7 @@ export function BeatvideoMusicPanel() {
                       step={0.01}
                       value={bpmDraft}
                       placeholder="BPM"
-                      disabled={!selectedMediaId || analyzing}
+                      disabled={!selectedMediaId || importingBeat}
                       onChange={(event) => setBpmDraft(event.target.value)}
                       onKeyDown={(event) => {
                         if (event.key === 'Enter') void applyBpm()
@@ -1615,7 +1657,7 @@ export function BeatvideoMusicPanel() {
                       type="button"
                       size="sm"
                       variant="outline"
-                      disabled={!selectedMediaId || analyzing || bpmDraft.trim() === ''}
+                      disabled={!selectedMediaId || importingBeat || bpmDraft.trim() === ''}
                       onClick={() => void applyBpm()}
                     >
                       Use BPM

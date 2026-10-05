@@ -65,6 +65,41 @@ async function waitForPreview(url, child) {
   throw lastError ?? new Error('preview did not become ready')
 }
 
+function createWavFixture({ seconds = 4, sampleRate = 44_100, bpm = 120 } = {}) {
+  const channels = 1
+  const bitsPerSample = 16
+  const totalSamples = Math.max(1, Math.floor(seconds * sampleRate))
+  const bytesPerSample = bitsPerSample / 8
+  const dataSize = totalSamples * channels * bytesPerSample
+  const buffer = Buffer.alloc(44 + dataSize)
+
+  buffer.write('RIFF', 0)
+  buffer.writeUInt32LE(36 + dataSize, 4)
+  buffer.write('WAVE', 8)
+  buffer.write('fmt ', 12)
+  buffer.writeUInt32LE(16, 16)
+  buffer.writeUInt16LE(1, 20)
+  buffer.writeUInt16LE(channels, 22)
+  buffer.writeUInt32LE(sampleRate, 24)
+  buffer.writeUInt32LE(sampleRate * channels * bytesPerSample, 28)
+  buffer.writeUInt16LE(channels * bytesPerSample, 32)
+  buffer.writeUInt16LE(bitsPerSample, 34)
+  buffer.write('data', 36)
+  buffer.writeUInt32LE(dataSize, 40)
+
+  const beatSamples = Math.max(1, Math.round((60 / bpm) * sampleRate))
+  for (let sample = 0; sample < totalSamples; sample++) {
+    const phase = sample % beatSamples
+    const click = phase < Math.round(sampleRate * 0.018)
+      ? Math.exp(-phase / (sampleRate * 0.004)) * 0.82
+      : 0
+    const bed = Math.sin((2 * Math.PI * 220 * sample) / sampleRate) * 0.08
+    const value = Math.max(-1, Math.min(1, click + bed))
+    buffer.writeInt16LE(Math.round(value * 0x7fff), 44 + sample * 2)
+  }
+  return buffer
+}
+
 async function createWebmFixture(page) {
   const base64 = await page.evaluate(async () => {
     if (!globalThis.MediaRecorder) throw new Error('MediaRecorder unavailable in smoke browser')
@@ -482,6 +517,53 @@ async function main() {
       { timeout: 10_000 },
     )
 
+    console.log('Smoke: importing real WAV beat and building fixed BPM grid')
+    await desktopPage.getByRole('tab', { name: 'Beat' }).click()
+    const beatChooserPromise = desktopPage.waitForEvent('filechooser', { timeout: 10_000 })
+    await desktopPage.getByRole('button', { name: 'Import beat' }).click()
+    const beatChooser = await beatChooserPromise
+    await beatChooser.setFiles({
+      name: 'editor-roundtrip-beat.wav',
+      mimeType: 'audio/wav',
+      buffer: createWavFixture(),
+    })
+
+    const fixedBpmSetup = desktopPage.getByTestId('beat-fixed-bpm-setup')
+    await fixedBpmSetup.waitFor({ state: 'visible', timeout: 30_000 })
+    const bpmInput = fixedBpmSetup.getByRole('spinbutton', { name: 'Manual fixed BPM' })
+    await bpmInput.fill('120')
+    await fixedBpmSetup.getByRole('button', { name: 'Use fixed BPM' }).click()
+    await desktopPage.getByText(/120 BPM/).first().waitFor({ state: 'visible', timeout: 30_000 })
+
+    const beatGrid = desktopPage.locator('[data-beatvideo-grid-overlay="tracks"]')
+    await beatGrid.waitFor({ state: 'visible', timeout: 20_000 })
+    const waveform = desktopPage.locator('[data-timeline-waveform-canvas]').last()
+    await waveform.waitFor({ state: 'visible', timeout: 30_000 })
+    await desktopPage.waitForFunction(
+      () => {
+        const canvases = [...document.querySelectorAll('[data-timeline-waveform-canvas]')]
+        return canvases.some((node) =>
+          node instanceof HTMLCanvasElement &&
+          node.width > 10 &&
+          node.height > 4 &&
+          node.style.display !== 'none'
+        )
+      },
+      null,
+      { timeout: 30_000 },
+    )
+
+    const waveformBeforeZoom = await waveform.boundingBox()
+    const timelineViewport = desktopPage.locator('[data-timeline-scroll-container]').first()
+    await timelineViewport.hover()
+    await desktopPage.mouse.wheel(0, -320)
+    await desktopPage.waitForTimeout(250)
+    const waveformAfterZoom = await waveform.boundingBox()
+    if (!waveformBeforeZoom || !waveformAfterZoom || waveformAfterZoom.width <= 0) {
+      throw new Error(`Waveform geometry unavailable around timeline zoom: ${JSON.stringify({ waveformBeforeZoom, waveformAfterZoom })}`)
+    }
+    await beatGrid.waitFor({ state: 'visible', timeout: 10_000 })
+
     await desktopPage.getByRole('button', { name: 'Save project' }).click()
     await desktopPage.getByText('Project saved', { exact: true }).waitFor({
       state: 'visible',
@@ -508,6 +590,20 @@ async function main() {
       { timeout: 20_000 },
     )
 
+    await desktopPage.getByRole('tab', { name: 'Beat' }).click()
+    await desktopPage.getByText('editor-roundtrip-beat.wav', { exact: true }).waitFor({
+      state: 'visible',
+      timeout: 20_000,
+    })
+    await desktopPage.locator('[data-beatvideo-grid-overlay="tracks"]').waitFor({
+      state: 'visible',
+      timeout: 20_000,
+    })
+    await desktopPage.locator('[data-timeline-waveform-canvas]').last().waitFor({
+      state: 'visible',
+      timeout: 20_000,
+    })
+
     await desktopPage.getByRole('tab', { name: 'Visual' }).click()
     await desktopPage.getByText('editor-roundtrip-smoke.webm', { exact: true }).waitFor({
       state: 'visible',
@@ -531,7 +627,7 @@ async function main() {
       throw new Error(`Desktop media round-trip errors:\\n${desktopErrors.join('\\n')}`)
     }
     console.log(
-      'Real-media editor smoke passed: WebM import, shot trim, Source precision UI, timeline overwrite, Undo/Redo, save and reopen are verified.',
+      'Real-media editor smoke passed: WebM shot trim + Source overwrite + Undo/Redo and WAV fixed-BPM waveform/grid survive save/reopen.',
     )
     await desktopContext.close()
   } finally {
