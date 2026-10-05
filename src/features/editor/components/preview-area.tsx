@@ -570,7 +570,7 @@ export const PreviewArea = memo(function PreviewArea({
         <>
           <InteractionLockRegion
             locked={isMaskEditingActive}
-            className="h-full"
+            className="h-full min-w-0 overflow-hidden"
             overlayClassName="rounded-none"
             style={{ width: `${displayedSourceSplitPercent}%` }}
           >
@@ -598,7 +598,7 @@ export const PreviewArea = memo(function PreviewArea({
 
       <div
         ref={programMonitorRef}
-        className={`flex flex-col min-w-0 min-h-0 bg-background ${hasSidePanels ? '' : 'flex-1'}`}
+        className={`flex flex-col min-w-0 min-h-0 overflow-hidden bg-background ${hasSidePanels ? '' : 'flex-1'}`}
         style={hasSidePanels ? { width: `${programPanelPercent}%` } : undefined}
         role="region"
         aria-label="Program monitor"

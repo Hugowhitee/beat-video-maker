@@ -496,7 +496,17 @@ async function main() {
     }
 
     const beforeInsertCount = await desktopPage.locator('[data-timeline-item]').count()
-    await sourceMonitor.getByRole('button', { name: 'Overwrite (.)' }).click()
+    const overwriteButton = sourceMonitor.getByRole('button', { name: 'Overwrite (.)' })
+    const sourceBox = await sourceMonitor.boundingBox()
+    const overwriteBox = await overwriteButton.boundingBox()
+    const programBox = await desktopPage.locator('[data-program-monitor]').boundingBox()
+    if (!sourceBox || !overwriteBox || !programBox ||
+      overwriteBox.x < sourceBox.x - 1 ||
+      overwriteBox.x + overwriteBox.width > sourceBox.x + sourceBox.width + 1 ||
+      overwriteBox.x + overwriteBox.width > programBox.x + 1) {
+      throw new Error(`Source controls overflow into Program: ${JSON.stringify({ sourceBox, overwriteBox, programBox })}`)
+    }
+    await overwriteButton.click()
     await desktopPage.waitForFunction(
       (before) => document.querySelectorAll('[data-timeline-item]').length > before,
       beforeInsertCount,

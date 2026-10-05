@@ -133,7 +133,7 @@ function SourcePatchDestinationPicker({
           variant="ghost"
           size="sm"
           className={cn(
-            'h-6 min-w-15 justify-between gap-1 px-1.5 font-mono text-[10px]',
+            'h-6 min-w-15 max-w-24 justify-between gap-1 px-1.5 font-mono text-[10px] @max-[560px]/source-controls:max-w-20',
             !selectedTrackId && 'text-muted-foreground',
           )}
           aria-label={`Choose ${kindLabel.toLowerCase()} source patch destination`}
@@ -1304,7 +1304,7 @@ function SourcePlaybackControls({
           </div>
         </div>
         {interactive && (
-          <div className="flex items-center gap-0.5 shrink-0">
+          <div className="flex shrink-0 items-center justify-center gap-0.5 @max-[560px]/source-controls:justify-end">
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button
@@ -1380,8 +1380,9 @@ function SourcePlaybackControls({
 
       {/* Transport row */}
       <div
-        className="border-t border-border panel-header flex items-center justify-between px-4 shrink-0"
-        style={{ height: EDITOR_LAYOUT_CSS_VALUES.previewControlsHeight }}
+        className="@container/source-controls grid shrink-0 grid-cols-[auto_1fr_auto] items-center gap-x-2 border-t border-border panel-header px-2 py-1 @max-[560px]/source-controls:grid-cols-[minmax(0,1fr)_auto] @max-[560px]/source-controls:gap-y-1"
+        style={{ minHeight: EDITOR_LAYOUT_CSS_VALUES.previewControlsHeight }}
+        data-testid="source-transport-controls"
       >
         <div className="flex min-w-0 shrink-0 items-center gap-2">
           <div className="inline-flex items-center gap-1.5 font-mono text-xs tabular-nums text-muted-foreground">
@@ -1493,8 +1494,8 @@ function SourcePlaybackControls({
         </div>
 
         {interactive ? (
-          <div className="flex items-center gap-0.5 shrink-0">
-            <div className="flex items-center gap-1 shrink-0">
+          <div className="flex min-w-0 shrink-0 items-center justify-end gap-0.5 @max-[560px]/source-controls:col-span-2 @max-[560px]/source-controls:w-full">
+            <div className="flex min-w-0 items-center gap-1">
               <div className="flex items-center gap-0.5 rounded-md border border-border bg-secondary/50 px-1 py-0.5">
                 <Tooltip>
                   <TooltipTrigger asChild>
