@@ -574,6 +574,57 @@ async function main() {
     }
     await beatGrid.waitFor({ state: 'visible', timeout: 10_000 })
 
+    console.log('Smoke: applying a real GPU effect and checking shared Color compare')
+    await desktopPage.getByRole('tab', { name: 'Visual', exact: true }).click()
+    const videoTimelineItem = desktopPage
+      .locator('[data-timeline-item]')
+      .filter({ hasText: 'editor-roundtrip-smoke.webm' })
+      .first()
+    await videoTimelineItem.waitFor({ state: 'visible', timeout: 20_000 })
+    await videoTimelineItem.click()
+
+    const clipInspector = desktopPage.getByTestId('properties-clip-panel-host')
+    await clipInspector.waitFor({ state: 'visible', timeout: 20_000 })
+    await clipInspector.getByRole('tab', { name: 'Effects', exact: true }).click()
+    const effectsSection = clipInspector.getByTestId('effects-section')
+    await effectsSection.waitFor({ state: 'visible', timeout: 20_000 })
+    await effectsSection.getByRole('button', { name: 'Add Effect', exact: true }).click()
+    const effectSearch = desktopPage.getByPlaceholder('Search effects…')
+    await effectSearch.fill('Film Grain')
+    await desktopPage.getByRole('button', { name: 'Film Grain', exact: true }).first().click()
+
+    const activeEffectIndicator = videoTimelineItem.getByRole('button', {
+      name: /Edit effects: 1 active, 0 bypassed/i,
+    })
+    await activeEffectIndicator.waitFor({ state: 'visible', timeout: 20_000 })
+    const disableEffect = clipInspector.getByRole('button', { name: 'Disable Effect' }).first()
+    await disableEffect.click()
+    await videoTimelineItem.getByRole('button', {
+      name: /Edit effects: 0 active, 1 bypassed/i,
+    }).waitFor({ state: 'visible', timeout: 10_000 })
+    await clipInspector.getByRole('button', { name: 'Enable Effect' }).first().click()
+    await activeEffectIndicator.waitFor({ state: 'visible', timeout: 10_000 })
+
+    await desktopPage.getByRole('tab', { name: 'Color', exact: true }).click()
+    const compareButton = desktopPage.getByRole('button', {
+      name: /Before \/ After .*Shift \+ B/i,
+    }).first()
+    await compareButton.waitFor({ state: 'visible', timeout: 20_000 })
+    if ((await compareButton.getAttribute('aria-pressed')) !== 'false') {
+      throw new Error('Color comparison should start in After mode')
+    }
+    await compareButton.click()
+    if ((await compareButton.getAttribute('aria-pressed')) !== 'true') {
+      throw new Error('Color Before/After button did not enter Before mode')
+    }
+    await desktopPage.keyboard.press('Shift+b')
+    await desktopPage.waitForFunction(
+      () => document.querySelector('button[aria-label*="Before / After"]')?.getAttribute('aria-pressed') === 'false',
+      null,
+      { timeout: 10_000 },
+    )
+
+    const persistedItemCount = await desktopPage.locator('[data-timeline-item]').count()
     await desktopPage.getByRole('button', { name: 'Save project' }).click()
     await desktopPage.getByText('Project saved', { exact: true }).waitFor({
       state: 'visible',
@@ -596,7 +647,7 @@ async function main() {
     })
     await desktopPage.waitForFunction(
       (expected) => document.querySelectorAll('[data-timeline-item]').length === expected,
-      insertedCount,
+      persistedItemCount,
       { timeout: 20_000 },
     )
 
@@ -633,11 +684,43 @@ async function main() {
       )
     }
 
+    const reopenedVideoTimelineItem = desktopPage
+      .locator('[data-timeline-item]')
+      .filter({ hasText: 'editor-roundtrip-smoke.webm' })
+      .first()
+    await reopenedVideoTimelineItem.getByRole('button', {
+      name: /Edit effects: 1 active, 0 bypassed/i,
+    }).waitFor({ state: 'visible', timeout: 20_000 })
+
+    console.log('Smoke: rendering and downloading a real video export')
+    await desktopPage.getByRole('button', { name: 'Close source monitor' }).click()
+    await desktopPage.getByRole('button', { name: 'Export', exact: true }).click()
+    const exportDialog = desktopPage.getByRole('dialog')
+    await exportDialog.getByRole('heading', { name: 'Export', exact: true }).waitFor({
+      state: 'visible',
+      timeout: 20_000,
+    })
+    await exportDialog.getByRole('button', { name: 'Small file', exact: true }).click()
+    const exportVideoButton = exportDialog.getByRole('button', { name: 'Export Video', exact: true })
+    await exportVideoButton.waitFor({ state: 'visible', timeout: 30_000 })
+    await exportVideoButton.click()
+    await desktopPage.getByText('Your video is ready to download.', { exact: true }).waitFor({
+      state: 'visible',
+      timeout: 120_000,
+    })
+    const downloadPromise = desktopPage.waitForEvent('download', { timeout: 30_000 })
+    await desktopPage.getByRole('button', { name: 'Download', exact: true }).click()
+    const download = await downloadPromise
+    const suggestedName = download.suggestedFilename()
+    if (!/\.(mp4|webm|mov|mkv)$/i.test(suggestedName)) {
+      throw new Error(`Unexpected exported video filename: ${suggestedName}`)
+    }
+
     if (desktopErrors.length) {
       throw new Error(`Desktop media round-trip errors:\\n${desktopErrors.join('\\n')}`)
     }
     console.log(
-      'Real-media editor smoke passed: WebM shot trim + Source overwrite + Undo/Redo and WAV fixed-BPM waveform/grid survive save/reopen.',
+      'Real-media editor smoke passed: WebM trim/overwrite, Undo/Redo, WAV waveform/grid, GPU effect bypass, Color compare, save/reopen and downloaded video export are verified.',
     )
     await desktopContext.close()
   } finally {
