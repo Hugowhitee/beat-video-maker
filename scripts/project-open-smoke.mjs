@@ -589,7 +589,7 @@ async function main() {
     const effectsSection = clipInspector.getByTestId('effects-section')
     await effectsSection.waitFor({ state: 'visible', timeout: 20_000 })
     await effectsSection.getByRole('button', { name: 'Add Effect', exact: true }).click()
-    const effectSearch = desktopPage.getByPlaceholder('Search effects…')
+    const effectSearch = desktopPage.getByPlaceholder('Search effects')
     await effectSearch.fill('Film Grain')
     await desktopPage.getByRole('button', { name: 'Film Grain', exact: true }).first().click()
 
