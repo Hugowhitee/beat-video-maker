@@ -652,10 +652,17 @@ async function main() {
     )
 
     await desktopPage.getByRole('tab', { name: 'Beat' }).click()
-    await desktopPage.getByText('editor-roundtrip-beat.wav', { exact: true }).waitFor({
-      state: 'visible',
-      timeout: 20_000,
-    })
+    const reopenedBeatSource = desktopPage.getByLabel('Project beat source')
+    await reopenedBeatSource.waitFor({ state: 'visible', timeout: 20_000 })
+    await desktopPage.waitForFunction(
+      () => {
+        const select = document.querySelector('select[aria-label="Project beat source"]')
+        return select instanceof HTMLSelectElement &&
+          select.selectedOptions[0]?.textContent?.trim() === 'editor-roundtrip-beat.wav'
+      },
+      null,
+      { timeout: 20_000 },
+    )
     await desktopPage.locator('[data-beatvideo-grid-overlay="tracks"]').waitFor({
       state: 'visible',
       timeout: 20_000,

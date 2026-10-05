@@ -14,7 +14,7 @@ export {
   applyEditPlanToTimeline,
 } from '@/features/auto-edit/timeline-materialization'
 
-export type { EditPace, SourceMixMode, TransitionProfile } from '@/features/auto-edit/types'
+export type { CutRhythm, EditPace, SourceMixMode, TransitionProfile } from '@/features/auto-edit/types'
 export {
   replaceSegmentSource,
   setSegmentLocked,

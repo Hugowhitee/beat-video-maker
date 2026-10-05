@@ -26,6 +26,7 @@ import {
   type ReviewedShotEdit,
   type ClipMap,
   type ClipMapBuildProgress,
+  type CutRhythm,
   type EditPace,
   type EditPlan,
   type SourceMixMode,
@@ -88,6 +89,7 @@ export function BeatvideoVisualSourcePanel({
 
   const [arrangeMode, setArrangeMode] = useState<ArrangeMode>('auto')
   const [arrangePace, setArrangePace] = useState<EditPace>('balanced')
+  const [cutRhythm, setCutRhythm] = useState<CutRhythm>('straight')
   const [sourceMixMode, setSourceMixMode] = useState<SourceMixMode>('balanced')
   const [sourceWeights, setSourceWeights] = useState<Record<string, number>>({})
   const [transitionProfile, setTransitionProfile] =
@@ -301,6 +303,7 @@ export function BeatvideoVisualSourcePanel({
     }
   }, [
     autoArranging,
+    cutRhythm,
     describeProgress,
     importingFootage,
     preparingFootage,
@@ -458,6 +461,7 @@ export function BeatvideoVisualSourcePanel({
       const relativePlan = createEditPlan(relative.music, plannerClipMap, {
         mode: arrangeMode,
         pace: arrangePace,
+        cutRhythm,
         sourceMix: sourceMixMode,
         sourceWeights,
         loopBars,
@@ -1385,6 +1389,43 @@ export function BeatvideoVisualSourcePanel({
                     </button>
                   ))}
                 </div>
+              </div>
+
+              <div>
+                <div className="mb-1 flex items-center justify-between gap-2 text-[10px] text-muted-foreground">
+                  <span>Cut rhythm</span>
+                  <span className="font-mono">
+                    {cutRhythm === 'straight'
+                      ? 'beats'
+                      : cutRhythm === 'backbeat'
+                        ? '2 + 4'
+                        : 'beats + &'}
+                  </span>
+                </div>
+                <div className="studio-segmented grid h-8 grid-cols-3">
+                  {([
+                    ['straight', 'Straight'],
+                    ['backbeat', 'Backbeat'],
+                    ['syncopated', 'Syncopated'],
+                  ] as const).map(([value, label]) => (
+                    <button
+                      key={value}
+                      type="button"
+                      aria-pressed={cutRhythm === value}
+                      onClick={() => setCutRhythm(value)}
+                      className="studio-segment h-7 px-1 text-[10px] font-medium"
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+                <p className="mt-1 text-[10px] leading-relaxed text-muted-foreground">
+                  {cutRhythm === 'straight'
+                    ? 'Every internal cut stays on a detected beat.'
+                    : cutRhythm === 'backbeat'
+                      ? 'Still beat-locked, but some cuts favor beats 2 and 4 — common backbeat/snare positions.'
+                      : 'Adds occasional half-beat “and” cuts for syncopation; every edge still belongs to the musical grid.'}
+                </p>
               </div>
 
               <div>

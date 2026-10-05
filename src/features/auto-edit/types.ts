@@ -1,6 +1,7 @@
 export type EditMode = 'loop' | 'guided' | 'auto';
 export type TransitionProfile = 'clean' | 'accent';
 export type EditPace = 'relaxed' | 'balanced' | 'energetic';
+export type CutRhythm = 'straight' | 'backbeat' | 'syncopated';
 export type SourceMixMode = 'balanced' | 'rotate' | 'weighted';
 export type EditTransitionKind = 'film-burn' | 'film-gate';
 
@@ -87,6 +88,12 @@ export type EditPlannerOptions = {
   loopBars?: number;
   transitionProfile?: TransitionProfile;
   pace?: EditPace;
+  /**
+   * Which musical grid positions Auto Arrange may prefer for clip boundaries.
+   * "backbeat" favors beats 2/4; "syncopated" may also use the half-beat "and".
+   * This deliberately does not claim to detect a snare instrument.
+   */
+  cutRhythm?: CutRhythm;
   /** How Auto Arrange distributes eligible shots across the enabled footage sources. */
   sourceMix?: SourceMixMode;
   /** Per-source multipliers used only by weighted source mixing. */
