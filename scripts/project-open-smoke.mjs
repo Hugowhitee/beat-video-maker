@@ -443,6 +443,17 @@ async function main() {
     }
     const saveRange = desktopPage.getByRole('button', { name: 'Save In/Out' })
     await saveRange.click({ timeout: 10_000 })
+    await desktopPage.waitForFunction(
+      ({ selector, original }) => {
+        const element = document.querySelector(selector)
+        return element instanceof HTMLElement && element.innerText !== original
+      },
+      {
+        selector: '[data-beatvideo-shot-open]',
+        original: originalShotText,
+      },
+      { timeout: 20_000 },
+    )
 
     const trimmedShotText = await firstShotRange.innerText()
     if (trimmedShotText === originalShotText) {
