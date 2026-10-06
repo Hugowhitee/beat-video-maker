@@ -713,7 +713,9 @@ async function main() {
     }
 
     await desktopPage.getByRole('tab', { name: 'Visual' }).click()
-    await desktopPage.getByText('editor-roundtrip-smoke.webm', { exact: true }).waitFor({
+    // The file name also appears in the timeline, sequence and select options.
+    // Target the footage card heading rather than ambiguous visible text.
+    await desktopPage.getByRole('heading', { name: 'editor-roundtrip-smoke.webm' }).first().waitFor({
       state: 'visible',
       timeout: 20_000,
     })
