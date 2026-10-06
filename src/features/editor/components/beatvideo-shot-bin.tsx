@@ -130,7 +130,7 @@ export function BeatvideoShotBin({
   const openedShotRef = useRef<string | null>(null)
 
   const previewShotAtPointer = useCallback(
-    (event: PointerEvent<HTMLDivElement>, shot: ClipShot) => {
+    (event: PointerEvent<HTMLElement>, shot: ClipShot) => {
       if (openedShotRef.current === shot.id) return
       const media = mediaById[shot.sourceId]
       if (!media || media.fps <= 0) return
@@ -171,10 +171,10 @@ export function BeatvideoShotBin({
               >
                 <div className="flex h-7 min-w-0 items-center gap-2 border-b border-border/70 px-2">
                   <span className="h-2 w-2 shrink-0 rounded-[2px] bg-primary/70" aria-hidden="true" />
-                  <span className="min-w-0 flex-1 truncate text-[9px] font-medium text-foreground">
+                  <span className="min-w-0 flex-1 truncate text-[10px] font-medium text-foreground">
                     {source.name}
                   </span>
-                  <span className="shrink-0 font-mono text-[8px] tabular-nums text-muted-foreground">
+                  <span className="shrink-0 font-mono text-[10px] tabular-nums text-muted-foreground">
                     {source.shots.length} shot{source.shots.length === 1 ? '' : 's'}
                     {skippedCount > 0 ? ` · ${skippedCount} skipped` : ''}
                   </span>
@@ -189,20 +189,6 @@ export function BeatvideoShotBin({
                       <div
                         key={shot.id}
                         draggable
-                        tabIndex={0}
-                        aria-label={`Shot ${index + 1} from ${source.name}. Drag onto a sequence slot.`}
-                        title="Click to play and trim in Source · drag onto a sequence clip"
-                        onClick={() => {
-                          openedShotRef.current = shot.id
-                          clearShotPreview()
-                          onOpenShot(shot)
-                        }}
-                        onPointerEnter={(event) => previewShotAtPointer(event, shot)}
-                        onPointerMove={(event) => previewShotAtPointer(event, shot)}
-                        onPointerLeave={() => {
-                          openedShotRef.current = null
-                          clearShotPreview()
-                        }}
                         onDragStart={(event) => {
                           clearShotPreview()
                           onDragStart(event, shot.id)
@@ -211,18 +197,7 @@ export function BeatvideoShotBin({
                           clearShotPreview()
                           onDragEnd()
                         }}
-                        onKeyDown={(event) => {
-                          if (event.key !== 'Enter' && event.key !== ' ') return
-                          event.preventDefault()
-                          if (event.key === 'Enter') {
-                            openedShotRef.current = shot.id
-                            clearShotPreview()
-                            onOpenShot(shot)
-                          } else {
-                            onToggleAvoid(shot.id)
-                          }
-                        }}
-                        className={`group relative w-28 shrink-0 cursor-grab border bg-background outline-none active:cursor-grabbing focus-visible:border-primary ${
+                        className={`group relative w-28 shrink-0 cursor-grab border bg-background active:cursor-grabbing ${
                           dragging || selectedShotId === shot.id
                             ? 'border-primary ring-1 ring-primary/50'
                             : avoided
@@ -230,28 +205,56 @@ export function BeatvideoShotBin({
                               : 'border-border/80 hover:border-primary/45'
                         }`}
                       >
-                        <BeatvideoShotFrame
-                          shot={shot}
-                          sourceDuration={sourceDuration}
-                          className="aspect-video w-full"
-                        />
+                        <button
+                          type="button"
+                          data-beatvideo-shot
+                          aria-label={`Shot ${index + 1} from ${source.name}. Open in Source.`}
+                          title="Open in Source · drag the card onto a sequence clip"
+                          onClick={() => {
+                            openedShotRef.current = shot.id
+                            clearShotPreview()
+                            onOpenShot(shot)
+                          }}
+                          onPointerEnter={(event) => previewShotAtPointer(event, shot)}
+                          onPointerMove={(event) => previewShotAtPointer(event, shot)}
+                          onPointerLeave={() => {
+                            openedShotRef.current = null
+                            clearShotPreview()
+                          }}
+                          className="block w-full text-left outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-1"
+                        >
+                          <BeatvideoShotFrame
+                            shot={shot}
+                            sourceDuration={sourceDuration}
+                            className="aspect-video w-full"
+                          />
+                        </button>
                         <div className="flex items-center justify-between gap-1 border-t border-border/60 px-1.5 py-1">
-                          <span className="font-mono text-[8px] text-foreground/80">
-                            {String(index + 1).padStart(2, '0')}
-                          </span>
-                          <span className="font-mono text-[8px] text-muted-foreground">
-                            {shot.start.toFixed(1)}–{shot.end.toFixed(1)}s
-                          </span>
                           <button
                             type="button"
-                            onClick={(event) => {
-                              event.stopPropagation()
-                              onToggleAvoid(shot.id)
+                            data-beatvideo-shot-open
+                            className="flex min-h-6 min-w-0 flex-1 items-center justify-between gap-1 rounded-[2px] px-1 text-left outline-none hover:bg-muted/60 focus-visible:ring-2 focus-visible:ring-primary"
+                            aria-label={`Open shot ${index + 1} in Source`}
+                            onClick={() => {
+                              openedShotRef.current = shot.id
+                              clearShotPreview()
+                              onOpenShot(shot)
                             }}
+                          >
+                            <span className="font-mono text-[10px] text-foreground/80">
+                              {String(index + 1).padStart(2, '0')}
+                            </span>
+                            <span className="font-mono text-[10px] text-muted-foreground">
+                              {shot.start.toFixed(1)}–{shot.end.toFixed(1)}s
+                            </span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => onToggleAvoid(shot.id)}
                             className={
                               avoided
-                                ? 'text-[8px] font-medium text-amber-300 hover:text-amber-200'
-                                : 'text-[8px] text-muted-foreground hover:text-foreground'
+                                ? 'min-h-6 px-1 text-[10px] font-medium text-amber-300 hover:text-amber-200'
+                                : 'min-h-6 px-1 text-[10px] text-muted-foreground hover:text-foreground'
                             }
                             aria-label={avoided ? 'Use shot on rebuild' : 'Skip shot on rebuild'}
                           >
@@ -267,7 +270,7 @@ export function BeatvideoShotBin({
           })}
         </div>
       ) : (
-        <div className="py-2 text-[9px] text-muted-foreground">No shots detected.</div>
+        <div className="py-2 text-[10px] text-muted-foreground">No shots detected.</div>
       )}
     </div>
   )

@@ -86,7 +86,7 @@ export function useTrackHeightResize() {
   )
 
   const handleResizeStart = useCallback(
-    (event: ReactMouseEvent<HTMLButtonElement>, trackId: string) => {
+    (event: ReactMouseEvent<HTMLButtonElement>, trackId: string, resizeFromBottom = false) => {
       const track = useItemsStore.getState().tracks.find((candidate) => candidate.id === trackId)
       if (!track) return
 
@@ -99,7 +99,7 @@ export function useTrackHeightResize() {
         startY: event.clientY,
         startHeight: track.height,
         currentHeight: track.height,
-        deltaDirection: getTrackKind(track) === 'audio' ? 1 : -1,
+        deltaDirection: resizeFromBottom || getTrackKind(track) === 'audio' ? 1 : -1,
         applyToAll: event.altKey,
         didChange: false,
       })

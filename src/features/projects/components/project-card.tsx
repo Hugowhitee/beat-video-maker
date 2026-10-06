@@ -232,7 +232,7 @@ export function ProjectCard({
           <Button
             type="button"
             size="sm"
-            className="studio-secondary-action h-7 px-2.5 text-[9px]"
+            className="studio-secondary-action h-7 px-2.5 text-[10px]"
             onClick={handleOpenClick}
           >
             Open

@@ -31,6 +31,7 @@ interface TransformGizmoProps {
   item: TimelineItem
   coordParams: CoordinateParams
   onTransformStart: () => void
+  onEditText?: () => void
   onTransformEnd: (
     transform: Transform,
     operation: 'move' | 'resize' | 'rotate' | 'anchor',
@@ -52,6 +53,7 @@ export function TransformGizmo({
   item,
   coordParams,
   onTransformStart,
+  onEditText,
   onTransformEnd,
   onCropEnd,
   isPlaying = false,
@@ -621,7 +623,14 @@ export function TransformGizmo({
       }}
       // Prevent events from propagating to elements below
       onMouseDown={(e) => e.stopPropagation()}
-      onDoubleClick={(e) => e.stopPropagation()}
+      onDoubleClick={(e) => {
+        e.stopPropagation()
+        // Double-click body text to edit; transform handles stay independent.
+        if (item.type === 'text' && !(e.target as HTMLElement).closest('button')) {
+          e.preventDefault()
+          onEditText?.()
+        }
+      }}
     >
       {item.type === 'controller' && (
         <div className="pointer-events-none absolute inset-0" data-testid="null-controller-gizmo">

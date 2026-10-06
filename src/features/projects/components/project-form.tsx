@@ -127,7 +127,7 @@ function ProjectFormBase({
         >
           <input type="hidden" {...register('beatvideoMode')} />
           <div>
-            <div className="mb-3 text-[9px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+            <div className="mb-3 text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
               Project type
             </div>
             <div className="grid grid-cols-2 gap-2">
@@ -178,7 +178,7 @@ function ProjectFormBase({
             <div
               className="border-t border-border pt-6"
             >
-              <div className="mb-5 text-[9px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+              <div className="mb-5 text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
                 {t('projects.form.projectDetails')}
               </div>
 
@@ -265,7 +265,7 @@ function ProjectFormBase({
 
             {/* Video Settings */}
             <div className="border-t border-border pt-6">
-              <div className="mb-5 text-[9px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+              <div className="mb-5 text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
                 {t('projects.form.resolution')}
               </div>
 
@@ -319,7 +319,7 @@ function ProjectFormBase({
               )}
 
               <div className="mt-6">
-                <div className="mb-3 text-[9px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+                <div className="mb-3 text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
                   {t('projects.form.frameRate')}
                 </div>
                 <div
@@ -332,7 +332,7 @@ function ProjectFormBase({
                     <button
                       key={preset.value}
                       type="button"
-                      className="studio-segment h-8 min-w-0 px-1 text-[9px] font-medium"
+                      className="studio-segment h-8 min-w-0 px-1 text-[10px] font-medium"
                       aria-pressed={fps === preset.value}
                       title={preset.label}
                       onClick={() =>
@@ -355,7 +355,7 @@ function ProjectFormBase({
 
           <div className="flex flex-col gap-4 border-t border-border pt-5 sm:flex-row sm:items-end sm:justify-between">
             <div className="min-w-0">
-              <div className="text-[9px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+              <div className="text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
                 Ready
               </div>
               <div className="mt-1 truncate text-[11px] font-semibold text-foreground">

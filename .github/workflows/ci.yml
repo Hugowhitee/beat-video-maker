@@ -31,6 +31,8 @@ jobs:
       - name: Verify project tiles and OPFS project open
         run: node scripts/project-open-smoke.mjs
       - run: vp test run
+      - name: Verify portable headless project round-trip
+        run: npm run headless:test:portable
       - name: Verify GitHub Pages production build
         env:
           GITHUB_PAGES: 'true'

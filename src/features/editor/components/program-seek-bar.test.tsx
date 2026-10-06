@@ -4,12 +4,14 @@ import { beforeEach, describe, expect, it } from 'vite-plus/test'
 import { fireEvent, render, screen } from '@testing-library/react'
 import { usePlaybackStore } from '@/shared/state/playback'
 import { usePreviewBridgeStore } from '@/shared/state/preview-bridge'
+import { useTimelineViewportStore } from '@/features/editor/deps/timeline-store-contract'
 import { ProgramSeekBar } from './program-seek-bar'
 
 describe('Program seek bar', () => {
   beforeEach(() => {
     usePlaybackStore.setState({ currentFrame: 30, previewFrame: 90, isPlaying: false })
     usePreviewBridgeStore.setState({ displayedFrame: 90 })
+    useTimelineViewportStore.setState({ pendingScrollToFrame: null })
   })
 
   it('reads the canonical playhead and seeks through the same playback store', () => {
@@ -19,6 +21,7 @@ describe('Program seek bar', () => {
     expect(slider).toHaveAttribute('aria-valuetext', '0:01 of 2:00')
     fireEvent.change(slider, { target: { value: '1800' } })
     expect(usePlaybackStore.getState().currentFrame).toBe(1800)
+    expect(useTimelineViewportStore.getState().pendingScrollToFrame).toBe(1800)
     expect(usePlaybackStore.getState().previewFrame).toBeNull()
     expect(usePreviewBridgeStore.getState().displayedFrame).toBeNull()
   })
@@ -29,5 +32,6 @@ describe('Program seek bar', () => {
     const slider = screen.getByRole('slider', { name: 'Seek in program' })
     expect(slider).toHaveValue('120')
     expect(slider).toBeDisabled()
+    expect(useTimelineViewportStore.getState().pendingScrollToFrame).toBeNull()
   })
 })

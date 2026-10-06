@@ -9,7 +9,7 @@ import {
 } from 'react'
 import { useEditorStore } from '@/shared/state/editor'
 import { usePlaybackStore } from '@/shared/state/playback'
-import { ChevronDown, ImagePlus } from 'lucide-react'
+import { ChevronDown, ImagePlus, ScanSearch } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { Switch } from '@/components/ui/switch'
@@ -26,6 +26,7 @@ import {
   type ReviewedShotEdit,
   type ClipMap,
   type ClipMapBuildProgress,
+  type CutRhythm,
   type EditPace,
   type EditPlan,
   type SourceMixMode,
@@ -34,6 +35,7 @@ import {
 import { resolveBeatvideoTimelineGrid } from '@/features/editor/deps/beatvideo-music'
 import { useMediaLibraryStore } from '@/features/editor/deps/media-library'
 import { useProjectStore } from '@/features/editor/deps/projects'
+import { useSceneBrowserStore } from '@/features/editor/deps/scene-browser'
 import {
   createLinkedPreCompPattern,
   executeTimelineCommand,
@@ -45,6 +47,7 @@ import { useSelectionStore } from '@/shared/state/selection'
 import type { BeatvideoProjectMode } from '@/types/project'
 import type { MusicMap } from '@/types/beatvideo'
 import { BeatvideoShotBin, BeatvideoShotFrame } from './beatvideo-shot-bin'
+import { BeatvideoShotReviewControls } from './beatvideo-shot-review-controls'
 import { useSourcePlayerStore } from '@/shared/state/source-player'
 import {
   ARRANGEMENT_SHOT_DRAG_MIME,
@@ -86,6 +89,7 @@ export function BeatvideoVisualSourcePanel({
 
   const [arrangeMode, setArrangeMode] = useState<ArrangeMode>('auto')
   const [arrangePace, setArrangePace] = useState<EditPace>('balanced')
+  const [cutRhythm, setCutRhythm] = useState<CutRhythm>('straight')
   const [sourceMixMode, setSourceMixMode] = useState<SourceMixMode>('balanced')
   const [sourceWeights, setSourceWeights] = useState<Record<string, number>>({})
   const [transitionProfile, setTransitionProfile] =
@@ -95,6 +99,10 @@ export function BeatvideoVisualSourcePanel({
   const [disabledArrangeSourceIds, setDisabledArrangeSourceIds] = useState<string[]>([])
   const [draggingShotId, setDraggingShotId] = useState<string | null>(null)
   const [selectedSourceShotId, setSelectedSourceShotId] = useState<string | null>(null)
+  const sourcePlayerMediaId = useSourcePlayerStore((state) => state.currentMediaId)
+  const sourceInPoint = useSourcePlayerStore((state) => state.inPoint)
+  const sourceOutPoint = useSourcePlayerStore((state) => state.outPoint)
+  const openSceneBrowser = useSceneBrowserStore((state) => state.openBrowser)
   const [reviewingShots, setReviewingShots] = useState(false)
   const [dragOverSlotKey, setDragOverSlotKey] = useState<string | null>(null)
   const [activeSourceSegmentId, setActiveSourceSegmentId] = useState<string | null>(null)
@@ -166,6 +174,19 @@ export function BeatvideoVisualSourcePanel({
   )
 
   const selectedSourceShot = selectedSourceShotId ? shotById.get(selectedSourceShotId) : null
+  const selectedShotMedia = selectedSourceShot
+    ? videoCandidates.find((media) => media.id === selectedSourceShot.sourceId)
+    : null
+  const selectedShotFps = Math.max(1, selectedShotMedia?.fps || 30)
+  const selectedShotSourceOpen = Boolean(
+    selectedSourceShot && sourcePlayerMediaId === selectedSourceShot.sourceId &&
+      sourceInPoint !== null && sourceOutPoint !== null,
+  )
+  const selectedShotRangeDirty = Boolean(
+    selectedSourceShot && selectedShotSourceOpen &&
+      (sourceInPoint !== Math.round(selectedSourceShot.start * selectedShotFps) ||
+        sourceOutPoint !== Math.round(selectedSourceShot.end * selectedShotFps)),
+  )
 
   const editableArrangementSlots = useMemo(() => {
     if (!lastPlan || !lastClipMap || loopBlocksGrouped) return []
@@ -282,6 +303,7 @@ export function BeatvideoVisualSourcePanel({
     }
   }, [
     autoArranging,
+    cutRhythm,
     describeProgress,
     importingFootage,
     preparingFootage,
@@ -439,6 +461,7 @@ export function BeatvideoVisualSourcePanel({
       const relativePlan = createEditPlan(relative.music, plannerClipMap, {
         mode: arrangeMode,
         pace: arrangePace,
+        cutRhythm,
         sourceMix: sourceMixMode,
         sourceWeights,
         loopBars,
@@ -685,6 +708,13 @@ export function BeatvideoVisualSourcePanel({
     )
   }, [])
 
+  const openAiSceneSearch = useCallback(() => {
+    openSceneBrowser({
+      mediaId: selectedSourceShot?.sourceId ?? null,
+      focus: true,
+    })
+  }, [openSceneBrowser, selectedSourceShot?.sourceId])
+
   const setArrangeSourceEnabled = useCallback((sourceId: string, enabled: boolean) => {
     setDisabledArrangeSourceIds((current) =>
       enabled
@@ -740,7 +770,8 @@ export function BeatvideoVisualSourcePanel({
       sourcePlayer.setCurrentMediaId(shot.sourceId)
       sourcePlayer.setInPoint(startFrame)
       sourcePlayer.setOutPoint(endFrame)
-      sourcePlayer.setPendingPlay(true)
+      // Reviewing a shot is inspection, not an implicit Play action.
+      sourcePlayer.setPendingPlay(false)
       sourcePlayer.setPendingSeekFrame(startFrame)
       useEditorStore.getState().setSourcePreviewMediaId(shot.sourceId)
     },
@@ -763,11 +794,29 @@ export function BeatvideoVisualSourcePanel({
         sources: current.sources.map((candidate) =>
           candidate.id === source.id ? nextSource : candidate),
       }))
-      if (action.kind === 'merge-left') {
-        const n = Number(action.shotId.split(':').at(-1))
-        setSelectedSourceShotId(`${source.id}:shot:${Math.max(1, n - 1)}`)
-      } else if (action.kind === 'reset-scenes') {
-        setSelectedSourceShotId(null)
+      const nextSelectedShotId = action.kind === 'merge-left'
+        ? `${source.id}:shot:${Math.max(1, Number(action.shotId.split(':').at(-1)) - 1)}`
+        : action.kind === 'reset-scenes' ? null : shot.id
+      if (action.kind === 'merge-left' || action.kind === 'reset-scenes') {
+        setSelectedSourceShotId(nextSelectedShotId)
+      }
+
+      // Review persistence is the owner of saved source boundaries. Refresh
+      // the active Source monitor after Save, Reset, Split or Merge so an old
+      // draft never masquerades as a newly saved result.
+      const player = useSourcePlayerStore.getState()
+      if (player.currentMediaId === source.id) {
+        const savedShot = nextSource.shots.find((candidate) => candidate.id === nextSelectedShotId)
+        if (savedShot) {
+          const sourceFps = Math.max(1, source.fps || 30)
+          const firstFrame = Math.max(0, Math.round(savedShot.start * sourceFps))
+          const afterLastFrame = Math.max(firstFrame + 1, Math.round(savedShot.end * sourceFps))
+          player.setInPoint(firstFrame)
+          player.setOutPoint(afterLastFrame)
+          player.setPendingSeekFrame(firstFrame)
+        } else if (action.kind === 'reset-scenes') {
+          player.clearInOutPoints()
+        }
       }
       toast.success('Source shots updated')
     } catch (error) {
@@ -796,6 +845,20 @@ export function BeatvideoVisualSourcePanel({
       end: player.outPoint / sourceFps,
     })
   }, [handleReviewSourceShot, selectedSourceShot, videoCandidates])
+
+  const cancelSelectedShotInOut = useCallback(() => {
+    if (!selectedSourceShot) return
+    const source = videoCandidates.find((media) => media.id === selectedSourceShot.sourceId)
+    const player = useSourcePlayerStore.getState()
+    if (!source || player.currentMediaId !== source.id) return
+    const sourceFps = Math.max(1, source.fps || 30)
+    const originalStartFrame = Math.max(0, Math.round(selectedSourceShot.start * sourceFps))
+    const originalEndFrame = Math.max(originalStartFrame + 1, Math.round(selectedSourceShot.end * sourceFps))
+    player.setInPoint(originalStartFrame)
+    player.setOutPoint(originalEndFrame)
+    player.setPreviewSourceFrame(null)
+    player.setPendingSeekFrame(originalStartFrame)
+  }, [selectedSourceShot, videoCandidates])
 
   const splitSelectedShotAtPlayhead = useCallback(() => {
     if (!selectedSourceShot) return
@@ -975,6 +1038,28 @@ export function BeatvideoVisualSourcePanel({
     }
   }, [selectedLoopMediaId, timelineGrid, videoCandidates])
 
+  // One review control set in Shots and Sequence. The draft is kept only in
+  // the existing source player; persisted edits belong to reviewClipSourceShots.
+  const shotReviewControls = lastClipMap && selectedSourceShot ? (
+    <BeatvideoShotReviewControls
+      name={selectedSourceShot.sourceName}
+      id={selectedSourceShot.id}
+      busy={reviewingShots}
+      dirty={selectedShotRangeDirty}
+      sourceOpen={selectedShotSourceOpen}
+      onSave={saveSelectedShotInOut}
+      onCancel={cancelSelectedShotInOut}
+      onSplit={splitSelectedShotAtPlayhead}
+      onMergeLeft={() => void handleReviewSourceShot({
+        kind: 'merge-left', shotId: selectedSourceShot.id,
+      })}
+      onResetTrim={() => void handleReviewSourceShot({
+        kind: 'reset-trim', shotId: selectedSourceShot.id,
+      })}
+      onResetAll={() => void handleReviewSourceShot({ kind: 'reset-scenes' })}
+    />
+  ) : null
+
   if (beatvideoMode === 'photo') {
     return (
       <section className="space-y-2 border-b border-border bg-secondary/10 px-3 py-3">
@@ -1011,10 +1096,10 @@ export function BeatvideoVisualSourcePanel({
           are a compact local selector, not another competing tab strip. */}
       <div className="flex items-center justify-between gap-3 border-b border-border/70 pb-3">
         <div className="min-w-0">
-          <div className="text-[9px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">
+          <div className="text-[10px] font-semibold uppercase tracking-[0.1em] text-muted-foreground">
             Video workflow
           </div>
-          <p className="mt-0.5 text-[9px] text-muted-foreground">
+          <p className="mt-0.5 text-[10px] text-muted-foreground">
             {visualStage === 'footage' ? 'Choose footage' :
               visualStage === 'shots' ? 'Review source shots' :
               visualStage === 'arrange' ? 'Build on the beat' : 'Fine-tune the edit'}
@@ -1044,7 +1129,7 @@ export function BeatvideoVisualSourcePanel({
           <div className="flex items-end justify-between gap-3">
             <div>
               <div className="text-[11px] font-semibold text-foreground">Footage</div>
-              <div className="mt-1 font-mono text-[9px] text-muted-foreground">
+              <div className="mt-1 font-mono text-[10px] text-muted-foreground">
                 {videoCandidates.length === 0
                   ? 'No video added'
                   : `${videoCandidates.length} source${videoCandidates.length === 1 ? '' : 's'}`}
@@ -1073,11 +1158,11 @@ export function BeatvideoVisualSourcePanel({
                       <div className="truncate text-[10px] font-semibold text-foreground">
                         {media.fileName}
                       </div>
-                      <div className="mt-0.5 font-mono text-[8px] text-muted-foreground">
+                      <div className="mt-0.5 font-mono text-[10px] text-muted-foreground">
                         {Math.max(0, media.duration).toFixed(1)} s
                       </div>
                     </div>
-                    <span className="font-mono text-[8px] text-muted-foreground">
+                    <span className="font-mono text-[10px] text-muted-foreground">
                       {enabled ? 'ON' : 'OFF'}
                     </span>
                     <Switch
@@ -1110,20 +1195,34 @@ export function BeatvideoVisualSourcePanel({
           <div className="mb-2 flex items-start justify-between gap-2">
             <div>
               <div className="text-[11px] font-medium text-foreground">Shots</div>
-              <div className="mt-0.5 text-[9px] leading-relaxed text-muted-foreground">
-                Review scene splits before placement. Skip weak shots; drag good shots into the sequence later.
+              <div className="mt-0.5 text-[10px] leading-relaxed text-muted-foreground">
+                Review detected cut boundaries. AI search finds source moments; it never replaces those boundaries.
               </div>
             </div>
-            <Button
-              type="button"
-              size="sm"
-              variant="ghost"
-              className="h-7 shrink-0 px-2 text-[10px]"
-              disabled={preparingFootage || autoArranging || importingFootage}
-              onClick={() => void prepareCurrentFootage()}
-            >
-              {preparingFootage ? 'Detecting…' : lastClipMap ? 'Refresh' : 'Detect'}
-            </Button>
+            <div className="flex shrink-0 items-center gap-1.5">
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                className="h-9 gap-1.5 px-2.5 text-xs"
+                onClick={openAiSceneSearch}
+                aria-label="Search source scenes with AI"
+                title="Search captions, meaning and color. Search timestamps never replace shot boundaries."
+              >
+                <ScanSearch className="h-3.5 w-3.5" />
+                AI search
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant={lastClipMap ? 'outline' : 'default'}
+                className="h-9 min-w-[92px] shrink-0 px-3 text-xs"
+                disabled={preparingFootage || autoArranging || importingFootage}
+                onClick={() => void prepareCurrentFootage()}
+              >
+                {preparingFootage ? 'Detecting shots…' : lastClipMap ? 'Redetect shots' : 'Detect shots'}
+              </Button>
+            </div>
           </div>
           {lastClipMap ? (
             <BeatvideoShotBin
@@ -1141,41 +1240,11 @@ export function BeatvideoVisualSourcePanel({
               onDragEnd={endArrangementShotDrag}
             />
           ) : (
-            <div className="rounded-[3px] bg-[#d9dbd6] p-3 text-[9px] text-muted-foreground">
+            <div className="rounded-[3px] bg-[#d9dbd6] p-3 text-[10px] text-muted-foreground">
               Detect shots to inspect the automatic split before building an edit.
             </div>
           )}
-          {lastClipMap && selectedSourceShot ? (
-            <div className="space-y-2 border-t border-border/70 pt-2" aria-label="Selected shot review">
-              <p className="truncate text-[10px] font-semibold text-foreground">
-                {selectedSourceShot.sourceName} · Shot {selectedSourceShot.id.split(':').at(-1)}
-              </p>
-              <p className="text-[9px] leading-relaxed text-muted-foreground">
-                Preview in Source, adjust In/Out handles, or move the playhead to cut.
-              </p>
-              <div className="grid grid-cols-2 gap-1.5">
-                <Button type="button" size="sm" variant="outline" disabled={reviewingShots}
-                  onClick={saveSelectedShotInOut}>Save In / Out</Button>
-                <Button type="button" size="sm" variant="outline" disabled={reviewingShots}
-                  onClick={splitSelectedShotAtPlayhead}>Split at playhead</Button>
-                <Button type="button" size="sm" variant="outline"
-                  disabled={reviewingShots || selectedSourceShot.id.endsWith(':shot:1')}
-                  onClick={() => void handleReviewSourceShot({
-                    kind: 'merge-left', shotId: selectedSourceShot.id,
-                  })}>Merge left</Button>
-                <Button type="button" size="sm" variant="ghost" disabled={reviewingShots}
-                  onClick={() => void handleReviewSourceShot({
-                    kind: 'reset-trim', shotId: selectedSourceShot.id,
-                  })}>Reset trim</Button>
-              </div>
-              <button type="button"
-                className="text-[9px] text-muted-foreground underline-offset-2 hover:underline"
-                disabled={reviewingShots}
-                onClick={() => void handleReviewSourceShot({ kind: 'reset-scenes' })}>
-                Reset all manual shot corrections
-              </button>
-            </div>
-          ) : null}
+          {shotReviewControls}
           {lastClipMap ? (
             <button
               type="button"
@@ -1194,7 +1263,7 @@ export function BeatvideoVisualSourcePanel({
           <div className={visualStage === 'arrange' ? 'space-y-3' : 'hidden'}>
             <div className="mb-2 flex items-center justify-between gap-2">
               <span className="text-[11px] font-medium text-foreground">Place on beat</span>
-              <span className="font-mono text-[9px] text-muted-foreground">
+              <span className="font-mono text-[10px] text-muted-foreground">
                 {timelineGrid ? 'Grid ready' : 'Needs beat grid'}
               </span>
             </div>
@@ -1220,8 +1289,8 @@ export function BeatvideoVisualSourcePanel({
 
             <div className="mt-2 border-y border-border/70 py-2">
               <div className="mb-1.5 flex items-center justify-between gap-2">
-                <span className="text-[9px] font-medium text-foreground">Sources for this build</span>
-                <span className="font-mono text-[8px] tabular-nums text-muted-foreground">
+                <span className="text-[10px] font-medium text-foreground">Sources for this build</span>
+                <span className="font-mono text-[10px] tabular-nums text-muted-foreground">
                   {arrangeSourceIds.length}/{videoCandidates.length} on
                 </span>
               </div>
@@ -1231,7 +1300,7 @@ export function BeatvideoVisualSourcePanel({
                   return (
                     <label
                       key={media.id}
-                      className="flex h-7 min-w-0 items-center gap-2 px-1 text-[9px] text-foreground hover:bg-secondary/35"
+                      className="flex h-7 min-w-0 items-center gap-2 px-1 text-[10px] text-foreground hover:bg-secondary/35"
                     >
                       <Switch
                         checked={enabled}
@@ -1248,7 +1317,7 @@ export function BeatvideoVisualSourcePanel({
 
             <div className="mt-2 space-y-2">
               <div>
-                <div className="mb-1 text-[9px] text-muted-foreground">Source mix</div>
+                <div className="mb-1 text-[10px] text-muted-foreground">Source mix</div>
                 <div className="studio-segmented grid h-8 grid-cols-3">
                   {([
                     ['balanced', 'Balanced'],
@@ -1260,7 +1329,7 @@ export function BeatvideoVisualSourcePanel({
                       type="button"
                       aria-pressed={sourceMixMode === value}
                       onClick={() => setSourceMixMode(value as SourceMixMode)}
-                      className="studio-segment h-7 px-1 text-[8px] font-medium"
+                      className="studio-segment h-7 px-1 text-[10px] font-medium"
                     >
                       {label}
                     </button>
@@ -1277,7 +1346,7 @@ export function BeatvideoVisualSourcePanel({
                       return (
                         <label
                           key={media.id}
-                          className="grid grid-cols-[minmax(0,1fr)_72px_30px] items-center gap-2 px-1 text-[8px]"
+                          className="grid grid-cols-[minmax(0,1fr)_72px_30px] items-center gap-2 px-1 text-[10px]"
                         >
                           <span className="truncate text-muted-foreground">{media.fileName}</span>
                           <input
@@ -1302,7 +1371,7 @@ export function BeatvideoVisualSourcePanel({
               ) : null}
 
               <div>
-                <div className="mb-1 text-[9px] text-muted-foreground">Pace</div>
+                <div className="mb-1 text-[10px] text-muted-foreground">Pace</div>
                 <div className="studio-segmented grid h-8 grid-cols-3">
                   {([
                     ['relaxed', 'Relaxed'],
@@ -1314,7 +1383,7 @@ export function BeatvideoVisualSourcePanel({
                       type="button"
                       aria-pressed={arrangePace === value}
                       onClick={() => setArrangePace(value as EditPace)}
-                      className="studio-segment h-7 px-1 text-[8px] font-medium"
+                      className="studio-segment h-7 px-1 text-[10px] font-medium"
                     >
                       {label}
                     </button>
@@ -1323,7 +1392,44 @@ export function BeatvideoVisualSourcePanel({
               </div>
 
               <div>
-                <div className="mb-1 text-[9px] text-muted-foreground">Transitions</div>
+                <div className="mb-1 flex items-center justify-between gap-2 text-[10px] text-muted-foreground">
+                  <span>Cut rhythm</span>
+                  <span className="font-mono">
+                    {cutRhythm === 'straight'
+                      ? 'beats'
+                      : cutRhythm === 'backbeat'
+                        ? '2 + 4'
+                        : 'beats + &'}
+                  </span>
+                </div>
+                <div className="studio-segmented grid h-8 grid-cols-3">
+                  {([
+                    ['straight', 'Straight'],
+                    ['backbeat', 'Backbeat'],
+                    ['syncopated', 'Syncopated'],
+                  ] as const).map(([value, label]) => (
+                    <button
+                      key={value}
+                      type="button"
+                      aria-pressed={cutRhythm === value}
+                      onClick={() => setCutRhythm(value)}
+                      className="studio-segment h-7 px-1 text-[10px] font-medium"
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+                <p className="mt-1 text-[10px] leading-relaxed text-muted-foreground">
+                  {cutRhythm === 'straight'
+                    ? 'Every internal cut stays on a detected beat.'
+                    : cutRhythm === 'backbeat'
+                      ? 'Still beat-locked, but some cuts favor beats 2 and 4 — common backbeat/snare positions.'
+                      : 'Adds occasional half-beat “and” cuts for syncopation; every edge still belongs to the musical grid.'}
+                </p>
+              </div>
+
+              <div>
+                <div className="mb-1 text-[10px] text-muted-foreground">Transitions</div>
                 <div className="studio-segmented grid h-8 grid-cols-2">
                   {([
                     ['clean', 'Cuts only'],
@@ -1334,7 +1440,7 @@ export function BeatvideoVisualSourcePanel({
                       type="button"
                       aria-pressed={transitionProfile === value}
                       onClick={() => setTransitionProfile(value as TransitionProfile)}
-                      className="studio-segment h-7 px-1 text-[8px] font-medium"
+                      className="studio-segment h-7 px-1 text-[10px] font-medium"
                     >
                       {label}
                     </button>
@@ -1345,7 +1451,7 @@ export function BeatvideoVisualSourcePanel({
 
             {arrangeMode === 'loop' ? (
               <div className="mt-2">
-                <div className="mb-1 text-[9px] text-muted-foreground">Loop length</div>
+                <div className="mb-1 text-[10px] text-muted-foreground">Loop length</div>
                 <div className="studio-segmented grid h-8 grid-cols-4">
                   {[2, 4, 8, 16].map((bars) => (
                     <button
@@ -1353,7 +1459,7 @@ export function BeatvideoVisualSourcePanel({
                       type="button"
                       aria-pressed={loopBars === bars}
                       onClick={() => setLoopBars(bars)}
-                      className="studio-segment h-7 px-1 text-[8px] font-medium"
+                      className="studio-segment h-7 px-1 text-[10px] font-medium"
                     >
                       {bars} bars
                     </button>
@@ -1391,7 +1497,7 @@ export function BeatvideoVisualSourcePanel({
             </Button>
 
             {lastAppliedItemIds.length > 0 && !loopBlocksGrouped ? (
-              <div className="mt-2 flex items-center gap-3 border-t border-border/70 pt-2 text-[9px]">
+              <div className="mt-2 flex items-center gap-3 border-t border-border/70 pt-2 text-[10px]">
                 <span className="text-muted-foreground">Generated clips</span>
                 <button
                   type="button"
@@ -1409,7 +1515,7 @@ export function BeatvideoVisualSourcePanel({
                 </button>
               </div>
             ) : null}
-            <div className="mt-2 font-mono text-[8px] leading-relaxed text-muted-foreground">
+            <div className="mt-2 font-mono text-[10px] leading-relaxed text-muted-foreground">
               Cuts: corrected beat grid · source audio: muted
             </div>
           </div>
@@ -1418,7 +1524,17 @@ export function BeatvideoVisualSourcePanel({
             <div className="border-t border-border pt-2">
               <div className="mb-1.5 flex items-center justify-between gap-2">
                 <span className="text-[10px] font-medium text-foreground">Source shots</span>
-                <span className="text-[9px] text-muted-foreground">Click to preview · drag to replace</span>
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] text-muted-foreground">Preview · drag to replace</span>
+                  <button
+                    type="button"
+                    className="studio-secondary-action h-7 px-2"
+                    onClick={openAiSceneSearch}
+                    aria-label="Search source scenes with AI"
+                  >
+                    AI search
+                  </button>
+                </div>
               </div>
               <BeatvideoShotBin
                 clipMap={lastClipMap}
@@ -1434,6 +1550,7 @@ export function BeatvideoVisualSourcePanel({
                 onDragStart={beginArrangementShotDrag}
                 onDragEnd={endArrangementShotDrag}
               />
+              {shotReviewControls}
             </div>
           ) : null}
 
@@ -1442,11 +1559,11 @@ export function BeatvideoVisualSourcePanel({
               <div className="mb-1.5 flex items-end justify-between gap-2">
                 <div>
                   <div className="text-[10px] font-medium text-foreground">Sequence</div>
-                  <div className="text-[8px] text-muted-foreground">
+                  <div className="text-[10px] text-muted-foreground">
                     Drag a source shot above to replace · select a clip to edit on the timeline
                   </div>
                 </div>
-                <span className="font-mono text-[9px] text-muted-foreground">
+                <span className="font-mono text-[10px] text-muted-foreground">
                   {editableArrangementSlots.length} slots
                 </span>
               </div>
@@ -1543,27 +1660,27 @@ export function BeatvideoVisualSourcePanel({
                           ) : (
                             <div className="h-full w-full bg-muted/40" />
                           )}
-                          <span className="absolute left-1 top-1 bg-background/85 px-1 font-mono text-[8px] text-foreground/80">
+                          <span className="absolute left-1 top-1 bg-background/85 px-1 font-mono text-[10px] text-foreground/80">
                             {index + 1}
                           </span>
-                          <span className="absolute bottom-1 right-1 bg-background/85 px-1 font-mono text-[8px] text-foreground/80">
+                          <span className="absolute bottom-1 right-1 bg-background/85 px-1 font-mono text-[10px] text-foreground/80">
                             {duration.toFixed(2)}s
                             {linkedRepeats > 1 ? ` ×${linkedRepeats}` : ''}
                           </span>
                           </div>
 
-                          <div className="truncate border-t border-border/70 px-1.5 py-1 text-[8px] text-foreground/80">
+                          <div className="truncate border-t border-border/70 px-1.5 py-1 text-[10px] text-foreground/80">
                             {shot?.sourceName ?? 'Footage'}
                             {currentShotIsManual ? ' · edited' : ''}
                           </div>
                         </button>
 
                         <div className="flex h-7 items-center justify-between gap-2 border-t border-border/70 px-1.5">
-                          <span className="text-[7px] text-muted-foreground">
+                          <span className="text-[10px] text-muted-foreground">
                             {linkedRepeats > 1 ? `All ${linkedRepeats} repeats` : 'Clip'}
                           </span>
                           <div className="flex items-center gap-1.5">
-                            <span className="font-mono text-[7px] text-muted-foreground">
+                            <span className="font-mono text-[10px] text-muted-foreground">
                               {slotEnabled ? 'ON' : 'OFF'}
                             </span>
                             <Switch
@@ -1581,18 +1698,18 @@ export function BeatvideoVisualSourcePanel({
                           <div className="border-t border-border/70 px-1.5 py-1.5">
                             {activeSourceSegmentId === segment.id ? (
                               <div className="space-y-1.5">
-                                <p className="text-[8px] leading-snug text-muted-foreground">
-                                  Mark In/Out in Source. Duration stays {duration.toFixed(2)}s;
-                                  musical cuts remain fixed.
+                                <p className="text-[10px] leading-snug text-muted-foreground">
+                                  Slip the source range in Source. Duration stays {duration.toFixed(2)}s;
+                                  timeline clip edges and musical cuts remain fixed.
                                 </p>
                                 <div className="flex items-center gap-1">
                                   <button type="button"
-                                    className="studio-primary-action h-7 min-w-0 flex-1 px-1 text-[9px]"
+                                    className="studio-primary-action h-7 min-w-0 flex-1 px-1 text-[10px]"
                                     onClick={() => applyVisualSourceTrim(segment)}>
-                                    Apply range
+                                    Apply slip
                                   </button>
                                   <button type="button"
-                                    className="studio-secondary-action h-7 px-1 text-[9px]"
+                                    className="studio-secondary-action h-7 px-1 text-[10px]"
                                     onClick={() => setActiveSourceSegmentId(null)}>
                                     Cancel
                                   </button>
@@ -1600,10 +1717,10 @@ export function BeatvideoVisualSourcePanel({
                               </div>
                             ) : (
                               <button type="button"
-                                className="studio-secondary-action h-7 w-full px-1 text-[9px]"
+                                className="studio-secondary-action h-7 w-full px-1 text-[10px]"
                                 aria-label={`Edit source range for generated clip ${index + 1}`}
                                 onClick={() => beginVisualSourceTrim(segment)}>
-                                Trim in Source
+                                Slip source
                               </button>
                             )}
                           </div>
@@ -1630,7 +1747,7 @@ export function BeatvideoVisualSourcePanel({
           ) : null}
 
           {visualStage === 'sequence' && loopBlocksGrouped ? (
-            <div className="border-l border-primary/50 pl-2 text-[9px] leading-relaxed text-muted-foreground">
+            <div className="border-l border-primary/50 pl-2 text-[10px] leading-relaxed text-muted-foreground">
               Every block is an instance of Loop A. Double-click any block to edit the
               underlying cuts once; all repeats update together. Undo once to return to
               the generated cuts before linking.
@@ -1670,10 +1787,10 @@ export function BeatvideoVisualSourcePanel({
       ) : null}
 
       {progressLabel ? (
-        <div className="font-mono text-[9px] text-muted-foreground">{progressLabel}</div>
+        <div className="font-mono text-[10px] text-muted-foreground">{progressLabel}</div>
       ) : null}
       {visualStage === 'footage' ? (
-        <p className="text-[9px] leading-relaxed text-muted-foreground">
+        <p className="text-[10px] leading-relaxed text-muted-foreground">
           Manual placement stays available: drag any source from the Media library onto the Media lane.
         </p>
       ) : null}

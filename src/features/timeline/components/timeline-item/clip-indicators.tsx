@@ -1,6 +1,6 @@
 import { memo, type SyntheticEvent } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Link2Off, Diamond, WandSparkles } from 'lucide-react'
+import { Link2Off, Diamond, WandSparkles, SlidersHorizontal } from 'lucide-react'
 import { cn } from '@/shared/ui/cn'
 import { EDITOR_LAYOUT_CSS_VALUES } from '@/config/editor-layout'
 
@@ -13,6 +13,10 @@ interface ClipIndicatorsProps {
   keyframesExpanded: boolean
   /** Whether the item has live animation (procedural layers, modifiers, or text motion). */
   hasMotion: boolean
+  /** Canonical effect stack membership, including bypassed instances. */
+  appliedEffectCount?: number
+  enabledEffectCount?: number
+  onEffectsOpen?: () => void
   /** Current playback speed (1 = normal) */
   currentSpeed: number
   /** Whether media playback is reversed */
@@ -101,6 +105,9 @@ interface ClipLabelIndicatorsProps {
   hasKeyframes: boolean
   keyframesExpanded: boolean
   hasMotion: boolean
+  appliedEffectCount: number
+  enabledEffectCount: number
+  onEffectsOpen?: () => void
   isShapeMask: boolean
   showSpeedBadge: boolean
   currentSpeed: number
@@ -113,6 +120,7 @@ interface ClipLabelIndicatorsProps {
 function hasClipLabelIndicators({
   hasKeyframes,
   hasMotion,
+  appliedEffectCount,
   isShapeMask,
   showSpeedBadge,
   isReversed,
@@ -121,6 +129,7 @@ function hasClipLabelIndicators({
   return (
     hasKeyframes ||
     hasMotion ||
+    appliedEffectCount > 0 ||
     isShapeMask ||
     showSpeedBadge ||
     isReversed ||
@@ -133,6 +142,9 @@ const ClipLabelIndicators = memo(function ClipLabelIndicators({
   hasKeyframes,
   keyframesExpanded,
   hasMotion,
+  appliedEffectCount,
+  enabledEffectCount,
+  onEffectsOpen,
   isShapeMask,
   showSpeedBadge,
   currentSpeed,
@@ -165,6 +177,30 @@ const ClipLabelIndicators = memo(function ClipLabelIndicators({
           }}
         >
           <WandSparkles className="w-3 h-3 text-sky-400" />
+        </button>
+      )}
+      {appliedEffectCount > 0 && (
+        <button
+          type="button"
+          className={cn(
+            'pointer-events-auto inline-flex items-center gap-0.5 rounded-sm p-0.5 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-primary',
+            enabledEffectCount > 0
+              ? 'text-primary hover:bg-primary/20'
+              : 'text-muted-foreground hover:bg-muted',
+          )}
+          title={`${appliedEffectCount} applied effects · ${enabledEffectCount} enabled`}
+          aria-label={`Edit effects: ${enabledEffectCount} active, ${appliedEffectCount - enabledEffectCount} bypassed`}
+          onPointerDown={stopClipIndicatorEvent}
+          onMouseDown={stopClipIndicatorEvent}
+          onClick={(event) => {
+            stopClipIndicatorEvent(event)
+            onEffectsOpen?.()
+          }}
+        >
+          <SlidersHorizontal className="h-3 w-3" />
+          {appliedEffectCount > 1 && (
+            <span className="font-mono text-[10px]">{appliedEffectCount}</span>
+          )}
         </button>
       )}
       {isShapeMask && (
@@ -209,6 +245,9 @@ export const ClipIndicators = memo(function ClipIndicators({
   hasKeyframes,
   keyframesExpanded,
   hasMotion,
+  appliedEffectCount = 0,
+  enabledEffectCount = 0,
+  onEffectsOpen,
   currentSpeed,
   isReversed,
   reverseConformStatus,
@@ -227,6 +266,9 @@ export const ClipIndicators = memo(function ClipIndicators({
     hasKeyframes,
     keyframesExpanded,
     hasMotion,
+    appliedEffectCount,
+    enabledEffectCount,
+    onEffectsOpen,
     isShapeMask: isShape && isMask,
     showSpeedBadge,
     currentSpeed,

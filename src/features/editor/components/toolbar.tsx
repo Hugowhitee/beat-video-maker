@@ -25,6 +25,32 @@ const SaveDirtyIndicator = memo(function SaveDirtyIndicator() {
   ) : null
 })
 
+/** Identical navigation contract at desktop and compact densities. */
+function BackToProjectsAction({
+  compact,
+  label,
+  onClick,
+}: {
+  compact: boolean
+  label: string
+  onClick: () => void
+}) {
+  return (
+    <Button
+      type="button"
+      variant="ghost"
+      size="sm"
+      className={`studio-topbar-button h-9 min-w-9 shrink-0 gap-2 px-2.5 text-xs ${compact ? 'w-9 px-0' : ''}`}
+      onClick={onClick}
+      aria-label={label}
+      title={label}
+    >
+      <ArrowLeft className="h-4 w-4 shrink-0" />
+      {compact ? null : <span>Projects</span>}
+    </Button>
+  )
+}
+
 interface ToolbarProps {
   projectId: string
   project: {
@@ -126,15 +152,7 @@ export const Toolbar = memo(function Toolbar({
         aria-label={t('toolbar.ariaLabel')}
       >
         <div className="studio-topbar flex h-12 min-w-0 items-center gap-1.5 bg-[#242724] px-2 text-[#f6f7f3]">
-          <Button
-            variant="ghost"
-            size="icon"
-            className="studio-topbar-button h-8 w-8 shrink-0"
-            onClick={handleBackClick}
-            aria-label={t('toolbar.backToProjectsAria')}
-          >
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
+          <BackToProjectsAction compact label={t('toolbar.backToProjectsAria')} onClick={handleBackClick} />
 
           <UnsavedChangesDialog
             open={showUnsavedDialog}
@@ -178,7 +196,7 @@ export const Toolbar = memo(function Toolbar({
             <Button
               variant="ghost"
               size="sm"
-              className="studio-topbar-button h-8 shrink-0 px-2 text-[9px] font-semibold uppercase"
+              className="studio-topbar-button h-8 shrink-0 px-2 text-xs font-semibold uppercase"
               onClick={onProjectSettings}
               aria-label="Project settings"
               title="Project settings"
@@ -190,7 +208,7 @@ export const Toolbar = memo(function Toolbar({
           <Button
             variant="ghost"
             size="sm"
-            className="studio-topbar-button relative h-8 shrink-0 px-2 text-[9px] font-semibold uppercase"
+            className="studio-topbar-button relative h-8 shrink-0 px-2 text-xs font-semibold uppercase"
             onClick={handleSave}
             aria-label={t('toolbar.saveAria')}
           >
@@ -200,7 +218,7 @@ export const Toolbar = memo(function Toolbar({
 
           <Button
             size="sm"
-            className="studio-export-button h-8 shrink-0 px-2 text-[9px] font-semibold uppercase"
+            className="studio-export-button h-8 shrink-0 px-2 text-xs font-semibold uppercase"
             onClick={onExport}
             aria-label={t('toolbar.export')}
           >
@@ -260,16 +278,9 @@ export const Toolbar = memo(function Toolbar({
       aria-label={t('toolbar.ariaLabel')}
     >
       <div className="studio-topbar flex h-12 shrink-0 items-center gap-2 bg-[#242724] pl-[18px] pr-4 text-[#f6f7f3]">
-        <button
-          type="button"
-          onClick={handleBackClick}
-          className="mr-8 flex shrink-0 items-baseline text-left"
-          aria-label={t('toolbar.backToProjectsAria')}
-          title={t('toolbar.backToProjects')}
-        >
-          <span className="text-[12px] font-semibold tracking-[-0.01em]">BEAT VIDEO</span>
-          <span className="ml-1 text-[12px] font-semibold text-[#c7e85a]">MAKER</span>
-        </button>
+        <div className="mr-4 shrink-0">
+          <BackToProjectsAction compact={false} label={t('toolbar.backToProjectsAria')} onClick={handleBackClick} />
+        </div>
 
         <UnsavedChangesDialog
           open={showUnsavedDialog}
@@ -321,7 +332,7 @@ export const Toolbar = memo(function Toolbar({
             <Button
               variant="ghost"
               size="sm"
-              className="studio-topbar-button h-[30px] px-3 text-[10px] font-semibold"
+              className="studio-topbar-button h-[30px] px-3 text-xs font-semibold"
               onClick={onProjectSettings}
             >
               Project settings
@@ -331,7 +342,7 @@ export const Toolbar = memo(function Toolbar({
           <Button
             variant="ghost"
             size="sm"
-            className="studio-topbar-button relative h-[30px] px-3 text-[10px] font-semibold"
+            className="studio-topbar-button relative h-[30px] px-3 text-xs font-semibold"
             onClick={handleSave}
             aria-label={t('toolbar.saveAria')}
           >
@@ -341,7 +352,7 @@ export const Toolbar = memo(function Toolbar({
 
           <Button
             size="sm"
-            className="studio-export-button h-[30px] w-[92px] px-0 text-[10px] font-semibold uppercase"
+            className="studio-export-button h-[30px] w-[92px] px-0 text-xs font-semibold uppercase"
             onClick={onExport}
           >
             {t('toolbar.export')}
@@ -389,7 +400,7 @@ export const Toolbar = memo(function Toolbar({
             type="button"
             disabled={!canUndo}
             onClick={undo}
-            className="studio-workspace-action absolute left-0 top-0 flex h-full items-center text-[10px] font-medium"
+            className="studio-workspace-action absolute left-0 top-0 flex h-full items-center text-xs font-medium"
           >
             Undo
           </button>
@@ -397,7 +408,7 @@ export const Toolbar = memo(function Toolbar({
             type="button"
             disabled={!canRedo}
             onClick={redo}
-            className="studio-workspace-action absolute left-[50px] top-0 flex h-full items-center text-[10px] font-medium"
+            className="studio-workspace-action absolute left-[50px] top-0 flex h-full items-center text-xs font-medium"
           >
             Redo
           </button>

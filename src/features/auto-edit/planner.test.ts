@@ -744,6 +744,103 @@ test('Auto Arrange pace changes edit density without changing the grid source', 
   }
 })
 
+test('backbeat rhythm keeps every internal cut on a real beat and favors beats 2 and 4', () => {
+  const music = musicMap([
+    {
+      id: 'drop',
+      start: 0,
+      end: 16,
+      kind: 'drop',
+      energy: 0.92,
+      confidence: 0.96,
+    },
+  ], 16)
+
+  const plan = createEditPlan(music, clipMap(), {
+    mode: 'auto',
+    pace: 'energetic',
+    cutRhythm: 'backbeat',
+    transitionProfile: 'clean',
+    seed: 1,
+  })
+
+  const beatByTime = new Map(music.beats.map((beat) => [beat.time.toFixed(6), beat]))
+  const internalCuts = plan.segments.slice(0, -1).map((segment) => segment.timelineEnd)
+  expect(internalCuts.length).toBeGreaterThan(2)
+  expect(internalCuts.every((time) => beatByTime.has(time.toFixed(6)))).toBe(true)
+
+  const backbeatCuts = internalCuts.filter((time) => {
+    const beat = beatByTime.get(time.toFixed(6))
+    if (!beat) return false
+    const position = (beat.index % music.beatsPerBar) + 1
+    return position === 2 || position === 4
+  })
+  expect(backbeatCuts.length).toBeGreaterThan(0)
+})
+
+test('syncopated rhythm may use half-beat ands but never invents arbitrary cut times', () => {
+  const music = musicMap([
+    {
+      id: 'drop',
+      start: 0,
+      end: 16,
+      kind: 'drop',
+      energy: 0.94,
+      confidence: 0.97,
+    },
+  ], 16)
+
+  const plan = createEditPlan(music, clipMap(), {
+    mode: 'auto',
+    pace: 'energetic',
+    cutRhythm: 'syncopated',
+    transitionProfile: 'clean',
+    seed: 1,
+  })
+
+  const beatTimes = new Set(music.beats.map((beat) => beat.time.toFixed(6)))
+  const allowed = new Set(beatTimes)
+  for (let index = 0; index < music.beats.length - 1; index += 1) {
+    const left = music.beats[index]!.time
+    const right = music.beats[index + 1]!.time
+    allowed.add((left + (right - left) / 2).toFixed(6))
+  }
+
+  const internalCuts = plan.segments.slice(0, -1).map((segment) => segment.timelineEnd)
+  expect(internalCuts.every((time) => allowed.has(time.toFixed(6)))).toBe(true)
+  expect(internalCuts.some((time) => !beatTimes.has(time.toFixed(6)))).toBe(true)
+})
+
+test('short source shots never force Auto Arrange to create an off-grid boundary', () => {
+  const music = musicMap([
+    {
+      id: 'verse',
+      start: 0,
+      end: 4,
+      kind: 'verse',
+      energy: 0.5,
+      confidence: 0.9,
+    },
+  ], 4)
+  const clips = clipMap()
+  for (const source of clips.sources) {
+    source.shots = source.shots.map((shot, index) => ({
+      ...shot,
+      start: index,
+      end: index + 0.2,
+    }))
+  }
+
+  expect(() =>
+    createEditPlan(music, clips, {
+      mode: 'auto',
+      cutRhythm: 'straight',
+      transitionProfile: 'clean',
+      seed: 1,
+    }),
+  ).toThrow(/musical grid point/i)
+})
+
 test('excluded shots are never selected by Auto Arrange', () => {
   const music = musicMap([
     {

@@ -240,6 +240,10 @@ export const HOTKEY_EDITOR_SECTIONS: readonly HotkeyEditorSection[] = [
         keys: ["WORKSPACE_COLOR"],
       },
       {
+        labelKey: "effects.colorPanel.compareMode",
+        keys: ["COLOR_COMPARE"],
+      },
+      {
         labelKey: "toolbar.workspaces.motion",
         keys: ["WORKSPACE_ANIMATE"],
       },

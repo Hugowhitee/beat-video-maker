@@ -26,6 +26,7 @@ import {
 import { formatTimecode } from '@/shared/utils/time-utils'
 import { toast } from 'sonner'
 import { MonitorVolumeControl } from './monitor-volume-control'
+import { useTimelineViewportStore } from '@/features/preview/deps/timeline-contract'
 
 interface PlaybackControlsProps {
   totalFrames: number
@@ -136,6 +137,7 @@ export function PlaybackControls({
     setPreviewFrame(null)
     setDisplayedFrame(null)
     setCurrentFrame(frame)
+    useTimelineViewportStore.getState().requestScrollToFrame(frame)
   }
 
   const handleGoToStart = () => commitTimelineSeek(0)

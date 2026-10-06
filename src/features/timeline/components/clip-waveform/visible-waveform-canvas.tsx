@@ -383,6 +383,11 @@ export const VisibleWaveformCanvas = memo(function VisibleWaveformCanvas({
   ])
 
   return (
-    <canvas ref={canvasRef} className="absolute top-0 pointer-events-none" aria-hidden="true" />
+    <canvas
+      ref={canvasRef}
+      data-timeline-waveform-canvas
+      className="absolute top-0 pointer-events-none"
+      aria-hidden="true"
+    />
   )
 })

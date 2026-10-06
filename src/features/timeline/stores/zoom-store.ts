@@ -19,6 +19,8 @@ interface ZoomActions {
   setZoomLevel: (level: number) => void
   setZoomLevelImmediate: (level: number) => void // Bypasses throttle for smooth momentum zoom
   setZoomLevelSynchronized: (level: number) => void
+  /** Drop orphaned wheel/slider gestures when the owning timeline unmounts. */
+  settleUnmountedGesture: () => void
   zoomIn: () => void
   zoomOut: () => void
   zoomToFit: (containerWidth: number, contentDurationSeconds: number) => void
@@ -294,6 +296,11 @@ export const useZoomStore = create<ZoomState & ZoomActions>((set, get) => ({
   },
   setZoomLevelSynchronized: (level) => {
     applySynchronizedZoom(set, level)
+  },
+  settleUnmountedGesture: () => {
+    if (!get().isZoomInteracting && activeZoomGestureCount === 0) return
+    activeZoomGestureCount = 0
+    applySynchronizedZoom(set, get().level)
   },
   zoomIn: () => {
     const newLevel = Math.min(get().level * 1.1, 50) // 10% per step for finer control

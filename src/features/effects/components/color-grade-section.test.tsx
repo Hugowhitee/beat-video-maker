@@ -42,6 +42,10 @@ vi.mock('@/features/effects/deps/preview-contract', () => ({
   useThrottledFrame: () => 12,
 }))
 
+vi.mock('@/features/effects/deps/settings', () => ({
+  useResolvedHotkeys: () => ({ COLOR_COMPARE: 'shift+b' }),
+}))
+
 vi.mock('../hooks/use-keyframes-by-item-id', () => ({
   useKeyframesByItemId: () => new Map(),
 }))
@@ -116,6 +120,18 @@ describe('ColorGradeSection', () => {
 
     expect(screen.getByRole('button', { name: 'Copy grade' })).toBeDisabled()
     expect(screen.getByRole('button', { name: 'Paste grade' })).toBeDisabled()
+  })
+
+  it('uses one primary Before/After toggle and exposes its shortcut', () => {
+    render(<ColorGradeSection items={[makeVideoItem()]} />)
+
+    const compareButton = screen.getByRole('button', { name: /Before \/ After .*Shift \+ B/i })
+    expect(compareButton).toHaveAttribute('aria-pressed', 'false')
+    expect(compareButton).toHaveTextContent('After')
+    expect(compareButton).toHaveTextContent('Shift + B')
+
+    fireEvent.click(compareButton)
+    expect(mocks.gizmoState.setColorGradeComparisonMode).toHaveBeenCalledWith('before')
   })
 
   it('disables split comparison until an enabled color grade exists', () => {

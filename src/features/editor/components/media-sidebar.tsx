@@ -1508,7 +1508,7 @@ export const MediaSidebar = memo(function MediaSidebar({
                           setActiveTab(id)
                           if (id === 'effects') triggerPreviews()
                         }}
-                        className="studio-segment h-7 min-w-0 truncate px-1 text-[9px] font-medium"
+                        className="studio-segment h-7 min-w-0 truncate px-1 font-medium"
                       >
                         {label}
                       </button>
@@ -1521,7 +1521,7 @@ export const MediaSidebar = memo(function MediaSidebar({
                           type="button"
                           aria-label="More Visual tools"
                           className={cn(
-                            'flex h-8 max-w-[92px] shrink-0 items-center gap-1 border border-border px-2 text-[10px] font-medium hover:bg-[#d1d4ce]',
+                            'flex h-8 max-w-[98px] shrink-0 items-center gap-1 border border-border px-2 text-xs font-medium hover:bg-[#d1d4ce]',
                             selectedSecondaryTab && 'bg-[#c9cec6] text-foreground',
                           )}
                         >

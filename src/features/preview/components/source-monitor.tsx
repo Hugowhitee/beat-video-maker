@@ -41,6 +41,8 @@ import {
   usePlayer,
 } from '@/features/preview/deps/player-context'
 import { SourceComposition } from './source-composition'
+import { SourceTrimFilmstrip } from './source-trim-filmstrip'
+import { TimeDisplayFormatSelect } from './time-display-format-select'
 import { ShuttleIndicator } from '@/shared/ui/shuttle-indicator'
 import { resolveMediaUrl } from '../utils/media-resolver'
 import {
@@ -131,7 +133,7 @@ function SourcePatchDestinationPicker({
           variant="ghost"
           size="sm"
           className={cn(
-            'h-6 min-w-15 justify-between gap-1 px-1.5 font-mono text-[10px]',
+            'h-6 min-w-15 max-w-24 justify-between gap-1 px-1.5 font-mono text-[10px] @max-[560px]/source-controls:max-w-20',
             !selectedTrackId && 'text-muted-foreground',
           )}
           aria-label={`Choose ${kindLabel.toLowerCase()} source patch destination`}
@@ -488,6 +490,7 @@ function SourceMonitorInner({
   return (
     <div
       ref={wrapperRef}
+      data-testid="source-monitor"
       tabIndex={-1}
       className="flex-1 flex flex-col min-w-0 outline-none"
       onMouseEnter={handleMouseEnter}
@@ -538,6 +541,8 @@ function SourceMonitorInner({
 
       {/* Controls bar - same height as program monitor */}
       <SourcePlaybackControls
+        mediaId={mediaId}
+        blobUrl={src || null}
         durationInFrames={durationInFrames}
         fps={fps}
         mediaType={mediaType}
@@ -552,6 +557,8 @@ function SourceMonitorInner({
 // -- Playback controls for the source monitor --
 
 function SourcePlaybackControls({
+  mediaId,
+  blobUrl,
   durationInFrames,
   fps,
   mediaType,
@@ -559,6 +566,8 @@ function SourcePlaybackControls({
   interactive,
   seekFrame,
 }: {
+  mediaId: string
+  blobUrl: string | null
   durationInFrames: number
   fps: number
   mediaType: 'video' | 'audio' | 'image' | 'lottie'
@@ -1222,6 +1231,38 @@ function SourcePlaybackControls({
 
   return (
     <div className="@container flex flex-col shrink-0">
+      {interactive && mediaType === 'video' && (
+        <SourceTrimFilmstrip
+          mediaId={mediaId}
+          blobUrl={blobUrl}
+          durationInFrames={durationInFrames}
+          fps={fps}
+          inPoint={inPoint}
+          outPoint={outPoint}
+          onSeek={(frame) => {
+            player.pause()
+            replayingRef.current = false
+            commitSourceSeek(frame)
+          }}
+          onPreview={(frame) => {
+            player.pause()
+            replayingRef.current = false
+            useSourcePlayerStore.getState().setPreviewSourceFrame(frame)
+          }}
+          onChangeIn={(frame) => {
+            const store = useSourcePlayerStore.getState()
+            const accepted = clampDraggedSourceInPoint(frame, store.outPoint, lastFrame)
+            store.setInPoint(accepted)
+            return accepted
+          }}
+          onChangeOut={(frame) => {
+            const store = useSourcePlayerStore.getState()
+            const accepted = clampDraggedSourceOutPoint(frame, store.inPoint, durationInFrames)
+            store.setOutPoint(accepted)
+            return accepted
+          }}
+        />
+      )}
       {/* Seek bar row with I/O region above and editing buttons */}
       <div className="border-t border-border panel-header flex items-center gap-2 px-4 h-7 shrink-0">
         <div className="flex-1 flex flex-col justify-center gap-0.5 min-w-0">
@@ -1263,7 +1304,7 @@ function SourcePlaybackControls({
           </div>
         </div>
         {interactive && (
-          <div className="flex items-center gap-0.5 shrink-0">
+          <div className="flex shrink-0 items-center justify-center gap-0.5 @max-[560px]/source-controls:justify-end">
             <Tooltip>
               <TooltipTrigger asChild>
                 <Button
@@ -1339,21 +1380,19 @@ function SourcePlaybackControls({
 
       {/* Transport row */}
       <div
-        className="border-t border-border panel-header flex items-center justify-between px-4 shrink-0"
-        style={{ height: EDITOR_LAYOUT_CSS_VALUES.previewControlsHeight }}
+        className="@container/source-controls grid shrink-0 grid-cols-[auto_1fr_auto] items-center gap-x-2 border-t border-border panel-header px-2 py-1 @max-[560px]/source-controls:grid-cols-[minmax(0,1fr)_auto] @max-[560px]/source-controls:gap-y-1"
+        style={{ minHeight: EDITOR_LAYOUT_CSS_VALUES.previewControlsHeight }}
+        data-testid="source-transport-controls"
       >
         <div className="flex min-w-0 shrink-0 items-center gap-2">
-          <button
-            type="button"
-            className="inline-flex items-center gap-1.5 bg-transparent p-0 font-mono text-[11px] tabular-nums text-left transition-colors select-none text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring rounded-sm shrink-0"
-            onClick={() => setShowFrames((prev) => !prev)}
-          >
+          <div className="inline-flex items-center gap-1.5 font-mono text-xs tabular-nums text-muted-foreground">
             <span ref={currentTimeRef} className="text-foreground font-semibold">
               {formatTime(clock.currentFrame)}
             </span>
             <span className="text-muted-foreground">/</span>
             <span>{formatTime(lastFrame)}</span>
-          </button>
+          </div>
+          <TimeDisplayFormatSelect showFrames={showFrames} onChange={setShowFrames} />
           <ShuttleIndicator
             active={playing && shuttleActiveRef.current}
             playbackRate={playbackRate}
@@ -1455,8 +1494,8 @@ function SourcePlaybackControls({
         </div>
 
         {interactive ? (
-          <div className="flex items-center gap-0.5 shrink-0">
-            <div className="flex items-center gap-1 shrink-0">
+          <div className="flex min-w-0 shrink-0 items-center justify-end gap-0.5 @max-[560px]/source-controls:col-span-2 @max-[560px]/source-controls:w-full">
+            <div className="flex min-w-0 items-center gap-1">
               <div className="flex items-center gap-0.5 rounded-md border border-border bg-secondary/50 px-1 py-0.5">
                 <Tooltip>
                   <TooltipTrigger asChild>

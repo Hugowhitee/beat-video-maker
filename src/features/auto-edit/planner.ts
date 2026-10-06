@@ -93,36 +93,134 @@ function beatTime(music: MusicMap, index: number) {
   return music.beats[index]?.time ?? music.duration;
 }
 
-function previousBeatTimeAtOrBefore(music: MusicMap, time: number, minimum: number) {
-  for (let index = music.beats.length - 1; index >= 0; index -= 1) {
-    const candidate = music.beats[index]?.time;
-    if (
-      candidate !== undefined
-      && candidate <= time + EPSILON
-      && candidate > minimum + EPSILON
-    ) {
-      return candidate;
+function musicalGridTimes(
+  music: MusicMap,
+  cutRhythm: Required<EditPlannerOptions>['cutRhythm'],
+) {
+  const times = music.beats
+    .map((beat) => beat.time)
+    .filter((time) => Number.isFinite(time) && time >= 0 && time <= music.duration + EPSILON)
+
+  if (cutRhythm === 'syncopated') {
+    for (let index = 0; index < music.beats.length - 1; index += 1) {
+      const left = music.beats[index]?.time
+      const right = music.beats[index + 1]?.time
+      if (
+        left === undefined ||
+        right === undefined ||
+        right <= left + EPSILON
+      ) {
+        continue
+      }
+      times.push(left + (right - left) / 2)
     }
   }
-  return null;
+
+  return [...new Set(times.map((time) => time.toFixed(9)))]
+    .map(Number)
+    .sort((left, right) => left - right)
+}
+
+function previousGridTimeAtOrBefore(
+  gridTimes: readonly number[],
+  time: number,
+  minimum: number,
+) {
+  for (let index = gridTimes.length - 1; index >= 0; index -= 1) {
+    const candidate = gridTimes[index]
+    if (
+      candidate !== undefined &&
+      candidate <= time + EPSILON &&
+      candidate > minimum + EPSILON
+    ) {
+      return candidate
+    }
+  }
+  return null
+}
+
+function isBackbeat(music: MusicMap, beatArrayIndex: number) {
+  const beat = music.beats[beatArrayIndex]
+  if (!beat) return false
+  const oneBasedPosition =
+    ((beat.index % music.beatsPerBar) + music.beatsPerBar) % music.beatsPerBar + 1
+  return oneBasedPosition === 2 || oneBasedPosition === 4
+}
+
+function resolveRhythmicCutTime(params: {
+  context: PlannerContext
+  currentBeat: number
+  requestedSpan: number
+  patternIndex: number
+}) {
+  const { context, currentBeat, requestedSpan, patternIndex } = params
+  const { music, options } = context
+  const targetBeatIndex = currentBeat + requestedSpan
+  const straightTime = beatTime(music, targetBeatIndex)
+
+  if (options.cutRhythm === 'backbeat' && patternIndex % 2 === 1) {
+    const candidates = [
+      targetBeatIndex,
+      targetBeatIndex - 1,
+      targetBeatIndex + 1,
+      targetBeatIndex + 2,
+    ]
+      .filter(
+        (index) =>
+          index > currentBeat &&
+          index < music.beats.length &&
+          isBackbeat(music, index),
+      )
+      .sort(
+        (left, right) =>
+          Math.abs(left - targetBeatIndex) - Math.abs(right - targetBeatIndex),
+      )
+    const candidate = candidates[0]
+    if (candidate !== undefined) return beatTime(music, candidate)
+  }
+
+  if (options.cutRhythm === 'syncopated') {
+    const cadence =
+      options.pace === 'energetic' ? 2 :
+      options.pace === 'balanced' ? 3 :
+      4
+    if (patternIndex % cadence === cadence - 1) {
+      const rightIndex = Math.min(targetBeatIndex, music.beats.length - 1)
+      const leftIndex = Math.max(currentBeat, rightIndex - 1)
+      const left = music.beats[leftIndex]?.time
+      const right = music.beats[rightIndex]?.time
+      if (
+        left !== undefined &&
+        right !== undefined &&
+        right > left + EPSILON
+      ) {
+        const midpoint = left + (right - left) / 2
+        if (midpoint > beatTime(music, currentBeat) + EPSILON) return midpoint
+      }
+    }
+  }
+
+  return straightTime
 }
 
 function capSlotToAvailableShot(
-  music: MusicMap,
+  gridTimes: readonly number[],
   start: number,
   proposedEnd: number,
   maxShotDuration: number,
 ) {
   if (proposedEnd - start <= maxShotDuration + EPSILON) return proposedEnd;
 
-  const beatLimited = previousBeatTimeAtOrBefore(
-    music,
+  const gridLimited = previousGridTimeAtOrBefore(
+    gridTimes,
     start + maxShotDuration,
     start,
   );
-  if (beatLimited !== null) return beatLimited;
+  if (gridLimited !== null) return gridLimited;
 
-  return Math.min(proposedEnd, start + maxShotDuration);
+  throw new Error(
+    'No enabled footage shot is long enough to reach the next selected musical grid point.',
+  );
 }
 
 function buildTimelineSlots(
@@ -132,6 +230,7 @@ function buildTimelineSlots(
 ) {
   const { music, maxShotDuration } = context;
   const slots: TimelineSlot[] = [];
+  const gridTimes = musicalGridTimes(music, context.options.cutRhythm);
   const patternIndices = new Map<string, number>();
 
   let cursor = rangeStart;
@@ -144,19 +243,24 @@ function buildTimelineSlots(
     patternIndices.set(section.id, patternIndex + 1);
 
     const currentBeat = nextBeatIndexAtOrAfter(music, cursor);
-    let end = beatTime(music, currentBeat + requestedSpan);
+    let end = resolveRhythmicCutTime({
+      context,
+      currentBeat,
+      requestedSpan,
+      patternIndex,
+    });
 
     const sectionEnd = Math.min(section.end, rangeEnd);
     if (sectionEnd > cursor + EPSILON && sectionEnd < end - EPSILON) {
       // Section analysis is descriptive evidence, not an edit grid. Never let
       // a section timestamp create an off-beat cut: move the boundary to the
       // last verified beat before that section edge.
-      const beatLockedSectionEnd = previousBeatTimeAtOrBefore(
-        music,
+      const gridLockedSectionEnd = previousGridTimeAtOrBefore(
+        gridTimes,
         sectionEnd,
         cursor,
       );
-      if (beatLockedSectionEnd !== null) end = beatLockedSectionEnd;
+      if (gridLockedSectionEnd !== null) end = gridLockedSectionEnd;
     }
     end = Math.min(end, rangeEnd);
 
@@ -165,7 +269,7 @@ function buildTimelineSlots(
       end = Math.min(rangeEnd, Math.max(nextBeat, cursor + 0.05));
     }
 
-    end = capSlotToAvailableShot(music, cursor, end, maxShotDuration);
+    end = capSlotToAvailableShot(gridTimes, cursor, end, maxShotDuration);
 
     if (end <= cursor + EPSILON) {
       throw new Error('Unable to create a positive-length edit slot from the supplied media.');
@@ -834,6 +938,7 @@ export function createEditPlan(
     loopBars: Math.max(1, Math.round(options.loopBars ?? 8)),
     transitionProfile: options.transitionProfile ?? 'clean',
     pace: options.pace ?? 'balanced',
+    cutRhythm: options.cutRhythm ?? 'straight',
     sourceMix: options.sourceMix ?? 'balanced',
     sourceWeights: { ...(options.sourceWeights ?? {}) },
     excludedShotIds: [...excludedShotIds],

@@ -141,6 +141,27 @@ describe('useTimelineItemPointerHandlers', () => {
       expect(selectItems).toHaveBeenCalledWith(['item-1'])
     })
 
+    it('opens the existing Visual Edit task surface for a selected visual clip', () => {
+      useTimelineStore.setState({ items: [makeVideoItem()] })
+      useEditorStore.setState({ workspace: 'edit', rightSidebarOpen: false })
+      const handlers = renderHandlers(makeInput({ activeTool: 'select' }))
+
+      handlers.handleClick(makeMouseEvent())
+
+      expect(useSelectionStore.getState().selectedItemIds).toContain('item-1')
+      expect(useEditorStore.getState().rightSidebarOpen).toBe(true)
+    })
+
+    it('does not force the Visual Edit task surface outside the Visual workspace', () => {
+      useTimelineStore.setState({ items: [makeVideoItem()] })
+      useEditorStore.setState({ workspace: 'beat', rightSidebarOpen: false })
+      const handlers = renderHandlers(makeInput({ activeTool: 'select' }))
+
+      handlers.handleClick(makeMouseEvent())
+
+      expect(useEditorStore.getState().rightSidebarOpen).toBe(false)
+    })
+
     it('splits the item at the cursor with the razor tool', () => {
       const splitItem = vi.spyOn(useTimelineStore.getState(), 'splitItem')
       const handlers = renderHandlers(makeInput({ activeTool: 'razor' }))

@@ -371,7 +371,7 @@ export function ProjectList({ onEditProject, onImportProject }: ProjectListProps
             type="button"
             variant="outline"
             size="sm"
-            className="h-9 gap-1.5 border-border bg-[#d9dbd6] px-3 text-[9px] shadow-none sm:hidden"
+            className="h-9 gap-1.5 border-border bg-[#d9dbd6] px-3 text-[10px] shadow-none sm:hidden"
             aria-expanded={mobileFiltersOpen}
             onClick={() => setMobileFiltersOpen((open) => !open)}
           >
@@ -425,7 +425,7 @@ export function ProjectList({ onEditProject, onImportProject }: ProjectListProps
               <Button
                 variant="outline"
                 size="sm"
-                className="h-9 gap-1.5 border-border bg-[#d9dbd6] px-3 text-[9px] shadow-none sm:w-9 sm:px-0"
+                className="h-9 gap-1.5 border-border bg-[#d9dbd6] px-3 text-[10px] shadow-none sm:w-9 sm:px-0"
               >
                 <ArrowUpDown className="h-3.5 w-3.5" />
                 <span className="sm:hidden">Sort</span>

@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { getResolvedPlaybackFrame, usePlaybackStore } from '@/shared/state/playback'
 import { usePreviewBridgeStore } from '@/shared/state/preview-bridge'
 import { formatTimecodeCompact } from '@/shared/utils/time-utils'
+import { TimeDisplayFormatSelect } from './time-display-format-select'
 
 interface TimecodeDisplayProps {
   fps: number
@@ -12,7 +13,7 @@ interface TimecodeDisplayProps {
  * Timecode Display Component
  *
  * Displays current time and total duration in SMPTE format (HH:MM:SS:FF)
- * - Click to toggle between SMPTE timecode and frame numbers
+ * - Explicit selection between SMPTE timecode and frame numbers
  * - Synchronized with playback store via manual subscription (no re-renders during playback)
  * - Tabular numbers for consistent width
  * - High-contrast neutral current time; lime is reserved for state/position signals
@@ -88,12 +89,8 @@ export function TimecodeDisplay({ fps, totalFrames }: TimecodeDisplayProps) {
   }, [showFrames, fps, formatFrameNumber, getVisibleFrame])
 
   return (
-    <button
-      type="button"
-      className="inline-flex items-center gap-1.5 bg-transparent p-0 font-mono text-[11px] tabular-nums text-left transition-colors select-none text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring rounded-sm"
-      style={{ width: reservedDisplayWidth }}
-      onClick={() => setShowFrames((prev) => !prev)}
-    >
+    <div className="inline-flex items-center gap-2 font-mono text-xs tabular-nums text-muted-foreground">
+      <div className="inline-flex items-center gap-1.5" style={{ width: reservedDisplayWidth }}>
       <span ref={currentTimeRef} className="text-foreground font-semibold">
         {showFrames
           ? formatFrameNumber(getVisibleFrame())
@@ -103,6 +100,8 @@ export function TimecodeDisplay({ fps, totalFrames }: TimecodeDisplayProps) {
       <span>
         {showFrames ? formatFrameNumber(lastFrame) : formatTimecodeCompact(lastFrame, fps)}
       </span>
-    </button>
+      </div>
+      <TimeDisplayFormatSelect showFrames={showFrames} onChange={setShowFrames} />
+    </div>
   )
 }

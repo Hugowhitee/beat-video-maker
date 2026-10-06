@@ -1026,6 +1026,13 @@ export const TimelineContent = memo(function TimelineContent({
     [scrollRef],
   )
 
+  // A new timeline can mount while the previous editor's viewport snapshot
+  // still has zero width (or a stale scroll position). Publish the actual
+  // mounted geometry before passive effects and clip waveform culling run.
+  useLayoutEffect(() => {
+    syncViewportFromContainer(undefined, true)
+  }, [syncViewportFromContainer])
+
   // Measure container width - run after render and on resize
   useEffect(() => {
     const updateWidth = () => {
@@ -1176,10 +1183,12 @@ export const TimelineContent = memo(function TimelineContent({
 
     const frameX = frameToPixelsRef.current(pendingCenterFrame)
     const viewportWidth = container.clientWidth
-    const nextScrollLeft = Math.max(0, frameX - viewportWidth / 2)
+    const maxScrollLeft = Math.max(0, timelineWidthRef.current - viewportWidth)
+    const nextScrollLeft = Math.max(0, Math.min(maxScrollLeft, frameX - viewportWidth / 2))
     container.scrollLeft = nextScrollLeft
     scrollLeftRef.current = nextScrollLeft
     syncViewportFromContainer(nextScrollLeft, true)
+    notifyTimelineLiveScroll(container)
   }, [pendingCenterFrame, syncViewportFromContainer])
 
   // Scroll the timeline so a specific frame is visible (requested externally)
@@ -1196,9 +1205,15 @@ export const TimelineContent = memo(function TimelineContent({
     // Already visible — nothing to do
     if (frameX >= sl && frameX <= sl + vw) return
 
-    // Center the frame in the viewport
-    container.scrollLeft = Math.max(0, frameX - vw / 2)
-    syncViewportFromContainer()
+    // External Program/transport seeks share the native scroll position,
+    // published viewport, live waveform window and playback-follow reference.
+    // Publishing only container.scrollLeft left the last three on an old axis.
+    const maxScrollLeft = Math.max(0, timelineWidthRef.current - vw)
+    const nextScrollLeft = Math.max(0, Math.min(maxScrollLeft, frameX - vw / 2))
+    container.scrollLeft = nextScrollLeft
+    scrollLeftRef.current = nextScrollLeft
+    syncViewportFromContainer(nextScrollLeft, true)
+    notifyTimelineLiveScroll(container)
   }, [pendingScrollToFrame, syncViewportFromContainer])
 
   useLayoutEffect(() => {
@@ -2017,6 +2032,9 @@ export const TimelineContent = memo(function TimelineContent({
       if (zoomApplyRafRef.current !== null) {
         cancelAnimationFrame(zoomApplyRafRef.current)
       }
+      // A disappearing timeline must not leave rich clip culling frozen on its
+      // previous zoom. Only end an active gesture; retain the selected scale.
+      useZoomStore.getState().settleUnmountedGesture()
     }
   }, [])
 

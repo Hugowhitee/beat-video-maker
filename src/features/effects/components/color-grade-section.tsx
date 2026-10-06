@@ -19,6 +19,8 @@ import { useGizmoStore, useThrottledFrame } from '@/features/effects/deps/previe
 import { useGradeClipboardStore, type GradeClipboardEntry } from '@/shared/state/grade-clipboard'
 import { PropertySection } from '@/shared/ui/property-controls'
 import { cn } from '@/shared/ui/cn'
+import { formatHotkeyBinding } from '@/config/hotkeys'
+import { useResolvedHotkeys } from '@/features/effects/deps/settings'
 import { GpuWheelsPanel, GpuCurvesPanel } from './panels'
 import {
   getGpuEffect,
@@ -137,6 +139,7 @@ export const ColorGradeSection = memo(function ColorGradeSection({
   onCreateAdjustmentLayer,
 }: ColorGradeSectionProps) {
   const { t } = useTranslation()
+  const hotkeys = useResolvedHotkeys()
   const addEffects = useTimelineStore((s) => s.addEffects)
   const setItemEffects = useTimelineStore((s) => s.setItemEffects)
   const updateEffect = useTimelineStore((s) => s.updateEffect)
@@ -491,41 +494,38 @@ export const ColorGradeSection = memo(function ColorGradeSection({
   const splitCompareTitle = canCompareGrade
     ? t('effects.colorPanel.compareSplitTooltip')
     : t('effects.colorPanel.compareSplitDisabledTooltip')
+  const showingBefore = colorGradeComparisonMode === 'before'
+  const compareShortcutLabel = formatHotkeyBinding(hotkeys.COLOR_COMPARE)
+  const beforeAfterAriaLabel =
+    `${t('effects.colorPanel.compareBefore')} / ${t('effects.colorPanel.compareAfter')} · ${compareShortcutLabel}`
 
   const compareControls = (
     <div
-      className="grid grid-cols-3 gap-1"
+      className="grid grid-cols-[minmax(0,1fr)_auto] gap-1"
       role="group"
       aria-label={t('effects.colorPanel.compareMode')}
     >
       <Button
-        variant={colorGradeComparisonMode === 'off' ? 'default' : 'outline'}
+        variant={showingBefore ? 'default' : 'outline'}
         size="sm"
-        className="h-7 px-1 text-xs"
-        onClick={() => setColorGradeComparisonMode('off')}
-        title={t('effects.colorPanel.compareAfterTooltip')}
-        aria-label={t('effects.colorPanel.compareAfterTooltip')}
-        aria-pressed={colorGradeComparisonMode === 'off'}
+        className="h-7 min-w-0 justify-between gap-2 px-2 text-xs"
+        onClick={() => setColorGradeComparisonMode(showingBefore ? 'off' : 'before')}
+        title={beforeAfterAriaLabel}
+        aria-label={beforeAfterAriaLabel}
+        aria-pressed={showingBefore}
       >
-        <Eye className="mr-1 h-3 w-3" />
-        {t('effects.colorPanel.compareAfter')}
-      </Button>
-      <Button
-        variant={colorGradeComparisonMode === 'before' ? 'default' : 'outline'}
-        size="sm"
-        className="h-7 px-1 text-xs"
-        onClick={() => setColorGradeComparisonMode('before')}
-        title={t('effects.colorPanel.compareBeforeTooltip')}
-        aria-label={t('effects.colorPanel.compareBeforeTooltip')}
-        aria-pressed={colorGradeComparisonMode === 'before'}
-      >
-        <CircleOff className="mr-1 h-3 w-3" />
-        {t('effects.colorPanel.compareBefore')}
+        <span className="flex min-w-0 items-center gap-1">
+          {showingBefore ? <CircleOff className="h-3 w-3" /> : <Eye className="h-3 w-3" />}
+          <span>{showingBefore ? t('effects.colorPanel.compareBefore') : t('effects.colorPanel.compareAfter')}</span>
+        </span>
+        <kbd className="shrink-0 font-mono text-[10px] font-normal text-muted-foreground">
+          {compareShortcutLabel}
+        </kbd>
       </Button>
       <Button
         variant={colorGradeComparisonMode === 'split' ? 'default' : 'outline'}
         size="sm"
-        className="h-7 px-1 text-xs"
+        className="h-7 px-2 text-xs"
         onClick={() => setColorGradeComparisonMode('split')}
         disabled={!canCompareGrade}
         title={splitCompareTitle}
