@@ -11,13 +11,32 @@ import { useZoomStore } from '../stores/zoom-store'
  */
 export const CLIP_VISIBILITY_PREFETCH_MARGIN_PX = 600
 const RATIO_EPSILON = 0.002
-const subscribeToNothing = () => () => {}
-const getNullZoomSnapshot = () => null
 const subscribeToZoom = (onStoreChange: () => void) => useZoomStore.subscribe(onStoreChange)
 const getStandaloneZoomSnapshot = () => {
   const state = useZoomStore.getState()
   return state.isZoomInteracting ? Number.NaN : state.contentPixelsPerSecond
 }
+
+// Main-timeline clips receive a context-bridged zoom value and intentionally
+// avoid subscribing to each live zoom frame. They still need a single wake-up
+// when a zoom gesture settles: otherwise a clip that mounted with a frozen
+// offscreen visibility snapshot can remain invisible indefinitely after
+// project reopen even when its new viewport and geometry are correct.
+let zoomSettlementRevision = 0
+const zoomSettlementListeners = new Set<() => void>()
+useZoomStore.subscribe((state, previous) => {
+  if (!previous.isZoomInteracting || state.isZoomInteracting) return
+  zoomSettlementRevision += 1
+  for (const listener of zoomSettlementListeners) listener()
+})
+
+function subscribeToZoomSettlement(listener: () => void) {
+  zoomSettlementListeners.add(listener)
+  return () => {
+    zoomSettlementListeners.delete(listener)
+  }
+}
+const getZoomSettlementSnapshot = () => zoomSettlementRevision
 
 export interface ClipVisibilityState {
   isVisible: boolean
@@ -48,9 +67,9 @@ export function useClipVisibility(
   // bridged scale, so this selector stays null and cannot create a SyncLane
   // zoom-end fan-out.
   useSyncExternalStore(
-    geometryPixelsPerSecond === undefined ? subscribeToZoom : subscribeToNothing,
-    geometryPixelsPerSecond === undefined ? getStandaloneZoomSnapshot : getNullZoomSnapshot,
-    geometryPixelsPerSecond === undefined ? getStandaloneZoomSnapshot : getNullZoomSnapshot,
+    geometryPixelsPerSecond === undefined ? subscribeToZoom : subscribeToZoomSettlement,
+    geometryPixelsPerSecond === undefined ? getStandaloneZoomSnapshot : getZoomSettlementSnapshot,
+    geometryPixelsPerSecond === undefined ? getStandaloneZoomSnapshot : getZoomSettlementSnapshot,
   )
 
   const visibility = useTimelineViewportStore(

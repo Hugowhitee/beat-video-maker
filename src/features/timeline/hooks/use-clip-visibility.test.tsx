@@ -134,6 +134,45 @@ describe('useClipVisibility', () => {
     expect(screen.getByTestId('visibility')).toHaveTextContent('true:0.000:1.000')
   })
 
+  it('recovers a bridged clip that remounts while zoom/viewport state is settling', () => {
+    function BridgedClip() {
+      const visibility = useClipVisibility(0, 400, 100)
+      return createElement('div', { 'data-testid': 'bridged-visibility' }, String(visibility.isVisible))
+    }
+
+    // The editor may remount its clip subtree while an old zoom is active.
+    act(() => {
+      useTimelineViewportStore.getState().setViewportImmediate({
+        scrollLeft: 5000,
+        scrollTop: 0,
+        viewportWidth: 900,
+        viewportHeight: 120,
+      })
+      useZoomStore.setState({ isZoomInteracting: true })
+    })
+    render(createElement(BridgedClip))
+    expect(screen.getByTestId('bridged-visibility')).toHaveTextContent('false')
+
+    // The actual new timeline can be in view before zoom finishes. During the
+    // gesture, retain the frozen cull state to avoid expensive per-frame mounts.
+    act(() => {
+      useTimelineViewportStore.getState().setViewportImmediate({
+        scrollLeft: 0,
+        scrollTop: 0,
+        viewportWidth: 900,
+        viewportHeight: 120,
+      })
+    })
+    expect(screen.getByTestId('bridged-visibility')).toHaveTextContent('false')
+
+    // Unlike the old hook, bridged clips must wake up once on zoom settlement
+    // even if the viewport store emits no further changes.
+    act(() => {
+      useZoomStore.setState({ isZoomInteracting: false })
+    })
+    expect(screen.getByTestId('bridged-visibility')).toHaveTextContent('true')
+  })
+
   it('does not leak visibility from a suspended geometry transition', async () => {
     useTimelineViewportStore.getState().setViewport({
       scrollLeft: 5000,
