@@ -667,9 +667,14 @@ async function main() {
       state: 'visible',
       timeout: 20_000,
     })
+    // Reopening hydrates waveform peaks from persisted OPFS asynchronously. On
+    // shared CI runners that storage read can trail the already-restored beat
+    // source/grid by more than the normal interaction timeout. Keep this as a
+    // hard release assertion for the real rendered canvas, but give hydration
+    // the same long-running budget as media analysis/import above.
     await desktopPage.locator('[data-timeline-waveform-canvas]').last().waitFor({
       state: 'visible',
-      timeout: 20_000,
+      timeout: 60_000,
     })
 
     await desktopPage.getByRole('tab', { name: 'Visual' }).click()
