@@ -409,12 +409,11 @@ export function useWaveform({
     canUseVisibleRange,
   ])
 
-  // Cleanup on unmount
+  // Generation belongs to the shared cache, not this mounted clip. Let it finish
+  // across route/workspace unmount so durable waveform persistence can complete.
   useEffect(() => {
     return () => {
-      if (ownsGenerationRef.current) {
-        waveformCache.abort(mediaId)
-      }
+      ownsGenerationRef.current = false
     }
   }, [mediaId])
 
