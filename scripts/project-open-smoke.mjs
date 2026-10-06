@@ -742,7 +742,10 @@ async function main() {
     }).waitFor({ state: 'visible', timeout: 20_000 })
 
     console.log('Smoke: rendering and downloading a real video export')
-    await desktopPage.getByRole('button', { name: 'Close source monitor' }).click()
+    const closeSource = desktopPage.getByRole('button', { name: 'Close source monitor' })
+    if (await closeSource.isVisible()) {
+      await closeSource.click()
+    }
     await desktopPage.getByRole('button', { name: 'Export', exact: true }).click()
     const exportDialog = desktopPage.getByRole('dialog')
     await exportDialog.getByRole('heading', { name: 'Export', exact: true }).waitFor({
