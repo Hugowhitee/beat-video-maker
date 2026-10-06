@@ -886,7 +886,7 @@ class WaveformCacheService {
                 samplesPerSecond,
               )
               if (persistOPFS) {
-                void this.persistToOPFS(mediaId, peaks, duration, channels, samplesPerSecond)
+                await this.persistToOPFS(mediaId, peaks, duration, channels, samplesPerSecond)
               }
 
               reportProgress(100, true)
