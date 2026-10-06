@@ -382,6 +382,8 @@ export const ClipWaveform = memo(function ClipWaveform({
           : isLoading ? 'loading' : 'empty',
     'data-clip-waveform-visible': String(isVisible),
     'data-clip-waveform-source': String(!!blobUrl),
+    'data-clip-waveform-viewport': `${useTimelineViewportStore.getState().viewportWidth}:${useTimelineViewportStore.getState().scrollLeft}`,
+    'data-clip-waveform-zoom': `${useZoomStore.getState().isZoomInteracting}:${useZoomStore.getState().contentPixelsPerSecond}:${renderPixelsPerSecond}`,
   }
 
   // Show empty state for unsupported/failed waveforms (no infinite skeleton).

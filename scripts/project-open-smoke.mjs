@@ -705,6 +705,8 @@ async function main() {
           waveState: node.querySelector('[data-clip-waveform-state]')?.getAttribute('data-clip-waveform-state'),
           waveVisible: node.querySelector('[data-clip-waveform-visible]')?.getAttribute('data-clip-waveform-visible'),
           waveSource: node.querySelector('[data-clip-waveform-source]')?.getAttribute('data-clip-waveform-source'),
+          waveViewport: node.querySelector('[data-clip-waveform-viewport]')?.getAttribute('data-clip-waveform-viewport'),
+          waveZoom: node.querySelector('[data-clip-waveform-zoom]')?.getAttribute('data-clip-waveform-zoom'),
         })),
       }))
       throw new Error(`Waveform not rendered after reopen: ${JSON.stringify(diagnostic)}\n${error instanceof Error ? error.message : String(error)}`)

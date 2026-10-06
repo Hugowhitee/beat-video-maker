@@ -1026,6 +1026,13 @@ export const TimelineContent = memo(function TimelineContent({
     [scrollRef],
   )
 
+  // A new timeline can mount while the previous editor's viewport snapshot
+  // still has zero width (or a stale scroll position). Publish the actual
+  // mounted geometry before passive effects and clip waveform culling run.
+  useLayoutEffect(() => {
+    syncViewportFromContainer(undefined, true)
+  }, [syncViewportFromContainer])
+
   // Measure container width - run after render and on resize
   useEffect(() => {
     const updateWidth = () => {
@@ -2025,6 +2032,9 @@ export const TimelineContent = memo(function TimelineContent({
       if (zoomApplyRafRef.current !== null) {
         cancelAnimationFrame(zoomApplyRafRef.current)
       }
+      // A disappearing timeline must not leave rich clip culling frozen on its
+      // previous zoom. Only end an active gesture; retain the selected scale.
+      useZoomStore.getState().settleUnmountedGesture()
     }
   }, [])
 
