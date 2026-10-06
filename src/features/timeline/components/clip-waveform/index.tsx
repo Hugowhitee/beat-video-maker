@@ -372,11 +372,22 @@ export const ClipWaveform = memo(function ClipWaveform({
   const renderVersion = `${loadedSamples}:${height}:e${Math.round(
     renderPixelsPerSecond * 1000,
   )}:w${Math.round(settledRenderClipWidth)}`
+  const debugWaveformAttributes = {
+    'data-clip-waveform-state': !audioCodecSupported
+      ? 'unsupported'
+      : error
+        ? 'error'
+        : peaks?.length
+          ? height > 0 ? 'ready' : 'unmeasured'
+          : isLoading ? 'loading' : 'empty',
+    'data-clip-waveform-visible': String(isVisible),
+    'data-clip-waveform-source': String(!!blobUrl),
+  }
 
   // Show empty state for unsupported/failed waveforms (no infinite skeleton).
   if (!audioCodecSupported || !!error) {
     return (
-      <div ref={containerRef} className="absolute inset-0 flex items-center">
+      <div ref={containerRef} {...debugWaveformAttributes} className="absolute inset-0 flex items-center">
         {/* Flat line to indicate no waveform available */}
         <div className="w-full h-[1px] bg-foreground/20" style={{ marginTop: 0 }} />
       </div>
@@ -387,20 +398,20 @@ export const ClipWaveform = memo(function ClipWaveform({
   if (!peaks || peaks.length === 0 || height === 0) {
     if (!isLoading && height > 0) {
       return (
-        <div ref={containerRef} className="absolute inset-0 flex items-center">
+        <div ref={containerRef} {...debugWaveformAttributes} className="absolute inset-0 flex items-center">
           <div className="w-full h-[1px] bg-foreground/20" style={{ marginTop: 0 }} />
         </div>
       )
     }
     return (
-      <div ref={containerRef} className="absolute inset-0">
+      <div ref={containerRef} {...debugWaveformAttributes} className="absolute inset-0">
         <WaveformSkeleton clipWidth={clipWidth} height={height || 24} />
       </div>
     )
   }
 
   return (
-    <div ref={containerRef} className="absolute inset-0">
+    <div ref={containerRef} {...debugWaveformAttributes} className="absolute inset-0">
       <VisibleWaveformCanvas
         width={settledRenderClipWidth}
         height={height}

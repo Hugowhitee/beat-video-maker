@@ -672,10 +672,43 @@ async function main() {
     // source/grid by more than the normal interaction timeout. Keep this as a
     // hard release assertion for the real rendered canvas, but give hydration
     // the same long-running budget as media analysis/import above.
-    await desktopPage.locator('[data-timeline-waveform-canvas]').last().waitFor({
-      state: 'visible',
-      timeout: 60_000,
+    // The waveform is viewport-virtualized; re-center the timeline before
+    // asserting that the reopened Beat lane renders the stored waveform.
+    await desktopPage.locator('[data-timeline-scroll-container]').first().evaluate((element) => {
+      element.scrollLeft = 0
+      element.dispatchEvent(new Event('scroll', { bubbles: true }))
     })
+    try {
+      await desktopPage.locator('[data-timeline-waveform-canvas]').last().waitFor({
+        state: 'visible',
+        timeout: 18_000,
+      })
+    } catch (error) {
+      const diagnostic = await desktopPage.evaluate(() => ({
+        width: window.innerWidth,
+        tracks: [...document.querySelectorAll('[data-track-id]')].map((node) => ({
+          id: node.getAttribute('data-track-id'),
+          title: node.textContent?.trim().slice(0, 70),
+          height: node.getBoundingClientRect().height,
+        })),
+        viewports: [...document.querySelectorAll('[data-timeline-scroll-container]')].map((node) => ({
+          width: node.clientWidth,
+          scrollLeft: node.scrollLeft,
+          scrollWidth: node.scrollWidth,
+        })),
+        clips: [...document.querySelectorAll('[data-timeline-item]')].map((node) => ({
+          media: node.textContent?.trim().slice(0, 90),
+          from: node.getAttribute('data-timeline-start-frame'),
+          duration: node.getAttribute('data-timeline-duration-frames'),
+          visible: node.getBoundingClientRect().width > 0,
+          waveform: node.querySelector('[data-timeline-waveform-canvas]') !== null,
+          waveState: node.querySelector('[data-clip-waveform-state]')?.getAttribute('data-clip-waveform-state'),
+          waveVisible: node.querySelector('[data-clip-waveform-visible]')?.getAttribute('data-clip-waveform-visible'),
+          waveSource: node.querySelector('[data-clip-waveform-source]')?.getAttribute('data-clip-waveform-source'),
+        })),
+      }))
+      throw new Error(`Waveform not rendered after reopen: ${JSON.stringify(diagnostic)}\n${error instanceof Error ? error.message : String(error)}`)
+    }
 
     await desktopPage.getByRole('tab', { name: 'Visual' }).click()
     await desktopPage.getByText('editor-roundtrip-smoke.webm', { exact: true }).waitFor({
