@@ -140,7 +140,7 @@ export function useWaveform({
   // (zoom crossing a resolution threshold). The previous level stays visible
   // until the new one loads, so zooming never flashes a skeleton.
   useEffect(() => {
-    if (!useLevels || !enabled || !isVisible) {
+    if (!useLevels || !enabled) {
       return
     }
 
@@ -174,7 +174,7 @@ export function useWaveform({
     return () => {
       cancelled = true
     }
-  }, [mediaId, levelIndex, isVisible, enabled, useLevels])
+  }, [mediaId, levelIndex, enabled, useLevels])
 
   // Progress callback - using useEffectEvent so it doesn't need to be in effect deps
   const onProgress = useEffectEvent((nextProgress: number) => {
