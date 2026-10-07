@@ -29,7 +29,7 @@ function makeTrack(overrides: Partial<TimelineTrack> = {}): TimelineTrack {
   }
 }
 
-function renderTrackHeader(track: TimelineTrack, onToggleDisabled = vi.fn()) {
+function renderTrackHeader(track: TimelineTrack, onToggleDisabled = vi.fn(), displayName?: string) {
   const renderResult = render(
     <TrackHeader
       track={track}
@@ -37,6 +37,8 @@ function renderTrackHeader(track: TimelineTrack, onToggleDisabled = vi.fn()) {
       isSelected={false}
       canDeleteTrack
       canDeleteEmptyTracks
+      simplified={displayName !== undefined}
+      displayName={displayName}
       onToggleLock={() => undefined}
       onToggleSyncLock={() => undefined}
       onToggleDisabled={onToggleDisabled}
@@ -127,6 +129,13 @@ describe('TrackHeader', () => {
     expect(screen.queryByRole('button', { name: 'Disable sync lock' })).not.toBeInTheDocument()
   })
 
+  it('shows the semantic producer name while retaining the full underlying track name', () => {
+    renderTrackHeader(makeTrack({ name: 'V1 · Original footage' }), vi.fn(), 'Media')
+
+    expect(screen.getByText('Media')).toHaveAttribute('title', 'V1 · Original footage')
+    expect(screen.queryByText('V1 · Original footage')).not.toBeInTheDocument()
+  })
+
   it('keeps collapse available without adding producer-header icon chrome', () => {
     const onToggleCollapsed = vi.fn()
     render(
@@ -155,6 +164,10 @@ describe('TrackHeader', () => {
     expect(screen.queryByRole('button', { name: /collapse beat track/i })).not.toBeInTheDocument()
     fireEvent.doubleClick(screen.getByText('Beat'))
     expect(onToggleCollapsed).toHaveBeenCalledTimes(1)
+
+    fireEvent.contextMenu(screen.getByText('Beat'))
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Collapse track' }))
+    expect(onToggleCollapsed).toHaveBeenCalledTimes(2)
   })
 
   it('renders sync lock enabled by default and toggles the label when disabled', () => {

@@ -20,12 +20,17 @@ function leftPercent(time: number, duration: number) {
 
 function sectionColor(section: MusicSection, index: number, variant: 'ruler' | 'tracks') {
   const hue =
-    section.kind === 'intro' ? 225 :
-    section.kind === 'build' ? 70 :
-    section.kind === 'drop' ? 150 :
-    section.kind === 'break' ? 290 :
-    section.kind === 'outro' ? 25 :
-    [225, 285, 170, 55][index % 4] ?? 225
+    section.kind === 'intro'
+      ? 225
+      : section.kind === 'build'
+        ? 70
+        : section.kind === 'drop'
+          ? 150
+          : section.kind === 'break'
+            ? 290
+            : section.kind === 'outro'
+              ? 25
+              : ([225, 285, 170, 55][index % 4] ?? 225)
   const chroma = section.kind === 'unknown' ? 0.045 : 0.07
   const alpha = variant === 'ruler' ? 0.3 : 0.065
   return `oklch(0.7 ${chroma} ${hue} / ${alpha})`
@@ -49,19 +54,12 @@ export const BeatvideoGridOverlay = memo(function BeatvideoGridOverlay({
   const contentLayerRef = useMemo(createTimelineTrackContentLayerRef, [])
 
   const timelineGrid = useMemo(
-    () =>
-      analysis
-        ? resolveBeatvideoTimelineGrid(analysis, items, fps)
-        : null,
+    () => (analysis ? resolveBeatvideoTimelineGrid(analysis, items, fps) : null),
     [analysis, fps, items],
   )
 
-  if (
-    !beatGridVisible ||
-    !timelineGrid ||
-    timelineGrid.grid.beats.length === 0 ||
-    duration <= 0
-  ) return null
+  if (!beatGridVisible || !timelineGrid || timelineGrid.grid.beats.length === 0 || duration <= 0)
+    return null
 
   const { grid, barOneTimelineTime } = timelineGrid
   const { markers, labelStride } = resolveBeatGridMarkers({
@@ -89,15 +87,14 @@ export const BeatvideoGridOverlay = memo(function BeatvideoGridOverlay({
         const left = leftPercent(section.start, duration)
         const width = Math.max(0, leftPercent(section.end, duration) - left)
         const showLabel =
-          variant === 'ruler' &&
-          (section.end - section.start) * pixelsPerSecond >= 72
+          variant === 'ruler' && (section.end - section.start) * pixelsPerSecond >= 72
         return (
           <div
             key={section.id}
             className={
               variant === 'ruler'
-                ? 'absolute bottom-0 h-[6px] border-l border-primary/30'
-                : 'absolute inset-y-0 border-l border-primary/14'
+                ? 'absolute bottom-0 h-[6px] border-l border-foreground/30'
+                : 'absolute inset-y-0 border-l border-foreground/14'
             }
             style={{
               left: `${left}%`,
@@ -128,6 +125,7 @@ export const BeatvideoGridOverlay = memo(function BeatvideoGridOverlay({
         return (
           <div
             key={`${beat.index}:${beat.time.toFixed(4)}`}
+            data-musical-marker={isBarOne ? 'bar-one' : isPhraseBar ? 'phrase' : kind}
             className="absolute inset-y-0"
             style={{ left: `${leftPercent(beat.time, duration)}%` }}
           >
@@ -138,9 +136,9 @@ export const BeatvideoGridOverlay = memo(function BeatvideoGridOverlay({
                   : kind === 'subdivision'
                     ? 'h-full w-px bg-foreground/[0.09]'
                     : isPhraseBar
-                      ? 'h-full w-[2px] bg-primary/65'
+                      ? 'h-full w-[2px] bg-foreground/50'
                       : kind === 'bar'
-                        ? 'h-full w-px bg-primary/45'
+                        ? 'h-full w-px bg-foreground/35'
                         : 'h-full w-px bg-foreground/24'
               }
             />

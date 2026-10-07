@@ -61,6 +61,7 @@ export const TimelineRulerSurface = memo(function TimelineRulerSurface({
     <div
       ref={rulerRef}
       className="relative z-30 shrink-0 timeline-ruler bg-background"
+      data-timeline-ruler={musicalRuler ? 'musical' : 'timecode'}
       style={{ width: `${initialWidth}px`, height: EDITOR_LAYOUT_CSS_VALUES.timelineRulerHeight }}
     >
       <div
@@ -72,10 +73,7 @@ export const TimelineRulerSurface = memo(function TimelineRulerSurface({
           contain: 'layout style paint',
         }}
       >
-        <TimelineMarkers
-          duration={duration}
-          tone={musicalRuler ? 'light' : 'dark'}
-        />
+        <TimelineMarkers duration={duration} tone="dark" />
         <BeatvideoGridOverlay duration={duration} variant="ruler" />
       </div>
     </div>

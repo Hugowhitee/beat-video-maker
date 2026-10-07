@@ -38,11 +38,7 @@ import { useTimelineStore } from '@/features/editor/deps/timeline-store'
 import { importBundleExportDialog } from '@/features/editor/deps/project-bundle'
 import { useMediaLibraryStore } from '@/features/editor/deps/media-library'
 import { useSettingsStore } from '@/features/editor/deps/settings'
-import {
-  PlaybackControls,
-  useItemsStore,
-  useMaskEditorStore,
-} from '@/features/editor/deps/preview'
+import { PlaybackControls, useItemsStore, useMaskEditorStore } from '@/features/editor/deps/preview'
 import { usePlaybackStore } from '@/shared/state/playback'
 import { useEditorStore } from '@/shared/state/editor'
 import { clearPreviewAudioCache } from '@/features/editor/deps/composition-runtime'
@@ -90,17 +86,22 @@ const STUDIO_COLUMN_MIN_WIDTH = 320
 const STUDIO_COLUMN_MAX_WIDTH = 640
 function getStudioColumnMaxWidth(): number {
   if (typeof window === 'undefined') return STUDIO_COLUMN_MAX_WIDTH
-  return Math.max(STUDIO_COLUMN_MIN_WIDTH, Math.min(
-    STUDIO_COLUMN_MAX_WIDTH, window.innerWidth - 520,
-  ))
+  return Math.max(
+    STUDIO_COLUMN_MIN_WIDTH,
+    Math.min(STUDIO_COLUMN_MAX_WIDTH, window.innerWidth - 520),
+  )
 }
 function readStudioColumnWidth(workspace: EditorWorkspaceId): number {
   const fallback = workspace === 'master' || workspace === 'color' ? 480 : 400
   try {
     const stored = Number(window.localStorage.getItem(`editor:studioColumnWidth:${workspace}`))
-    return Math.max(STUDIO_COLUMN_MIN_WIDTH, Math.min(
-      getStudioColumnMaxWidth(), Number.isFinite(stored) && stored > 0 ? stored : fallback,
-    ))
+    return Math.max(
+      STUDIO_COLUMN_MIN_WIDTH,
+      Math.min(
+        getStudioColumnMaxWidth(),
+        Number.isFinite(stored) && stored > 0 ? stored : fallback,
+      ),
+    )
   } catch {
     return fallback
   }
@@ -486,15 +487,18 @@ export const LoadedEditor = memo(function LoadedEditor({
   const rightSidebarOpen = useEditorStore((s) => s.rightSidebarOpen)
   const setRightSidebarOpen = useEditorStore((s) => s.setRightSidebarOpen)
   const [studioColumnWidth, setStudioColumnWidth] = useState(() => readStudioColumnWidth(workspace))
-  const updateStudioColumnWidth = useCallback((width: number) => {
-    const clamped = Math.max(STUDIO_COLUMN_MIN_WIDTH, Math.min(getStudioColumnMaxWidth(), width))
-    setStudioColumnWidth(clamped)
-    try {
-      window.localStorage.setItem(`editor:studioColumnWidth:${workspace}`, String(clamped))
-    } catch {
-      /* Persisting a layout preference must not block the editor. */
-    }
-  }, [workspace])
+  const updateStudioColumnWidth = useCallback(
+    (width: number) => {
+      const clamped = Math.max(STUDIO_COLUMN_MIN_WIDTH, Math.min(getStudioColumnMaxWidth(), width))
+      setStudioColumnWidth(clamped)
+      try {
+        window.localStorage.setItem(`editor:studioColumnWidth:${workspace}`, String(clamped))
+      } catch {
+        /* Persisting a layout preference must not block the editor. */
+      }
+    },
+    [workspace],
+  )
   useEffect(() => {
     setStudioColumnWidth(readStudioColumnWidth(workspace))
   }, [workspace])
@@ -508,10 +512,7 @@ export const LoadedEditor = memo(function LoadedEditor({
   const timelinePanelRef = useRef<ImperativePanelHandle>(null)
   const previousWorkspaceRef = useRef(workspace)
   const maxItemEndFrame = useItemsStore((s) => s.maxItemEndFrame)
-  const mobileTotalFrames = Math.max(
-    1,
-    maxItemEndFrame > 0 ? maxItemEndFrame : project.fps * 10,
-  )
+  const mobileTotalFrames = Math.max(1, maxItemEndFrame > 0 ? maxItemEndFrame : project.fps * 10)
 
   // Guard against concurrent saves (e.g., spamming Ctrl+S)
   const isSavingRef = useRef(false)
@@ -798,10 +799,7 @@ export const LoadedEditor = memo(function LoadedEditor({
   const isMasterWorkspace = workspace === 'master'
   const isMotionWorkspace = workspace === 'motion'
   const isProducerWorkspace =
-    workspace === 'beat' ||
-    workspace === 'edit' ||
-    workspace === 'color' ||
-    workspace === 'master'
+    workspace === 'beat' || workspace === 'edit' || workspace === 'color' || workspace === 'master'
   // All producer workspaces share Program and timeline geometry. Color keeps
   // its grading stack in the task column; none duplicates the editor timeline.
   const hidesDefaultSidebars = isColorWorkspace
@@ -946,203 +944,206 @@ export const LoadedEditor = memo(function LoadedEditor({
         </div>
       ) : (
         <>
-      {/* Main Layout: Full-height sidebar + vertical split */}
-      <div className="flex-1 flex overflow-hidden">
-        {/* Left Sidebar - Media Library (full column mode). Producer workspaces
+          {/* Main Layout: Full-height sidebar + vertical split */}
+          <div className="flex-1 flex overflow-hidden">
+            {/* Left Sidebar - Media Library (full column mode). Producer workspaces
             intentionally have no permanent project rail; their content/actions
             live in the active task panel, Inspector, or canonical timeline. */}
-        {mediaFullColumn && !hidesDefaultSidebars && !isProducerWorkspace && (
-          <InteractionLockRegion locked={isMaskEditingActive}>
-            <ErrorBoundary level="feature">
-              <MediaSidebar beatvideoMode={beatvideoMode} />
-            </ErrorBoundary>
-          </InteractionLockRegion>
-        )}
-
-        {/* Right side: Preview/Properties + Timeline */}
-          <ResizablePanelGroup
-            direction="vertical"
-            className="flex-1 min-w-0"
-            autoSaveId="editor:timeline-layout"
-          >
-            {/* Top - Preview + Properties (inline mode) */}
-            <ResizablePanel
-              defaultSize={100 - editorLayout.timelineDefaultSize}
-              minSize={100 - editorLayout.timelineMaxSize}
-              maxSize={100 - editorLayout.timelineMinSize}
-            >
-              <div className="h-full flex overflow-hidden relative">
-                {/* Left Sidebar - Media Library (inline with preview) */}
-                {!mediaFullColumn && !isProducerWorkspace && (
-                  <InteractionLockRegion locked={isMaskEditingActive}>
-                    <ErrorBoundary level="feature">
-                      <MediaSidebar beatvideoMode={beatvideoMode} />
-                    </ErrorBoundary>
-                  </InteractionLockRegion>
-                )}
-
-                {/* Center - Preview */}
+            {mediaFullColumn && !hidesDefaultSidebars && !isProducerWorkspace && (
+              <InteractionLockRegion locked={isMaskEditingActive}>
                 <ErrorBoundary level="feature">
-                  {isMotionWorkspace ? (
-                    <MotionPreviewArea project={project} />
-                  ) : (
-                    <PreviewArea project={project} />
-                  )}
-                </ErrorBoundary>
-
-                {/* Right Sidebar - Properties (inline with preview) */}
-                {!propertiesFullColumn && !isProducerWorkspace && (
-                  <InteractionLockRegion locked={isMaskEditingActive}>
-                    <ErrorBoundary level="feature">
-                      <PropertiesSidebar />
-                    </ErrorBoundary>
-                  </InteractionLockRegion>
-                )}
-              </div>
-            </ResizablePanel>
-
-            <ResizableHandle
-              aria-label="Resize preview and timeline"
-              className={`group data-[panel-group-direction=vertical]:h-[10px] data-[panel-group-direction=vertical]:cursor-row-resize data-[panel-group-direction=vertical]:bg-transparent data-[panel-group-direction=vertical]:before:pointer-events-none data-[panel-group-direction=vertical]:before:absolute data-[panel-group-direction=vertical]:before:inset-x-0 data-[panel-group-direction=vertical]:before:top-1/2 data-[panel-group-direction=vertical]:before:h-px data-[panel-group-direction=vertical]:before:-translate-y-1/2 data-[panel-group-direction=vertical]:before:bg-[#aeb6ac] data-[panel-group-direction=vertical]:hover:before:h-[2px] data-[panel-group-direction=vertical]:hover:before:bg-[#526955] data-[panel-group-direction=vertical]:focus-visible:before:h-[2px] data-[panel-group-direction=vertical]:focus-visible:before:bg-[#526955] data-[panel-group-direction=vertical]:data-[resize-handle-active]:before:bg-[#526955] ${
-                isMaskEditingActive ? 'pointer-events-none opacity-60' : ''
-              }`}
-            />
-
-            {/* Bottom - Timeline */}
-            <ResizablePanel
-              ref={timelinePanelRef}
-              defaultSize={editorLayout.timelineDefaultSize}
-              minSize={editorLayout.timelineMinSize}
-              maxSize={editorLayout.timelineMaxSize}
-            >
-              <InteractionLockRegion locked={isMaskEditingActive} className="h-full">
-                <ErrorBoundary level="feature">
-                  <div className="h-full flex overflow-hidden">
-                    <div className="min-w-0 flex-1">
-                      {isMotionWorkspace ? (
-                        <MotionTimelineDock project={project} />
-                      ) : (
-                        <Suspense fallback={null}>
-                          <LazyTimeline duration={timelineDuration} beatvideoMode={beatvideoMode} />
-                        </Suspense>
-                      )}
-                    </div>
-                    {workspace === 'edit' && beatvideoMode === 'video' ? (
-                      <AudioMeterPanel key="editor-meter" initialMode="meter" />
-                    ) : null}
-                  </div>
+                  <MediaSidebar beatvideoMode={beatvideoMode} />
                 </ErrorBoundary>
               </InteractionLockRegion>
-            </ResizablePanel>
-          </ResizablePanelGroup>
+            )}
 
-        {isColorWorkspace ? (
-          <>
-          <StudioResizeRail
-            label="Resize Color controls"
-            width={visibleStudioColumnWidth}
-            minWidth={STUDIO_COLUMN_MIN_WIDTH}
-            maxWidth={getStudioColumnMaxWidth()}
-            defaultWidth={480}
-            onWidthChange={updateStudioColumnWidth}
-          />
-          <InteractionLockRegion
-            locked={isMaskEditingActive}
-            className="h-full min-w-0 shrink-0 bg-[#e8e9e5]"
-            style={{ width: visibleStudioColumnWidth }}
-          >
-            <ErrorBoundary level="feature">
-              <Suspense fallback={null}>
-                <LazyColorGradingDock />
-              </Suspense>
-            </ErrorBoundary>
-          </InteractionLockRegion>
-          </>
-        ) : isMasterWorkspace ? (
-          <>
-          <StudioResizeRail
-            label="Resize Master controls"
-            width={visibleStudioColumnWidth}
-            minWidth={STUDIO_COLUMN_MIN_WIDTH}
-            maxWidth={getStudioColumnMaxWidth()}
-            defaultWidth={480}
-            onWidthChange={updateStudioColumnWidth}
-          />
-          <InteractionLockRegion
-            locked={isMaskEditingActive}
-            className="studio-master-column h-full shrink-0"
-            style={{ width: visibleStudioColumnWidth }}
-          >
-            <ErrorBoundary level="feature">
-              <BeatvideoMasterPanel />
-            </ErrorBoundary>
-          </InteractionLockRegion>
-          </>
-        ) : workspace === 'beat' || workspace === 'edit' ? (
-          <>
-          <StudioResizeRail
-            label={workspace === 'beat' ? 'Resize Beat controls' : 'Resize Visual tools'}
-            width={visibleStudioColumnWidth}
-            minWidth={STUDIO_COLUMN_MIN_WIDTH}
-            maxWidth={getStudioColumnMaxWidth()}
-            defaultWidth={400}
-            onWidthChange={updateStudioColumnWidth}
-          />
-          <InteractionLockRegion
-            locked={isMaskEditingActive}
-            className="studio-task-column h-full shrink-0 bg-[#e8e9e5]"
-            style={{ width: visibleStudioColumnWidth }}
-          >
-            {workspace === 'edit' ? (
-              <div className="flex h-full min-h-0 flex-col">
-                <div className="shrink-0 border-b border-border bg-[#e8e9e5] px-3 py-2">
-                  <div className="studio-segmented grid h-8 grid-cols-2">
-                    <button
-                      type="button"
-                      className="studio-segment h-8 text-[10px] font-semibold"
-                      aria-pressed={!rightSidebarOpen}
-                      onClick={() => setRightSidebarOpen(false)}
-                    >
-                      Add
-                    </button>
-                    <button
-                      type="button"
-                      className="studio-segment h-8 text-[10px] font-semibold"
-                      aria-pressed={rightSidebarOpen}
-                      onClick={() => setRightSidebarOpen(true)}
-                    >
-                      Edit
-                    </button>
-                  </div>
-                </div>
-                <div className="min-h-0 flex-1">
+            {/* Right side: Preview/Properties + Timeline */}
+            <ResizablePanelGroup
+              direction="vertical"
+              className="flex-1 min-w-0"
+              autoSaveId="editor:timeline-layout"
+            >
+              {/* Top - Preview + Properties (inline mode) */}
+              <ResizablePanel
+                defaultSize={100 - editorLayout.timelineDefaultSize}
+                minSize={100 - editorLayout.timelineMaxSize}
+                maxSize={100 - editorLayout.timelineMinSize}
+              >
+                <div className="h-full flex overflow-hidden relative">
+                  {/* Left Sidebar - Media Library (inline with preview) */}
+                  {!mediaFullColumn && !isProducerWorkspace && (
+                    <InteractionLockRegion locked={isMaskEditingActive}>
+                      <ErrorBoundary level="feature">
+                        <MediaSidebar beatvideoMode={beatvideoMode} />
+                      </ErrorBoundary>
+                    </InteractionLockRegion>
+                  )}
+
+                  {/* Center - Preview */}
                   <ErrorBoundary level="feature">
-                    {rightSidebarOpen ? (
-                      <PropertiesSidebar studioTaskColumn />
+                    {isMotionWorkspace ? (
+                      <MotionPreviewArea project={project} />
                     ) : (
-                      <MediaSidebar beatvideoMode={beatvideoMode} studioTaskColumn />
+                      <PreviewArea project={project} />
                     )}
                   </ErrorBoundary>
-                </div>
-              </div>
-            ) : (
-              <ErrorBoundary level="feature">
-                <MediaSidebar beatvideoMode={beatvideoMode} studioTaskColumn />
-              </ErrorBoundary>
-            )}
-          </InteractionLockRegion>
-          </>
-        ) : null}
 
-        {/* Right Sidebar - Properties (full column mode) */}
-        {propertiesFullColumn && !hidesDefaultSidebars && !isProducerWorkspace && (
-          <InteractionLockRegion locked={isMaskEditingActive}>
-            <ErrorBoundary level="feature">
-              <PropertiesSidebar />
-            </ErrorBoundary>
-          </InteractionLockRegion>
-        )}
-      </div>
+                  {/* Right Sidebar - Properties (inline with preview) */}
+                  {!propertiesFullColumn && !isProducerWorkspace && (
+                    <InteractionLockRegion locked={isMaskEditingActive}>
+                      <ErrorBoundary level="feature">
+                        <PropertiesSidebar />
+                      </ErrorBoundary>
+                    </InteractionLockRegion>
+                  )}
+                </div>
+              </ResizablePanel>
+
+              <ResizableHandle
+                aria-label="Resize preview and timeline"
+                className={`group data-[panel-group-direction=vertical]:h-[10px] data-[panel-group-direction=vertical]:cursor-row-resize data-[panel-group-direction=vertical]:bg-transparent data-[panel-group-direction=vertical]:before:pointer-events-none data-[panel-group-direction=vertical]:before:absolute data-[panel-group-direction=vertical]:before:inset-x-0 data-[panel-group-direction=vertical]:before:top-1/2 data-[panel-group-direction=vertical]:before:h-px data-[panel-group-direction=vertical]:before:-translate-y-1/2 data-[panel-group-direction=vertical]:before:bg-[#aeb6ac] data-[panel-group-direction=vertical]:hover:before:h-[2px] data-[panel-group-direction=vertical]:hover:before:bg-[#526955] data-[panel-group-direction=vertical]:focus-visible:before:h-[2px] data-[panel-group-direction=vertical]:focus-visible:before:bg-[#526955] data-[panel-group-direction=vertical]:data-[resize-handle-active]:before:bg-[#526955] ${
+                  isMaskEditingActive ? 'pointer-events-none opacity-60' : ''
+                }`}
+              />
+
+              {/* Bottom - Timeline */}
+              <ResizablePanel
+                ref={timelinePanelRef}
+                defaultSize={editorLayout.timelineDefaultSize}
+                minSize={editorLayout.timelineMinSize}
+                maxSize={editorLayout.timelineMaxSize}
+              >
+                <InteractionLockRegion locked={isMaskEditingActive} className="h-full">
+                  <ErrorBoundary level="feature">
+                    <div className="h-full flex overflow-hidden">
+                      <div className="min-w-0 flex-1">
+                        {isMotionWorkspace ? (
+                          <MotionTimelineDock project={project} />
+                        ) : (
+                          <Suspense fallback={null}>
+                            <LazyTimeline
+                              duration={timelineDuration}
+                              beatvideoMode={beatvideoMode}
+                            />
+                          </Suspense>
+                        )}
+                      </div>
+                      {workspace === 'edit' && beatvideoMode === 'video' ? (
+                        <AudioMeterPanel key="editor-meter" initialMode="meter" />
+                      ) : null}
+                    </div>
+                  </ErrorBoundary>
+                </InteractionLockRegion>
+              </ResizablePanel>
+            </ResizablePanelGroup>
+
+            {isColorWorkspace ? (
+              <>
+                <StudioResizeRail
+                  label="Resize Color controls"
+                  width={visibleStudioColumnWidth}
+                  minWidth={STUDIO_COLUMN_MIN_WIDTH}
+                  maxWidth={getStudioColumnMaxWidth()}
+                  defaultWidth={480}
+                  onWidthChange={updateStudioColumnWidth}
+                />
+                <InteractionLockRegion
+                  locked={isMaskEditingActive}
+                  className="h-full min-w-0 shrink-0 bg-panel-bg"
+                  style={{ width: visibleStudioColumnWidth }}
+                >
+                  <ErrorBoundary level="feature">
+                    <Suspense fallback={null}>
+                      <LazyColorGradingDock />
+                    </Suspense>
+                  </ErrorBoundary>
+                </InteractionLockRegion>
+              </>
+            ) : isMasterWorkspace ? (
+              <>
+                <StudioResizeRail
+                  label="Resize Master controls"
+                  width={visibleStudioColumnWidth}
+                  minWidth={STUDIO_COLUMN_MIN_WIDTH}
+                  maxWidth={getStudioColumnMaxWidth()}
+                  defaultWidth={480}
+                  onWidthChange={updateStudioColumnWidth}
+                />
+                <InteractionLockRegion
+                  locked={isMaskEditingActive}
+                  className="studio-master-column h-full shrink-0"
+                  style={{ width: visibleStudioColumnWidth }}
+                >
+                  <ErrorBoundary level="feature">
+                    <BeatvideoMasterPanel />
+                  </ErrorBoundary>
+                </InteractionLockRegion>
+              </>
+            ) : workspace === 'beat' || workspace === 'edit' ? (
+              <>
+                <StudioResizeRail
+                  label={workspace === 'beat' ? 'Resize Beat controls' : 'Resize Visual tools'}
+                  width={visibleStudioColumnWidth}
+                  minWidth={STUDIO_COLUMN_MIN_WIDTH}
+                  maxWidth={getStudioColumnMaxWidth()}
+                  defaultWidth={400}
+                  onWidthChange={updateStudioColumnWidth}
+                />
+                <InteractionLockRegion
+                  locked={isMaskEditingActive}
+                  className="studio-task-column h-full shrink-0 bg-panel-bg"
+                  style={{ width: visibleStudioColumnWidth }}
+                >
+                  {workspace === 'edit' ? (
+                    <div className="flex h-full min-h-0 flex-col">
+                      <div className="shrink-0 border-b border-border bg-panel-bg px-3 py-2">
+                        <div className="studio-segmented grid h-8 grid-cols-2">
+                          <button
+                            type="button"
+                            className="studio-segment h-8 text-[10px] font-semibold"
+                            aria-pressed={!rightSidebarOpen}
+                            onClick={() => setRightSidebarOpen(false)}
+                          >
+                            Add
+                          </button>
+                          <button
+                            type="button"
+                            className="studio-segment h-8 text-[10px] font-semibold"
+                            aria-pressed={rightSidebarOpen}
+                            onClick={() => setRightSidebarOpen(true)}
+                          >
+                            Edit
+                          </button>
+                        </div>
+                      </div>
+                      <div className="min-h-0 flex-1">
+                        <ErrorBoundary level="feature">
+                          {rightSidebarOpen ? (
+                            <PropertiesSidebar studioTaskColumn />
+                          ) : (
+                            <MediaSidebar beatvideoMode={beatvideoMode} studioTaskColumn />
+                          )}
+                        </ErrorBoundary>
+                      </div>
+                    </div>
+                  ) : (
+                    <ErrorBoundary level="feature">
+                      <MediaSidebar beatvideoMode={beatvideoMode} studioTaskColumn />
+                    </ErrorBoundary>
+                  )}
+                </InteractionLockRegion>
+              </>
+            ) : null}
+
+            {/* Right Sidebar - Properties (full column mode) */}
+            {propertiesFullColumn && !hidesDefaultSidebars && !isProducerWorkspace && (
+              <InteractionLockRegion locked={isMaskEditingActive}>
+                <ErrorBoundary level="feature">
+                  <PropertiesSidebar />
+                </ErrorBoundary>
+              </InteractionLockRegion>
+            )}
+          </div>
         </>
       )}
 

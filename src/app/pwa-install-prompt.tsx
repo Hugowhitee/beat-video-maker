@@ -94,7 +94,7 @@ export function PwaInstallPrompt() {
     <aside
       data-studio-v2="true"
       aria-label={t('appShell.installPrompt.label')}
-      className="fixed bottom-4 left-4 z-50 w-[min(calc(100vw-2rem),340px)] rounded-[3px] border border-border bg-[#e8e9e5] p-3 text-foreground shadow-[0_8px_28px_rgba(23,25,23,0.16)]"
+      className="fixed bottom-4 left-4 z-50 w-[min(calc(100vw-2rem),340px)] rounded-[3px] border border-border bg-panel-bg p-3 text-foreground shadow-[0_8px_28px_rgba(23,25,23,0.16)]"
     >
       <div className="flex items-start gap-2.5">
         <Download className="mt-0.5 h-4 w-4 shrink-0 text-foreground" />
@@ -118,7 +118,7 @@ export function PwaInstallPrompt() {
         <button
           type="button"
           aria-label={t('appShell.installPrompt.dismiss')}
-          className="flex h-7 w-7 shrink-0 items-center justify-center text-muted-foreground hover:bg-[#d1d4ce] hover:text-foreground"
+          className="flex h-7 w-7 shrink-0 items-center justify-center text-muted-foreground hover:bg-secondary hover:text-foreground"
           onClick={dismiss}
         >
           <X className="h-3.5 w-3.5" />

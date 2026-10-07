@@ -311,6 +311,30 @@ describe('TimelineHeader zoom slider', () => {
     expect(screen.getByRole('button', { name: /zoom to fit/i })).toBeInTheDocument()
   })
 
+  it('keeps producer editing and fit controls in the canonical desktop toolbar', () => {
+    const onZoomToFit = vi.fn()
+    render(<TimelineHeader simplifiedBeatvideo onZoomToFit={onZoomToFit} />)
+
+    expect(screen.getByRole('button', { name: /select tool/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /razor tool/i })).toBeInTheDocument()
+    expect(screen.getByTestId('zoom-slider')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /grid: auto/i })).toBeInTheDocument()
+    expect(screen.getByRole('status', { name: 'Timeline zoom level' })).toHaveTextContent('100%')
+
+    fireEvent.click(screen.getByRole('button', { name: /zoom to fit/i }))
+    expect(onZoomToFit).toHaveBeenCalledTimes(1)
+  })
+
+  it('keeps the numeric readout current during live zoom without rerendering the slider', () => {
+    render(<TimelineHeader simplifiedBeatvideo />)
+    const readout = screen.getByRole('status', { name: 'Timeline zoom level' })
+
+    act(() => useZoomStore.getState().setZoomLevelImmediate(0.35))
+
+    expect(readout).toHaveTextContent('35%')
+    expect(sliderRenderSpy).toHaveBeenCalledTimes(1)
+  })
+
   it('toggles the keyframe panel without a selected clip', () => {
     render(<TimelineHeader />)
 

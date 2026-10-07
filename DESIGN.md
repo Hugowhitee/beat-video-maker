@@ -8,7 +8,7 @@ colors:
   panel-header: "oklch(0.23 0.008 78)"
   popover: "oklch(0.255 0.008 78)"
   timeline-bg: "oklch(0.19 0.007 78)"
-  primary: "#b0db47"
+  primary: "#b4dc4b"
   primary-foreground: "#17200d"
   secondary: "oklch(0.31 0.008 78)"
   muted: "oklch(0.285 0.007 78)"
@@ -18,7 +18,7 @@ colors:
   destructive: "oklch(0.58 0.22 25)"
   border: "oklch(0.365 0.008 78)"
   input: "oklch(0.35 0.008 78)"
-  ring: "#b0db47"
+  ring: "#b4dc4b"
   clip-video: "oklch(0.3991 0.0401 250)"
   clip-audio: "oklch(0.22 0.02 302)"
   clip-image: "oklch(0.62 0.17 250)"
@@ -67,7 +67,8 @@ spacing:
 
 # Design System: Beat Video Maker
 
-The runtime tokens in `src/index.css` are authoritative. The editor-scoped
+The shared runtime tokens in `src/index.css` use the preferred Figma editor's
+(AYtUttGMSahwYUDLBIoUO9, frame 7:2) graphite surface ramp and lime signal. The editor-scoped
 `[data-studio-v2='true']` grammar defines active/selected/enabled states.
 
 ## 1. Creative direction
@@ -75,7 +76,7 @@ The runtime tokens in `src/index.css` are authoritative. The editor-scoped
 **North star: The Quiet Instrument.**
 
 Beat Video Maker should feel like purpose-built music/video software rather than a
-generic web dashboard: warm graphite surfaces, compact technical typography,
+generic web dashboard: cool graphite surfaces, compact technical typography,
 precise controls, restrained chrome, and real media as the most visually dominant
 content.
 
@@ -93,7 +94,7 @@ Avoid both extremes:
 
 ### Shell state signal
 
-**Studio Lime `#b0db47`** is the one editor-state signal. It is not a decorative
+**Studio Lime `#b4dc4b`** is the one editor-state signal. It is not a decorative
 brand color and should occupy little screen area.
 
 Use it consistently:
@@ -106,7 +107,7 @@ Use it consistently:
 - **Warning / repair needed** → amber `#d6a04b`, never lime.
 - **Disabled** → neutral gray, no accent.
 
-Neutral actions use a light/tactile graphite control with dark/legible glyphs. The
+Neutral actions use graphite surfaces with light, legible glyphs. The
 same semantic state must never use different colors in different workspaces.
 
 ### Data colors
@@ -121,7 +122,7 @@ enabled state.
 
 ### Value hierarchy
 
-Depth comes from the warm neutral ramp before borders/shadows. Timeline floor is
+Depth comes from the graphite surface ramp before borders/shadows. Timeline floor is
 darkest, panels are slightly lighter, detached menus/utilities may float above them.
 
 ## 3. Typography
@@ -145,6 +146,21 @@ Precision controls may have a restrained hardware feel:
 - subtle top highlight / lower edge;
 - very small shadow only when it materially improves affordance;
 - no glossy bevels or skeuomorphic decoration.
+
+Parameter rows use the shared `SliderInput`: optional label, a separate 4px neutral
+rail and an 80px typed value column. Text never sits on the rail. Bipolar controls
+show a zero detent; ordinary parameters snap only to their declared step. Keyboard
+and typed edits use the same commit/history path as pointer edits.
+
+Console level faders use one 14 × 32px nickel cap with grip ribs. Scale, tick/rail,
+stereo meter and typed dB readout occupy separate columns. Unity is available by
+double-click, Enter and the visible reset action. The floating mixer scrolls
+horizontally rather than shrinking channel strips.
+
+Rotary controls keep a square footprint, circular face and calibrated indicator.
+The selected Master processor owns one aligned row of knob labels and typed
+values. Reset uses the processor's real defaults and all input methods preserve
+Undo/Redo. Do not display Pan until the canonical audio engine supports it.
 
 ### Segmented selectors
 
@@ -228,6 +244,10 @@ Grid hierarchy:
 - strong: bars;
 - lighter: beats;
 - subdivisions appear only at useful zoom/resolution.
+
+Timecode and musical ruler surfaces both use the dark palette. Normal phrase/bar
+lines are neutral; the verified Bar 1 and snap targets retain the state signal.
+Zoom is one group: minus, rail, plus, live percentage and Fit.
 
 The grid must remain visible across clips without overpowering thumbnails/waveforms.
 Do not hide it behind media blocks and do not duplicate it inside the Beat lane.

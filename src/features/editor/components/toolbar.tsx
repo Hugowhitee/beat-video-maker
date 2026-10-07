@@ -98,8 +98,7 @@ export const Toolbar = memo(function Toolbar({
   const beatvideoMusic = useProjectStore((state) =>
     state.currentProject?.id === projectId ? state.currentProject.beatvideoMusic : undefined,
   )
-  const bpm =
-    beatvideoMusic?.bpmOverride ?? beatvideoMusic?.musicMap?.bpm ?? null
+  const bpm = beatvideoMusic?.bpmOverride ?? beatvideoMusic?.musicMap?.bpm ?? null
   const beatsPerBar = beatvideoMusic?.musicMap?.beatsPerBar ?? 4
   const updateProject = useProjectStore((state) => state.updateProject)
   const projectName = storedProjectName ?? project?.name ?? t('common.untitledProject')
@@ -151,8 +150,12 @@ export const Toolbar = memo(function Toolbar({
         role="toolbar"
         aria-label={t('toolbar.ariaLabel')}
       >
-        <div className="studio-topbar flex h-12 min-w-0 items-center gap-1.5 bg-[#242724] px-2 text-[#f6f7f3]">
-          <BackToProjectsAction compact label={t('toolbar.backToProjectsAria')} onClick={handleBackClick} />
+        <div className="studio-topbar flex h-12 min-w-0 items-center gap-1.5 bg-panel-bg px-2 text-foreground">
+          <BackToProjectsAction
+            compact
+            label={t('toolbar.backToProjectsAria')}
+            onClick={handleBackClick}
+          />
 
           <UnsavedChangesDialog
             open={showUnsavedDialog}
@@ -175,13 +178,13 @@ export const Toolbar = memo(function Toolbar({
                     setEditingProjectName(false)
                   }
                 }}
-                className="h-8 w-full border-0 bg-transparent px-1 text-[12px] font-semibold text-[#f6f7f3] outline-none focus-visible:ring-1 focus-visible:ring-[#c7e85a]"
+                className="h-8 w-full border-0 bg-transparent px-1 text-[12px] font-semibold text-foreground outline-none focus-visible:ring-1 focus-visible:ring-[#c7e85a]"
                 aria-label="Project title"
               />
             ) : (
               <button
                 type="button"
-                className="flex h-8 max-w-full items-center gap-1.5 text-left text-[12px] font-semibold text-[#f6f7f3]"
+                className="flex h-8 max-w-full items-center gap-1.5 text-left text-[12px] font-semibold text-foreground"
                 onClick={() => setEditingProjectName(true)}
                 aria-label="Rename project"
                 title={projectName}
@@ -250,15 +253,13 @@ export const Toolbar = memo(function Toolbar({
                 </DropdownMenuItem>
               ) : null}
               {onExportBundle ? (
-                <DropdownMenuItem onClick={onExportBundle}>
-                  Download project ZIP
-                </DropdownMenuItem>
+                <DropdownMenuItem onClick={onExportBundle}>Download project ZIP</DropdownMenuItem>
               ) : null}
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
 
-        <div className="overflow-x-auto bg-[#c7cac4] px-1">
+        <div className="overflow-x-auto bg-panel-header px-1">
           <div className="w-max min-w-full">
             <WorkspaceSwitcher beatvideoMode={beatvideoMode} />
           </div>
@@ -277,9 +278,13 @@ export const Toolbar = memo(function Toolbar({
       role="toolbar"
       aria-label={t('toolbar.ariaLabel')}
     >
-      <div className="studio-topbar flex h-12 shrink-0 items-center gap-2 bg-[#242724] pl-[18px] pr-4 text-[#f6f7f3]">
+      <div className="studio-topbar flex h-12 shrink-0 items-center gap-2 bg-panel-bg pl-[18px] pr-4 text-foreground">
         <div className="mr-4 shrink-0">
-          <BackToProjectsAction compact={false} label={t('toolbar.backToProjectsAria')} onClick={handleBackClick} />
+          <BackToProjectsAction
+            compact={false}
+            label={t('toolbar.backToProjectsAria')}
+            onClick={handleBackClick}
+          />
         </div>
 
         <UnsavedChangesDialog
@@ -303,13 +308,13 @@ export const Toolbar = memo(function Toolbar({
                   setEditingProjectName(false)
                 }
               }}
-              className="h-8 w-full border-0 bg-transparent px-1 text-[11px] font-semibold text-[#f6f7f3] outline-none focus-visible:ring-1 focus-visible:ring-[#c7e85a]"
+              className="h-8 w-full border-0 bg-transparent px-1 text-[11px] font-semibold text-foreground outline-none focus-visible:ring-1 focus-visible:ring-[#c7e85a]"
               aria-label="Project title"
             />
           ) : (
             <button
               type="button"
-              className="flex h-8 max-w-full items-center gap-1.5 text-left text-[11px] font-semibold text-[#f6f7f3] hover:text-white"
+              className="flex h-8 max-w-full items-center gap-1.5 text-left text-[11px] font-semibold text-foreground hover:text-white"
               onClick={() => setEditingProjectName(true)}
               aria-label="Rename project"
               title={projectName}
@@ -383,16 +388,14 @@ export const Toolbar = memo(function Toolbar({
                 </DropdownMenuItem>
               ) : null}
               {onExportBundle ? (
-                <DropdownMenuItem onClick={onExportBundle}>
-                  Download project ZIP
-                </DropdownMenuItem>
+                <DropdownMenuItem onClick={onExportBundle}>Download project ZIP</DropdownMenuItem>
               ) : null}
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
       </div>
 
-      <div className="studio-workspacebar flex h-11 shrink-0 items-center bg-[#c7cac4] px-4">
+      <div className="studio-workspacebar flex h-11 shrink-0 items-center bg-panel-header px-4">
         <WorkspaceSwitcher beatvideoMode={beatvideoMode} />
 
         <div className="relative ml-auto h-full w-[110px] shrink-0">

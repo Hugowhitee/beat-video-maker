@@ -189,8 +189,8 @@ export function ProjectCard({
       aria-label={t('projects.card.openProject')}
       className={`group relative flex aspect-square min-h-0 flex-col overflow-hidden rounded-[3px] border transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring ${
         isSelected
-          ? 'border-foreground bg-[#d1d4ce]'
-          : 'border-transparent bg-[#e8e9e5] hover:border-border hover:bg-[#dfe1dc]'
+          ? 'border-foreground bg-secondary'
+          : 'border-transparent bg-panel-bg hover:border-border hover:bg-accent'
       }`}
     >
       {isSelected ? (
@@ -347,4 +347,5 @@ export function ProjectCard({
         </AlertDialogContent>
       </AlertDialog>
     </div>
-  )}
+  )
+}

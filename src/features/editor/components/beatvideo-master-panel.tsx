@@ -1,14 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { toast } from 'sonner'
-import {
-  Activity,
-  BookmarkPlus,
-  Flame,
-  Shield,
-  SlidersHorizontal,
-  X,
-} from 'lucide-react'
+import { Activity, BookmarkPlus, Flame, Shield, SlidersHorizontal, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
+import { Switch } from '@/components/ui/switch'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import {
   captureSnapshot,
@@ -19,6 +13,7 @@ import { usePlaybackStore } from '@/shared/state/playback'
 import { useEditorStore } from '@/shared/state/editor'
 import {
   MASTERING_PRESETS,
+  DEFAULT_MASTER_FX_SETTINGS,
   analyzeProgramLevel,
   createSaturationCurve,
   resolveAutoLevelPlan,
@@ -34,11 +29,16 @@ import type {
 } from '@/types/audio'
 import { AudioEqPanelContent } from './properties-sidebar/clip-panel/audio-eq-panel-content'
 import type { AudioEqPatch } from './properties-sidebar/clip-panel/audio-eq-curve-editor'
-import { getOrDecodeAudio, getPreviewMasterReduction } from '@/features/editor/deps/composition-runtime'
+import {
+  getOrDecodeAudio,
+  getPreviewMasterReduction,
+} from '@/features/editor/deps/composition-runtime'
 import { resolveMediaUrl } from '@/features/editor/deps/media-library'
 import { useProjectStore } from '@/features/editor/deps/projects'
 import { cn } from '@/shared/ui/cn'
 import { RotaryKnob } from '@/shared/ui/property-controls/rotary-knob'
+import { SliderInput } from '@/shared/ui/property-controls/slider-input'
+import { NumberInput } from '@/shared/ui/property-controls/number-input'
 import { AudioMeterPanel } from './audio-meter-panel'
 
 type MasterSlot = MasterProcessorId
@@ -87,19 +87,21 @@ function loadSavedMasterPresets(): SavedMasterPreset[] {
       ) {
         return []
       }
-      return [{
-        id: candidate.id,
-        name: candidate.name,
-        masterFx: candidate.masterFx as MasterFxSettings,
-        busAudioEq:
-          candidate.busAudioEq && typeof candidate.busAudioEq === 'object'
-            ? candidate.busAudioEq as AudioEqSettings
-            : undefined,
-        masterBusDb:
-          typeof candidate.masterBusDb === 'number' && Number.isFinite(candidate.masterBusDb)
-            ? candidate.masterBusDb
-            : undefined,
-      }]
+      return [
+        {
+          id: candidate.id,
+          name: candidate.name,
+          masterFx: candidate.masterFx as MasterFxSettings,
+          busAudioEq:
+            candidate.busAudioEq && typeof candidate.busAudioEq === 'object'
+              ? (candidate.busAudioEq as AudioEqSettings)
+              : undefined,
+          masterBusDb:
+            typeof candidate.masterBusDb === 'number' && Number.isFinite(candidate.masterBusDb)
+              ? candidate.masterBusDb
+              : undefined,
+        },
+      ]
     })
   } catch {
     return []
@@ -136,38 +138,41 @@ function MasterRange({
   onGestureStart: () => void
   onGestureEnd: () => void
 }) {
-  const decimals = step < 0.1 ? 2 : step < 1 ? 1 : 0
-  const scaleMidpoint = min <= 0 && max >= 0 ? 0 : (min + max) / 2
-  const formatScale = (next: number) =>
-    `${next.toFixed(decimals)}${unit ?? ''}`
+  const formatScale = (next: number) => `${next > 0 && min < 0 ? '+' : ''}${next}`
 
   return (
-    <label className="grid grid-cols-[82px_1fr_62px] items-start gap-2 text-[11px]">
-      <span className="pt-0.5 text-muted-foreground">{label}</span>
-      <span className="min-w-0">
-        <input
-          type="range"
-          min={min}
-          max={max}
-          step={step}
-          value={value}
-          onPointerDown={onGestureStart}
-          onPointerUp={onGestureEnd}
-          onPointerCancel={onGestureEnd}
-          onChange={(event) => onChange(Number(event.target.value))}
-          className="block h-4 w-full min-w-0 accent-primary"
-        />
-        <span className="mt-0.5 grid grid-cols-3 font-mono text-[10px] leading-none text-muted-foreground/60">
+    <div
+      className="min-w-0"
+      onPointerDownCapture={onGestureStart}
+      onPointerUp={onGestureEnd}
+      onPointerCancel={onGestureEnd}
+    >
+      <SliderInput
+        label={label}
+        min={min}
+        max={max}
+        step={step}
+        value={value}
+        unit={unit}
+        onLiveChange={onChange}
+        onChange={(next) => {
+          onGestureStart()
+          onChange(next)
+          onGestureEnd()
+        }}
+      />
+      <div
+        aria-hidden="true"
+        className="mt-1 grid grid-cols-[80px_minmax(0,1fr)_80px] gap-2 font-mono text-[10px] leading-none text-muted-foreground"
+      >
+        <span />
+        <span className="flex justify-between gap-1">
           <span>{formatScale(min)}</span>
-          <span className="text-center">{formatScale(scaleMidpoint)}</span>
-          <span className="text-right">{formatScale(max)}</span>
+          <span>{formatScale(max)}</span>
         </span>
-      </span>
-      <span className="pt-0.5 text-right font-mono text-xs tabular-nums text-foreground">
-        {value.toFixed(step < 0.1 ? 2 : 1)}
-        {unit ?? ''}
-      </span>
-    </label>
+        <span />
+      </div>
+    </div>
   )
 }
 
@@ -178,6 +183,8 @@ function MasterKnob({
   max,
   step,
   display,
+  defaultValue,
+  unit,
   onChange,
   onGestureStart,
   onGestureEnd,
@@ -188,30 +195,48 @@ function MasterKnob({
   max: number
   step: number
   display: string
+  defaultValue: number
+  unit: string
   onChange: (value: number) => void
   onGestureStart: () => void
   onGestureEnd: () => void
 }) {
   return (
-    <div className="flex w-[74px] shrink-0 flex-col items-start pl-[10px]">
+    <div className="flex min-w-0 flex-col items-center gap-1">
       <RotaryKnob
         value={value}
         min={min}
         max={max}
         step={step}
-        size={32}
-        appearance="plain"
+        size={44}
+        label={label}
+        defaultValue={defaultValue}
         onLiveChange={onChange}
         onChange={onChange}
         onGestureStart={onGestureStart}
         onGestureEnd={onGestureEnd}
       />
-      <div className="mt-[7px] text-[10px] font-medium uppercase leading-3 text-muted-foreground">
-        {label}
-      </div>
-      <div className="mt-px font-mono text-[10px] leading-3 tabular-nums text-foreground">
-        {display}
-      </div>
+      <div className="mt-1 text-[11px] font-medium leading-4 text-muted-foreground">{label}</div>
+      <label className="w-full" title={display}>
+        <span className="sr-only">{label} value</span>
+        <NumberInput
+          value={value}
+          min={min}
+          max={max}
+          step={step}
+          unit={unit}
+          unitWidth={22}
+          scrubEnabled={false}
+          className="h-6 rounded-[3px]"
+          formatInputValue={(next) => next.toFixed(step < 1 ? 1 : 0)}
+          onChange={(next) => {
+            if (next === value) return
+            onGestureStart()
+            onChange(next)
+            onGestureEnd()
+          }}
+        />
+      </label>
     </div>
   )
 }
@@ -247,20 +272,73 @@ function TransferGraph({
   const ceilingY = ceilingDb === undefined ? null : (1 - (ceilingDb + 60) / 60) * 100
 
   return (
-    <div className="relative h-36 overflow-hidden rounded border border-[#555a55] bg-[#343834]">
-      <svg viewBox="0 0 100 100" preserveAspectRatio="none" className="absolute inset-0 h-full w-full">
+    <div className="relative h-36 overflow-hidden rounded border border-border bg-background/60">
+      <svg
+        viewBox="0 0 100 100"
+        preserveAspectRatio="none"
+        className="absolute inset-0 h-full w-full"
+      >
         {[25, 50, 75].map((n) => (
           <g key={n}>
-            <line x1={n} x2={n} y1="0" y2="100" stroke="currentColor" className="text-border" strokeWidth="0.45" />
-            <line x1="0" x2="100" y1={n} y2={n} stroke="currentColor" className="text-border" strokeWidth="0.45" />
+            <line
+              x1={n}
+              x2={n}
+              y1="0"
+              y2="100"
+              stroke="currentColor"
+              className="text-border"
+              strokeWidth="0.45"
+            />
+            <line
+              x1="0"
+              x2="100"
+              y1={n}
+              y2={n}
+              stroke="currentColor"
+              className="text-border"
+              strokeWidth="0.45"
+            />
           </g>
         ))}
-        <line x1="0" y1="100" x2="100" y2="0" stroke="currentColor" className="text-muted-foreground/35" strokeWidth="0.65" />
-        <line x1={thresholdX} x2={thresholdX} y1="0" y2="100" stroke="currentColor" className="text-muted-foreground" strokeDasharray="2 2" strokeWidth="0.65" />
+        <line
+          x1="0"
+          y1="100"
+          x2="100"
+          y2="0"
+          stroke="currentColor"
+          className="text-muted-foreground/35"
+          strokeWidth="0.65"
+        />
+        <line
+          x1={thresholdX}
+          x2={thresholdX}
+          y1="0"
+          y2="100"
+          stroke="currentColor"
+          className="text-muted-foreground"
+          strokeDasharray="2 2"
+          strokeWidth="0.65"
+        />
         {ceilingY !== null ? (
-          <line x1="0" x2="100" y1={ceilingY} y2={ceilingY} stroke="currentColor" className="text-muted-foreground" strokeDasharray="2 2" strokeWidth="0.65" />
+          <line
+            x1="0"
+            x2="100"
+            y1={ceilingY}
+            y2={ceilingY}
+            stroke="currentColor"
+            className="text-muted-foreground"
+            strokeDasharray="2 2"
+            strokeWidth="0.65"
+          />
         ) : null}
-        <polyline points={points} fill="none" stroke="currentColor" className="text-primary" strokeWidth="1.6" vectorEffect="non-scaling-stroke" />
+        <polyline
+          points={points}
+          fill="none"
+          stroke="currentColor"
+          className="text-primary"
+          strokeWidth="1.6"
+          vectorEffect="non-scaling-stroke"
+        />
       </svg>
       <div className="absolute left-2 top-2 text-[11px] uppercase tracking-[0.14em] text-muted-foreground">
         {mode === 'compressor' ? 'Transfer' : 'Peak control'}
@@ -285,12 +363,47 @@ function SaturationGraph({ driveDb, mix }: { driveDb: number; mix: number }) {
   }, [driveDb, mix])
 
   return (
-    <div className="relative h-36 overflow-hidden rounded border border-[#555a55] bg-[#343834]">
-      <svg viewBox="0 0 100 100" preserveAspectRatio="none" className="absolute inset-0 h-full w-full">
-        <line x1="0" y1="100" x2="100" y2="0" stroke="currentColor" className="text-muted-foreground/35" strokeWidth="0.65" />
-        <line x1="50" y1="0" x2="50" y2="100" stroke="currentColor" className="text-border" strokeWidth="0.45" />
-        <line x1="0" y1="50" x2="100" y2="50" stroke="currentColor" className="text-border" strokeWidth="0.45" />
-        <polyline points={points} fill="none" stroke="currentColor" className="text-primary" strokeWidth="1.6" vectorEffect="non-scaling-stroke" />
+    <div className="relative h-36 overflow-hidden rounded border border-border bg-background/60">
+      <svg
+        viewBox="0 0 100 100"
+        preserveAspectRatio="none"
+        className="absolute inset-0 h-full w-full"
+      >
+        <line
+          x1="0"
+          y1="100"
+          x2="100"
+          y2="0"
+          stroke="currentColor"
+          className="text-muted-foreground/35"
+          strokeWidth="0.65"
+        />
+        <line
+          x1="50"
+          y1="0"
+          x2="50"
+          y2="100"
+          stroke="currentColor"
+          className="text-border"
+          strokeWidth="0.45"
+        />
+        <line
+          x1="0"
+          y1="50"
+          x2="100"
+          y2="50"
+          stroke="currentColor"
+          className="text-border"
+          strokeWidth="0.45"
+        />
+        <polyline
+          points={points}
+          fill="none"
+          stroke="currentColor"
+          className="text-primary"
+          strokeWidth="1.6"
+          vectorEffect="non-scaling-stroke"
+        />
       </svg>
       <div className="absolute left-2 top-2 text-[11px] uppercase tracking-[0.14em] text-muted-foreground">
         Transfer curve
@@ -335,13 +448,13 @@ export function BeatvideoMasterPanel() {
   const activeBuiltInPresetId = useMemo(() => {
     if (busAudioEq !== undefined) return null
     const current = JSON.stringify(resolved, (key, value) =>
-      (key === 'processorInstanceIds' || key === 'inputGainDb') ? undefined : value,
+      key === 'processorInstanceIds' || key === 'inputGainDb' ? undefined : value,
     )
     return (
       MASTERING_PRESETS.find(
         (preset) =>
           JSON.stringify(resolveMasterFxSettings(preset.settings), (key, value) =>
-            (key === 'processorInstanceIds' || key === 'inputGainDb') ? undefined : value,
+            key === 'processorInstanceIds' || key === 'inputGainDb' ? undefined : value,
           ) === current,
       )?.id ?? null
     )
@@ -502,7 +615,7 @@ export function BeatvideoMasterPanel() {
       masterBusDb,
     }
     const next = existing
-      ? savedPresets.map((preset) => preset.id === existing.id ? nextPreset : preset)
+      ? savedPresets.map((preset) => (preset.id === existing.id ? nextPreset : preset))
       : [...savedPresets, nextPreset]
     persistSavedMasterPresets(next)
     setSavedPresets(next)
@@ -556,9 +669,8 @@ export function BeatvideoMasterPanel() {
       const mediaUrl = await resolveMediaUrl(mediaId)
       if (!mediaUrl) throw new Error('The beat source could not be opened')
       const buffer = await getOrDecodeAudio(mediaId, mediaUrl)
-      const channels = Array.from(
-        { length: buffer.numberOfChannels },
-        (_, channel) => buffer.getChannelData(channel),
+      const channels = Array.from({ length: buffer.numberOfChannels }, (_, channel) =>
+        buffer.getChannelData(channel),
       )
       const sourceLevel = analyzeProgramLevel(channels, buffer.sampleRate)
       if (sourceLevel.analyzedBlocks === 0 || sourceLevel.rmsDb <= -100) {
@@ -569,9 +681,7 @@ export function BeatvideoMasterPanel() {
       // gain so Auto level measures the signal that actually reaches Master.
       const timeline = useTimelineStore.getState()
       const beatItem = timeline.items.find(
-        (item) =>
-          (item.type === 'audio' || item.type === 'video') &&
-          item.mediaId === mediaId,
+        (item) => (item.type === 'audio' || item.type === 'video') && item.mediaId === mediaId,
       )
       const beatTrack = beatItem
         ? timeline.tracks.find((track) => track.id === beatItem.trackId)
@@ -734,576 +844,746 @@ export function BeatvideoMasterPanel() {
   )
 
   return (
-    <div className="flex h-full min-h-0 flex-col bg-[#e8e9e5]">
+    <div className="flex h-full min-h-0 min-w-0 flex-col bg-background">
       <div className="min-h-0 flex-1 overflow-y-auto" data-testid="master-chain-scroll-region">
-      <div className="relative h-[100px] shrink-0 px-5 pt-[16px]">
-        <div className="flex min-w-0 items-start justify-between gap-3">
-          <div className="min-w-0">
-          <Popover>
-            <PopoverTrigger asChild>
-              <button
-                type="button"
-                className="block text-[11px] font-semibold uppercase tracking-[0.08em] text-foreground"
-                title="Master options"
-              >
-                Master
-              </button>
-            </PopoverTrigger>
-            <PopoverContent align="start" sideOffset={8} className="w-[min(440px,calc(100vw-24px))] p-3">
-              <div className="text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
-                Master options
-              </div>
-
-              {savedPresets.length > 0 ? (
-                <div className="mt-3 border-t border-border pt-2">
-                  <div className="mb-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
-                    My presets
-                  </div>
-                  <div className="space-y-1">
-                    {savedPresets.map((preset) => (
-                      <div key={preset.id} className="flex h-7 items-center border border-border bg-background">
-                        <button
-                          type="button"
-                          onClick={() => applySavedPreset(preset)}
-                          className="min-w-0 flex-1 truncate px-2 text-left text-[10px] font-medium text-foreground"
-                        >
-                          {preset.name}
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => removeSavedPreset(preset.id)}
-                          className="flex h-full w-7 items-center justify-center border-l border-border text-muted-foreground hover:text-foreground"
-                          aria-label={`Delete ${preset.name} preset`}
-                        >
-                          <X className="h-3 w-3" />
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              ) : null}
-
-              <div className="mt-3 border-t border-border pt-2">
-                {savingPreset ? (
-                  <div className="flex items-center gap-1.5">
-                    <input
-                      autoFocus
-                      value={presetName}
-                      maxLength={48}
-                      placeholder="Preset name"
-                      onChange={(event) => setPresetName(event.target.value)}
-                      onKeyDown={(event) => {
-                        if (event.key === 'Enter') saveCurrentPreset()
-                        if (event.key === 'Escape') {
-                          setSavingPreset(false)
-                          setPresetName('')
-                        }
-                      }}
-                      className="h-7 min-w-0 flex-1 border border-input bg-background px-2 text-[10px] text-foreground outline-none"
-                    />
-                    <Button
-                      type="button"
-                      size="sm"
-                      className="h-7 px-2 text-[10px]"
-                      disabled={presetName.trim() === ''}
-                      onClick={saveCurrentPreset}
-                    >
-                      Save
-                    </Button>
-                  </div>
-                ) : (
+        <div className="shrink-0 border-b border-border px-5 py-4">
+          <div className="flex min-w-0 items-start justify-between gap-3">
+            <div className="min-w-0">
+              <Popover>
+                <PopoverTrigger asChild>
                   <button
                     type="button"
-                    className="flex h-7 items-center gap-1.5 text-[10px] font-medium text-muted-foreground hover:text-foreground"
-                    onClick={() => setSavingPreset(true)}
+                    className="block text-[11px] font-semibold uppercase tracking-[0.08em] text-foreground"
+                    title="Master options"
                   >
-                    <BookmarkPlus className="h-3.5 w-3.5" />
-                    Save current preset
+                    Master
                   </button>
-                )}
-              </div>
-
-              <div className="mt-3 grid grid-cols-2 gap-2 border-t border-border pt-2">
-                <button
-                  type="button"
-                  className="studio-secondary-action h-8"
-                  onClick={() =>
-                    commitMasterFx(
-                      { ...resolved, enabled: !resolved.enabled },
-                      'TOGGLE_MASTER_BYPASS',
-                    )
-                  }
+                </PopoverTrigger>
+                <PopoverContent
+                  align="start"
+                  sideOffset={8}
+                  className="w-[min(440px,calc(100vw-24px))] p-3"
                 >
-                  {resolved.enabled ? 'Bypass chain' : 'Enable chain'}
-                </button>
-                <button
-                  type="button"
-                  className="studio-secondary-action h-8"
-                  onClick={resetAll}
-                >
-                  Reset chain
-                </button>
-              </div>
-            </PopoverContent>
-          </Popover>
+                  <div className="text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+                    Master options
+                  </div>
 
-          </div>
-          <button
-            type="button"
-            onClick={toggleMixerFloating}
-            aria-pressed={mixerFloating}
-            className="studio-secondary-action h-7 shrink-0 px-2 text-[10px]"
-            title="Balance Beat, producer tags and watermark audio before Master"
-          >
-            {mixerFloating ? 'Close mix' : 'Track mix'}
-          </button>
-        </div>
+                  {savedPresets.length > 0 ? (
+                    <div className="mt-3 border-t border-border pt-2">
+                      <div className="mb-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
+                        My presets
+                      </div>
+                      <div className="space-y-1">
+                        {savedPresets.map((preset) => (
+                          <div
+                            key={preset.id}
+                            className="flex h-7 items-center border border-border bg-background"
+                          >
+                            <button
+                              type="button"
+                              onClick={() => applySavedPreset(preset)}
+                              className="min-w-0 flex-1 truncate px-2 text-left text-[10px] font-medium text-foreground"
+                            >
+                              {preset.name}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => removeSavedPreset(preset.id)}
+                              className="flex h-full w-7 items-center justify-center border-l border-border text-muted-foreground hover:text-foreground"
+                              aria-label={`Delete ${preset.name} preset`}
+                            >
+                              <X className="h-3 w-3" />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ) : null}
 
-        <div className="absolute left-5 top-[50px] text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
-          Presets
-        </div>
-        <div className="studio-segmented absolute left-5 right-5 top-[68px] grid grid-cols-3 sm:grid-cols-6">
-          {MASTERING_PRESETS.map((preset) => (
-            <button
-              key={preset.id}
-              type="button"
-              onClick={() => applyPreset(preset.id)}
-              aria-pressed={activeBuiltInPresetId === preset.id}
-              className="studio-segment h-8 min-w-0 px-1 text-[11px] font-medium"
-              title={preset.description}
-            >
-              <span className="truncate">{preset.label}</span>
-            </button>
-          ))}
-        </div>
-        <div className="absolute bottom-0 left-5 right-5 h-px bg-border" aria-hidden="true" />
-      </div>
+                  <div className="mt-3 border-t border-border pt-2">
+                    {savingPreset ? (
+                      <div className="flex items-center gap-1.5">
+                        <input
+                          autoFocus
+                          value={presetName}
+                          maxLength={48}
+                          placeholder="Preset name"
+                          onChange={(event) => setPresetName(event.target.value)}
+                          onKeyDown={(event) => {
+                            if (event.key === 'Enter') saveCurrentPreset()
+                            if (event.key === 'Escape') {
+                              setSavingPreset(false)
+                              setPresetName('')
+                            }
+                          }}
+                          className="h-7 min-w-0 flex-1 border border-input bg-background px-2 text-[10px] text-foreground outline-none"
+                        />
+                        <Button
+                          type="button"
+                          size="sm"
+                          className="h-7 px-2 text-[10px]"
+                          disabled={presetName.trim() === ''}
+                          onClick={saveCurrentPreset}
+                        >
+                          Save
+                        </Button>
+                      </div>
+                    ) : (
+                      <button
+                        type="button"
+                        className="flex h-7 items-center gap-1.5 text-[10px] font-medium text-muted-foreground hover:text-foreground"
+                        onClick={() => setSavingPreset(true)}
+                      >
+                        <BookmarkPlus className="h-3.5 w-3.5" />
+                        Save current preset
+                      </button>
+                    )}
+                  </div>
 
-      <div className="relative h-[246px] shrink-0">
-        <div className="absolute left-5 top-[8px] text-[11px] font-semibold uppercase leading-[11px] tracking-[0.14em] text-muted-foreground">
-          Plugins
-        </div>
-        <div className="absolute left-5 right-5 top-[30px] h-[216px]">
-          {Array.from({ length: MAX_MASTER_SLOTS }, (_, index) => {
-            const id = resolved.order[index]
-            if (!id) {
-              const canAdd = availableProcessors.length > 0 && index === resolved.order.length
-              return (
-                <div
-                  key={`empty-${index}`}
-                  className={cn(
-                    'absolute left-0 h-[46px] w-full min-w-0 rounded-[3px] text-muted-foreground',
-                    canAdd ? 'bg-[#d9dbd6]' : 'bg-[#d1d4ce]',
-                  )}
-                  style={{ top: index * 54 }}
-                >
-                  <span className="absolute left-[10px] top-[10px] font-mono text-[10px] font-semibold leading-[11px] tabular-nums">
-                    {String(index + 1).padStart(2, '0')}
-                  </span>
-                  {canAdd ? (
+                  <div className="mt-3 grid grid-cols-2 gap-2 border-t border-border pt-2">
                     <button
                       type="button"
-                      onClick={() => setAddEffectOpen((open) => !open)}
-                      className="absolute inset-0 text-left hover:bg-black/[0.025]"
-                      aria-expanded={addEffectOpen}
+                      className="studio-secondary-action h-8"
+                      onClick={() =>
+                        commitMasterFx(
+                          { ...resolved, enabled: !resolved.enabled },
+                          'TOGGLE_MASTER_BYPASS',
+                        )
+                      }
                     >
-                      <span className="absolute left-[42px] top-[8px] text-[11px] font-semibold leading-[13px] text-foreground">
-                        +&nbsp; Add processor
-                      </span>
-                      <span className="absolute left-[42px] top-[25px] text-[10px] font-medium leading-[11px] text-muted-foreground">
-                        Empty slot
-                      </span>
+                      {resolved.enabled ? 'Bypass chain' : 'Enable chain'}
                     </button>
-                  ) : (
-                    <span className="absolute left-[42px] top-[15px] text-[10px] text-muted-foreground/55">
-                      Empty slot
-                    </span>
-                  )}
-                </div>
-              )
-            }
+                    <button
+                      type="button"
+                      className="studio-secondary-action h-8"
+                      onClick={resetAll}
+                    >
+                      Reset chain
+                    </button>
+                  </div>
+                </PopoverContent>
+              </Popover>
+            </div>
+            <button
+              type="button"
+              onClick={toggleMixerFloating}
+              aria-pressed={mixerFloating}
+              className="studio-secondary-action h-7 shrink-0 px-2 text-[10px]"
+              title="Balance Beat, producer tags and watermark audio before Master"
+            >
+              {mixerFloating ? 'Close mix' : 'Track mix'}
+            </button>
+          </div>
 
-            const meta = SLOT_META_BY_ID.get(id)
-            if (!meta) return null
-            const { label, hint } = meta
-            const enabled = slotEnabled(id)
-            const selected = selectedSlot === id
-            const dragTarget = dragOverSlot === id && draggingSlot !== id
-
-            return (
-              <div
-                key={resolved.processorInstanceIds[id] ?? id}
-                onDragOver={(event) => {
-                  if (!draggingSlot || draggingSlot === id) return
-                  event.preventDefault()
-                  event.dataTransfer.dropEffect = 'move'
-                  setDragOverSlot(id)
-                }}
-                onDragLeave={() => {
-                  setDragOverSlot((current) => (current === id ? null : current))
-                }}
-                onDrop={(event) => {
-                  event.preventDefault()
-                  if (draggingSlot) reorderSlot(draggingSlot, id)
-                  setDraggingSlot(null)
-                  setDragOverSlot(null)
-                }}
-                draggable
-                onDragStart={(event) => {
-                  setDraggingSlot(id)
-                  event.dataTransfer.effectAllowed = 'move'
-                  event.dataTransfer.setData('text/plain', id)
-                }}
-                onDragEnd={() => {
-                  setDraggingSlot(null)
-                  setDragOverSlot(null)
-                }}
-                style={{ top: index * 54 }}
-                className={cn(
-                  'group absolute left-0 h-[46px] w-full min-w-0 cursor-grab rounded-[3px] bg-[#d1d4ce] active:cursor-grabbing',
-                  dragTarget && 'shadow-[inset_0_2px_0_var(--primary)]',
-                )}
-                data-selected={selected ? 'true' : undefined}
+          <div className="mt-4 text-[11px] font-medium text-muted-foreground">Presets</div>
+          <div className="studio-segmented mt-2 grid grid-cols-3 sm:grid-cols-6">
+            {MASTERING_PRESETS.map((preset) => (
+              <button
+                key={preset.id}
+                type="button"
+                onClick={() => applyPreset(preset.id)}
+                aria-pressed={activeBuiltInPresetId === preset.id}
+                className="studio-segment h-8 min-w-0 px-1 text-[11px] font-medium"
+                title={preset.description}
               >
-                <button
-                  type="button"
-                  onClick={() => setSelectedSlot(id)}
-                  className="absolute inset-0 text-left"
-                  title={hint}
-                >
-                  <span className="absolute left-[10px] top-[10px] font-mono text-[10px] font-semibold leading-[11px] tabular-nums text-muted-foreground">
-                    {String(index + 1).padStart(2, '0')}
-                  </span>
-                  <span className="absolute left-[42px] top-[8px] max-w-[calc(100%_-_120px)] truncate text-[11px] font-semibold leading-[13px] text-foreground">
-                    {label}
-                  </span>
-                  <span className="absolute left-[42px] top-[25px] max-w-[calc(100%_-_120px)] truncate text-[10px] font-medium leading-[11px] text-muted-foreground">
-                    {id === 'limiter'
-                      ? `Ceiling ${resolved.limiter.ceilingDb.toFixed(1)} dB`
-                      : hint}
-                  </span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => removeProcessor(id)}
-                  className="absolute bottom-0 right-[34px] top-0 flex w-8 items-center justify-center text-muted-foreground opacity-0 transition-opacity hover:bg-black/[0.04] hover:text-foreground focus:opacity-100 group-hover:opacity-100"
-                  aria-label={`Remove ${label}`}
-                  title={`Remove ${label}`}
-                >
-                  <X className="h-3 w-3" />
-                </button>
-                <button
-                  type="button"
-                  onClick={() => toggleSlot(id)}
-                  className={cn(
-                    'absolute bottom-0 right-0 top-0 flex w-[34px] items-center justify-start',
-                    enabled ? 'text-foreground' : 'text-muted-foreground',
-                  )}
-                  aria-label={`${enabled ? 'Bypass' : 'Enable'} ${label}`}
-                  aria-pressed={enabled}
-                  title={`${enabled ? 'Bypass' : 'Enable'} ${label}`}
-                >
-                  <span className="text-[10px] font-semibold uppercase">{enabled ? 'On' : 'Off'}</span>
-                </button>
-              </div>
-            )
-          })}
+                <span className="truncate">{preset.label}</span>
+              </button>
+            ))}
+          </div>
         </div>
 
-        {addEffectOpen ? (
-          <div className="absolute left-5 right-5 top-[238px] z-30 max-h-[220px] overflow-y-auto border border-border bg-[#f2f3ef] p-2 shadow-lg">
-            <div className="mb-1 px-1 text-[10px] uppercase tracking-[0.12em] text-muted-foreground">
-              Available processors
-            </div>
-            {availableProcessors.length > 0 ? (
-              <div className="grid grid-cols-1 gap-1">
-                {availableProcessors.map(({ id, label, icon: Icon }) => (
-                  <button
-                    key={id}
-                    type="button"
-                    onClick={() => addProcessor(id)}
-                    className="flex h-9 items-center gap-2 rounded-[3px] border border-border bg-[#e8e9e5] px-2 text-left text-[10px] text-foreground hover:bg-[#d9dbd6]"
-                  >
-                    <Icon className="h-3.5 w-3.5 text-muted-foreground" />
-                    <span className="truncate">{label}</span>
-                  </button>
-                ))}
-              </div>
-            ) : (
-              <div className="px-1 py-2 text-[10px] text-muted-foreground">
-                All available master processors are already loaded.
-              </div>
-            )}
+        <div className="relative h-[246px] shrink-0">
+          <div className="absolute left-5 top-[8px] text-[11px] font-semibold uppercase leading-[11px] tracking-[0.14em] text-muted-foreground">
+            Plugins
           </div>
-        ) : null}
-      </div>
+          <div className="absolute left-5 right-5 top-[30px] h-[216px]">
+            {Array.from({ length: MAX_MASTER_SLOTS }, (_, index) => {
+              const id = resolved.order[index]
+              if (!id) {
+                const canAdd = availableProcessors.length > 0 && index === resolved.order.length
+                return (
+                  <div
+                    key={`empty-${index}`}
+                    className={cn(
+                      'absolute left-0 h-[46px] w-full min-w-0 rounded-[3px] text-muted-foreground',
+                      canAdd ? 'bg-secondary/40' : 'bg-secondary',
+                    )}
+                    style={{ top: index * 54 }}
+                  >
+                    <span className="absolute left-[10px] top-[10px] font-mono text-[10px] font-semibold leading-[11px] tabular-nums">
+                      {String(index + 1).padStart(2, '0')}
+                    </span>
+                    {canAdd ? (
+                      <button
+                        type="button"
+                        onClick={() => setAddEffectOpen((open) => !open)}
+                        className="absolute inset-0 text-left hover:bg-foreground/[0.025]"
+                        aria-expanded={addEffectOpen}
+                      >
+                        <span className="absolute left-[42px] top-[8px] text-[11px] font-semibold leading-[13px] text-foreground">
+                          +&nbsp; Add processor
+                        </span>
+                        <span className="absolute left-[42px] top-[25px] text-[10px] font-medium leading-[11px] text-muted-foreground">
+                          Empty slot
+                        </span>
+                      </button>
+                    ) : (
+                      <span className="absolute left-[42px] top-[15px] text-[10px] text-muted-foreground/55">
+                        Empty slot
+                      </span>
+                    )}
+                  </div>
+                )
+              }
 
-      <div className="min-h-[190px] border-t border-border bg-[#e8e9e5] p-5">
-        {selectedSlot === 'eq' ? (
-          <AudioEqPanelContent
-            targetLabel="Master"
-            trackEq={busAudioEq}
-            enabled={busAudioEq !== undefined && busAudioEq.enabled !== false}
-            onTrackEqChange={handleBusEqChange}
-            onEnabledChange={handleBusEqEnabled}
-            layoutMode="compact"
-          />
-        ) : null}
+              const meta = SLOT_META_BY_ID.get(id)
+              if (!meta) return null
+              const { label, hint } = meta
+              const enabled = slotEnabled(id)
+              const selected = selectedSlot === id
+              const dragTarget = dragOverSlot === id && draggingSlot !== id
 
-        {selectedSlot === 'compressor' ? (
-          <div>
-            <Popover>
-              <PopoverTrigger asChild>
+              return (
+                <div
+                  key={resolved.processorInstanceIds[id] ?? id}
+                  onDragOver={(event) => {
+                    if (!draggingSlot || draggingSlot === id) return
+                    event.preventDefault()
+                    event.dataTransfer.dropEffect = 'move'
+                    setDragOverSlot(id)
+                  }}
+                  onDragLeave={() => {
+                    setDragOverSlot((current) => (current === id ? null : current))
+                  }}
+                  onDrop={(event) => {
+                    event.preventDefault()
+                    if (draggingSlot) reorderSlot(draggingSlot, id)
+                    setDraggingSlot(null)
+                    setDragOverSlot(null)
+                  }}
+                  draggable
+                  onDragStart={(event) => {
+                    setDraggingSlot(id)
+                    event.dataTransfer.effectAllowed = 'move'
+                    event.dataTransfer.setData('text/plain', id)
+                  }}
+                  onDragEnd={() => {
+                    setDraggingSlot(null)
+                    setDragOverSlot(null)
+                  }}
+                  style={{ top: index * 54 }}
+                  className={cn(
+                    'group absolute left-0 h-[46px] w-full min-w-0 cursor-grab rounded-[3px] border border-border bg-secondary active:cursor-grabbing',
+                    selected && 'border-l-2 border-l-primary bg-background/50',
+                    dragTarget && 'shadow-[inset_0_2px_0_var(--primary)]',
+                  )}
+                  data-selected={selected ? 'true' : undefined}
+                >
+                  <button
+                    type="button"
+                    onClick={() => setSelectedSlot(id)}
+                    className="absolute inset-0 text-left"
+                    title={hint}
+                  >
+                    <span className="absolute left-[10px] top-[10px] font-mono text-[10px] font-semibold leading-[11px] tabular-nums text-muted-foreground">
+                      {String(index + 1).padStart(2, '0')}
+                    </span>
+                    <span className="absolute left-[42px] top-[8px] max-w-[calc(100%_-_120px)] truncate text-[11px] font-semibold leading-[13px] text-foreground">
+                      {label}
+                    </span>
+                    <span className="absolute left-[42px] top-[25px] max-w-[calc(100%_-_120px)] truncate text-[10px] font-medium leading-[11px] text-muted-foreground">
+                      {id === 'limiter'
+                        ? `Ceiling ${resolved.limiter.ceilingDb.toFixed(1)} dB`
+                        : hint}
+                    </span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => removeProcessor(id)}
+                    className="absolute bottom-0 right-[44px] top-0 flex w-8 items-center justify-center text-muted-foreground opacity-0 transition-opacity hover:bg-foreground/[0.04] hover:text-foreground focus:opacity-100 group-hover:opacity-100"
+                    aria-label={`Remove ${label}`}
+                    title={`Remove ${label}`}
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                  <div className="absolute bottom-0 right-2 top-0 flex items-center">
+                    <Switch
+                      checked={enabled}
+                      onCheckedChange={() => toggleSlot(id)}
+                      aria-label={`${label} enabled`}
+                      title={`${enabled ? 'Bypass' : 'Enable'} ${label}`}
+                    />
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+
+          {addEffectOpen ? (
+            <div className="absolute left-5 right-5 top-[238px] z-30 max-h-[220px] overflow-y-auto border border-border bg-popover p-2 shadow-lg">
+              <div className="mb-1 px-1 text-[10px] uppercase tracking-[0.12em] text-muted-foreground">
+                Available processors
+              </div>
+              {availableProcessors.length > 0 ? (
+                <div className="grid grid-cols-1 gap-1">
+                  {availableProcessors.map(({ id, label, icon: Icon }) => (
+                    <button
+                      key={id}
+                      type="button"
+                      onClick={() => addProcessor(id)}
+                      className="flex h-9 items-center gap-2 rounded-[3px] border border-border bg-background px-2 text-left text-[10px] text-foreground hover:bg-secondary/40"
+                    >
+                      <Icon className="h-3.5 w-3.5 text-muted-foreground" />
+                      <span className="truncate">{label}</span>
+                    </button>
+                  ))}
+                </div>
+              ) : (
+                <div className="px-1 py-2 text-[10px] text-muted-foreground">
+                  All available master processors are already loaded.
+                </div>
+              )}
+            </div>
+          ) : null}
+        </div>
+
+        <div className="min-h-[190px] border-t border-border bg-background p-5">
+          {selectedSlot === 'eq' ? (
+            <AudioEqPanelContent
+              targetLabel="Master"
+              trackEq={busAudioEq}
+              enabled={busAudioEq !== undefined && busAudioEq.enabled !== false}
+              onTrackEqChange={handleBusEqChange}
+              onEnabledChange={handleBusEqEnabled}
+              layoutMode="compact"
+            />
+          ) : null}
+
+          {selectedSlot === 'compressor' ? (
+            <div>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <button
+                    type="button"
+                    className="block text-[10px] font-semibold leading-[11px] text-muted-foreground"
+                    title="Compressor advanced controls"
+                  >
+                    Compressor · Advanced
+                  </button>
+                </PopoverTrigger>
+                <PopoverContent align="start" sideOffset={8} className="w-[440px] p-3">
+                  <div className="space-y-3">
+                    <TransferGraph
+                      thresholdDb={resolved.compressor.thresholdDb}
+                      ratio={resolved.compressor.ratio}
+                      reductionDb={reduction.compressorDb}
+                      mode="compressor"
+                    />
+                    <MasterRange
+                      label="Knee"
+                      value={resolved.compressor.kneeDb}
+                      min={0}
+                      max={40}
+                      step={0.5}
+                      unit=" dB"
+                      onGestureStart={beginGesture}
+                      onGestureEnd={endGesture}
+                      onChange={(kneeDb) =>
+                        patchMaster({
+                          enabled: true,
+                          compressor: { ...resolved.compressor, enabled: true, kneeDb },
+                        })
+                      }
+                    />
+                    <MasterRange
+                      label="Makeup"
+                      value={resolved.compressor.makeupGainDb}
+                      min={-6}
+                      max={12}
+                      step={0.1}
+                      unit=" dB"
+                      onGestureStart={beginGesture}
+                      onGestureEnd={endGesture}
+                      onChange={(makeupGainDb) =>
+                        patchMaster({
+                          enabled: true,
+                          compressor: { ...resolved.compressor, enabled: true, makeupGainDb },
+                        })
+                      }
+                    />
+                  </div>
+                </PopoverContent>
+              </Popover>
+              <div className="mt-4 grid grid-cols-4 items-start gap-x-2 gap-y-4">
+                <MasterKnob
+                  label="Thresh"
+                  unit="dB"
+                  defaultValue={DEFAULT_MASTER_FX_SETTINGS.compressor.thresholdDb}
+                  value={resolved.compressor.thresholdDb}
+                  min={-40}
+                  max={0}
+                  step={0.5}
+                  display={resolved.compressor.thresholdDb.toFixed(0)}
+                  onGestureStart={beginGesture}
+                  onGestureEnd={endGesture}
+                  onChange={(thresholdDb) =>
+                    patchMaster({
+                      enabled: true,
+                      compressor: { ...resolved.compressor, enabled: true, thresholdDb },
+                    })
+                  }
+                />
+                <MasterKnob
+                  label="Ratio"
+                  unit=":1"
+                  defaultValue={DEFAULT_MASTER_FX_SETTINGS.compressor.ratio}
+                  value={resolved.compressor.ratio}
+                  min={1}
+                  max={12}
+                  step={0.1}
+                  display={`${resolved.compressor.ratio.toFixed(1).replace(/\.0$/, '')}:1`}
+                  onGestureStart={beginGesture}
+                  onGestureEnd={endGesture}
+                  onChange={(ratio) =>
+                    patchMaster({
+                      enabled: true,
+                      compressor: { ...resolved.compressor, enabled: true, ratio },
+                    })
+                  }
+                />
+                <MasterKnob
+                  label="Attack"
+                  unit="ms"
+                  defaultValue={DEFAULT_MASTER_FX_SETTINGS.compressor.attackSec * 1000}
+                  value={resolved.compressor.attackSec * 1000}
+                  min={0}
+                  max={200}
+                  step={1}
+                  display={
+                    resolved.compressor.attackSec * 1000 < 100
+                      ? (resolved.compressor.attackSec * 1000).toFixed(0)
+                      : Math.round(resolved.compressor.attackSec * 1000).toString()
+                  }
+                  onGestureStart={beginGesture}
+                  onGestureEnd={endGesture}
+                  onChange={(ms) =>
+                    patchMaster({
+                      enabled: true,
+                      compressor: {
+                        ...resolved.compressor,
+                        enabled: true,
+                        attackSec: ms / 1000,
+                      },
+                    })
+                  }
+                />
+                <MasterKnob
+                  label="Release"
+                  unit="ms"
+                  defaultValue={DEFAULT_MASTER_FX_SETTINGS.compressor.releaseSec * 1000}
+                  value={resolved.compressor.releaseSec * 1000}
+                  min={20}
+                  max={800}
+                  step={5}
+                  display={Math.round(resolved.compressor.releaseSec * 1000).toString()}
+                  onGestureStart={beginGesture}
+                  onGestureEnd={endGesture}
+                  onChange={(ms) =>
+                    patchMaster({
+                      enabled: true,
+                      compressor: {
+                        ...resolved.compressor,
+                        enabled: true,
+                        releaseSec: ms / 1000,
+                      },
+                    })
+                  }
+                />
                 <button
                   type="button"
-                  className="block text-[10px] font-semibold leading-[11px] text-muted-foreground"
-                  title="Compressor advanced controls"
+                  onClick={() => toggleSlot('compressor')}
+                  className="studio-secondary-action col-span-4 h-7 justify-self-end px-3 text-[11px]"
+                  aria-pressed={!slotEnabled('compressor')}
                 >
-                  Compressor · Advanced
+                  Bypass
                 </button>
-              </PopoverTrigger>
-              <PopoverContent align="start" sideOffset={8} className="w-[440px] p-3">
-                <div className="space-y-3">
-                  <TransferGraph
-                    thresholdDb={resolved.compressor.thresholdDb}
-                    ratio={resolved.compressor.ratio}
-                    reductionDb={reduction.compressorDb}
-                    mode="compressor"
-                  />
-                  <MasterRange label="Knee" value={resolved.compressor.kneeDb} min={0} max={40} step={0.5} unit=" dB" onGestureStart={beginGesture} onGestureEnd={endGesture} onChange={(kneeDb) => patchMaster({ enabled: true, compressor: { ...resolved.compressor, enabled: true, kneeDb } })} />
-                  <MasterRange label="Makeup" value={resolved.compressor.makeupGainDb} min={-6} max={12} step={0.1} unit=" dB" onGestureStart={beginGesture} onGestureEnd={endGesture} onChange={(makeupGainDb) => patchMaster({ enabled: true, compressor: { ...resolved.compressor, enabled: true, makeupGainDb } })} />
+              </div>
+            </div>
+          ) : null}
+
+          {selectedSlot === 'saturator' ? (
+            <div className="space-y-3">
+              <SaturationGraph driveDb={resolved.saturator.driveDb} mix={resolved.saturator.mix} />
+              <MasterRange
+                label="Drive"
+                value={resolved.saturator.driveDb}
+                min={0}
+                max={18}
+                step={0.1}
+                unit=" dB"
+                onGestureStart={beginGesture}
+                onGestureEnd={endGesture}
+                onChange={(driveDb) =>
+                  patchMaster({
+                    enabled: true,
+                    saturator: { ...resolved.saturator, enabled: true, driveDb },
+                  })
+                }
+              />
+              <MasterRange
+                label="Mix"
+                value={resolved.saturator.mix * 100}
+                min={0}
+                max={100}
+                step={1}
+                unit="%"
+                onGestureStart={beginGesture}
+                onGestureEnd={endGesture}
+                onChange={(mix) =>
+                  patchMaster({
+                    enabled: true,
+                    saturator: { ...resolved.saturator, enabled: true, mix: mix / 100 },
+                  })
+                }
+              />
+              <MasterRange
+                label="Output"
+                value={resolved.saturator.outputGainDb}
+                min={-12}
+                max={6}
+                step={0.1}
+                unit=" dB"
+                onGestureStart={beginGesture}
+                onGestureEnd={endGesture}
+                onChange={(outputGainDb) =>
+                  patchMaster({
+                    enabled: true,
+                    saturator: { ...resolved.saturator, enabled: true, outputGainDb },
+                  })
+                }
+              />
+              <div className="flex items-center justify-between border-t border-border pt-2 text-xs text-muted-foreground">
+                <span>Oversampling</span>
+                <div className="flex gap-1">
+                  {(['none', '2x', '4x'] as const).map((oversample) => (
+                    <button
+                      key={oversample}
+                      type="button"
+                      onClick={() =>
+                        commitMasterFx({
+                          ...resolved,
+                          enabled: true,
+                          saturator: { ...resolved.saturator, enabled: true, oversample },
+                        })
+                      }
+                      className={cn(
+                        'rounded border px-2 py-1 font-mono',
+                        resolved.saturator.oversample === oversample
+                          ? 'border-foreground/50 bg-secondary text-foreground'
+                          : 'border-border',
+                      )}
+                    >
+                      {oversample}
+                    </button>
+                  ))}
                 </div>
-              </PopoverContent>
-            </Popover>
-            <div className="mt-[17px] flex items-start">
-              <MasterKnob
-                label="Thresh"
-                value={resolved.compressor.thresholdDb}
-                min={-40}
+              </div>
+            </div>
+          ) : null}
+
+          {selectedSlot === null ? (
+            <div className="flex min-h-40 items-center justify-center border border-dashed border-border text-center text-xs text-muted-foreground">
+              Add an effect to the Master chain to start processing.
+            </div>
+          ) : null}
+
+          {selectedSlot === 'limiter' ? (
+            <div className="space-y-3">
+              <TransferGraph
+                thresholdDb={resolved.limiter.thresholdDb}
+                ratio={20}
+                ceilingDb={resolved.limiter.ceilingDb}
+                reductionDb={reduction.limiterDb}
+                mode="limiter"
+              />
+              <MasterRange
+                label="Threshold"
+                value={resolved.limiter.thresholdDb}
+                min={-12}
                 max={0}
-                step={0.5}
-                display={resolved.compressor.thresholdDb.toFixed(0)}
+                step={0.1}
+                unit=" dB"
                 onGestureStart={beginGesture}
                 onGestureEnd={endGesture}
                 onChange={(thresholdDb) =>
                   patchMaster({
                     enabled: true,
-                    compressor: { ...resolved.compressor, enabled: true, thresholdDb },
+                    limiter: { ...resolved.limiter, enabled: true, thresholdDb },
                   })
                 }
               />
-              <MasterKnob
-                label="Ratio"
-                value={resolved.compressor.ratio}
-                min={1}
-                max={12}
+              <MasterRange
+                label="Ceiling"
+                value={resolved.limiter.ceilingDb}
+                min={-6}
+                max={0}
                 step={0.1}
-                display={`${resolved.compressor.ratio.toFixed(1).replace(/\.0$/, '')}:1`}
+                unit=" dB"
                 onGestureStart={beginGesture}
                 onGestureEnd={endGesture}
-                onChange={(ratio) =>
+                onChange={(ceilingDb) =>
                   patchMaster({
                     enabled: true,
-                    compressor: { ...resolved.compressor, enabled: true, ratio },
+                    limiter: { ...resolved.limiter, enabled: true, ceilingDb },
                   })
                 }
               />
-              <MasterKnob
-                label="Attack"
-                value={resolved.compressor.attackSec * 1000}
-                min={0}
-                max={200}
-                step={1}
-                display={resolved.compressor.attackSec * 1000 < 100
-                  ? (resolved.compressor.attackSec * 1000).toFixed(0)
-                  : Math.round(resolved.compressor.attackSec * 1000).toString()}
-                onGestureStart={beginGesture}
-                onGestureEnd={endGesture}
-                onChange={(ms) =>
-                  patchMaster({
-                    enabled: true,
-                    compressor: {
-                      ...resolved.compressor,
-                      enabled: true,
-                      attackSec: ms / 1000,
-                    },
-                  })
-                }
-              />
-              <MasterKnob
+              <MasterRange
                 label="Release"
-                value={resolved.compressor.releaseSec * 1000}
+                value={resolved.limiter.releaseSec * 1000}
                 min={20}
-                max={800}
+                max={500}
                 step={5}
-                display={Math.round(resolved.compressor.releaseSec * 1000).toString()}
+                unit=" ms"
                 onGestureStart={beginGesture}
                 onGestureEnd={endGesture}
                 onChange={(ms) =>
                   patchMaster({
                     enabled: true,
-                    compressor: {
-                      ...resolved.compressor,
-                      enabled: true,
-                      releaseSec: ms / 1000,
-                    },
+                    limiter: { ...resolved.limiter, enabled: true, releaseSec: ms / 1000 },
                   })
                 }
               />
+              <p className="border-l-2 border-border pl-2 text-xs leading-relaxed text-muted-foreground">
+                Slot {resolved.order.indexOf('limiter') + 1}. Ceiling caps peaks at this point in
+                the rack.
+              </p>
+            </div>
+          ) : null}
+        </div>
+
+        {/* Gain staging is last in the plugin-workflow scroll area, while
+          the post-master Output and real meter stay visible below. */}
+        <div
+          className="shrink-0 border-t border-border px-5 py-4"
+          data-testid="master-auto-level-section"
+        >
+          <div className="flex min-w-0 flex-wrap items-center justify-between gap-3">
+            <div>
+              <div className="text-xs font-semibold text-foreground">Auto level</div>
+              <div className="mt-1 text-xs text-muted-foreground">Input trim · before plugins</div>
+            </div>
+            <Button
+              type="button"
+              size="sm"
+              className="studio-primary-action h-9 shrink-0 px-3 text-xs"
+              disabled={autoLeveling}
+              onClick={() => void autoLevel()}
+            >
+              {autoLeveling ? 'Analyzing…' : 'Auto level'}
+            </Button>
+          </div>
+          <div className="mt-3">
+            <MasterRange
+              label="Input trim"
+              min={-12}
+              max={12}
+              step={0.1}
+              value={resolved.inputGainDb}
+              unit=" dB"
+              onGestureStart={beginGesture}
+              onGestureEnd={endGesture}
+              onChange={(inputGainDb) => {
+                setAutoLevelResult(null)
+                patchMaster({ enabled: true, inputGainDb })
+              }}
+            />
+            {Math.abs(resolved.inputGainDb) > 0.0001 ? (
               <button
                 type="button"
-                onClick={() => toggleSlot('compressor')}
-                className="studio-secondary-action -ml-2 mt-1 h-7 w-[72px] shrink-0"
-                aria-pressed={!slotEnabled('compressor')}
+                className="studio-secondary-action mt-3 h-7 px-2 text-[11px]"
+                onClick={() => {
+                  setAutoLevelResult(null)
+                  commitMasterFx({ ...resolved, inputGainDb: 0 }, 'RESET_MASTER_INPUT')
+                }}
               >
-                Bypass
+                Reset input
               </button>
-            </div>
-
+            ) : null}
           </div>
-        ) : null}
-
-        {selectedSlot === 'saturator' ? (
-          <div className="space-y-3">
-            <SaturationGraph driveDb={resolved.saturator.driveDb} mix={resolved.saturator.mix} />
-            <MasterRange label="Drive" value={resolved.saturator.driveDb} min={0} max={18} step={0.1} unit=" dB" onGestureStart={beginGesture} onGestureEnd={endGesture} onChange={(driveDb) => patchMaster({ enabled: true, saturator: { ...resolved.saturator, enabled: true, driveDb } })} />
-            <MasterRange label="Mix" value={resolved.saturator.mix * 100} min={0} max={100} step={1} unit="%" onGestureStart={beginGesture} onGestureEnd={endGesture} onChange={(mix) => patchMaster({ enabled: true, saturator: { ...resolved.saturator, enabled: true, mix: mix / 100 } })} />
-            <MasterRange label="Output" value={resolved.saturator.outputGainDb} min={-12} max={6} step={0.1} unit=" dB" onGestureStart={beginGesture} onGestureEnd={endGesture} onChange={(outputGainDb) => patchMaster({ enabled: true, saturator: { ...resolved.saturator, enabled: true, outputGainDb } })} />
-            <div className="flex items-center justify-between border-t border-border pt-2 text-xs text-muted-foreground">
-              <span>Oversampling</span>
-              <div className="flex gap-1">
-                {(['none', '2x', '4x'] as const).map((oversample) => (
-                  <button key={oversample} type="button" onClick={() => commitMasterFx({ ...resolved, enabled: true, saturator: { ...resolved.saturator, enabled: true, oversample } })} className={cn('rounded border px-2 py-1 font-mono', resolved.saturator.oversample === oversample ? 'border-foreground/50 bg-secondary text-foreground' : 'border-border')}>
-                    {oversample}
-                  </button>
-                ))}
+          {autoLevelResult && (
+            <div
+              className="mt-3 border-t border-border pt-2 font-mono text-xs leading-5 text-muted-foreground"
+              data-auto-level-result
+            >
+              Source {autoLevelResult.rmsDb.toFixed(1)} dBFS RMS
+              {' → '}
+              Trim {autoLevelResult.inputGainDb >= 0 ? '+' : ''}
+              {autoLevelResult.inputGainDb.toFixed(1)} dB
+              {' → '}
+              Into chain {autoLevelResult.projectedRmsDb.toFixed(1)} dBFS RMS
+              <div>
+                Peak {autoLevelResult.projectedPeakDb.toFixed(1)} dBFS
+                {' · '}
+                Headroom {Math.max(0, -autoLevelResult.projectedPeakDb).toFixed(1)} dB
+                {autoLevelResult.estimatedLimiterReductionDb > 0
+                  ? ` · Estimated peak control ${autoLevelResult.estimatedLimiterReductionDb.toFixed(1)} dB`
+                  : ''}
               </div>
             </div>
-          </div>
-        ) : null}
-
-        {selectedSlot === null ? (
-          <div className="flex min-h-40 items-center justify-center border border-dashed border-border text-center text-xs text-muted-foreground">
-            Add an effect to the Master chain to start processing.
-          </div>
-        ) : null}
-
-        {selectedSlot === 'limiter' ? (
-          <div className="space-y-3">
-            <TransferGraph thresholdDb={resolved.limiter.thresholdDb} ratio={20} ceilingDb={resolved.limiter.ceilingDb} reductionDb={reduction.limiterDb} mode="limiter" />
-            <MasterRange label="Threshold" value={resolved.limiter.thresholdDb} min={-12} max={0} step={0.1} unit=" dB" onGestureStart={beginGesture} onGestureEnd={endGesture} onChange={(thresholdDb) => patchMaster({ enabled: true, limiter: { ...resolved.limiter, enabled: true, thresholdDb } })} />
-            <MasterRange label="Ceiling" value={resolved.limiter.ceilingDb} min={-6} max={0} step={0.1} unit=" dB" onGestureStart={beginGesture} onGestureEnd={endGesture} onChange={(ceilingDb) => patchMaster({ enabled: true, limiter: { ...resolved.limiter, enabled: true, ceilingDb } })} />
-            <MasterRange label="Release" value={resolved.limiter.releaseSec * 1000} min={20} max={500} step={5} unit=" ms" onGestureStart={beginGesture} onGestureEnd={endGesture} onChange={(ms) => patchMaster({ enabled: true, limiter: { ...resolved.limiter, enabled: true, releaseSec: ms / 1000 } })} />
-            <p className="border-l-2 border-border pl-2 text-xs leading-relaxed text-muted-foreground">
-              Slot {resolved.order.indexOf('limiter') + 1}. Ceiling caps peaks at this point in the rack.
-            </p>
-          </div>
-        ) : null}
-
+          )}
+        </div>
       </div>
 
-      {/* Gain staging is last in the plugin-workflow scroll area, while
-          the post-master Output and real meter stay visible below. */}
       <div
-        className="shrink-0 border-t border-border px-5 py-4"
-        data-testid="master-auto-level-section"
+        className="flex shrink-0 gap-4 border-t border-border bg-background px-5 py-3"
+        data-testid="master-output-controls"
       >
-        <div className="flex min-w-0 flex-wrap items-center justify-between gap-3">
-          <div>
-            <div className="text-xs font-semibold text-foreground">Auto level</div>
-            <div className="mt-1 text-xs text-muted-foreground">Input trim · before plugins</div>
+        <div className="min-w-0 flex-1 pt-1">
+          <div className="text-[11px] font-medium leading-4 text-muted-foreground">
+            Master out · after plugins
           </div>
-          <Button
-            type="button"
-            size="sm"
-            className="studio-primary-action h-9 shrink-0 px-3 text-xs"
-            disabled={autoLeveling}
-            onClick={() => void autoLevel()}
-          >
-            {autoLeveling ? 'Analyzing…' : 'Auto level'}
-          </Button>
+          <div className="mt-1 font-mono text-[18px] font-semibold leading-6 tabular-nums text-foreground">
+            {masterBusDb >= 0 ? '+' : ''}
+            {masterBusDb.toFixed(1)} dB
+          </div>
+          <div className="mt-3">
+            <MasterRange
+              label="Output"
+              min={-24}
+              max={12}
+              step={0.1}
+              value={Math.max(-24, Math.min(12, masterBusDb))}
+              unit=" dB"
+              onGestureStart={beginOutputGesture}
+              onGestureEnd={endOutputGesture}
+              onChange={setOutputTrimLive}
+            />
+          </div>
+          {Math.abs(masterBusDb) > 0.0001 ? (
+            <button
+              type="button"
+              onClick={() => {
+                const before = captureSnapshot()
+                setMasterBusDb(0)
+                markChanged()
+                setAutoLevelResult(null)
+                useTimelineCommandStore
+                  .getState()
+                  .addUndoEntry({ type: 'RESET_MASTER_OUTPUT', payload: {} }, before)
+              }}
+              className="studio-secondary-action mt-3 h-7 px-2 text-[11px]"
+            >
+              Reset output
+            </button>
+          ) : null}
         </div>
-        <div className="mt-3 flex min-w-0 items-center gap-3">
-          <input
-            type="range"
-            min={-12}
-            max={12}
-            step={0.1}
-            value={resolved.inputGainDb}
-            onPointerDown={beginGesture}
-            onPointerUp={endGesture}
-            onPointerCancel={endGesture}
-            onChange={(event) => {
-              setAutoLevelResult(null)
-              patchMaster({ enabled: true, inputGainDb: Number(event.target.value) })
-            }}
-            className="studio-master-input-range h-7 min-w-0 flex-1"
-            style={{
-              background: `linear-gradient(to right, #242724 0 ${Math.max(0, Math.min(100, ((resolved.inputGainDb + 12) / 24) * 100))}%, #c7cac4 ${Math.max(0, Math.min(100, ((resolved.inputGainDb + 12) / 24) * 100))}% 100%)`,
-            }}
-            aria-label="Input trim"
+        <div className="shrink-0">
+          <AudioMeterPanel
+            initialMode="meter"
+            allowDockedMixer={false}
+            presentation="master-inline"
           />
-          <output className="w-16 shrink-0 text-right font-mono text-xs font-semibold tabular-nums text-foreground">
-            {resolved.inputGainDb >= 0 ? '+' : ''}{resolved.inputGainDb.toFixed(1)} dB
-          </output>
-        </div>
-        {autoLevelResult && (
-          <div
-            className="mt-3 border-t border-border pt-2 font-mono text-xs leading-5 text-muted-foreground"
-            data-auto-level-result
-          >
-            Source {autoLevelResult.rmsDb.toFixed(1)} dBFS
-            {' → '}
-            Trim {autoLevelResult.inputGainDb >= 0 ? '+' : ''}
-            {autoLevelResult.inputGainDb.toFixed(1)} dB
-            {' → '}
-            Peak headroom {Math.max(0, -autoLevelResult.projectedPeakDb).toFixed(1)} dB
-          </div>
-        )}
-      </div>
-
-      </div>
-
-      <div className="relative h-[170px] shrink-0 bg-[#e8e9e5]" data-testid="master-output-controls">
-        <div className="absolute left-5 right-5 top-0 h-px bg-border" aria-hidden="true" />
-        <div className="absolute left-5 top-[18px] text-[10px] font-semibold uppercase leading-[11px] tracking-[0.12em] text-muted-foreground">
-          Master out
-        </div>
-        <div className="absolute left-5 top-[38px] font-mono text-[18px] font-semibold leading-6 tabular-nums text-foreground">
-          {masterBusDb >= 0 ? '+' : ''}{masterBusDb.toFixed(1)} dB
-        </div>
-        <input
-          type="range"
-          min={-24}
-          max={12}
-          step={0.1}
-          value={Math.max(-24, Math.min(12, masterBusDb))}
-          onPointerDown={beginOutputGesture}
-          onPointerUp={endOutputGesture}
-          onPointerCancel={endOutputGesture}
-          onChange={(event) => setOutputTrimLive(Number(event.target.value))}
-          className="studio-master-input-range absolute left-5 top-[82px] h-6 w-[300px] max-w-[calc(100%_-_150px)]"
-          aria-label="Master output trim"
-        />
-        {Math.abs(masterBusDb) > 0.0001 ? (
-          <button
-            type="button"
-            onClick={() => {
-              const before = captureSnapshot()
-              setMasterBusDb(0)
-              markChanged()
-              setAutoLevelResult(null)
-              useTimelineCommandStore
-                .getState()
-                .addUndoEntry({ type: 'RESET_MASTER_OUTPUT', payload: {} }, before)
-            }}
-            className="studio-secondary-action absolute left-5 top-[124px] h-7 px-2 text-[10px]"
-          >
-            Reset output
-          </button>
-        ) : null}
-        <div className="absolute right-5 top-[10px]">
-          <AudioMeterPanel initialMode="meter" allowDockedMixer={false} presentation="master-inline" />
         </div>
       </div>
     </div>

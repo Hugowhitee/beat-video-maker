@@ -35,8 +35,10 @@ export const ProgramSeekBar = memo(function ProgramSeekBar({
   }
 
   return (
-    <div className="group flex h-[15px] w-full items-center gap-2 px-3"
-      data-testid="program-seek-bar">
+    <div
+      className="group flex h-[15px] w-full items-center gap-2 px-3"
+      data-testid="program-seek-bar"
+    >
       <input
         type="range"
         min={0}
@@ -49,7 +51,7 @@ export const ProgramSeekBar = memo(function ProgramSeekBar({
         aria-valuetext={`${formatClock(clampedFrame, fps)} of ${formatClock(maxFrame, fps)}`}
         className="peer relative z-10 h-[15px] w-full min-w-0 cursor-pointer appearance-none bg-transparent outline-none disabled:cursor-default [&::-moz-range-thumb]:h-[12px] [&::-moz-range-thumb]:w-[12px] [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:border-0 [&::-moz-range-thumb]:bg-[#526955] [&::-moz-range-thumb]:opacity-0 [&::-webkit-slider-thumb]:h-[12px] [&::-webkit-slider-thumb]:w-[12px] [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:border-0 [&::-webkit-slider-thumb]:bg-[#526955] [&::-webkit-slider-thumb]:opacity-0 hover:[&::-webkit-slider-thumb]:opacity-100 focus-visible:[&::-webkit-slider-thumb]:opacity-100 hover:[&::-moz-range-thumb]:opacity-100 focus-visible:[&::-moz-range-thumb]:opacity-100"
         style={{
-          background: `linear-gradient(to right, #526955 ${percent}%, #a5afa3 ${percent}%) center / 100% 3px no-repeat`,
+          background: `linear-gradient(to right, var(--muted-foreground) ${percent}%, var(--border) ${percent}%) center / 100% 3px no-repeat`,
         }}
       />
     </div>

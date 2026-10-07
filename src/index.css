@@ -25,60 +25,60 @@ body.canvas-translate-cursor-not-allowed * {
 
 @layer base {
   :root {
-    /* Warm graphite editor theme - lighter, calmer, still dark enough for long sessions. */
+    /* Graphite surface ramp sampled from the preferred Figma editor (7:2). */
     /* Beatvideo uses a restrained studio-hardware feel instead of a near-black NLE shell. */
 
     /* Base - Very dark, reduced eye strain */
-    --background: oklch(0.225 0.008 78); /* warm graphite workspace */
-    --foreground: oklch(0.94 0.004 78); /* soft off-white */
+    --background: #1b2228; /* graphite workspace */
+    --foreground: #edf2f2; /* soft off-white */
 
     /* Panels - Layered depth */
-    --card: oklch(0.265 0.008 78); /* raised panels */
-    --card-foreground: oklch(0.92 0.004 78);
+    --card: #282f36; /* raised panels */
+    --card-foreground: #edf2f2;
 
-    --popover: oklch(0.255 0.008 78);
-    --popover-foreground: oklch(0.92 0.004 78);
+    --popover: #282f36;
+    --popover-foreground: #edf2f2;
 
     /* Primary - cool studio signal. Low chroma keeps active state legible without
        turning the editor into a saturated SaaS dashboard. */
-    --primary: oklch(0.76 0.075 225);
-    --primary-foreground: oklch(0.18 0.012 225);
+    --primary: #b4dc4b;
+    --primary-foreground: #17200d;
 
     /* Secondary - Subtle panel variation */
-    --secondary: oklch(0.31 0.008 78);
-    --secondary-foreground: oklch(0.89 0.004 78);
+    --secondary: #39424b;
+    --secondary-foreground: #edf2f2;
 
     /* Muted - Backgrounds and disabled states */
-    --muted: oklch(0.285 0.007 78);
-    --muted-foreground: oklch(0.68 0.006 78);
+    --muted: #28333a;
+    --muted-foreground: #abb6bc;
 
     /* Accent - Hover states and highlights */
-    --accent: oklch(0.34 0.009 78);
-    --accent-foreground: oklch(0.95 0.004 78);
+    --accent: #39474f;
+    --accent-foreground: #edf2f2;
 
     /* Destructive - Red for delete/errors */
     --destructive: oklch(0.58 0.22 25); /* #E53E3E - Error red */
     --destructive-foreground: oklch(0.98 0 0);
 
     /* Borders - Subtle separators */
-    --border: oklch(0.365 0.008 78);
-    --input: oklch(0.35 0.008 78);
-    --ring: oklch(0.76 0.075 225);
+    --border: #4d5861;
+    --input: #4d5861;
+    --ring: #b4dc4b;
 
     /* Panel system - Layered depth */
-    --panel-bg: oklch(0.265 0.008 78);
-    --panel-header: oklch(0.23 0.008 78);
-    --timeline-bg: oklch(0.19 0.007 78);
+    --panel-bg: #282f36;
+    --panel-header: #1c242a;
+    --timeline-bg: #171e23;
 
     /* Sidebar */
-    --sidebar: oklch(0.265 0.008 78);
-    --sidebar-foreground: oklch(0.92 0.004 78);
-    --sidebar-primary: oklch(0.76 0.075 225);
-    --sidebar-primary-foreground: oklch(0.18 0.012 225);
-    --sidebar-accent: oklch(0.31 0.008 78);
-    --sidebar-accent-foreground: oklch(0.92 0.004 78);
-    --sidebar-border: oklch(0.365 0.008 78);
-    --sidebar-ring: oklch(0.76 0.075 225);
+    --sidebar: #282f36;
+    --sidebar-foreground: #edf2f2;
+    --sidebar-primary: #b4dc4b;
+    --sidebar-primary-foreground: #17200d;
+    --sidebar-accent: #39424b;
+    --sidebar-accent-foreground: #edf2f2;
+    --sidebar-border: #4d5861;
+    --sidebar-ring: #b4dc4b;
 
     --radius: 0.4rem;
   }
@@ -385,47 +385,52 @@ body.canvas-translate-cursor-not-allowed * {
   }
 }
 
-
 /* Beatvideo Studio V2 -------------------------------------------------------
-   Approved Figma shell. The light instrument chrome is scoped to the editor;
+   Shared graphite instrument chrome is scoped to the editor;
    authored media, Program and timeline data visualisations keep their specialist
    dark rendering. One lime signal denotes active/enabled state. */
 [data-studio-v2='true'] {
-  --background: #d9dbd6;
-  --foreground: #171917;
-  --card: #d1d4ce;
-  --card-foreground: #171917;
-  --popover: #e8e9e5;
-  --popover-foreground: #171917;
-  --primary: #c7e85a;
-  --primary-foreground: #242724;
-  --secondary: #c7cac4;
-  --secondary-foreground: #171917;
-  --muted: #cfd2cc;
-  --muted-foreground: #686d67;
-  --accent: #dfe1dc;
-  --accent-foreground: #171917;
-  --border: #aeb2ab;
-  --input: #aeb2ab;
-  --ring: #c7e85a;
-  --panel-bg: #e8e9e5;
-  --panel-header: #c7cac4;
-  --timeline-bg: #343834;
-  --sidebar: #e8e9e5;
-  --sidebar-foreground: #171917;
-  --sidebar-primary: #c7e85a;
-  --sidebar-primary-foreground: #242724;
-  --sidebar-accent: #d7d9d4;
-  --sidebar-accent-foreground: #171917;
-  --sidebar-border: #aeb2ab;
-  --sidebar-ring: #c7e85a;
+  --background: #1b2228;
+  --foreground: #edf2f2;
+  --card: #39424b;
+  --card-foreground: #edf2f2;
+  --popover: #282f36;
+  --popover-foreground: #edf2f2;
+  --primary: #b4dc4b;
+  --primary-foreground: #171e23;
+  --secondary: #39424b;
+  --secondary-foreground: #edf2f2;
+  --muted: #28333a;
+  --muted-foreground: #abb6bc;
+  --accent: #39424b;
+  --accent-foreground: #edf2f2;
+  --border: #4d5861;
+  --input: #4d5861;
+  --ring: #b4dc4b;
+  --panel-bg: #282f36;
+  --panel-header: #39424b;
+  --timeline-bg: #28333a;
+  --sidebar: #282f36;
+  --sidebar-foreground: #edf2f2;
+  --sidebar-primary: #b4dc4b;
+  --sidebar-primary-foreground: #171e23;
+  --sidebar-accent: #39424b;
+  --sidebar-accent-foreground: #edf2f2;
+  --sidebar-border: #4d5861;
+  --sidebar-ring: #b4dc4b;
   --studio-positive: #93b82f;
   --studio-warning: #a46f22;
   /* One readable text scale for controls throughout the producer shell. */
   --studio-control-font-size: 0.75rem;
-  --studio-segment-font-size: 0.6875rem;
-  color-scheme: light;
-  font-family: 'IBM Plex Sans', Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --studio-segment-font-size: 0.75rem;
+  color-scheme: dark;
+  font-family:
+    'IBM Plex Sans',
+    Inter,
+    -apple-system,
+    BlinkMacSystemFont,
+    'Segoe UI',
+    sans-serif;
 }
 
 [data-studio-v2='true'] .studio-topbar {
@@ -452,14 +457,14 @@ body.canvas-translate-cursor-not-allowed * {
   font-size: var(--studio-control-font-size);
   border: 0;
   border-radius: 4px;
-  background: #c7e85a;
-  color: #242724;
+  background: #b4dc4b;
+  color: #171e23;
   box-shadow: none;
 }
 
 [data-studio-v2='true'] .studio-export-button:hover {
-  background: #d0ee6d;
-  color: #171917;
+  background: #c1e568;
+  color: var(--primary-foreground);
 }
 
 [data-studio-v2='true'] .studio-workspace-tabs {
@@ -469,20 +474,24 @@ body.canvas-translate-cursor-not-allowed * {
 [data-studio-v2='true'] .studio-workspace-tab {
   border: 0;
   border-radius: 3px;
-  background: #d1d4ce;
-  color: #171917;
+  background: #39424b;
+  color: #edf2f2;
   box-shadow: none;
-  transition: background-color 100ms ease, color 100ms ease, border-color 100ms ease;
+  transition:
+    background-color 100ms ease,
+    color 100ms ease,
+    border-color 100ms ease;
 }
 
 [data-studio-v2='true'] .studio-workspace-tab:hover {
-  background: #d9dbd6;
-  color: #171917;
+  background: #1b2228;
+  color: #edf2f2;
 }
 
 [data-studio-v2='true'] .studio-workspace-tab[aria-selected='true'] {
-  background: #242724;
-  color: #f3f4f0;
+  background: #171e23;
+  color: #edf2f2;
+  box-shadow: inset 0 -2px 0 var(--primary);
 }
 
 [data-studio-v2='true'] .studio-segmented {
@@ -491,7 +500,7 @@ body.canvas-translate-cursor-not-allowed * {
   padding: 2px;
   border: 1px solid var(--border);
   border-radius: 4px;
-  background: #d5d7d2;
+  background: #1b2228;
 }
 
 [data-studio-v2='true'] .studio-segment {
@@ -502,102 +511,54 @@ body.canvas-translate-cursor-not-allowed * {
   background: transparent;
   color: var(--muted-foreground);
   box-shadow: none;
-  transition: color 100ms ease, background-color 100ms ease;
+  transition:
+    color 100ms ease,
+    background-color 100ms ease;
 }
 
 [data-studio-v2='true'] .studio-segment:hover {
-  background: rgb(36 39 36 / 0.06);
+  background: rgb(255 255 255 / 0.06);
   color: var(--foreground);
 }
 
 [data-studio-v2='true'] .studio-segment[aria-selected='true'],
 [data-studio-v2='true'] .studio-segment[data-state='active'],
 [data-studio-v2='true'] .studio-segment[aria-pressed='true'] {
-  background: #242724;
-  color: #f3f4f0;
+  background: #171e23;
+  color: #edf2f2;
   box-shadow: none;
 }
 
 [data-studio-v2='true'] .studio-master-column {
-  background: #e8e9e5;
+  background: #282f36;
 }
 
-
 [data-studio-v2='true'] .studio-master-preview-frame {
-  background: #d9dbd6;
+  background: #1b2228;
 }
 
 [data-studio-v2='true'] .studio-master-program {
-  --background: #242724;
-  --foreground: #f6f7f3;
-  --muted: #343834;
-  --muted-foreground: #cdd1ca;
-  --secondary: #343834;
-  --secondary-foreground: #f6f7f3;
-  --border: #4a4f4a;
-  --panel-header: #242724;
+  --background: #171e23;
+  --foreground: #edf2f2;
+  --muted: #28333a;
+  --muted-foreground: #abb6bc;
+  --secondary: #28333a;
+  --secondary-foreground: #edf2f2;
+  --border: #4d5861;
+  --panel-header: #171e23;
   color-scheme: dark;
-  background: #242724;
+  background: #171e23;
 }
 
 [data-studio-v2='true'] .studio-master-program input[type='range'] {
-  accent-color: #c7e85a;
-}
-
-[data-studio-v2='true'] .studio-master-input-range {
-  appearance: none;
-  -webkit-appearance: none;
-  height: 6px !important;
-  border: 0;
-  border-radius: 3px;
-  outline: 0;
-  cursor: ew-resize;
-}
-
-[data-studio-v2='true'] .studio-master-input-range::-webkit-slider-runnable-track {
-  height: 6px;
-  border: 0;
-  border-radius: 3px;
-  background: transparent;
-}
-
-[data-studio-v2='true'] .studio-master-input-range::-webkit-slider-thumb {
-  -webkit-appearance: none;
-  width: 10px;
-  height: 18px;
-  margin-top: -6px;
-  border: 0;
-  background: transparent;
-  cursor: ew-resize;
-}
-
-[data-studio-v2='true'] .studio-master-input-range::-moz-range-track {
-  height: 6px;
-  border: 0;
-  border-radius: 3px;
-  background: transparent;
-}
-
-[data-studio-v2='true'] .studio-master-input-range::-moz-range-progress {
-  height: 6px;
-  border: 0;
-  border-radius: 3px;
-  background: transparent;
-}
-
-[data-studio-v2='true'] .studio-master-input-range::-moz-range-thumb {
-  width: 10px;
-  height: 18px;
-  border: 0;
-  background: transparent;
-  cursor: ew-resize;
+  accent-color: #b4dc4b;
 }
 
 [data-studio-v2='true'] .studio-primary-action {
-  border: 1px solid #242724;
+  border: 1px solid #171e23;
   border-radius: 3px;
-  background: #242724;
-  color: #f6f7f3;
+  background: #171e23;
+  color: #edf2f2;
   font-size: var(--studio-control-font-size);
   font-weight: 600;
   text-transform: uppercase;
@@ -605,102 +566,111 @@ body.canvas-translate-cursor-not-allowed * {
 }
 
 [data-studio-v2='true'] .studio-primary-action:hover {
-  background: #343834;
+  background: #28333a;
 }
 
 [data-studio-v2='true'] .studio-workspace-action {
-  color: #686d67;
+  color: #abb6bc;
   transition: color 100ms ease;
 }
 
 [data-studio-v2='true'] .studio-workspace-action:hover:not(:disabled),
 [data-studio-v2='true'] .studio-workspace-action[aria-pressed='true'] {
-  color: #171917;
+  color: #edf2f2;
 }
 
 [data-studio-v2='true'] .studio-workspace-action:disabled {
-  color: #929790;
+  color: #7c8990;
   cursor: default;
 }
 
 [data-studio-v2='true'] .studio-secondary-action {
-  border: 1px solid #9ca09a;
+  border: 1px solid #4d5861;
   border-radius: 4px;
-  background: #d9dbd6;
-  color: #242724;
+  background: #1b2228;
+  color: var(--foreground);
   font-size: var(--studio-control-font-size);
   font-weight: 600;
 }
 
 [data-studio-v2='true'] .studio-secondary-action:hover {
-  background: #cfd2cc;
+  background: #28333a;
+}
+
+[data-studio-v2='true'] .studio-secondary-action[aria-pressed='true'] {
+  background: var(--background);
+  border-color: var(--border);
+  color: var(--primary);
+  box-shadow: inset 0 -2px 0 var(--primary);
 }
 
 /* Shared keyboard and disabled behavior for the same action semantics. */
-[data-studio-v2='true'] :is(
-  .studio-topbar-button,
-  .studio-export-button,
-  .studio-primary-action,
-  .studio-secondary-action,
-  .studio-segment
-):focus-visible {
+[data-studio-v2='true']
+  :is(
+    .studio-topbar-button,
+    .studio-export-button,
+    .studio-primary-action,
+    .studio-secondary-action,
+    .studio-segment
+  ):focus-visible {
   outline: 2px solid var(--ring);
   outline-offset: 2px;
 }
 
-[data-studio-v2='true'] :is(
-  .studio-export-button,
-  .studio-primary-action,
-  .studio-secondary-action,
-  .studio-segment
-):disabled {
+[data-studio-v2='true']
+  :is(
+    .studio-export-button,
+    .studio-primary-action,
+    .studio-secondary-action,
+    .studio-segment
+  ):disabled {
   opacity: 0.55;
   cursor: not-allowed;
 }
 
 [data-studio-v2='true'] [data-studio-timeline-toolbar] button,
 [data-studio-v2='true'] .studio-tool {
-  border: 1px solid #9ca09a;
+  border: 1px solid #4d5861;
   border-radius: 4px;
-  background: #dfe1dc;
-  color: #242724;
+  background: #39424b;
+  color: var(--foreground);
   box-shadow: none;
 }
 
 [data-studio-v2='true'] [data-studio-timeline-toolbar] button:hover,
 [data-studio-v2='true'] .studio-tool:hover {
-  background: #eceee9;
-  color: #171917;
+  background: #39474f;
+  color: #edf2f2;
 }
 
 [data-studio-v2='true'] [data-studio-timeline-toolbar] button[aria-pressed='true'],
 [data-studio-v2='true'] .studio-tool[aria-pressed='true'],
 [data-studio-v2='true'] .studio-tool-active {
-  border-color: #242724;
-  background: #242724;
-  color: #c7e85a;
+  border-color: #171e23;
+  background: #171e23;
+  color: #b4dc4b;
   box-shadow: none;
 }
 
 [data-studio-v2='true'] [data-studio-player] > button,
 [data-studio-v2='true'] [data-studio-player] > div > button:first-child {
-  border: 1px solid #555a55;
+  border: 1px solid #56666f;
   border-radius: 4px;
-  background: #2d312e;
-  color: #f3f4f0;
+  background: #282f36;
+  color: #edf2f2;
   box-shadow: none;
 }
 
 [data-studio-v2='true'] [data-studio-player] > button:hover,
 [data-studio-v2='true'] [data-studio-player] > div > button:first-child:hover {
-  background: #3a3f3b;
+  background: #39424b;
   color: #ffffff;
 }
 
 [data-studio-v2='true'] [data-studio-player] button[aria-pressed='true'] {
-  border-color: #c7e85a;
-  background: #242724;
-  color: #c7e85a;
+  border-color: #b4dc4b;
+  background: #171e23;
+  color: #b4dc4b;
   box-shadow: none;
 }
 
@@ -710,12 +680,22 @@ body.canvas-translate-cursor-not-allowed * {
 
 @media (max-width: 767px) {
   [data-studio-v2='true'] {
-    --panel-bg: #e8e9e5;
-    --panel-header: #d1d4ce;
+    --panel-bg: #282f36;
+    --panel-header: #39424b;
   }
 
   [data-studio-v2='true'] .studio-toolbar {
-    background: #d1d4ce;
+    background: #39424b;
   }
 }
 
+/* The zoom rail is one precision control, including its edge actions. */
+[data-studio-v2='true'] [data-timeline-zoom-controls] > button {
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  background: transparent;
+}
+[data-studio-v2='true'] [data-timeline-zoom-controls] > button:last-child {
+  border-left: 1px solid var(--border);
+}

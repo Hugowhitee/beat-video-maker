@@ -14,6 +14,9 @@ interface RotaryKnobProps {
   step?: number
   size?: number
   appearance?: 'arc' | 'plain'
+  label?: string
+  defaultValue?: number
+  disabled?: boolean
   className?: string
 }
 
@@ -42,6 +45,9 @@ export function RotaryKnob({
   step = 1,
   size = 28,
   appearance = 'arc',
+  label = 'Parameter',
+  defaultValue,
+  disabled = false,
   className,
 }: RotaryKnobProps) {
   const elRef = useRef<HTMLDivElement>(null)
@@ -75,11 +81,11 @@ export function RotaryKnob({
   const cy = size / 2
   const r = size / 2 - 3
   const deg = ARC_START_DEG + norm * ARC_SWEEP_DEG
-  const tip = polarXY(cx, cy, r, deg)
+  const faceRadius = appearance === 'plain' ? r + 1 : r - 4
 
   const onDown = useCallback(
     (e: React.PointerEvent) => {
-      if (isMixed) return
+      if (isMixed || disabled) return
       e.preventDefault()
       const el = elRef.current
       if (!el) return
@@ -93,7 +99,7 @@ export function RotaryKnob({
       const compute = (clientY: number) => {
         const s = stateRef.current
         const dy = startY - clientY
-        const raw = startValue + (dy * (s.max - s.min)) / 120
+        const raw = startValue + (dy * (s.max - s.min)) / (e.shiftKey ? 1200 : 120)
         const offset = raw - s.min
         const snappedOffset = Math.round(offset / s.step) * s.step
         const decimals = Math.max(0, -Math.floor(Math.log10(s.step)))
@@ -122,12 +128,12 @@ export function RotaryKnob({
       el.addEventListener('pointerup', handleUp)
       el.addEventListener('pointercancel', handleUp)
     },
-    [isMixed, num],
+    [isMixed, num, disabled],
   )
 
   const onKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
-      if (isMixed) return
+      if (isMixed || disabled) return
       const s = stateRef.current
       let next: number | null = null
       if (e.key === 'ArrowUp' || e.key === 'ArrowRight') {
@@ -145,51 +151,49 @@ export function RotaryKnob({
       }
       if (next !== null) {
         e.preventDefault()
-        s.onChange(next)
+        e.stopPropagation()
+        s.onGestureStart?.()
+        s.onChange(Number(next.toFixed(Math.max(0, -Math.floor(Math.log10(s.step))))))
+        s.onGestureEnd?.()
       }
     },
-    [isMixed, displayNum],
+    [isMixed, displayNum, disabled],
   )
 
   return (
     <div
       ref={elRef}
       role="slider"
-      tabIndex={0}
+      tabIndex={disabled ? -1 : 0}
+      aria-label={label}
+      aria-disabled={disabled}
       aria-valuemin={min}
       aria-valuemax={max}
       aria-valuenow={displayNum}
       className={cn(
-        'shrink-0 touch-none cursor-ns-resize select-none outline-none focus-visible:ring-1 focus-visible:ring-ring rounded-full',
-        isMixed && 'opacity-40',
+        'shrink-0 touch-none cursor-ns-resize select-none outline-none focus-visible:ring-1 focus-visible:ring-ring rounded-full overflow-hidden',
+        (isMixed || disabled) && 'opacity-40',
         className,
       )}
       onPointerDown={onDown}
       onKeyDown={onKeyDown}
+      style={{ width: size, height: size, aspectRatio: '1 / 1' }}
+      title={defaultValue === undefined ? label : `${label} · Double-click to reset`}
+      onDoubleClick={() => {
+        if (disabled || defaultValue === undefined) return
+        onGestureStart?.()
+        onChange(Math.max(min, Math.min(max, defaultValue)))
+        onGestureEnd?.()
+      }}
     >
-      <svg viewBox={`0 0 ${size} ${size}`} width={size} height={size}>
-        {appearance === 'plain' ? (
-          <>
-            <circle
-              cx={cx}
-              cy={cy}
-              r={r + 1}
-              fill="var(--background)"
-              stroke="var(--muted-foreground)"
-              strokeWidth={1}
-            />
-            <line
-              x1={cx}
-              y1={cy}
-              x2={cx}
-              y2={4}
-              stroke="var(--foreground)"
-              strokeWidth={2}
-              strokeLinecap="round"
-              transform={`rotate(${-135 + norm * 270} ${cx} ${cy})`}
-            />
-          </>
-        ) : (
+      <svg
+        aria-hidden="true"
+        viewBox={`0 0 ${size} ${size}`}
+        width={size}
+        height={size}
+        className="block"
+      >
+        {appearance === 'arc' && (
           <>
             <path
               d={arcPath(cx, cy, r, ARC_START_DEG, ARC_START_DEG + ARC_SWEEP_DEG)}
@@ -207,9 +211,26 @@ export function RotaryKnob({
                 strokeLinecap="round"
               />
             )}
-            <circle cx={tip.x} cy={tip.y} r={2} fill="var(--foreground)" />
           </>
         )}
+        <circle
+          cx={cx}
+          cy={cy}
+          r={faceRadius}
+          fill="var(--secondary)"
+          stroke="var(--border)"
+          strokeWidth={1}
+        />
+        <line
+          x1={cx}
+          y1={cy - faceRadius * 0.4}
+          x2={cx}
+          y2={cy - faceRadius + 2}
+          stroke="var(--foreground)"
+          strokeWidth={2}
+          strokeLinecap="round"
+          transform={`rotate(${-135 + norm * 270} ${cx} ${cy})`}
+        />
       </svg>
     </div>
   )

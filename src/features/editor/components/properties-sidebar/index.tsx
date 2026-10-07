@@ -218,8 +218,7 @@ export const PropertiesSidebar = memo(function PropertiesSidebar({
           : t('editor.propertiesSidebar.title')
   const headerContext = activeClipHeader?.text ?? motionCompositionHeader
   const headerTitle = activeClipHeader?.title ?? motionCompositionHeader ?? undefined
-  const producerWorkspace =
-    workspace === 'beat' || workspace === 'edit' || workspace === 'master'
+  const producerWorkspace = workspace === 'beat' || workspace === 'edit' || workspace === 'master'
 
   // Keep the panel content mounted + visible while the collapse animation plays
   // so it slides out smoothly instead of blinking away. Only switch Activity to
@@ -297,12 +296,7 @@ export const PropertiesSidebar = memo(function PropertiesSidebar({
         }
         initial={false}
         animate={{
-          width:
-            mobile || studioTaskColumn
-              ? '100%'
-              : rightSidebarOpen
-                ? rightSidebarWidth
-                : 0,
+          width: mobile || studioTaskColumn ? '100%' : rightSidebarOpen ? rightSidebarWidth : 0,
         }}
         transition={
           mobile || studioTaskColumn || isResizingRef.current || prefersReducedMotion
@@ -422,9 +416,9 @@ export const PropertiesSidebar = memo(function PropertiesSidebar({
                       <LazyClipPanel />
                     </Suspense>
                   </div>
-                  {!hasClipSelection && (
-                    studioTaskColumn && workspace === 'edit' ? (
-                      <div className="flex min-h-40 items-center justify-center border border-dashed border-border bg-[#e8e9e5] px-6 text-center">
+                  {!hasClipSelection &&
+                    (studioTaskColumn && workspace === 'edit' ? (
+                      <div className="flex min-h-40 items-center justify-center border border-dashed border-border bg-panel-bg px-6 text-center">
                         <span className="text-[10px] leading-4 text-muted-foreground">
                           Select a visual item to edit.
                         </span>
@@ -433,8 +427,7 @@ export const PropertiesSidebar = memo(function PropertiesSidebar({
                       <div>
                         <CanvasPanel />
                       </div>
-                    )
-                  )}
+                    ))}
                 </>
               )}
             </div>

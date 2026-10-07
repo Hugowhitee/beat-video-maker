@@ -56,7 +56,7 @@ function NewProject() {
   return (
     <div
       data-studio-v2="true"
-      className="min-h-dvh overflow-x-hidden bg-[#d9dbd6] text-foreground"
+      className="min-h-dvh overflow-x-hidden bg-background text-foreground"
     >
       <div className="flex h-12 items-center bg-[#242724] px-[18px] text-[#f6f7f3]">
         <Link to="/projects" className="flex shrink-0 items-baseline gap-1.5">

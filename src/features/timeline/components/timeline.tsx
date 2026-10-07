@@ -20,16 +20,7 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
 } from '@/components/ui/dropdown-menu'
-import {
-  Plus,
-  Minus,
-  Rows4,
-  Rows3,
-  Rows2,
-  Check,
-  Video,
-  AudioLines,
-} from 'lucide-react'
+import { Plus, Minus, Rows4, Rows3, Rows2, Check, Video, AudioLines } from 'lucide-react'
 import { CompositionBreadcrumbs } from './composition-breadcrumbs'
 import { SequenceTabs } from './sequence-tabs'
 import { useCompositionNavigationStore } from '../stores/composition-navigation-store'
@@ -110,10 +101,7 @@ export const Timeline = memo(function Timeline({
   const editorLayout = getEditorLayout(editorDensity)
   const workspace = useEditorStore((s) => s.workspace)
   const simplifiedBeatvideoTimeline =
-    workspace === 'beat' ||
-    workspace === 'edit' ||
-    workspace === 'color' ||
-    workspace === 'master'
+    workspace === 'beat' || workspace === 'edit' || workspace === 'color' || workspace === 'master'
   const {
     tracks,
     addTrack,
@@ -152,17 +140,9 @@ export const Timeline = memo(function Timeline({
   )
   const visibleTracks = useMemo(() => {
     if (!simplifiedBeatvideoTimeline) return workspaceTracks
-    return resolveProducerTrackLayout(
-      workspaceTracks,
-      itemsByTrackId,
-      showProducerExtras,
-    ).visibleTracks
-  }, [
-    itemsByTrackId,
-    showProducerExtras,
-    simplifiedBeatvideoTimeline,
-    workspaceTracks,
-  ])
+    return resolveProducerTrackLayout(workspaceTracks, itemsByTrackId, showProducerExtras)
+      .visibleTracks
+  }, [itemsByTrackId, showProducerExtras, simplifiedBeatvideoTimeline, workspaceTracks])
   const producerTrackDisplayNameById = useMemo(() => {
     const labels = new Map<string, string>()
     if (!simplifiedBeatvideoTimeline) return labels
@@ -174,7 +154,7 @@ export const Timeline = memo(function Timeline({
     for (const track of visibleTracks) {
       if (getTrackKind(track) === 'video') {
         if (track.id === primaryMediaId) {
-          labels.set(track.id, 'V1 · Footage')
+          labels.set(track.id, 'Media')
         } else {
           graphicsIndex += 1
           labels.set(track.id, `G${graphicsIndex} · Graphics`)
@@ -184,7 +164,7 @@ export const Timeline = memo(function Timeline({
 
       audioIndex += 1
       if (track.name === 'Beat') {
-        labels.set(track.id, `A${audioIndex} · Beat`)
+        labels.set(track.id, 'Beat')
       } else if (track.name === 'Producer tags') {
         labels.set(track.id, `A${audioIndex} · Producer`)
       } else if (track.name === 'Watermarks') {
@@ -991,11 +971,13 @@ export const Timeline = memo(function Timeline({
               <RowFrame
                 key={track.id}
                 onResizeMouseDown={(event) =>
-                   handleTrackResizeStart(event, track.id, simplifiedBeatvideoTimeline)
-                 }
-                 onResizeDoubleClick={(event) => handleTrackResizeReset(event, track.id)}
+                  handleTrackResizeStart(event, track.id, simplifiedBeatvideoTimeline)
+                }
+                onResizeDoubleClick={(event) => handleTrackResizeReset(event, track.id)}
                 resizeHandleLabel={`Resize ${track.name} height`}
-                resizeHandlePosition={simplifiedBeatvideoTimeline || getTrackKind(track) === 'audio' ? 'bottom' : 'top'}
+                resizeHandlePosition={
+                  simplifiedBeatvideoTimeline || getTrackKind(track) === 'audio' ? 'bottom' : 'top'
+                }
               >
                 <TrackHeader
                   track={track}
@@ -1073,7 +1055,7 @@ export const Timeline = memo(function Timeline({
     <div
       className={
         simplifiedBeatvideoTimeline
-          ? 'h-full flex flex-col overflow-hidden bg-[#d9dbd6]'
+          ? 'timeline-bg h-full flex flex-col overflow-hidden border-t border-border'
           : 'timeline-bg h-full border-t border-border flex flex-col overflow-hidden'
       }
       role="region"
@@ -1090,7 +1072,7 @@ export const Timeline = memo(function Timeline({
         onZoomToFit={zoomHandlers?.handleZoomToFit}
       />
       {simplifiedBeatvideoTimeline && !compact ? (
-        <div className="h-1 shrink-0 bg-[#d9dbd6]" aria-hidden="true" />
+        <div className="h-px shrink-0 bg-border" aria-hidden="true" />
       ) : null}
 
       {/* Multi-sequence authoring is an Advanced/Motion concern. Keeping the
@@ -1105,7 +1087,7 @@ export const Timeline = memo(function Timeline({
       <div
         className={
           simplifiedBeatvideoTimeline
-            ? 'flex-1 flex overflow-hidden min-h-0 bg-[#343834]'
+            ? 'timeline-bg flex-1 flex overflow-hidden min-h-0'
             : 'flex-1 flex overflow-hidden min-h-0'
         }
         onMouseDown={handleTimelineAreaMouseDown}
@@ -1114,7 +1096,7 @@ export const Timeline = memo(function Timeline({
         <div
           className={
             simplifiedBeatvideoTimeline
-              ? 'flex-shrink-0 flex flex-col overflow-x-hidden bg-[#343834] text-[#d6dad4]'
+              ? 'panel-bg flex-shrink-0 flex flex-col overflow-x-hidden border-r border-border text-foreground'
               : 'border-r border-border panel-bg flex-shrink-0 flex flex-col overflow-x-hidden'
           }
           style={{ width: timelineSidebarWidth }}
@@ -1123,7 +1105,7 @@ export const Timeline = memo(function Timeline({
           <div
             className={
               simplifiedBeatvideoTimeline
-                ? 'shrink-0 bg-[#343834]'
+                ? 'panel-bg shrink-0'
                 : 'flex items-center justify-between px-3 border-b border-border bg-secondary/20 flex-shrink-0'
             }
             style={{ height: EDITOR_LAYOUT_CSS_VALUES.timelineTracksHeaderHeight }}
@@ -1186,7 +1168,9 @@ export const Timeline = memo(function Timeline({
                     size="icon"
                     className="h-6 w-6"
                     onClick={handleRemoveTracks}
-                    disabled={tracks.length === 0 || (!activeTrackId && selectedTrackIds.length === 0)}
+                    disabled={
+                      tracks.length === 0 || (!activeTrackId && selectedTrackIds.length === 0)
+                    }
                     title={
                       tracks.length === 0
                         ? t('timeline.noTracksToRemove')

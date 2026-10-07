@@ -9,8 +9,8 @@ import {
 } from '@/components/ui/dropdown-menu'
 import { Slider } from '@/components/ui/slider'
 import {
-  ZoomIn,
-  ZoomOut,
+  Plus,
+  Minus,
   Maximize2,
   Magnet,
   Scissors,
@@ -130,6 +130,7 @@ const TimelineZoomControls = memo(function TimelineZoomControls({
   const setZoomImmediate = useZoomStore((state) => state.setZoomLevelImmediate)
   const setZoomSynchronized = useZoomStore((state) => state.setZoomLevelSynchronized)
   const sliderRef = useRef<HTMLSpanElement>(null)
+  const zoomReadoutRef = useRef<HTMLOutputElement>(null)
   const sliderRafRef = useRef<number | null>(null)
   const pendingSliderValueRef = useRef<number | null>(null)
   const latestSliderValueRef = useRef<number | null>(null)
@@ -169,6 +170,11 @@ const TimelineZoomControls = memo(function TimelineZoomControls({
   )
 
   const renderSliderPreview = useCallback((sliderValue: number) => {
+    const value = Math.max(0, Math.min(1, sliderValue))
+    if (zoomReadoutRef.current) {
+      const zoom = ZOOM_MIN * Math.pow(ZOOM_MAX / ZOOM_MIN, value)
+      zoomReadoutRef.current.textContent = `${Math.round(zoom * 100)}%`
+    }
     const root = sliderRef.current
     const thumb = root?.querySelector<HTMLElement>('[role="slider"]')
     const thumbPositioner = thumb?.parentElement
@@ -176,7 +182,6 @@ const TimelineZoomControls = memo(function TimelineZoomControls({
     const range = track?.firstElementChild as HTMLElement | null
     if (!thumb || !thumbPositioner || !range) return
 
-    const value = Math.max(0, Math.min(1, sliderValue))
     const percentage = value * 100
     const thumbOffset = 8 - value * 16
     thumbPositioner.style.left = `calc(${percentage}% + ${thumbOffset}px)`
@@ -357,12 +362,7 @@ const TimelineZoomControls = memo(function TimelineZoomControls({
         finishSliderZoomInteraction()
       }
     },
-    [
-      commitSliderZoom,
-      finishSliderZoomInteraction,
-      releaseSliderZoomGesture,
-      renderSliderPreview,
-    ],
+    [commitSliderZoom, finishSliderZoomInteraction, releaseSliderZoomGesture, renderSliderPreview],
   )
 
   const controlledSliderValue = zoomToSlider(settledZoomLevel)
@@ -375,7 +375,12 @@ const TimelineZoomControls = memo(function TimelineZoomControls({
         isSameZoomLevel(liveZoomLevelRef.current, sliderCommitBaseZoom)))
 
   return (
-    <div className="flex shrink-0 items-center justify-end gap-1.5">
+    <div
+      role="group"
+      aria-label={t('timeline.header.zoomSlider')}
+      data-timeline-zoom-controls
+      className="flex shrink-0 items-center overflow-hidden rounded-sm border border-border bg-muted/40"
+    >
       <Button
         variant="ghost"
         size="icon"
@@ -384,40 +389,40 @@ const TimelineZoomControls = memo(function TimelineZoomControls({
         aria-label={t('timeline.header.zoomOut')}
         data-tooltip={t('timeline.header.zoomOutTooltip')}
       >
-        <ZoomOut className="w-3.5 h-3.5" />
+        <Minus className="w-3.5 h-3.5" />
       </Button>
 
       {!compact ? (
-      <Slider
-        ref={sliderRef}
-        value={[
-          shouldRenderSliderPreview
-            ? (latestSliderValueRef.current ?? controlledSliderValue)
-            : controlledSliderValue,
-        ]}
-        onValueChange={handleSliderChange}
-        onValueCommit={handleSliderCommit}
-        onPointerDownCapture={beginSliderZoomGesture}
-        onPointerCancelCapture={finishSliderZoomInteraction}
-        onKeyDownCapture={() => {
-          sliderKeyboardInputRef.current = true
-        }}
-        onKeyUpCapture={() => {
-          // Keep the keyboard marker set through Radix's onValueCommit, which
-          // runs later in this keyup event. The next microtask ends the input.
-          queueMicrotask(() => {
+        <Slider
+          ref={sliderRef}
+          value={[
+            shouldRenderSliderPreview
+              ? (latestSliderValueRef.current ?? controlledSliderValue)
+              : controlledSliderValue,
+          ]}
+          onValueChange={handleSliderChange}
+          onValueCommit={handleSliderCommit}
+          onPointerDownCapture={beginSliderZoomGesture}
+          onPointerCancelCapture={finishSliderZoomInteraction}
+          onKeyDownCapture={() => {
+            sliderKeyboardInputRef.current = true
+          }}
+          onKeyUpCapture={() => {
+            // Keep the keyboard marker set through Radix's onValueCommit, which
+            // runs later in this keyup event. The next microtask ends the input.
+            queueMicrotask(() => {
+              sliderKeyboardInputRef.current = false
+            })
+          }}
+          onBlurCapture={() => {
             sliderKeyboardInputRef.current = false
-          })
-        }}
-        onBlurCapture={() => {
-          sliderKeyboardInputRef.current = false
-        }}
-        min={0}
-        max={1}
-        step={0.005}
-        className="w-24"
-        aria-label={t('timeline.header.zoomSlider')}
-      />
+          }}
+          min={0}
+          max={1}
+          step={0.005}
+          className="mx-1 w-24"
+          aria-label={t('timeline.header.zoomSlider')}
+        />
       ) : null}
 
       <Button
@@ -428,18 +433,33 @@ const TimelineZoomControls = memo(function TimelineZoomControls({
         aria-label={t('timeline.header.zoomIn')}
         data-tooltip={t('timeline.header.zoomInTooltip')}
       >
-        <ZoomIn className="w-3.5 h-3.5" />
+        <Plus className="w-3.5 h-3.5" />
       </Button>
+
+      {!compact ? (
+        <output
+          ref={zoomReadoutRef}
+          aria-label={t('timeline.header.zoomLevel', { defaultValue: 'Timeline zoom level' })}
+          className="w-12 shrink-0 text-center font-mono text-[11px] tabular-nums text-foreground"
+        >
+          {Math.round(settledZoomLevel * 100)}%
+        </output>
+      ) : null}
 
       <Button
         variant="ghost"
-        size="icon"
-        style={btnSize}
+        size={compact ? 'icon' : 'sm'}
+        style={compact ? btnSize : { height: btnSize.height }}
+        className="gap-1.5 border-l border-border px-2"
+        disabled={!onZoomToFit}
         onClick={onZoomToFit}
         aria-label={t('timeline.header.zoomToFit')}
         data-tooltip={t('timeline.header.zoomToFitTooltip')}
       >
         <Maximize2 className="w-3.5 h-3.5" />
+        {!compact ? (
+          <span className="text-[11px]">{t('timeline.header.fit', { defaultValue: 'Fit' })}</span>
+        ) : null}
       </Button>
     </div>
   )
@@ -506,7 +526,6 @@ export const TimelineHeader = memo(function TimelineHeader({
     BEAT_GRID_RESOLUTION_OPTIONS.find((option) => option.value === beatGridResolution)?.label ??
     'Auto'
   const musicalSnapEnabled = snapEnabled && beatGridSnapEnabled
-  const producerZoomLevel = useZoomStore((state) => state.contentLevel)
 
   const toggleMusicalSnap = useCallback(() => {
     if (musicalSnapEnabled) {
@@ -515,13 +534,7 @@ export const TimelineHeader = memo(function TimelineHeader({
     }
     if (!snapEnabled) toggleSnap()
     if (!beatGridSnapEnabled) toggleBeatGridSnap()
-  }, [
-    beatGridSnapEnabled,
-    musicalSnapEnabled,
-    snapEnabled,
-    toggleBeatGridSnap,
-    toggleSnap,
-  ])
+  }, [beatGridSnapEnabled, musicalSnapEnabled, snapEnabled, toggleBeatGridSnap, toggleSnap])
 
   useEffect(() => {
     if (isSimplified && activeTool !== 'select' && activeTool !== 'razor') {
@@ -543,80 +556,6 @@ export const TimelineHeader = memo(function TimelineHeader({
 
   const handleRedo = () => {
     useTimelineStore.temporal.getState().redo()
-  }
-
-  if (isSimplified && !compact) {
-    const producerZoomPercent = Math.round(producerZoomLevel * 100)
-    const zoomOut = onZoomOut ?? useZoomStore.getState().zoomOut
-    const zoomIn = onZoomIn ?? useZoomStore.getState().zoomIn
-
-    return (
-      <div
-        className="relative h-[42px] shrink-0 bg-[#e8e9e5] text-[#171917]"
-        role="toolbar"
-        aria-label={t('timeline.header.controls')}
-        data-studio-timeline-toolbar
-      >
-        <div className="absolute left-3 top-[15px] text-[10px] font-semibold uppercase leading-3">
-          Sequence 01
-        </div>
-
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <button
-              type="button"
-              className="absolute left-[660px] top-0 flex h-[42px] w-[50px] items-center text-left font-mono text-[10px] text-[#686d67] hover:text-[#171917]"
-              aria-label={`Grid: ${beatGridResolutionLabel}`}
-              data-tooltip="Musical grid"
-            >
-              {beatGridResolutionLabel} snap
-            </button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="min-w-40">
-            <DropdownMenuItem onClick={toggleBeatGridVisible}>
-              <span className="w-4 font-mono text-xs">{beatGridVisible ? '✓' : ''}</span>
-              <span>Show grid</span>
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={toggleMusicalSnap}>
-              <span className="w-4 font-mono text-xs">{musicalSnapEnabled ? '✓' : ''}</span>
-              <span>Snap to grid</span>
-            </DropdownMenuItem>
-            {BEAT_GRID_RESOLUTION_OPTIONS.map((option, index) => (
-              <DropdownMenuItem
-                key={option.value}
-                onClick={() => setBeatGridResolution(option.value as BeatGridResolution)}
-                className={index === 0 ? 'border-t border-border/60' : ''}
-              >
-                <span className="w-4 font-mono text-xs">
-                  {option.value === beatGridResolution ? '✓' : ''}
-                </span>
-                <span className="font-mono text-xs">{option.label}</span>
-              </DropdownMenuItem>
-            ))}
-          </DropdownMenuContent>
-        </DropdownMenu>
-
-        <div className="absolute left-[710px] top-0 flex h-[42px] w-[64px] items-center justify-between font-mono text-[10px]">
-          <button
-            type="button"
-            onClick={zoomOut}
-            className="h-full w-3 text-[#686d67] hover:text-[#171917]"
-            aria-label={t('timeline.header.zoomOut')}
-          >
-            −
-          </button>
-          <span className="w-9 text-center tabular-nums">{producerZoomPercent}%</span>
-          <button
-            type="button"
-            onClick={zoomIn}
-            className="h-full w-3 text-[#686d67] hover:text-[#171917]"
-            aria-label={t('timeline.header.zoomIn')}
-          >
-            +
-          </button>
-        </div>
-      </div>
-    )
   }
 
   return (
@@ -730,9 +669,7 @@ export const TimelineHeader = memo(function TimelineHeader({
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="start">
                           <DropdownMenuItem
-                            onClick={() =>
-                              setActiveTool(activeTool === 'slip' ? 'select' : 'slip')
-                            }
+                            onClick={() => setActiveTool(activeTool === 'slip' ? 'select' : 'slip')}
                           >
                             <ArrowRightLeft className="w-3.5 h-3.5" />
                             <span className="flex-1">{t('timeline.header.slipTool')}</span>
@@ -807,102 +744,104 @@ export const TimelineHeader = memo(function TimelineHeader({
 
           {!isSimplified ? (
             <>
-            <Separator orientation="vertical" className="h-5 mx-1.5" />
-  
-            {/* In/Out Points */}
-            <div className="flex items-center gap-1">
-              <Button
-                variant="ghost"
-                size="icon"
-                style={btnSize}
-                onClick={() => setInPoint(usePlaybackStore.getState().currentFrame)}
-                aria-label={t('timeline.header.setInPoint')}
-                data-tooltip={t('timeline.header.setInPointTooltip')}
-              >
-                <span className="text-sm font-bold" style={{ color: 'var(--color-timeline-in)' }}>
-                  [
-                </span>
-              </Button>
-  
-              <Button
-                variant="ghost"
-                size="icon"
-                style={btnSize}
-                onClick={() => setOutPoint(usePlaybackStore.getState().currentFrame)}
-                aria-label={t('timeline.header.setOutPoint')}
-                data-tooltip={t('timeline.header.setOutPointTooltip')}
-              >
-                <span className="text-sm font-bold" style={{ color: 'var(--color-timeline-out)' }}>
-                  ]
-                </span>
-              </Button>
-  
-              <Button
-                variant="ghost"
-                size="icon"
-                style={btnSize}
-                onClick={clearInOutPoints}
-                disabled={inPoint === null && outPoint === null}
-                aria-label={t('timeline.header.clearInOutPoints')}
-                data-tooltip={t('timeline.header.clearInOutPointsTooltip')}
-              >
-                <X className="w-3.5 h-3.5" />
-              </Button>
-            </div>
-  
-            <Separator orientation="vertical" className="h-5 mx-1.5" />
-  
-            {/* Markers */}
-            <div className="flex items-center gap-1">
-              <Button
-                variant="ghost"
-                size="icon"
-                style={btnSize}
-                onClick={() => addMarker(usePlaybackStore.getState().currentFrame)}
-                aria-label={t('timeline.header.addMarker')}
-                data-tooltip={t('timeline.header.addMarkerTooltip')}
-              >
-                <Flag className="w-3.5 h-3.5" style={{ color: 'var(--color-timeline-marker)' }} />
-              </Button>
-  
-              <Button
-                variant="ghost"
-                size="icon"
-                style={btnSize}
-                onClick={() => {
-                  if (selectedMarkerId) {
-                    removeMarker(selectedMarkerId)
-                    clearSelection()
-                  }
-                }}
-                disabled={!selectedMarkerId}
-                aria-label={t('timeline.header.removeSelectedMarker')}
-                data-tooltip={t('timeline.header.removeSelectedMarkerTooltip')}
-              >
-                <FlagOff className="w-3.5 h-3.5" />
-              </Button>
-  
-              <Button
-                variant="ghost"
-                size="icon"
-                style={btnSize}
-                onClick={clearAllMarkers}
-                disabled={!hasMarkers}
-                aria-label={t('timeline.header.clearAllMarkers')}
-                data-tooltip={t('timeline.header.clearAllMarkersTooltip')}
-              >
-                <X className="w-3.5 h-3.5" />
-              </Button>
-            </div>
-  
-            <Separator orientation="vertical" className="h-5 mx-1.5" />
-  
-            {/* Microphone voiceover */}
-            <MicRecordControl />
-  
-            <Separator orientation="vertical" className="h-5 mx-1.5" />
-  
-              </>
+              <Separator orientation="vertical" className="h-5 mx-1.5" />
+
+              {/* In/Out Points */}
+              <div className="flex items-center gap-1">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  style={btnSize}
+                  onClick={() => setInPoint(usePlaybackStore.getState().currentFrame)}
+                  aria-label={t('timeline.header.setInPoint')}
+                  data-tooltip={t('timeline.header.setInPointTooltip')}
+                >
+                  <span className="text-sm font-bold" style={{ color: 'var(--color-timeline-in)' }}>
+                    [
+                  </span>
+                </Button>
+
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  style={btnSize}
+                  onClick={() => setOutPoint(usePlaybackStore.getState().currentFrame)}
+                  aria-label={t('timeline.header.setOutPoint')}
+                  data-tooltip={t('timeline.header.setOutPointTooltip')}
+                >
+                  <span
+                    className="text-sm font-bold"
+                    style={{ color: 'var(--color-timeline-out)' }}
+                  >
+                    ]
+                  </span>
+                </Button>
+
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  style={btnSize}
+                  onClick={clearInOutPoints}
+                  disabled={inPoint === null && outPoint === null}
+                  aria-label={t('timeline.header.clearInOutPoints')}
+                  data-tooltip={t('timeline.header.clearInOutPointsTooltip')}
+                >
+                  <X className="w-3.5 h-3.5" />
+                </Button>
+              </div>
+
+              <Separator orientation="vertical" className="h-5 mx-1.5" />
+
+              {/* Markers */}
+              <div className="flex items-center gap-1">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  style={btnSize}
+                  onClick={() => addMarker(usePlaybackStore.getState().currentFrame)}
+                  aria-label={t('timeline.header.addMarker')}
+                  data-tooltip={t('timeline.header.addMarkerTooltip')}
+                >
+                  <Flag className="w-3.5 h-3.5" style={{ color: 'var(--color-timeline-marker)' }} />
+                </Button>
+
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  style={btnSize}
+                  onClick={() => {
+                    if (selectedMarkerId) {
+                      removeMarker(selectedMarkerId)
+                      clearSelection()
+                    }
+                  }}
+                  disabled={!selectedMarkerId}
+                  aria-label={t('timeline.header.removeSelectedMarker')}
+                  data-tooltip={t('timeline.header.removeSelectedMarkerTooltip')}
+                >
+                  <FlagOff className="w-3.5 h-3.5" />
+                </Button>
+
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  style={btnSize}
+                  onClick={clearAllMarkers}
+                  disabled={!hasMarkers}
+                  aria-label={t('timeline.header.clearAllMarkers')}
+                  data-tooltip={t('timeline.header.clearAllMarkersTooltip')}
+                >
+                  <X className="w-3.5 h-3.5" />
+                </Button>
+              </div>
+
+              <Separator orientation="vertical" className="h-5 mx-1.5" />
+
+              {/* Microphone voiceover */}
+              <MicRecordControl />
+
+              <Separator orientation="vertical" className="h-5 mx-1.5" />
+            </>
           ) : (
             <Separator orientation="vertical" className="h-5 mx-1.5" />
           )}
@@ -980,51 +919,54 @@ export const TimelineHeader = memo(function TimelineHeader({
 
           {!isSimplified ? (
             <>
-            <Button
-              variant="ghost"
-              size="icon"
-              style={btnSize}
-              onClick={toggleAudioSkimming}
-              aria-label={
-                audioSkimmingEnabled
-                  ? t('timeline.header.disableAudioSkimming')
-                  : t('timeline.header.enableAudioSkimming')
-              }
-              aria-pressed={audioSkimmingEnabled}
-              data-tooltip={
-                audioSkimmingEnabled
-                  ? t('timeline.header.audioSkimmingEnabled')
-                  : t('timeline.header.audioSkimmingDisabled')
-              }
-            >
-              <Volume2 className="w-3.5 h-3.5" />
-            </Button>
-  
-            <Separator orientation="vertical" className="h-5 mx-1.5" />
-  
-            <InlineKeyframesToggle isOpen={inlineKeyframesOpen} onToggle={toggleEditKeyframePanel} />
-  
-            <Button
-              variant="ghost"
-              size="icon"
-              style={btnSize}
-              onClick={() => setLinkedSelectionEnabled(!linkedSelectionEnabled)}
-              aria-label={
-                linkedSelectionEnabled
-                  ? t('timeline.header.disableLinkedSelection')
-                  : t('timeline.header.enableLinkedSelection')
-              }
-              aria-pressed={linkedSelectionEnabled}
-              data-tooltip={t('timeline.header.linkedSelectionTooltip', {
-                state: linkedSelectionEnabled
-                  ? t('timeline.header.linkedSelectionOn')
-                  : t('timeline.header.linkedSelectionOff'),
-                shortcut: formatHotkeyBinding(hotkeys.TOGGLE_LINKED_SELECTION),
-              })}
-            >
-              <Link2 className="w-3.5 h-3.5" />
-            </Button>
-              </>
+              <Button
+                variant="ghost"
+                size="icon"
+                style={btnSize}
+                onClick={toggleAudioSkimming}
+                aria-label={
+                  audioSkimmingEnabled
+                    ? t('timeline.header.disableAudioSkimming')
+                    : t('timeline.header.enableAudioSkimming')
+                }
+                aria-pressed={audioSkimmingEnabled}
+                data-tooltip={
+                  audioSkimmingEnabled
+                    ? t('timeline.header.audioSkimmingEnabled')
+                    : t('timeline.header.audioSkimmingDisabled')
+                }
+              >
+                <Volume2 className="w-3.5 h-3.5" />
+              </Button>
+
+              <Separator orientation="vertical" className="h-5 mx-1.5" />
+
+              <InlineKeyframesToggle
+                isOpen={inlineKeyframesOpen}
+                onToggle={toggleEditKeyframePanel}
+              />
+
+              <Button
+                variant="ghost"
+                size="icon"
+                style={btnSize}
+                onClick={() => setLinkedSelectionEnabled(!linkedSelectionEnabled)}
+                aria-label={
+                  linkedSelectionEnabled
+                    ? t('timeline.header.disableLinkedSelection')
+                    : t('timeline.header.enableLinkedSelection')
+                }
+                aria-pressed={linkedSelectionEnabled}
+                data-tooltip={t('timeline.header.linkedSelectionTooltip', {
+                  state: linkedSelectionEnabled
+                    ? t('timeline.header.linkedSelectionOn')
+                    : t('timeline.header.linkedSelectionOff'),
+                  shortcut: formatHotkeyBinding(hotkeys.TOGGLE_LINKED_SELECTION),
+                })}
+              >
+                <Link2 className="w-3.5 h-3.5" />
+              </Button>
+            </>
           ) : null}
         </div>
       </div>

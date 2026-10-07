@@ -334,9 +334,7 @@ export const PreviewArea = memo(function PreviewArea({
     if (!target) return
 
     const action =
-      document.fullscreenElement === target
-        ? document.exitFullscreen()
-        : target.requestFullscreen()
+      document.fullscreenElement === target ? document.exitFullscreen() : target.requestFullscreen()
 
     void action.catch((error: unknown) => {
       toast.error('Could not change viewer fullscreen', {
@@ -545,11 +543,8 @@ export const PreviewArea = memo(function PreviewArea({
 
   const hasSidePanels = !!sourcePreviewMediaId || scopesPanelOpen
   // Master shares the Program monitor and transport, but not transform permissions.
-  const previewChrome: PreviewChrome = workspace === 'color'
-    ? 'color'
-    : workspace === 'master'
-      ? 'view'
-      : 'edit'
+  const previewChrome: PreviewChrome =
+    workspace === 'color' ? 'color' : workspace === 'master' ? 'view' : 'edit'
   const programPanelPercent = Math.max(
     0,
     100 - displayedSourceSplitPercent - displayedScopesSplitPercent,
@@ -637,7 +632,10 @@ export const PreviewArea = memo(function PreviewArea({
             />
           </div>
 
-          <div className="shrink-0 border-t border-border/70 bg-[#e8e9e5]" aria-label="Program progress">
+          <div
+            className="shrink-0 border-t border-border/70 bg-panel-bg"
+            aria-label="Program progress"
+          >
             <ProgramSeekBar totalFrames={totalFrames} fps={fps} disabled={isMaskEditingActive} />
           </div>
 
