@@ -2,6 +2,16 @@
 
 Baseline: `main` at `7c0f8aa` (PR #98). Integrated recovery work: [PR #99](https://github.com/Hugowhitee/beat-video-maker/pull/99). The Figma reference is a visual contract, not evidence of working behavior.
 
+## Delivered studio UI — 2026-10-10
+
+[PR #100](https://github.com/Hugowhitee/beat-video-maker/pull/100) landed at `63887a46959b4662f3b807b7fd88ee629e80e3b6`. Required CI [run901](https://github.com/Hugowhitee/beat-video-maker/actions/runs/38002069254) passed on candidate `7133a22`:713 test files /5085 tests, project-open real-media browser flow, portable headless import/edit/render round trip, checks/boundaries/contracts and both production builds. The current representative Visual gate remains PASS with the same1600×960 Figma/runtime proof below.
+
+**Online delivery: PASS.** Railway deployment `1038f420-4786-407c-a7a8-cefc11c934ab` is SUCCESS for the landed commit. The actual [production app](https://beat-video-maker-live-production.up.railway.app/) serves `main-DbXUtfAw.js`. App shell, editor core JS/CSS and runtime chunks match the controlled build byte for byte. Main CSS has identical structure with only four platform-dependent numeric color rounding differences (maximum0.00000006); entry/bootstrap JavaScript is identical after substituting those hashed CSS/chunk filenames and source-map names. This is actual served-build evidence, not a deployment-status assumption. [Production proof](visual-proof/2026-10-10-production-proof.json) records the commit, build comparison and actual online workflow result.
+
+The actual production browser flow passed create/open/reopen, compact and laptop reachability, real WebM/WAV import, precise source trim/overwrite, waveform/grid, applied GPU effect/bypass, Nodes compare, Undo/Redo, persistence and downloaded MP4 export. Local representative-project interaction proof also covers synchronized horizontal/vertical navigation, split resize, precision zoom/scale, Output Home/End/history without seeking, editable Loop A source-cut transition/history, and real Fade In preview opacity0→1 with Undo/Redo. Changes retain the canonical runtime owners. Global unused exports remain inherited main debt; aggregate `verify` is not claimed green.
+
+The following checkpoint and older recovery matrix are historical implementation evidence. Their pre-publication UNVERIFIED labels are superseded by the scoped delivery evidence above, not a claim that every possible project/effect combination was tested.
+
 ## Current Visual acceptance checkpoint — 2026-10-09
 
 Current checkout: `codex/editor-consistency`, recovery commit `9151758`, with uncommitted shared-owner implementation. Remote main was `ae9cbc6` when restored. The older matrix below describes the integrated recovery baseline; this checkpoint records the current candidate without claiming production delivery.
