@@ -1,0 +1,51 @@
+{
+  "bootstrapSame": true,
+  "deployedCommit": "63887a46959b4662f3b807b7fd88ee629e80e3b6",
+  "deploymentId": "1038f420-4786-407c-a7a8-cefc11c934ab",
+  "css": {
+    "structureSame": true,
+    "numericDifferences": 4,
+    "maxDelta": 5.999999999986051e-8,
+    "pass": true
+  },
+  "entrySame": true,
+  "actualEntry": "/assets/main-DbXUtfAw.js",
+  "actualCss": "/assets/main-DlAdoEwY.css",
+  "actualCssSha256": "0e8e0c4bf772a7f58a7c30f83641c43994836c35a5a9247297e9156b8cd7e7d8",
+  "pass": true,
+  "url": "https://beat-video-maker-live-production.up.railway.app/",
+  "deploymentStatus": "SUCCESS",
+  "byteMatchedAssets": [
+    "/assets/modulepreload-polyfill-Dezn_h7o.js",
+    "/assets/rolldown-runtime-DAXXjFlN.js",
+    "/assets/app-shell-yXPIsm_2.js",
+    "/assets/feature-editing-core-CC1iKdTQ.css",
+    "/assets/feature-editing-core-D6C4viRi.js"
+  ],
+  "ci": {
+    "runId": 38002069254,
+    "candidate": "7133a22d6677bae0bde922d056fd0cf6a35b0921",
+    "files": 713,
+    "tests": 5085,
+    "conclusion": "success"
+  },
+  "actualOnlineBrowserEvidence": [
+    "Smoke: waiting for production preview",
+    "Smoke: preview ready; launching Chrome",
+    "Smoke: opening New Project through OPFS fallback",
+    "Smoke: New Project loaded",
+    "Smoke: project created; waiting for editor route",
+    "Smoke: create -> editor result: editor",
+    "Smoke: editor opened; returning to Projects",
+    "Smoke: project tile visible",
+    "Smoke: clicked Open; waiting for reopened editor",
+    "Smoke: reopen result: editor; page errors: 0",
+    "Project UI smoke passed: compact phone editor, desktop-site fallback, project settings, and 177px square tiles are all verified.",
+    "Workspace UI smoke passed: Master Program/Output and Color controls reachable on laptop viewports",
+    "Smoke: generating real WebM fixture for editor round-trip",
+    "Smoke: importing real WAV beat and building fixed BPM grid",
+    "Smoke: applying a real GPU effect and checking shared Color compare",
+    "Smoke: rendering and downloading a real video export",
+    "Real-media editor smoke passed: WebM trim/overwrite, Undo/Redo, WAV waveform/grid, GPU effect bypass, Color compare, save/reopen and downloaded video export are verified."
+  ]
+}
