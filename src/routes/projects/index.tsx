@@ -36,7 +36,7 @@ import { TrashSection } from '@/features/projects/components/trash-section'
 import { WorkspaceIndicator } from '@/features/workspace-gate'
 import { LanguageSwitcher } from '@/shared/ui/language-switcher'
 import { resolveBeatvideoProjectMode } from '@/config/beatvideo'
-import { useStudioV2DocumentTheme } from '@/shared/ui/use-studio-v2-document-theme'
+import { useStudioDocumentTheme } from '@/shared/ui/use-studio-document-theme'
 import {
   DEFAULT_PROJECT_FPS,
   DEFAULT_PROJECT_HEIGHT,
@@ -55,7 +55,7 @@ export const Route = createFileRoute('/projects/')({
 })
 
 function ProjectsIndex() {
-  useStudioV2DocumentTheme()
+  useStudioDocumentTheme()
   const navigate = useNavigate()
   const { t } = useTranslation()
   const [editingProject, setEditingProject] = useState<Project | null>(null)
@@ -263,11 +263,11 @@ function ProjectsIndex() {
 
   return (
     <>
-      <div
-        data-studio-v2="true"
-        className="min-h-dvh overflow-x-hidden bg-[#d9dbd6] text-foreground"
-      >
-        <div className="flex h-12 items-center bg-[#242724] px-[18px] text-[#f6f7f3]" data-no-marquee>
+      <div data-studio="true" className="min-h-dvh overflow-x-hidden bg-background text-foreground">
+        <div
+          className="flex h-12 items-center bg-[#242724] px-[18px] text-[#f6f7f3]"
+          data-no-marquee
+        >
           <Link to="/" className="flex shrink-0 items-baseline gap-1.5">
             <span className="text-[10px] font-semibold">BEAT VIDEO</span>
             <span className="text-[10px] font-semibold text-[#c7e85a]">MAKER</span>
@@ -281,14 +281,14 @@ function ProjectsIndex() {
             </div>
             <button
               type="button"
-              className="h-full text-[10px] font-semibold uppercase tracking-[0.04em] text-[#c7cac4] hover:text-white"
+              className="h-full text-[10px] font-semibold uppercase tracking-[0.04em] text-muted-foreground hover:text-white"
               onClick={handleImportClick}
             >
               {t('projects.importProject')}
             </button>
             <Link
               to="/projects/new"
-              className="flex h-[30px] items-center rounded-[4px] bg-[#c7e85a] px-4 text-[10px] font-semibold uppercase tracking-[0.04em] text-[#242724]"
+              className="flex h-[30px] items-center rounded-[4px] bg-primary px-4 text-[10px] font-semibold uppercase tracking-[0.04em] text-[#242724]"
             >
               {t('projects.newProject')}
             </Link>
@@ -352,7 +352,10 @@ function ProjectsIndex() {
 
       {/* Edit Project Dialog */}
       <Dialog open={!!editingProject} onOpenChange={(open) => !open && setEditingProject(null)}>
-        <DialogContent data-studio-v2="true" className="max-w-[920px] w-[95vw] max-h-[90vh] overflow-y-auto bg-[#d9dbd6]">
+        <DialogContent
+          data-studio="true"
+          className="max-w-[920px] w-[95vw] max-h-[90vh] overflow-y-auto bg-background"
+        >
           <DialogHeader>
             <DialogTitle className="text-2xl">{t('projects.form.editTitle')}</DialogTitle>
             <DialogDescription>{t('projects.form.editSubtitle')}</DialogDescription>
@@ -382,7 +385,7 @@ function ProjectsIndex() {
           if (!open) handleCloseImportDialog()
         }}
       >
-        <DialogContent data-studio-v2="true" className="max-w-md bg-[#e8e9e5]">
+        <DialogContent data-studio="true" className="max-w-md bg-panel-bg">
           <DialogHeader>
             <DialogTitle>
               {importError

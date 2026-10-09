@@ -101,12 +101,10 @@ vi.mock('./color-grading-dock', () => ({
   ColorGradingDock: () => <div data-testid="color-grading-dock" />,
 }))
 
-
 vi.mock('./compose-workspace/compose-layout', () => ({
   MotionPreviewArea: () => <div data-testid="motion-preview-area" />,
   MotionTimelineDock: () => <div data-testid="motion-timeline-dock" />,
 }))
-
 
 vi.mock('./interaction-lock-region', () => ({
   InteractionLockRegion: ({ children }: { children: ReactNode }) => <>{children}</>,
@@ -224,13 +222,7 @@ vi.mock('@/features/editor/deps/settings', () => ({
 }))
 
 vi.mock('@/features/editor/deps/preview', () => ({
-  PlaybackControls: ({
-    totalFrames,
-    compact,
-  }: {
-    totalFrames: number
-    compact?: boolean
-  }) => (
+  PlaybackControls: ({ totalFrames, compact }: { totalFrames: number; compact?: boolean }) => (
     <div
       data-testid="mobile-playback-controls"
       data-total-frames={totalFrames}
@@ -461,7 +453,7 @@ describe('LoadedEditor migration metadata refresh', () => {
 
     expect(mocks.resizablePanelGroup).toHaveBeenCalledWith(
       expect.objectContaining({
-        autoSaveId: 'editor:timeline-layout',
+        autoSaveId: 'editor:producer-layout',
         direction: 'vertical',
       }),
     )
@@ -496,10 +488,10 @@ describe('LoadedEditor migration metadata refresh', () => {
     expect(mocks.resizablePanelGroup).toHaveBeenCalledWith(
       expect.objectContaining({
         direction: 'vertical',
-        autoSaveId: 'editor:timeline-layout',
+        autoSaveId: 'editor:producer-layout',
       }),
     )
-    expect(screen.getByRole('separator', { name: 'Resize Color controls' })).toBeInTheDocument()
+    expect(screen.getByRole('separator', { name: 'Resize Nodes controls' })).toBeInTheDocument()
   })
 
   it('uses one reachable editor surface at a time on phone-sized viewports', async () => {
@@ -557,10 +549,7 @@ describe('LoadedEditor migration metadata refresh', () => {
       'data-total-frames',
       '900',
     )
-    expect(screen.getByTestId('mobile-playback-controls')).toHaveAttribute(
-      'data-compact',
-      'true',
-    )
+    expect(screen.getByTestId('mobile-playback-controls')).toHaveAttribute('data-compact', 'true')
     // The canonical Program/audio runtime stays mounted behind the active tool
     // so transport remains real instead of becoming a detached state button.
     expect(screen.getByTestId('preview-area')).toHaveAttribute('data-compact', 'true')
@@ -569,6 +558,11 @@ describe('LoadedEditor migration metadata refresh', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Edit' }))
     expect(screen.getByTestId('properties-sidebar')).toHaveAttribute('data-mobile', 'true')
     expect(screen.getByTestId('preview-area')).toBeInTheDocument()
+    // Rendered overlays set their own visibility. Their mounted parent must
+    // suppress compositing so they cannot paint over the active tool surface.
+    expect(screen.getByTestId('preview-area').closest('[data-mobile-preview-runtime]')).toHaveClass(
+      'opacity-0',
+    )
 
     fireEvent.click(screen.getByRole('button', { name: 'Preview' }))
     expect(screen.getByTestId('preview-area')).toHaveAttribute('data-compact', 'true')

@@ -41,7 +41,7 @@ function AspectPreview({
       aria-hidden="true"
     >
       <span
-        className={selected ? 'rounded-[1px] bg-[#c7e85a]' : 'rounded-[1px] bg-[#343834]'}
+        className={selected ? 'rounded-[1px] bg-primary' : 'rounded-[1px] bg-[#343834]'}
         style={{ width: previewWidth, height: previewHeight }}
       />
     </span>
@@ -57,9 +57,7 @@ export function ProjectTemplatePicker({
   const isCustomSelected = selectedTemplateId === 'custom'
   const visibleTemplates = useMemo(() => {
     const primary = PROJECT_TEMPLATES.filter((template) =>
-      PRIMARY_TEMPLATE_IDS.includes(
-        template.id as (typeof PRIMARY_TEMPLATE_IDS)[number],
-      ),
+      PRIMARY_TEMPLATE_IDS.includes(template.id as (typeof PRIMARY_TEMPLATE_IDS)[number]),
     )
     const selected = PROJECT_TEMPLATES.find((template) => template.id === selectedTemplateId)
     if (selected && !primary.some((template) => template.id === selected.id)) {
@@ -84,7 +82,7 @@ export function ProjectTemplatePicker({
             className={`flex min-h-[58px] min-w-0 items-center gap-2 rounded-[3px] border px-2.5 py-2 text-left transition-colors ${
               isSelected
                 ? 'border-[#242724] bg-[#242724] text-[#f6f7f3]'
-                : 'border-transparent bg-[#d1d4ce] text-foreground hover:border-border hover:bg-[#c7cac4]'
+                : 'border-transparent bg-secondary text-foreground hover:border-border hover:bg-panel-header'
             }`}
           >
             <AspectPreview width={template.width} height={template.height} selected={isSelected} />
@@ -102,7 +100,7 @@ export function ProjectTemplatePicker({
               </span>
               <span
                 className={`mt-1 block truncate font-mono text-[8px] ${
-                  isSelected ? 'text-[#c7cac4]' : 'text-muted-foreground'
+                  isSelected ? 'text-muted-foreground' : 'text-muted-foreground'
                 }`}
               >
                 {resolution} · {aspectRatio}
@@ -119,7 +117,7 @@ export function ProjectTemplatePicker({
           className={`flex min-h-[58px] min-w-0 items-center gap-2 rounded-[3px] border px-2.5 py-2 text-left transition-colors ${
             isCustomSelected
               ? 'border-[#242724] bg-[#242724] text-[#f6f7f3]'
-              : 'border-transparent bg-[#d1d4ce] text-foreground hover:border-border hover:bg-[#c7cac4]'
+              : 'border-transparent bg-secondary text-foreground hover:border-border hover:bg-panel-header'
           }`}
         >
           <span
@@ -145,7 +143,7 @@ export function ProjectTemplatePicker({
             </span>
             <span
               className={`mt-1 block truncate text-[8px] ${
-                isCustomSelected ? 'text-[#c7cac4]' : 'text-muted-foreground'
+                isCustomSelected ? 'text-muted-foreground' : 'text-muted-foreground'
               }`}
             >
               {t('projects.templatePicker.enterDimensions')}

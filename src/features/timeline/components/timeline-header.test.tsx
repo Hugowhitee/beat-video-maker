@@ -110,7 +110,7 @@ describe('TimelineHeader zoom slider', () => {
 
     fireEvent.mouseDown(screen.getByRole('slider'))
 
-    expect(screen.getByTestId('zoom-slider-thumb-positioner').style.left).toBe('calc(75% - 4px)')
+    expect(screen.getByTestId('zoom-slider-thumb-positioner').style.left).toBe('calc(75% - 2px)')
     expect(screen.getByTestId('zoom-slider-range').style.right).toBe('25%')
     expect(onZoomChange).toHaveBeenLastCalledWith(targetZoom)
     expect(animationFrameSpy).not.toHaveBeenCalled()
@@ -309,6 +309,40 @@ describe('TimelineHeader zoom slider', () => {
     expect(screen.getByRole('button', { name: /zoom out/i })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /zoom in/i })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /zoom to fit/i })).toBeInTheDocument()
+  })
+
+  it('keeps producer editing and fit controls in the canonical desktop toolbar', () => {
+    const onZoomToFit = vi.fn()
+    render(<TimelineHeader simplifiedBeatvideo onZoomToFit={onZoomToFit} />)
+
+    expect(screen.getByRole('button', { name: /select tool/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /razor tool/i })).toBeInTheDocument()
+    expect(screen.getByTestId('zoom-slider')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /grid: auto/i })).toBeInTheDocument()
+    expect(screen.getByRole('status', { name: 'Timeline zoom level' })).toHaveTextContent('100%')
+
+    fireEvent.click(screen.getByRole('button', { name: /zoom to fit/i }))
+    expect(onZoomToFit).toHaveBeenCalledTimes(1)
+  })
+
+  it('keeps the numeric readout current during live zoom without rerendering the slider', () => {
+    render(<TimelineHeader simplifiedBeatvideo />)
+    const readout = screen.getByRole('status', { name: 'Timeline zoom level' })
+
+    act(() => useZoomStore.getState().setZoomLevelImmediate(0.35))
+
+    expect(readout).toHaveTextContent('35%')
+    expect(sliderRenderSpy).toHaveBeenCalledTimes(1)
+  })
+
+  it('commits typed zoom through the existing viewport owner', () => {
+    render(<TimelineHeader simplifiedBeatvideo />)
+    fireEvent.click(screen.getByRole('status', { name: 'Timeline zoom level' }))
+    const input = screen.getByRole('textbox', { name: 'Timeline zoom percent' })
+    fireEvent.change(input, { target: { value: '50' } })
+    fireEvent.blur(input)
+    expect(useZoomStore.getState().level).toBe(0.5)
+    expect(screen.getByRole('status', { name: 'Timeline zoom level' })).toHaveTextContent('50%')
   })
 
   it('toggles the keyframe panel without a selected clip', () => {

@@ -1,12 +1,4 @@
-import {
-  Suspense,
-  lazy,
-  memo,
-  useCallback,
-  useDeferredValue,
-  useMemo,
-  type ReactNode,
-} from 'react'
+import { Suspense, lazy, memo, useCallback, useDeferredValue, useMemo, type ReactNode } from 'react'
 import { Link2 } from 'lucide-react'
 import { perfMarkRender } from '@/shared/logging/perf-marks'
 import type { TimelineItem } from '@/types/timeline'
@@ -527,9 +519,11 @@ const StaticClipContent = memo(function StaticClipContent({ item }: { item: Time
 
   if (item.type === 'text') {
     return (
-      <div className="absolute inset-0 flex flex-col px-2 py-1 overflow-hidden">
-        <div className="text-[10px] text-muted-foreground truncate">Text</div>
-        <div className="text-xs font-medium truncate flex-1">
+      <div className="absolute inset-0 flex flex-col overflow-hidden">
+        <div className="h-3.5 shrink-0 bg-timeline-text px-1 text-[10px] leading-[14px] text-foreground truncate">
+          TITLE
+        </div>
+        <div className="px-2 text-[11px] font-normal truncate flex-1">
           {getTextItemPlainText(item) || 'Empty text'}
         </div>
       </div>
@@ -711,7 +705,7 @@ const DetailedCompositionClipContent = memo(function DetailedCompositionClipCont
             every other clip's label row. */}
         {renderTitleText(
           label,
-          <span className="shrink-0 rounded bg-violet-950/40 px-1.5 text-[9px] font-semibold uppercase tracking-[0.08em] text-violet-100/90">
+          <span className="shrink-0 px-1 text-[9px] font-normal uppercase text-muted-foreground">
             {compositionKindLabel}
           </span>,
         )}

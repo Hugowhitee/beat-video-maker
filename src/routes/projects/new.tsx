@@ -7,7 +7,7 @@ import { InlineCreateProjectForm } from '@/features/projects/components/project-
 import { useCreateProject } from '@/features/projects/hooks/use-project-actions'
 import { useProjectStore } from '@/features/projects/stores/project-store'
 import type { ProjectFormData } from '@/features/projects/utils/validation'
-import { useStudioV2DocumentTheme } from '@/shared/ui/use-studio-v2-document-theme'
+import { useStudioDocumentTheme } from '@/shared/ui/use-studio-document-theme'
 
 const logger = createLogger('NewProject')
 
@@ -24,7 +24,7 @@ export const Route = createFileRoute('/projects/new')({
 })
 
 function NewProject() {
-  useStudioV2DocumentTheme()
+  useStudioDocumentTheme()
   const navigate = useNavigate()
   const { t } = useTranslation()
   const [isSubmitting, setIsSubmitting] = useState(false)
@@ -54,10 +54,7 @@ function NewProject() {
   }
 
   return (
-    <div
-      data-studio-v2="true"
-      className="min-h-dvh overflow-x-hidden bg-[#d9dbd6] text-foreground"
-    >
+    <div data-studio="true" className="min-h-dvh overflow-x-hidden bg-background text-foreground">
       <div className="flex h-12 items-center bg-[#242724] px-[18px] text-[#f6f7f3]">
         <Link to="/projects" className="flex shrink-0 items-baseline gap-1.5">
           <span className="text-[10px] font-semibold">BEAT VIDEO</span>

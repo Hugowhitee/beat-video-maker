@@ -479,7 +479,7 @@
           "toggleSnap": "스냅 전환",
           "toggleCanvasSnap": "캔버스(기즈모) 스냅 전환",
           "editWorkspace": "편집 작업 영역으로 전환",
-          "colorWorkspace": "컬러 작업 영역으로 전환",
+          "colorWorkspace": "Nodes 작업 영역으로 전환",
           "copy": "선택한 항목 또는 키프레임 복사",
           "cut": "선택한 항목 또는 키프레임 잘라내기",
           "paste": "항목 또는 키프레임 붙여넣기",

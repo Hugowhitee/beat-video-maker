@@ -240,7 +240,29 @@ export function TimelineNavigator({ actualDuration, scrollContainerRef }: Timeli
     if (dragSnapshotRef.current || !thumbRef.current) return
     const live = getLiveNavigatorMetrics()
     updateNavigatorThumb(thumbRef.current, live.metrics)
+    thumbRef.current.setAttribute('aria-valuenow', String(Math.round(live.scrollLeft)))
+    thumbRef.current.setAttribute('aria-valuemax', String(Math.round(live.metrics.maxScrollLeft)))
   }, [getLiveNavigatorMetrics])
+
+  const handleNavigatorKeyDown = useCallback(
+    (event: React.KeyboardEvent) => {
+      const live = getLiveNavigatorMetrics()
+      const next = {
+        ArrowLeft: live.scrollLeft - 40,
+        ArrowRight: live.scrollLeft + 40,
+        PageUp: live.scrollLeft - viewportWidth,
+        PageDown: live.scrollLeft + viewportWidth,
+        Home: 0,
+        End: live.metrics.maxScrollLeft,
+      }[event.key]
+      if (next === undefined) return
+      event.preventDefault()
+      event.stopPropagation()
+      setScrollLeftOnContainer(Math.max(0, Math.min(live.metrics.maxScrollLeft, next)))
+      syncThumbToLiveGeometry()
+    },
+    [getLiveNavigatorMetrics, setScrollLeftOnContainer, syncThumbToLiveGeometry, viewportWidth],
+  )
 
   const rebaseActiveDragToTrackWidth = useCallback(
     (nextTrackWidth: number) => {
@@ -536,8 +558,16 @@ export function TimelineNavigator({ actualDuration, scrollContainerRef }: Timeli
       >
         <div
           ref={thumbRef}
+          role="scrollbar"
+          aria-label="Scroll timeline horizontally"
+          aria-orientation="horizontal"
+          aria-valuemin={0}
+          aria-valuemax={Math.round(currentMetrics.maxScrollLeft)}
+          aria-valuenow={Math.round(navigatorScrollLeft)}
+          tabIndex={0}
+          onKeyDown={handleNavigatorKeyDown}
           className={cn(
-            'absolute top-0 flex h-full items-center justify-between rounded-sm bg-muted-foreground/55 transition-colors',
+            'absolute top-0 flex h-full items-center justify-between rounded-sm bg-muted-foreground/55 transition-colors focus-visible:outline focus-visible:outline-1 focus-visible:outline-primary',
             dragTarget
               ? 'cursor-grabbing bg-muted-foreground/75'
               : 'cursor-grab hover:bg-muted-foreground/70',

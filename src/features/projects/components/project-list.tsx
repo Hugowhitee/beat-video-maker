@@ -344,7 +344,7 @@ export function ProjectList({ onEditProject, onImportProject }: ProjectListProps
     <div className="space-y-4">
       {/* Search and Filters Bar */}
       {!isEmpty && (
-        <div className="grid grid-cols-[minmax(0,1fr)_auto_auto] gap-2 rounded-[3px] bg-[#e8e9e5] p-2 lg:ml-auto lg:flex lg:w-fit lg:items-center">
+        <div className="grid grid-cols-[minmax(0,1fr)_auto_auto] gap-2 rounded-[3px] bg-panel-bg p-2 lg:ml-auto lg:flex lg:w-fit lg:items-center">
           {/* Search */}
           <div className="relative col-span-3 w-full lg:col-span-1 lg:w-[clamp(240px,28vw,360px)] lg:flex-none">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
@@ -371,7 +371,7 @@ export function ProjectList({ onEditProject, onImportProject }: ProjectListProps
             type="button"
             variant="outline"
             size="sm"
-            className="h-9 gap-1.5 border-border bg-[#d9dbd6] px-3 text-[10px] shadow-none sm:hidden"
+            className="h-9 gap-1.5 border-border bg-background px-3 text-[10px] shadow-none sm:hidden"
             aria-expanded={mobileFiltersOpen}
             onClick={() => setMobileFiltersOpen((open) => !open)}
           >
@@ -381,42 +381,42 @@ export function ProjectList({ onEditProject, onImportProject }: ProjectListProps
 
           {/* Resolution Filter */}
           <div className="hidden sm:block">
-          <Select
-            value={filterResolution || 'all'}
-            onValueChange={(value) => setFilterResolution(value === 'all' ? undefined : value)}
-          >
-            <SelectTrigger className="h-9 w-full border-border bg-[#d9dbd6] text-[10px] shadow-none sm:w-[150px]">
-              <SelectValue placeholder={t('projects.list.allResolutions')} />
-            </SelectTrigger>
-            <SelectContent data-studio-v2="true">
-              <SelectItem value="all">{t('projects.list.allResolutions')}</SelectItem>
-              {uniqueResolutions.map((res) => (
-                <SelectItem key={res} value={res}>
-                  {res}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+            <Select
+              value={filterResolution || 'all'}
+              onValueChange={(value) => setFilterResolution(value === 'all' ? undefined : value)}
+            >
+              <SelectTrigger className="h-9 w-full border-border bg-background text-[10px] shadow-none sm:w-[150px]">
+                <SelectValue placeholder={t('projects.list.allResolutions')} />
+              </SelectTrigger>
+              <SelectContent data-studio="true">
+                <SelectItem value="all">{t('projects.list.allResolutions')}</SelectItem>
+                {uniqueResolutions.map((res) => (
+                  <SelectItem key={res} value={res}>
+                    {res}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           {/* FPS Filter */}
           <div className="hidden sm:block">
-          <Select
-            value={filterFps?.toString() || 'all'}
-            onValueChange={(value) => setFilterFps(value === 'all' ? undefined : Number(value))}
-          >
-            <SelectTrigger className="h-9 w-full border-border bg-[#d9dbd6] text-[10px] shadow-none sm:w-[112px]">
-              <SelectValue placeholder={t('projects.list.allFps')} />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">{t('projects.list.allFps')}</SelectItem>
-              {uniqueFps.map((fps) => (
-                <SelectItem key={fps} value={fps.toString()}>
-                  {t('projects.list.fpsOption', { fps })}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+            <Select
+              value={filterFps?.toString() || 'all'}
+              onValueChange={(value) => setFilterFps(value === 'all' ? undefined : Number(value))}
+            >
+              <SelectTrigger className="h-9 w-full border-border bg-background text-[10px] shadow-none sm:w-[112px]">
+                <SelectValue placeholder={t('projects.list.allFps')} />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">{t('projects.list.allFps')}</SelectItem>
+                {uniqueFps.map((fps) => (
+                  <SelectItem key={fps} value={fps.toString()}>
+                    {t('projects.list.fpsOption', { fps })}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           {/* Sort Menu */}
@@ -425,14 +425,14 @@ export function ProjectList({ onEditProject, onImportProject }: ProjectListProps
               <Button
                 variant="outline"
                 size="sm"
-                className="h-9 gap-1.5 border-border bg-[#d9dbd6] px-3 text-[10px] shadow-none sm:w-9 sm:px-0"
+                className="h-9 gap-1.5 border-border bg-background px-3 text-[10px] shadow-none sm:w-9 sm:px-0"
               >
                 <ArrowUpDown className="h-3.5 w-3.5" />
                 <span className="sm:hidden">Sort</span>
                 <span className="sr-only sm:inline">Sort projects</span>
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-48" data-studio-v2="true">
+            <DropdownMenuContent align="end" className="w-48" data-studio="true">
               <DropdownMenuLabel>{t('projects.list.sortBy')}</DropdownMenuLabel>
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={() => setSortField('name')}>
@@ -464,14 +464,12 @@ export function ProjectList({ onEditProject, onImportProject }: ProjectListProps
             <div className="col-span-3 grid grid-cols-2 gap-2 border-t border-border pt-2 sm:hidden">
               <Select
                 value={filterResolution || 'all'}
-                onValueChange={(value) =>
-                  setFilterResolution(value === 'all' ? undefined : value)
-                }
+                onValueChange={(value) => setFilterResolution(value === 'all' ? undefined : value)}
               >
-                <SelectTrigger className="h-9 w-full border-border bg-[#d9dbd6] text-[10px] shadow-none">
+                <SelectTrigger className="h-9 w-full border-border bg-background text-[10px] shadow-none">
                   <SelectValue placeholder={t('projects.list.allResolutions')} />
                 </SelectTrigger>
-                <SelectContent data-studio-v2="true">
+                <SelectContent data-studio="true">
                   <SelectItem value="all">{t('projects.list.allResolutions')}</SelectItem>
                   {uniqueResolutions.map((res) => (
                     <SelectItem key={res} value={res}>
@@ -482,14 +480,12 @@ export function ProjectList({ onEditProject, onImportProject }: ProjectListProps
               </Select>
               <Select
                 value={filterFps?.toString() || 'all'}
-                onValueChange={(value) =>
-                  setFilterFps(value === 'all' ? undefined : Number(value))
-                }
+                onValueChange={(value) => setFilterFps(value === 'all' ? undefined : Number(value))}
               >
-                <SelectTrigger className="h-9 w-full border-border bg-[#d9dbd6] text-[10px] shadow-none">
+                <SelectTrigger className="h-9 w-full border-border bg-background text-[10px] shadow-none">
                   <SelectValue placeholder={t('projects.list.allFps')} />
                 </SelectTrigger>
-                <SelectContent data-studio-v2="true">
+                <SelectContent data-studio="true">
                   <SelectItem value="all">{t('projects.list.allFps')}</SelectItem>
                   {uniqueFps.map((fps) => (
                     <SelectItem key={fps} value={fps.toString()}>
@@ -628,7 +624,7 @@ export function ProjectList({ onEditProject, onImportProject }: ProjectListProps
 
       {/* Bulk delete confirm */}
       <AlertDialog open={showBulkDeleteDialog} onOpenChange={setShowBulkDeleteDialog}>
-        <AlertDialogContent data-studio-v2="true">
+        <AlertDialogContent data-studio="true">
           <AlertDialogHeader>
             <AlertDialogTitle className="flex items-center gap-2">
               <AlertTriangle className="h-5 w-5 text-destructive" />

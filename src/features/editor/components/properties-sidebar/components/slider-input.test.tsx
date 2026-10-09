@@ -3,6 +3,27 @@ import { describe, expect, it, vi } from 'vite-plus/test'
 import { SliderInput } from './slider-input'
 
 describe('SliderInput', () => {
+  it('supports keyboard precision and typed entry without moving the value column', () => {
+    const onChange = vi.fn()
+    render(<SliderInput label="Gain" value={0} min={-12} max={12} step={0.1} onChange={onChange} />)
+    const slider = screen.getByRole('slider', { name: 'Gain' })
+    fireEvent.keyDown(slider, { key: 'ArrowRight', shiftKey: true })
+    expect(onChange).toHaveBeenLastCalledWith(1)
+    fireEvent.keyDown(screen.getByRole('button', { name: 'Edit Gain value' }), { key: 'Enter' })
+    const input = screen.getByRole('textbox', { name: 'Gain value' })
+    fireEvent.change(input, { target: { value: '-3.2' } })
+    fireEvent.keyDown(input, { key: 'Enter' })
+    expect(onChange).toHaveBeenLastCalledWith(-3.2)
+  })
+
+  it('keeps disabled rails and values noninteractive', () => {
+    const onChange = vi.fn()
+    render(<SliderInput label="Gain" value={0} min={-12} max={12} onChange={onChange} disabled />)
+    fireEvent.keyDown(screen.getByRole('slider'), { key: 'ArrowRight' })
+    fireEvent.click(screen.getByRole('button', { name: 'Edit Gain value' }))
+    expect(screen.queryByRole('textbox')).not.toBeInTheDocument()
+    expect(onChange).not.toHaveBeenCalled()
+  })
   it('commits the final dragged value on pointer release when using live preview', () => {
     const onChange = vi.fn()
     const onLiveChange = vi.fn()
@@ -19,7 +40,7 @@ describe('SliderInput', () => {
       />,
     )
 
-    const track = screen.getByText('0').closest('div[class*="relative"]') as HTMLDivElement
+    const track = screen.getByRole('slider') as HTMLDivElement
     expect(track).toBeTruthy()
 
     Object.defineProperty(track, 'offsetWidth', {

@@ -575,8 +575,8 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
-        data-studio-v2="true"
-        className="max-w-2xl gap-0 overflow-hidden bg-[#e8e9e5] p-0 sm:top-16 sm:max-h-[calc(100vh-4rem)] sm:translate-y-0 sm:origin-top"
+        data-studio="true"
+        className="max-w-2xl gap-0 overflow-hidden bg-panel-bg p-0 sm:top-16 sm:max-h-[calc(100vh-4rem)] sm:translate-y-0 sm:origin-top"
       >
         <DialogHeader className="flex flex-row items-center justify-between border-b px-6 py-4 pr-14">
           <DialogTitle>{t('settings.title')}</DialogTitle>
@@ -592,7 +592,7 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
         </DialogHeader>
         <div className="flex min-h-0">
           {/* Sidebar */}
-          <nav className="flex w-44 shrink-0 flex-col gap-0.5 border-r border-border bg-[#d9dbd6] p-2">
+          <nav className="flex w-44 shrink-0 flex-col gap-0.5 border-r border-border bg-background p-2">
             {SETTINGS_SECTIONS.map((section) => {
               const Icon = section.icon
               return (
@@ -604,7 +604,7 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
                     'flex items-center gap-2 rounded-[3px] px-3 py-2 text-left text-[12px] transition-colors duration-150 ease-out motion-reduce:transition-none',
                     activeSection === section.id
                       ? 'bg-[#242724] text-[#f6f7f3] shadow-[inset_3px_0_0_#c7e85a]'
-                      : 'text-muted-foreground hover:bg-[#d1d4ce] hover:text-foreground',
+                      : 'text-muted-foreground hover:bg-secondary hover:text-foreground',
                   )}
                 >
                   <Icon className="h-3.5 w-3.5 shrink-0" />
@@ -1116,7 +1116,7 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
       </DialogContent>
 
       <AlertDialog open={showClearConfirm} onOpenChange={setShowClearConfirm}>
-        <AlertDialogContent data-studio-v2="true">
+        <AlertDialogContent data-studio="true">
           <AlertDialogHeader>
             <AlertDialogTitle>{t('settings.storage.clearCacheConfirmTitle')}</AlertDialogTitle>
             <AlertDialogDescription>

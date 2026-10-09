@@ -49,16 +49,11 @@ export class ErrorBoundary extends Component<Props, State> {
       const { level = 'component' } = this.props
 
       return (
-        <div
-          data-studio-v2="true"
-          className="min-h-[240px] bg-[#d9dbd6] p-6 text-foreground"
-        >
+        <div data-studio="true" className="min-h-[240px] bg-background p-6 text-foreground">
           <div className="mx-auto max-w-[560px] border-y border-border py-6">
             <div className="flex items-center gap-2 text-muted-foreground">
               <AlertTriangle className="h-4 w-4" />
-              <span className="text-[9px] font-semibold uppercase tracking-[0.12em]">
-                Recovery
-              </span>
+              <span className="text-[9px] font-semibold uppercase tracking-[0.12em]">Recovery</span>
             </div>
             <h2 className="mt-4 text-[20px] font-semibold">
               {level === 'app' && i18n.t('app.errorBoundary.appError')}
@@ -88,7 +83,7 @@ export class ErrorBoundary extends Component<Props, State> {
               )}
             </div>
             {import.meta.env.DEV && this.state.error?.stack && (
-              <pre className="mt-4 max-h-48 max-w-full overflow-auto rounded-[3px] bg-[#d1d4ce] p-3 text-left font-mono text-[9px]">
+              <pre className="mt-4 max-h-48 max-w-full overflow-auto rounded-[3px] bg-secondary p-3 text-left font-mono text-[9px]">
                 {this.state.error.stack}
               </pre>
             )}

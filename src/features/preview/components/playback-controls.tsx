@@ -2,7 +2,13 @@ import { useState } from 'react'
 import { useTranslation } from 'react-i18next'
 import { i18n } from '@/i18n'
 import { Button } from '@/components/ui/button'
-import { Separator } from '@/components/ui/separator'
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuCheckboxItem,
+} from '@/components/ui/dropdown-menu'
 import {
   Play,
   Pause,
@@ -11,6 +17,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Zap,
+  MoreHorizontal,
   Camera,
   Loader2,
   Maximize2,
@@ -110,8 +117,8 @@ export function PlaybackControls({
   const [isSavingFrame, setIsSavingFrame] = useState(false)
 
   const btnSize = {
-    width: compact ? '40px' : EDITOR_LAYOUT_CSS_VALUES.toolbarButtonSize,
-    height: compact ? '40px' : EDITOR_LAYOUT_CSS_VALUES.toolbarButtonSize,
+    width: compact ? '40px' : EDITOR_LAYOUT_CSS_VALUES.previewControlButtonSize,
+    height: compact ? '40px' : EDITOR_LAYOUT_CSS_VALUES.previewControlButtonSize,
   } as const
 
   // Use granular selectors - Zustand v5 best practice
@@ -230,10 +237,18 @@ export function PlaybackControls({
   }
 
   return (
-    <>
+    <div
+      className={
+        compact ? 'flex items-center gap-1' : 'grid w-full grid-cols-[1fr_auto_1fr] items-center'
+      }
+    >
       {/* Transport Controls */}
       <div
-        className="flex items-center gap-0.5 flex-shrink-0"
+        className={
+          compact
+            ? 'flex items-center gap-1 shrink-0'
+            : 'col-start-2 flex items-center gap-1 shrink-0'
+        }
         data-studio-player
         data-compact={compact ? 'true' : 'false'}
       >
@@ -246,22 +261,21 @@ export function PlaybackControls({
           data-tooltip={t('preview.controls.goToStartTooltip')}
           aria-label={t('preview.controls.goToStart')}
         >
-          <SkipBack className="w-3.5 h-3.5" />
+          <SkipBack className="w-[18px] h-[18px]" />
         </Button>
 
         {!compact ? (
-        <Button
-          variant="ghost"
-          size="icon"
-          className="flex-shrink-0"
-          style={btnSize}
-          onClick={handlePreviousFrame}
-          data-tooltip={t('preview.controls.prevFrameTooltip')}
-          aria-label={t('preview.controls.prevFrame')}
-        >
-          <ChevronLeft className="w-3.5 h-3.5" />
-        </Button>
-
+          <Button
+            variant="ghost"
+            size="icon"
+            className="flex-shrink-0"
+            style={btnSize}
+            onClick={handlePreviousFrame}
+            data-tooltip={t('preview.controls.prevFrameTooltip')}
+            aria-label={t('preview.controls.prevFrame')}
+          >
+            <ChevronLeft className="w-[18px] h-[18px]" />
+          </Button>
         ) : null}
 
         <Button
@@ -275,22 +289,25 @@ export function PlaybackControls({
           }
           aria-label={isPlaying ? t('preview.player.pause') : t('preview.player.play')}
         >
-          {isPlaying ? <Pause className="w-3.5 h-3.5" /> : <Play className="w-3.5 h-3.5 ml-0.5" />}
+          {isPlaying ? (
+            <Pause className="w-[18px] h-[18px]" />
+          ) : (
+            <Play className="w-[18px] h-[18px] ml-0.5" />
+          )}
         </Button>
 
         {!compact ? (
-        <Button
-          variant="ghost"
-          size="icon"
-          className="flex-shrink-0"
-          style={btnSize}
-          onClick={handleNextFrame}
-          data-tooltip={t('preview.controls.nextFrameTooltip')}
-          aria-label={t('preview.controls.nextFrame')}
-        >
-          <ChevronRight className="w-3.5 h-3.5" />
-        </Button>
-
+          <Button
+            variant="ghost"
+            size="icon"
+            className="flex-shrink-0"
+            style={btnSize}
+            onClick={handleNextFrame}
+            data-tooltip={t('preview.controls.nextFrameTooltip')}
+            aria-label={t('preview.controls.nextFrame')}
+          >
+            <ChevronRight className="w-[18px] h-[18px]" />
+          </Button>
         ) : null}
 
         <Button
@@ -302,9 +319,10 @@ export function PlaybackControls({
           data-tooltip={t('preview.controls.goToEndTooltip')}
           aria-label={t('preview.controls.goToEnd')}
         >
-          <SkipForward className="w-3.5 h-3.5" />
+          <SkipForward className="w-[18px] h-[18px]" />
         </Button>
-
+      </div>
+      <div className="flex min-w-0 items-center justify-end gap-1 pr-3" data-studio-player>
         <MonitorVolumeControl buttonStyle={btnSize} />
 
         {onToggleFullscreen ? (
@@ -323,69 +341,39 @@ export function PlaybackControls({
             aria-pressed={isFullscreen}
           >
             {isFullscreen ? (
-              <Minimize2 className="h-3.5 w-3.5" />
+              <Minimize2 className="h-[18px] w-[18px]" />
             ) : (
-              <Maximize2 className="h-3.5 w-3.5" />
+              <Maximize2 className="h-[18px] w-[18px]" />
             )}
           </Button>
         ) : null}
+
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" size="icon" style={btnSize} aria-label="Program actions">
+              <MoreHorizontal className="h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" side="top">
+            <DropdownMenuItem
+              disabled={isSavingFrame}
+              onClick={() => {
+                void handleSaveFrame()
+              }}
+            >
+              {isSavingFrame ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Camera className="h-4 w-4" />
+              )}
+              {isSavingFrame ? t('preview.controls.savingFrame') : t('preview.controls.saveFrame')}
+            </DropdownMenuItem>
+            <DropdownMenuCheckboxItem checked={useProxy} onCheckedChange={toggleUseProxy}>
+              <Zap className="h-4 w-4" /> Proxy playback
+            </DropdownMenuCheckboxItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
-
-      {/* Save frame — hidden at narrow widths */}
-      <div className="hidden @min-[440px]:flex items-center gap-0.5 flex-shrink-0" data-studio-player>
-        <Separator orientation="vertical" className="h-4 flex-shrink-0" />
-
-        <Button
-          variant="ghost"
-          size="icon"
-          className="flex-shrink-0"
-          style={btnSize}
-          onClick={() => {
-            void handleSaveFrame()
-          }}
-          disabled={isSavingFrame}
-          data-tooltip={
-            isSavingFrame
-              ? t('preview.controls.savingFrameTooltip')
-              : t('preview.controls.saveFrameTooltip')
-          }
-          aria-label={
-            isSavingFrame ? t('preview.controls.savingFrame') : t('preview.controls.saveFrame')
-          }
-        >
-          {isSavingFrame ? (
-            <Loader2 className="w-3.5 h-3.5 animate-spin" />
-          ) : (
-            <Camera className="w-3.5 h-3.5" />
-          )}
-        </Button>
-      </div>
-
-      {/* Proxy toggle — hidden at narrow widths */}
-      <div className="hidden @min-[440px]:flex items-center gap-0.5 flex-shrink-0" data-studio-player>
-        <Separator orientation="vertical" className="h-4 flex-shrink-0" />
-
-        <Button
-          variant="ghost"
-          size="icon"
-          style={btnSize}
-          className="flex-shrink-0"
-          onClick={toggleUseProxy}
-          aria-pressed={useProxy}
-          data-tooltip={
-            useProxy
-              ? t('preview.controls.proxyPlaybackOn')
-              : t('preview.controls.proxyPlaybackOff')
-          }
-          aria-label={
-            useProxy
-              ? t('preview.controls.disableProxyPlayback')
-              : t('preview.controls.enableProxyPlayback')
-          }
-        >
-          <Zap className="w-3.5 h-3.5" />
-        </Button>
-      </div>
-    </>
+    </div>
   )
 }

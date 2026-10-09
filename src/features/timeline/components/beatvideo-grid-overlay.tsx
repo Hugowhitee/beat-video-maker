@@ -7,10 +7,12 @@ import { resolveBeatvideoTimelineGrid } from '../utils/beatvideo-timeline-grid'
 import { resolveBeatGridMarkers } from '../utils/beatvideo-grid-resolution'
 import { createTimelineTrackContentLayerRef } from '../utils/timeline-live-geometry'
 import type { MusicSection } from '@/types/beatvideo'
+import { formatTimecodeCompact, secondsToFrames } from '@/shared/utils/time-utils'
 
 interface BeatvideoGridOverlayProps {
   duration: number
   variant: 'ruler' | 'tracks'
+  alignedTimeRuler?: boolean
 }
 
 function leftPercent(time: number, duration: number) {
@@ -20,12 +22,17 @@ function leftPercent(time: number, duration: number) {
 
 function sectionColor(section: MusicSection, index: number, variant: 'ruler' | 'tracks') {
   const hue =
-    section.kind === 'intro' ? 225 :
-    section.kind === 'build' ? 70 :
-    section.kind === 'drop' ? 150 :
-    section.kind === 'break' ? 290 :
-    section.kind === 'outro' ? 25 :
-    [225, 285, 170, 55][index % 4] ?? 225
+    section.kind === 'intro'
+      ? 225
+      : section.kind === 'build'
+        ? 70
+        : section.kind === 'drop'
+          ? 150
+          : section.kind === 'break'
+            ? 290
+            : section.kind === 'outro'
+              ? 25
+              : ([225, 285, 170, 55][index % 4] ?? 225)
   const chroma = section.kind === 'unknown' ? 0.045 : 0.07
   const alpha = variant === 'ruler' ? 0.3 : 0.065
   return `oklch(0.7 ${chroma} ${hue} / ${alpha})`
@@ -39,6 +46,7 @@ function sectionLabel(section: MusicSection, index: number) {
 export const BeatvideoGridOverlay = memo(function BeatvideoGridOverlay({
   duration,
   variant,
+  alignedTimeRuler = false,
 }: BeatvideoGridOverlayProps) {
   const analysis = useProjectStore((state) => state.currentProject?.beatvideoMusic)
   const items = useItemsStore((state) => state.items)
@@ -49,19 +57,12 @@ export const BeatvideoGridOverlay = memo(function BeatvideoGridOverlay({
   const contentLayerRef = useMemo(createTimelineTrackContentLayerRef, [])
 
   const timelineGrid = useMemo(
-    () =>
-      analysis
-        ? resolveBeatvideoTimelineGrid(analysis, items, fps)
-        : null,
+    () => (analysis ? resolveBeatvideoTimelineGrid(analysis, items, fps) : null),
     [analysis, fps, items],
   )
 
-  if (
-    !beatGridVisible ||
-    !timelineGrid ||
-    timelineGrid.grid.beats.length === 0 ||
-    duration <= 0
-  ) return null
+  if (!beatGridVisible || !timelineGrid || timelineGrid.grid.beats.length === 0 || duration <= 0)
+    return null
 
   const { grid, barOneTimelineTime } = timelineGrid
   const { markers, labelStride } = resolveBeatGridMarkers({
@@ -70,12 +71,17 @@ export const BeatvideoGridOverlay = memo(function BeatvideoGridOverlay({
     barOneTime: barOneTimelineTime,
     resolution: beatGridResolution,
     pixelsPerSecond,
+    minimumLabelSpacingPx: alignedTimeRuler ? 112 : undefined,
   })
 
   return (
     <div
       ref={variant === 'ruler' ? contentLayerRef : undefined}
-      style={variant === 'tracks' ? { width: 'var(--timeline-content-width, 100%)' } : undefined}
+      style={
+        variant === 'tracks'
+          ? { width: 'var(--timeline-content-width, 100%)' }
+          : { top: alignedTimeRuler ? 0 : 20, height: alignedTimeRuler ? 37 : 17 }
+      }
       aria-hidden="true"
       data-beatvideo-grid-overlay={variant}
       data-beatvideo-grid-placement={timelineGrid.placement.id}
@@ -89,15 +95,14 @@ export const BeatvideoGridOverlay = memo(function BeatvideoGridOverlay({
         const left = leftPercent(section.start, duration)
         const width = Math.max(0, leftPercent(section.end, duration) - left)
         const showLabel =
-          variant === 'ruler' &&
-          (section.end - section.start) * pixelsPerSecond >= 72
+          variant === 'ruler' && (section.end - section.start) * pixelsPerSecond >= 72
         return (
           <div
             key={section.id}
             className={
               variant === 'ruler'
-                ? 'absolute bottom-0 h-[6px] border-l border-primary/30'
-                : 'absolute inset-y-0 border-l border-primary/14'
+                ? 'absolute bottom-0 h-[6px] border-l border-foreground/30'
+                : 'absolute inset-y-0 border-l border-foreground/14'
             }
             style={{
               left: `${left}%`,
@@ -128,8 +133,12 @@ export const BeatvideoGridOverlay = memo(function BeatvideoGridOverlay({
         return (
           <div
             key={`${beat.index}:${beat.time.toFixed(4)}`}
-            className="absolute inset-y-0"
-            style={{ left: `${leftPercent(beat.time, duration)}%` }}
+            data-musical-marker={isBarOne ? 'bar-one' : isPhraseBar ? 'phrase' : kind}
+            className="absolute bottom-0"
+            style={{
+              left: `${leftPercent(beat.time, duration)}%`,
+              height: variant === 'ruler' ? 17 : '100%',
+            }}
           >
             <div
               className={
@@ -138,21 +147,20 @@ export const BeatvideoGridOverlay = memo(function BeatvideoGridOverlay({
                   : kind === 'subdivision'
                     ? 'h-full w-px bg-foreground/[0.09]'
                     : isPhraseBar
-                      ? 'h-full w-[2px] bg-primary/65'
+                      ? 'h-full w-[2px] bg-[#56666f]/70'
                       : kind === 'bar'
-                        ? 'h-full w-px bg-primary/45'
-                        : 'h-full w-px bg-foreground/24'
+                        ? 'h-full w-px bg-[#56666f]/45'
+                        : 'h-full w-px bg-[#56666f]/25'
               }
             />
+            {showBarLabel && alignedTimeRuler ? (
+              <span className="absolute left-1 -top-[17px] whitespace-nowrap font-mono text-[10px] font-normal leading-none text-foreground">
+                {formatTimecodeCompact(secondsToFrames(beat.time, fps), fps)}
+              </span>
+            ) : null}
             {showBarLabel ? (
-              <span
-                className={
-                  isBarOne
-                    ? 'absolute left-1 top-1 bg-primary px-1 py-0.5 font-mono text-[10px] font-semibold leading-none text-primary-foreground'
-                    : 'absolute left-1 top-1 bg-background/90 px-1 py-0.5 font-mono text-[10px] font-medium leading-none text-foreground/85'
-                }
-              >
-                {barNumber}
+              <span className="absolute left-1 top-1 font-mono text-[10px] font-normal leading-none text-foreground">
+                {String(barNumber).padStart(2, '0')}
               </span>
             ) : null}
           </div>

@@ -479,7 +479,7 @@
           "toggleSnap": "Basculer l'aimantation",
           "toggleCanvasSnap": "Basculer l'aimantation du canevas (gizmo)",
           "editWorkspace": "Passer à l'espace de travail Montage",
-          "colorWorkspace": "Passer à l'espace de travail Étalonnage",
+          "colorWorkspace": "Passer à l’espace de travail Nodes",
           "copy": "Copier les éléments ou images clés sélectionnés",
           "cut": "Couper les éléments ou images clés sélectionnés",
           "paste": "Coller les éléments ou images clés",

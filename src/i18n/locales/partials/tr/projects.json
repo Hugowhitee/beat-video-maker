@@ -479,7 +479,7 @@
           "toggleSnap": "Yakalamayı aç/kapat",
           "toggleCanvasSnap": "Tuval (gizmo) yakalamayı aç/kapat",
           "editWorkspace": "Kurgu çalışma alanına geç",
-          "colorWorkspace": "Renk çalışma alanına geç",
+          "colorWorkspace": "Nodes çalışma alanına geç",
           "copy": "Seçili öğeleri veya ana kareleri kopyala",
           "cut": "Seçili öğeleri veya ana kareleri kes",
           "paste": "Öğeleri veya ana kareleri yapıştır",

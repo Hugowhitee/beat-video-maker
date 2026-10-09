@@ -95,6 +95,27 @@ describe('timeline navigator interaction', () => {
     expect(scrollContainer.scrollLeft).toBe(120)
   })
 
+  it('pans the actual viewport with keyboard navigation and publishes live geometry', () => {
+    const scrollContainer = document.createElement('div')
+    scrollContainer.scrollLeft = 120
+    const liveScroll = vi.fn()
+    scrollContainer.addEventListener(TIMELINE_LIVE_SCROLL_EVENT, liveScroll)
+    const { getByRole } = render(
+      <TimelineNavigator actualDuration={60} scrollContainerRef={{ current: scrollContainer }} />,
+    )
+    const scrollbar = getByRole('scrollbar', { name: 'Scroll timeline horizontally' })
+    fireEvent.keyDown(scrollbar, { key: 'ArrowRight' })
+    expect(scrollContainer.scrollLeft).toBe(160)
+    expect(scrollbar).toHaveAttribute('aria-valuenow', '160')
+    fireEvent.keyDown(scrollbar, { key: 'PageDown' })
+    expect(scrollContainer.scrollLeft).toBe(460)
+    fireEvent.keyDown(scrollbar, { key: 'End' })
+    expect(scrollContainer.scrollLeft).toBeGreaterThan(460)
+    fireEvent.keyDown(scrollbar, { key: 'Home' })
+    expect(scrollContainer.scrollLeft).toBe(0)
+    expect(liveScroll).toHaveBeenCalledTimes(4)
+  })
+
   it('does not React-render for scroll-only viewport publications', () => {
     const scrollContainer = document.createElement('div')
     render(

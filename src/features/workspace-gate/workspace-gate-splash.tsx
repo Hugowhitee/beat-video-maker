@@ -18,7 +18,7 @@ export function WorkspaceGateSplash({ status, error, onPickFolder, onReconnect }
   const { t } = useTranslation()
 
   return (
-    <div data-studio-v2="true" className="min-h-dvh bg-[#d9dbd6] text-foreground">
+    <div data-studio="true" className="min-h-dvh bg-background text-foreground">
       <header className="flex h-12 items-center bg-[#242724] px-[18px] text-[#f6f7f3]">
         <div className="flex items-baseline gap-1.5">
           <span className="text-[10px] font-semibold">BEAT VIDEO</span>
@@ -36,9 +36,7 @@ export function WorkspaceGateSplash({ status, error, onPickFolder, onReconnect }
             ) : (
               <FolderOpen className="h-4 w-4" aria-hidden="true" />
             )}
-            <span className="text-[9px] font-semibold uppercase tracking-[0.12em]">
-              Workspace
-            </span>
+            <span className="text-[9px] font-semibold uppercase tracking-[0.12em]">Workspace</span>
           </div>
 
           {status.kind === 'initializing' ? (
@@ -83,7 +81,7 @@ export function WorkspaceGateSplash({ status, error, onPickFolder, onReconnect }
         </div>
 
         {error ? (
-          <div className="mt-5 flex gap-2 border-l-2 border-destructive bg-[#e8e9e5] px-3 py-3 text-[10px] leading-4 text-destructive">
+          <div className="mt-5 flex gap-2 border-l-2 border-destructive bg-panel-bg px-3 py-3 text-[10px] leading-4 text-destructive">
             <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden="true" />
             <span>{error}</span>
           </div>
@@ -92,7 +90,11 @@ export function WorkspaceGateSplash({ status, error, onPickFolder, onReconnect }
         {status.kind !== 'initializing' ? (
           <div className="flex flex-col gap-2 border-b border-border py-6 sm:flex-row">
             {status.kind === 'pick' ? (
-              <button type="button" className="studio-primary-action h-10 px-4" onClick={onPickFolder}>
+              <button
+                type="button"
+                className="studio-primary-action h-10 px-4"
+                onClick={onPickFolder}
+              >
                 <FolderOpen className="h-3.5 w-3.5" />
                 {t('projects.workspaceGate.chooseFolder')}
               </button>

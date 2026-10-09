@@ -570,6 +570,39 @@ describe('TimelineContent playback selection behavior', () => {
     animationFrameSpy.mockRestore()
   })
 
+  it('scrolls producer tracks with the wheel and pans time with Shift, without mixing axes', () => {
+    const frames: FrameRequestCallback[] = []
+    const raf = vi.spyOn(window, 'requestAnimationFrame').mockImplementation((callback) => {
+      frames.push(callback)
+      return frames.length
+    })
+    const tracksRef = createRef<HTMLDivElement>()
+    const { container, unmount } = render(
+      <TimelineContent
+        duration={100}
+        tracks={[VIDEO_TRACK]}
+        unifiedTrackStack
+        allTracksScrollRef={tracksRef}
+        videoPaneHeight={100}
+      />,
+    )
+    const timeScroller = container.querySelector<HTMLDivElement>(
+      '[data-timeline-scroll-container]',
+    )!
+    const trackScroller = tracksRef.current!
+    fireEvent.wheel(trackScroller, { deltaY: 120 })
+    act(() => frames.shift()?.(performance.now()))
+    expect(trackScroller.scrollTop).toBeGreaterThan(0)
+    expect(timeScroller.scrollLeft).toBe(0)
+    const verticalPosition = trackScroller.scrollTop
+    fireEvent.wheel(trackScroller, { deltaY: 120, shiftKey: true })
+    act(() => frames.shift()?.(performance.now()))
+    expect(timeScroller.scrollLeft).toBeGreaterThan(0)
+    expect(trackScroller.scrollTop).toBe(verticalPosition)
+    unmount()
+    raf.mockRestore()
+  })
+
   it('preserves the mouse pivot when wheel-zooming immediately after zoom to fit', () => {
     let zoomToFit: (() => void) | undefined
     const frameCallbacks: FrameRequestCallback[] = []

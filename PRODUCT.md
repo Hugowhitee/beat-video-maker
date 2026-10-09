@@ -18,7 +18,7 @@ The app is project-first globally and **beat-first inside a project**.
 2. **New project** — keep setup minimal: name, Photo/Video type and only output settings that must be known up front. Photo/Video is project configuration: change it from project settings when needed, not from a persistent editor-toolbar toggle.
 3. **Beat** — import/select the beat, enter a known BPM or analyze it, verify the musical grid and place producer tags/watermarks.
 4. **Visual** — add the hero cover or footage. Photo sources can fill the beat automatically; video sources may be analyzed on import, Auto Arranged against the verified grid, looped to the beat or dragged manually onto the normal timeline. Text, overlays, motion/camera movement and one canonical effects inspector live with the visual work instead of being split across unrelated product pages.
-5. **Color** — focused grading/correction with **Full video** as the default Beatvideo scope. The full-video grade is one real adjustment layer over the composed visual program, automatically kept at the full program duration; **Selected clip** remains an explicit local correction mode. Color stays separate because grading is a distinct finishing task; motion does not get a separate top-level Beatvideo page.
+5. **Nodes** — node-based grading and visual effects, with **Full video** as the default Beatvideo scope. The full-video grade is one real adjustment layer over the composed visual program, automatically kept at the full program duration; **Selected clip** remains an explicit local correction mode. This finishing workspace keeps the existing internal `color` identity for project and layout compatibility; motion does not get a separate top-level Beatvideo page.
 6. **Master** — finish the stereo beat through the project master rack plus the existing real track mixer. Dedicated Beat, Producer tags and Watermarks tracks automatically become mixer channels; preview and export use the same processing model.
 7. **Publish** — render locally, review publication metadata and optionally continue to YouTube.
 
@@ -30,10 +30,10 @@ Photo mode is the fastest path for a beat visual:
 
 - still image is the hero;
 - beat audio drives the musical grid;
-- Beat, Visual, Color and Master are the primary workflow pages;
+- Beat, Visual, Nodes and Master are the primary workflow pages;
 - Visual begins with an explicit **Visual source** action: add/replace the hero still in Photo, or add footage in Video; imported footage may be prepared for scene-aware Auto Arrange immediately;
 - Visual uses one visible task column with local **Add / Edit** modes: Add contains Media, Overlays, Effects and Transitions, with less-used tools under More; Edit contains the selected layer's transform, motion, effects and audio-reactive parameters. Do not promote Edit/Inspector to a second global workspace or toolbar destination;
-- Color remains a focused grading workspace; motion/composition internals remain available through Advanced editing when needed but are not a normal top-level Beatvideo navigation step;
+- Nodes exposes focused grading and applied effects; motion/composition internals remain available through Advanced editing when needed but are not a normal top-level Beatvideo navigation step;
 - generic video-only controls stay out of the normal path.
 
 Overlay means real timeline/compositor layers built from canonical editor primitives: text, imported logo/image and simple shapes. It is not a renamed preset/look menu.

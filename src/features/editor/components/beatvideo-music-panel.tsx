@@ -1,10 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import {
-  CheckCircle2,
-  Crosshair,
-  Focus,
-  Undo2,
-} from 'lucide-react'
+import { CheckCircle2, Crosshair, Focus, Undo2 } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { BeatvideoFileMetadata } from './beatvideo-file-metadata'
@@ -19,10 +14,7 @@ import {
   timelineFrameToSourceSeconds,
   type MusicAnalysisProgress,
 } from '@/features/editor/deps/beatvideo-music'
-import {
-  resolveMediaUrl,
-  useMediaLibraryStore,
-} from '@/features/editor/deps/media-library'
+import { resolveMediaUrl, useMediaLibraryStore } from '@/features/editor/deps/media-library'
 import { updateStoredProject, useProjectStore } from '@/features/editor/deps/projects'
 import {
   captureSnapshot,
@@ -42,10 +34,7 @@ import {
 import { usePlaybackStore } from '@/shared/state/playback'
 import { useSelectionStore } from '@/shared/state/selection'
 import { useEditorStore } from '@/shared/state/editor'
-import {
-  DEFAULT_PROJECT_HEIGHT,
-  DEFAULT_PROJECT_WIDTH,
-} from '@/shared/projects/defaults'
+import { DEFAULT_PROJECT_HEIGHT, DEFAULT_PROJECT_WIDTH } from '@/shared/projects/defaults'
 import { resolveProducerTagRepeatFrames } from '../utils/producer-tag'
 import {
   resolveBeatGridFocusZoomLevel,
@@ -99,9 +88,7 @@ function sourceDeltaForTimelineNudge(
   return timelineDeltaSeconds * speed * (placement.isReversed ? -1 : 1)
 }
 
-function correctionOrderAnchors(
-  analysis: BeatvideoMusicAnalysis,
-): BeatvideoGridCorrectionAnchor[] {
+function correctionOrderAnchors(analysis: BeatvideoMusicAnalysis): BeatvideoGridCorrectionAnchor[] {
   const anchors = [...(analysis.correctionAnchors ?? [])]
   if (
     analysis.detectedBarOneTime !== null &&
@@ -140,10 +127,7 @@ export function BeatvideoMusicPanel() {
   const toggleBeatGridVisible = useTimelineSettingsStore((state) => state.toggleBeatGridVisible)
   const analysis = currentProject?.beatvideoMusic
   const candidates = useMemo(
-    () =>
-      mediaItems.filter((media) =>
-        sourceSupportsBeatAnalysis(media.mimeType),
-      ),
+    () => mediaItems.filter((media) => sourceSupportsBeatAnalysis(media.mimeType)),
     [mediaItems],
   )
 
@@ -167,13 +151,9 @@ export function BeatvideoMusicPanel() {
   const abortRef = useRef<AbortController | null>(null)
   const pendingAutoAnalyzeMediaIdRef = useRef<string | null>(null)
 
-  const selectedAnalysis =
-    analysis?.mediaId === selectedMediaId ? analysis : null
+  const selectedAnalysis = analysis?.mediaId === selectedMediaId ? analysis : null
   const timelineGrid = useMemo(
-    () =>
-      selectedAnalysis
-        ? resolveBeatvideoTimelineGrid(selectedAnalysis, items, fps)
-        : null,
+    () => (selectedAnalysis ? resolveBeatvideoTimelineGrid(selectedAnalysis, items, fps) : null),
     [fps, items, selectedAnalysis],
   )
   const playheadBeatOffsetMs = useMemo(
@@ -189,12 +169,8 @@ export function BeatvideoMusicPanel() {
   }, [playheadBeatOffsetMs, selectedMediaId])
 
   const effectiveAnalysis = timelineGrid?.analysis ?? selectedAnalysis
-  const resolvedSourceGrid = effectiveAnalysis
-    ? resolveBeatvideoMusicGrid(effectiveAnalysis)
-    : null
-  const gridMode = effectiveAnalysis
-    ? getBeatvideoGridMode(effectiveAnalysis)
-    : 'detected'
+  const resolvedSourceGrid = effectiveAnalysis ? resolveBeatvideoMusicGrid(effectiveAnalysis) : null
+  const gridMode = effectiveAnalysis ? getBeatvideoGridMode(effectiveAnalysis) : 'detected'
   const gridReviewState = effectiveAnalysis
     ? resolveBeatGridReviewState(effectiveAnalysis)
     : 'hidden'
@@ -205,8 +181,7 @@ export function BeatvideoMusicPanel() {
     if (gridReviewState === 'recommended') setPrecisionAlignOpen(true)
   }, [effectiveAnalysis?.analyzedAt, gridReviewState])
 
-  const barCount =
-    resolvedSourceGrid?.beats.filter((beat) => beat.downbeat).length ?? 0
+  const barCount = resolvedSourceGrid?.beats.filter((beat) => beat.downbeat).length ?? 0
   const tagCandidates = useMemo(
     () =>
       mediaItems.filter(
@@ -243,8 +218,7 @@ export function BeatvideoMusicPanel() {
     }
   }, [selectedTagMediaId, selectedWatermarkMediaId, tagCandidates])
 
-  const activeTagMediaId =
-    tagTool === 'producer' ? selectedTagMediaId : selectedWatermarkMediaId
+  const activeTagMediaId = tagTool === 'producer' ? selectedTagMediaId : selectedWatermarkMediaId
 
   useEffect(() => {
     setTagTrimStartSeconds('0')
@@ -253,10 +227,7 @@ export function BeatvideoMusicPanel() {
   }, [activeTagMediaId, tagTool])
 
   useEffect(() => {
-    const bpm =
-      effectiveAnalysis?.bpmOverride ??
-      effectiveAnalysis?.musicMap.bpm ??
-      null
+    const bpm = effectiveAnalysis?.bpmOverride ?? effectiveAnalysis?.musicMap.bpm ?? null
     setBpmDraft(bpm ? bpm.toFixed(2).replace(/\.00$/, '') : '')
   }, [effectiveAnalysis])
 
@@ -274,9 +245,7 @@ export function BeatvideoMusicPanel() {
       // owns the reusable source-domain analysis. Cache failure must not make an
       // otherwise valid project correction fail.
       try {
-        await useMediaLibraryStore
-          .getState()
-          .updateBeatvideoMusicAnalysis(next.mediaId, next)
+        await useMediaLibraryStore.getState().updateBeatvideoMusicAnalysis(next.mediaId, next)
       } catch {
         // Best-effort cache: project persistence above remains canonical for the
         // currently open edit and will retry on the next committed correction.
@@ -308,7 +277,6 @@ export function BeatvideoMusicPanel() {
     }
   }, [analysis?.mediaId, currentProject, selectedMedia])
 
-
   const ensureTagTrack = useCallback((kind: 'producer' | 'watermark') => {
     const timeline = useTimelineStore.getState()
     const trackName = kind === 'producer' ? 'Producer tags' : 'Watermarks'
@@ -318,10 +286,7 @@ export function BeatvideoMusicPanel() {
     if (existing) return existing
 
     const before = captureSnapshot()
-    const maxOrder = timeline.tracks.reduce(
-      (max, track) => Math.max(max, track.order ?? 0),
-      0,
-    )
+    const maxOrder = timeline.tracks.reduce((max, track) => Math.max(max, track.order ?? 0), 0)
     const track = {
       ...createClassicTrack({
         tracks: timeline.tracks,
@@ -333,10 +298,9 @@ export function BeatvideoMusicPanel() {
     }
     timeline.setTracks([...timeline.tracks, track])
     timeline.markDirty()
-    useTimelineCommandStore.getState().addUndoEntry(
-      { type: 'CREATE_TAG_TRACK', payload: { kind } },
-      before,
-    )
+    useTimelineCommandStore
+      .getState()
+      .addUndoEntry({ type: 'CREATE_TAG_TRACK', payload: { kind } }, before)
     return track
   }, [])
 
@@ -346,9 +310,7 @@ export function BeatvideoMusicPanel() {
     try {
       const imported = await useMediaLibraryStore.getState().importMedia()
       if (imported.length === 0) return
-      const beat = imported.find((media) =>
-        sourceSupportsBeatAnalysis(media.mimeType),
-      )
+      const beat = imported.find((media) => sourceSupportsBeatAnalysis(media.mimeType))
       if (!beat) {
         toast.error('Choose an audio file for the project beat')
         return
@@ -382,7 +344,9 @@ export function BeatvideoMusicPanel() {
           (media) => media.mimeType.startsWith('audio/') && media.id !== selectedMediaId,
         )
         if (!tag) {
-          toast.error(`Choose a short audio file for the ${kind === 'producer' ? 'producer tag' : 'watermark'}`)
+          toast.error(
+            `Choose a short audio file for the ${kind === 'producer' ? 'producer tag' : 'watermark'}`,
+          )
           return
         }
 
@@ -397,9 +361,12 @@ export function BeatvideoMusicPanel() {
               : 'It will use the dedicated Watermarks track.',
         })
       } catch (error) {
-        toast.error(kind === 'producer' ? 'Could not import producer tag' : 'Could not import watermark', {
-          description: error instanceof Error ? error.message : String(error),
-        })
+        toast.error(
+          kind === 'producer' ? 'Could not import producer tag' : 'Could not import watermark',
+          {
+            description: error instanceof Error ? error.message : String(error),
+          },
+        )
       } finally {
         setImportingTag(false)
       }
@@ -424,9 +391,7 @@ export function BeatvideoMusicPanel() {
         ? timeline.items.filter((item) => item.trackId === existingBeatTrack.id)
         : []
       const matchingBeatTrackItem = beatTrackItems.find(
-        (item) =>
-          item.type === 'audio' &&
-          item.mediaId === media.id,
+        (item) => item.type === 'audio' && item.mediaId === media.id,
       )
 
       // A clean canonical Beat track is already exactly what this workflow needs.
@@ -438,39 +403,25 @@ export function BeatvideoMusicPanel() {
       // Beat track exists. Reuse that placement rather than creating duplicate audio.
       if (!existingBeatTrack) {
         const existingPlacement = timeline.items
-          .filter(
-            (item) =>
-              item.type === 'audio' &&
-              item.mediaId === media.id,
-          )
+          .filter((item) => item.type === 'audio' && item.mediaId === media.id)
           .sort((left, right) => right.durationInFrames - left.durationInFrames)[0]
         if (existingPlacement) return existingPlacement
       }
 
       const blobUrl = await resolveMediaUrl(media.id)
       if (!blobUrl) throw new Error('Could not load the selected beat')
-      const maxOrder = timeline.tracks.reduce(
-        (max, track) => Math.max(max, track.order ?? 0),
-        0,
-      )
-      const beatTrack =
-        existingBeatTrack ??
-        {
-          ...createClassicTrack({
-            tracks: timeline.tracks,
-            kind: 'audio',
-            order: maxOrder + 1,
-          }),
-          name: 'Beat',
-          color: '#38bdf8',
-        }
-      const nextTracks = existingBeatTrack
-        ? timeline.tracks
-        : [...timeline.tracks, beatTrack]
-      const durationInFrames = Math.max(
-        1,
-        Math.round(media.duration * timeline.fps),
-      )
+      const maxOrder = timeline.tracks.reduce((max, track) => Math.max(max, track.order ?? 0), 0)
+      const beatTrack = existingBeatTrack ?? {
+        ...createClassicTrack({
+          tracks: timeline.tracks,
+          kind: 'audio',
+          order: maxOrder + 1,
+        }),
+        name: 'Beat',
+        color: '#38bdf8',
+      }
+      const nextTracks = existingBeatTrack ? timeline.tracks : [...timeline.tracks, beatTrack]
+      const durationInFrames = Math.max(1, Math.round(media.duration * timeline.fps))
       const beatItems = buildDroppedMediaTimelineItems({
         media,
         mediaId: media.id,
@@ -499,33 +450,23 @@ export function BeatvideoMusicPanel() {
         addItemsOnNewTracks(beatItems, nextTracks)
       }
 
-      const placed = beatItems.find(
-        (item) => item.type === 'audio' && item.mediaId === media.id,
-      )
+      const placed = beatItems.find((item) => item.type === 'audio' && item.mediaId === media.id)
       if (!placed) throw new Error('Could not place the selected beat')
 
       useSelectionStore.getState().setActiveTrack(beatTrack.id)
       useSelectionStore.getState().selectItems([placed.id])
       return placed
     },
-    [
-      currentProject?.metadata.height,
-      currentProject?.metadata.width,
-      selectedMediaId,
-    ],
+    [currentProject?.metadata.height, currentProject?.metadata.width, selectedMediaId],
   )
 
   const beatPlacementReady = useMemo(() => {
     if (!analysis?.mediaId || analysis.mediaId !== selectedMediaId) return false
-    const beatTrackId = tracks.find(
-      (track) => track.kind === 'audio' && track.name === 'Beat',
-    )?.id
+    const beatTrackId = tracks.find((track) => track.kind === 'audio' && track.name === 'Beat')?.id
     if (!beatTrackId) return false
     return items.some(
       (item) =>
-        item.trackId === beatTrackId &&
-        item.type === 'audio' &&
-        item.mediaId === selectedMediaId,
+        item.trackId === beatTrackId && item.type === 'audio' && item.mediaId === selectedMediaId,
     )
   }, [analysis?.mediaId, items, selectedMediaId, tracks])
 
@@ -552,13 +493,7 @@ export function BeatvideoMusicPanel() {
     return () => {
       active = false
     }
-  }, [
-    analysis?.mediaId,
-    beatPlacementReady,
-    currentProject,
-    ensureBeatPlacement,
-    selectedMediaId,
-  ])
+  }, [analysis?.mediaId, beatPlacementReady, currentProject, ensureBeatPlacement, selectedMediaId])
 
   const analyze = useCallback(async () => {
     // React state may still read `analyzing=false` in another effect from the
@@ -610,22 +545,20 @@ export function BeatvideoMusicPanel() {
       if (refreshedGrid) {
         const reactiveUpdates = timeline.items.flatMap((item) =>
           item.audioReactive?.bindings.length
-            ? [{
-                itemId: item.id,
-                audioReactive: {
-                  ...item.audioReactive,
-                  beats: projectAudioReactiveBeatsToItem(
-                    refreshedGrid.grid,
-                    item,
-                    timeline.fps,
-                  ),
-                  transients: projectAudioReactiveTransientsToItem(
-                    refreshedGrid.grid,
-                    item,
-                    timeline.fps,
-                  ),
+            ? [
+                {
+                  itemId: item.id,
+                  audioReactive: {
+                    ...item.audioReactive,
+                    beats: projectAudioReactiveBeatsToItem(refreshedGrid.grid, item, timeline.fps),
+                    transients: projectAudioReactiveTransientsToItem(
+                      refreshedGrid.grid,
+                      item,
+                      timeline.fps,
+                    ),
+                  },
                 },
-              }]
+              ]
             : [],
         )
         timeline.setAudioReactiveStates(reactiveUpdates)
@@ -660,22 +593,11 @@ export function BeatvideoMusicPanel() {
       setAnalyzing(false)
       setProgress(null)
     }
-  }, [
-    analyzing,
-    currentProject,
-    ensureBeatPlacement,
-    persistAnalysis,
-    selectedMediaId,
-  ])
+  }, [analyzing, currentProject, ensureBeatPlacement, persistAnalysis, selectedMediaId])
 
   useEffect(() => {
     const pendingMediaId = pendingAutoAnalyzeMediaIdRef.current
-    if (
-      !pendingMediaId ||
-      analyzing ||
-      !currentProject ||
-      selectedMediaId !== pendingMediaId
-    ) {
+    if (!pendingMediaId || analyzing || !currentProject || selectedMediaId !== pendingMediaId) {
       return
     }
 
@@ -763,9 +685,9 @@ export function BeatvideoMusicPanel() {
       const anchorFrameOffset = Math.round(requestedAnchorSeconds * timeline.fps)
       const frames =
         kind === 'producer'
-          ? [
-              Math.round(usePlaybackStore.getState().currentFrame) - anchorFrameOffset,
-            ].filter((frame) => frame >= 0)
+          ? [Math.round(usePlaybackStore.getState().currentFrame) - anchorFrameOffset].filter(
+              (frame) => frame >= 0,
+            )
           : resolveProducerTagRepeatFrames({
               beats: timelineGrid!.grid.beats,
               fps: timeline.fps,
@@ -778,7 +700,11 @@ export function BeatvideoMusicPanel() {
             })
 
       if (frames.length === 0) {
-        toast.info(kind === 'producer' ? 'No producer-tag position available' : 'No watermark positions available')
+        toast.info(
+          kind === 'producer'
+            ? 'No producer-tag position available'
+            : 'No watermark positions available',
+        )
         return
       }
 
@@ -793,17 +719,15 @@ export function BeatvideoMusicPanel() {
         (max, track) => Math.max(max, track.order ?? 0),
         0,
       )
-      const targetTrack =
-        existingTrack ??
-        {
-          ...createClassicTrack({
-            tracks: currentTimeline.tracks,
-            kind: 'audio',
-            order: maxOrder + 1,
-          }),
-          name: trackName,
-          color: trackColor,
-        }
+      const targetTrack = existingTrack ?? {
+        ...createClassicTrack({
+          tracks: currentTimeline.tracks,
+          kind: 'audio',
+          order: maxOrder + 1,
+        }),
+        name: trackName,
+        color: trackColor,
+      }
       const nextTracks = existingTrack
         ? currentTimeline.tracks
         : [...currentTimeline.tracks, targetTrack]
@@ -890,11 +814,7 @@ export function BeatvideoMusicPanel() {
       toast.error('Move the playhead onto the beat source first')
       return null
     }
-    const sourceTime = timelineFrameToSourceSeconds(
-      timelineGrid.placement,
-      currentFrame,
-      fps,
-    )
+    const sourceTime = timelineFrameToSourceSeconds(timelineGrid.placement, currentFrame, fps)
     if (sourceTime === null) {
       toast.error('Could not map the playhead to the beat source')
       return null
@@ -957,15 +877,15 @@ export function BeatvideoMusicPanel() {
       return
     }
 
-    const nearest = timelineGrid.grid.beats.reduce<
-      (typeof timelineGrid.grid.beats)[number] | null
-    >((best, beat) => {
-      if (!best) return beat
-      return Math.abs(beat.time * fps - currentFrame) <
-        Math.abs(best.time * fps - currentFrame)
-        ? beat
-        : best
-    }, null)
+    const nearest = timelineGrid.grid.beats.reduce<(typeof timelineGrid.grid.beats)[number] | null>(
+      (best, beat) => {
+        if (!best) return beat
+        return Math.abs(beat.time * fps - currentFrame) < Math.abs(best.time * fps - currentFrame)
+          ? beat
+          : best
+      },
+      null,
+    )
     if (!nearest) return
     focusTimelineFrame(nearest.time * fps)
   }, [currentFrame, focusTimelineFrame, fps, timelineGrid])
@@ -974,8 +894,7 @@ export function BeatvideoMusicPanel() {
     async (mode: BeatvideoGridMode) => {
       if (!effectiveAnalysis) return
       if (mode === 'fixed') {
-        const detectedBpm =
-          effectiveAnalysis.bpmOverride ?? effectiveAnalysis.musicMap.bpm
+        const detectedBpm = effectiveAnalysis.bpmOverride ?? effectiveAnalysis.musicMap.bpm
         if (!detectedBpm || detectedBpm <= 0) {
           toast.error('Analyze a valid BPM before switching to Fixed BPM')
           return
@@ -1084,24 +1003,14 @@ export function BeatvideoMusicPanel() {
       const barOne = base.barOneTime ?? base.detectedBarOneTime
       if (barOne === null) return
 
-      const sourceDelta = sourceDeltaForTimelineNudge(
-        timelineGrid.placement,
-        timelineDeltaSeconds,
-      )
+      const sourceDelta = sourceDeltaForTimelineNudge(timelineGrid.placement, timelineDeltaSeconds)
       const nextBarOne = barOne + sourceDelta
       const nextAnchors = (base.correctionAnchors ?? []).map((anchor) => ({
         ...anchor,
         correctedTime: anchor.correctedTime + sourceDelta,
       }))
-      const allCorrectedTimes = [
-        nextBarOne,
-        ...nextAnchors.map((anchor) => anchor.correctedTime),
-      ]
-      if (
-        allCorrectedTimes.some(
-          (time) => time < 0 || time > base.musicMap.duration,
-        )
-      ) {
+      const allCorrectedTimes = [nextBarOne, ...nextAnchors.map((anchor) => anchor.correctedTime)]
+      if (allCorrectedTimes.some((time) => time < 0 || time > base.musicMap.duration)) {
         toast.error('Grid cannot be nudged past the source boundary')
         return
       }
@@ -1127,15 +1036,15 @@ export function BeatvideoMusicPanel() {
       return
     }
 
-    const nearest = timelineGrid.grid.beats.reduce<
-      (typeof timelineGrid.grid.beats)[number] | null
-    >((best, beat) => {
-      if (!best) return beat
-      return Math.abs(beat.time * fps - currentFrame) <
-        Math.abs(best.time * fps - currentFrame)
-        ? beat
-        : best
-    }, null)
+    const nearest = timelineGrid.grid.beats.reduce<(typeof timelineGrid.grid.beats)[number] | null>(
+      (best, beat) => {
+        if (!best) return beat
+        return Math.abs(beat.time * fps - currentFrame) < Math.abs(best.time * fps - currentFrame)
+          ? beat
+          : best
+      },
+      null,
+    )
     if (!nearest) {
       toast.error('No beat is visible at this timeline position')
       return
@@ -1165,21 +1074,12 @@ export function BeatvideoMusicPanel() {
     const visibleBeats = sourceGrid.beats
       .map((beat) => ({
         beat,
-        frame: sourceSecondsToTimelineFrame(
-          mapped.timelineGrid.placement,
-          beat.time,
-          fps,
-        ),
+        frame: sourceSecondsToTimelineFrame(mapped.timelineGrid.placement, beat.time, fps),
       }))
-      .filter(({ frame }) =>
-        frameInsidePlacement(frame, mapped.timelineGrid.placement),
-      )
-    const nearest = visibleBeats.reduce<
-      (typeof visibleBeats)[number] | null
-    >((best, candidate) => {
+      .filter(({ frame }) => frameInsidePlacement(frame, mapped.timelineGrid.placement))
+    const nearest = visibleBeats.reduce<(typeof visibleBeats)[number] | null>((best, candidate) => {
       if (!best) return candidate
-      return Math.abs(candidate.frame - currentFrame) <
-        Math.abs(best.frame - currentFrame)
+      return Math.abs(candidate.frame - currentFrame) < Math.abs(best.frame - currentFrame)
         ? candidate
         : best
     }, null)
@@ -1189,9 +1089,7 @@ export function BeatvideoMusicPanel() {
       return
     }
 
-    const originalBeat = base.musicMap.beats.find(
-      (beat) => beat.index === nearest.beat.index,
-    )
+    const originalBeat = base.musicMap.beats.find((beat) => beat.index === nearest.beat.index)
     if (!originalBeat) {
       toast.error('Could not resolve the original detected beat')
       return
@@ -1202,8 +1100,7 @@ export function BeatvideoMusicPanel() {
       Math.abs(originalBeat.time - base.detectedBarOneTime) <= ANCHOR_EPSILON
     ) {
       const anchors = (base.correctionAnchors ?? []).filter(
-        (anchor) =>
-          Math.abs(anchor.sourceTime - originalBeat.time) > ANCHOR_EPSILON,
+        (anchor) => Math.abs(anchor.sourceTime - originalBeat.time) > ANCHOR_EPSILON,
       )
       await persistAnalysis({
         ...base,
@@ -1220,12 +1117,9 @@ export function BeatvideoMusicPanel() {
     const previous = [...ordered]
       .reverse()
       .find((anchor) => anchor.sourceTime < originalBeat.time - ANCHOR_EPSILON)
-    const next = ordered.find(
-      (anchor) => anchor.sourceTime > originalBeat.time + ANCHOR_EPSILON,
-    )
+    const next = ordered.find((anchor) => anchor.sourceTime > originalBeat.time + ANCHOR_EPSILON)
     if (
-      (previous &&
-        mapped.sourceTime <= previous.correctedTime + ANCHOR_GAP_SECONDS) ||
+      (previous && mapped.sourceTime <= previous.correctedTime + ANCHOR_GAP_SECONDS) ||
       (next && mapped.sourceTime >= next.correctedTime - ANCHOR_GAP_SECONDS)
     ) {
       toast.error('This correction would cross a neighboring grid anchor')
@@ -1240,10 +1134,7 @@ export function BeatvideoMusicPanel() {
     await persistAnalysis({
       ...base,
       version: 2,
-      correctionAnchors: upsertCorrectionAnchor(
-        base.correctionAnchors ?? [],
-        anchor,
-      ),
+      correctionAnchors: upsertCorrectionAnchor(base.correctionAnchors ?? [], anchor),
     })
     toast.success('Beat anchor aligned to playhead')
   }, [currentFrame, fps, persistAnalysis, requirePlacementAtPlayhead])
@@ -1262,8 +1153,7 @@ export function BeatvideoMusicPanel() {
   const resetCorrections = useCallback(async () => {
     if (!effectiveAnalysis) return
     const hasDetectedTiming = effectiveAnalysis.musicMap.beats.length > 0
-    const fixedBpm =
-      effectiveAnalysis.bpmOverride ?? effectiveAnalysis.musicMap.bpm ?? null
+    const fixedBpm = effectiveAnalysis.bpmOverride ?? effectiveAnalysis.musicMap.bpm ?? null
     await persistAnalysis({
       ...effectiveAnalysis,
       version: 2,
@@ -1274,9 +1164,7 @@ export function BeatvideoMusicPanel() {
       correctionAnchors: [],
     })
     toast.success(
-      hasDetectedTiming
-        ? 'Beat grid reset to detected timing'
-        : 'Fixed BPM grid reset to bar 1',
+      hasDetectedTiming ? 'Beat grid reset to detected timing' : 'Fixed BPM grid reset to bar 1',
     )
   }, [effectiveAnalysis, persistAnalysis])
 
@@ -1284,9 +1172,12 @@ export function BeatvideoMusicPanel() {
     <div className="h-full overflow-y-auto p-5">
       <div className="space-y-5">
         <div className="border-b border-border pb-4">
-          <div className="text-[11px] font-semibold uppercase tracking-[0.08em] text-foreground">Beat</div>
+          <div className="text-[11px] font-semibold uppercase tracking-[0.08em] text-foreground">
+            Beat
+          </div>
           <p className="mt-2 text-[10px] leading-relaxed text-muted-foreground">
-            Choose the source once. Analysis starts automatically and drives the grid, snapping and reactive timing.
+            Choose the source once. Analysis starts automatically and drives the grid, snapping and
+            reactive timing.
           </p>
         </div>
 
@@ -1295,7 +1186,7 @@ export function BeatvideoMusicPanel() {
             Source
           </label>
           {candidates.length > 0 ? (
-            <div className="rounded-[3px] bg-[#d1d4ce] p-3">
+            <div className="rounded-[3px] bg-secondary p-3">
               <div className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3">
                 <div className="min-w-0">
                   <select
@@ -1328,7 +1219,7 @@ export function BeatvideoMusicPanel() {
               </div>
             </div>
           ) : (
-            <div className="rounded-[3px] bg-[#d1d4ce] p-3">
+            <div className="rounded-[3px] bg-secondary p-3">
               <p className="text-[10px] leading-relaxed text-muted-foreground">
                 Add the project beat. It will be placed on the Beat lane and analyzed automatically.
               </p>
@@ -1358,9 +1249,7 @@ export function BeatvideoMusicPanel() {
                   mimeType={selectedMedia.mimeType}
                   projectName={currentProject?.name ?? ''}
                   beatBpm={
-                    effectiveAnalysis?.bpmOverride ??
-                    effectiveAnalysis?.musicMap.bpm ??
-                    null
+                    effectiveAnalysis?.bpmOverride ?? effectiveAnalysis?.musicMap.bpm ?? null
                   }
                 />
               </div>
@@ -1370,7 +1259,11 @@ export function BeatvideoMusicPanel() {
           {(analyzing || !effectiveAnalysis || analysisUpdateAvailable) && selectedMediaId ? (
             <button
               type="button"
-              className={analyzing ? 'studio-secondary-action h-8 w-full' : 'studio-primary-action h-8 w-full'}
+              className={
+                analyzing
+                  ? 'studio-secondary-action h-8 w-full'
+                  : 'studio-primary-action h-8 w-full'
+              }
               onClick={() => {
                 if (analyzing) {
                   abortRef.current?.abort()
@@ -1389,7 +1282,7 @@ export function BeatvideoMusicPanel() {
 
           {selectedMedia && !effectiveAnalysis ? (
             <div
-              className="space-y-2 rounded-[3px] border border-border/70 bg-[#e8e9e5] p-3"
+              className="space-y-2 rounded-[3px] border border-border/70 bg-panel-bg p-3"
               data-testid="beat-fixed-bpm-setup"
             >
               <div className="flex items-center gap-1.5">
@@ -1419,7 +1312,8 @@ export function BeatvideoMusicPanel() {
                 </Button>
               </div>
               <p className="text-[10px] leading-relaxed text-muted-foreground">
-                Know the tempo already? Set a stable grid immediately; this cancels automatic analysis for this source.
+                Know the tempo already? Set a stable grid immediately; this cancels automatic
+                analysis for this source.
               </p>
             </div>
           ) : null}
@@ -1442,7 +1336,7 @@ export function BeatvideoMusicPanel() {
           ) : null}
 
           {!analyzing && effectiveAnalysis && resolvedSourceGrid ? (
-            <div className="rounded-[3px] bg-[#d9dbd6] p-3">
+            <div className="rounded-[3px] bg-background p-3">
               <div className="flex items-center justify-between gap-3">
                 <div className="min-w-0">
                   <div className="flex items-center gap-1.5 text-xs font-semibold text-foreground">
@@ -1559,8 +1453,7 @@ export function BeatvideoMusicPanel() {
                 Set Bar 1 at playhead
               </Button>
 
-              {gridMode === 'detected' &&
-              (effectiveAnalysis.correctionAnchors?.length ?? 0) > 0 ? (
+              {gridMode === 'detected' && (effectiveAnalysis.correctionAnchors?.length ?? 0) > 0 ? (
                 <Button
                   type="button"
                   size="sm"
@@ -1579,8 +1472,8 @@ export function BeatvideoMusicPanel() {
                 </summary>
                 <div className="mt-2 space-y-2">
                   <p className="text-[10px] leading-relaxed text-muted-foreground">
-                    Advanced: this moves every beat and every existing correction anchor. Use a local
-                    beat anchor above unless the complete grid has the same offset.
+                    Advanced: this moves every beat and every existing correction anchor. Use a
+                    local beat anchor above unless the complete grid has the same offset.
                   </p>
                   {!wholeGridShiftArmed ? (
                     <Button
@@ -1602,7 +1495,8 @@ export function BeatvideoMusicPanel() {
                   ) : (
                     <div className="border-l-2 border-amber-500/60 pl-2">
                       <p className="font-mono text-[10px] text-foreground">
-                        Entire grid: {playheadBeatOffsetMs !== null && playheadBeatOffsetMs >= 0 ? '+' : ''}
+                        Entire grid:{' '}
+                        {playheadBeatOffsetMs !== null && playheadBeatOffsetMs >= 0 ? '+' : ''}
                         {playheadBeatOffsetMs?.toFixed(1) ?? '—'} ms
                       </p>
                       <div className="mt-2 flex gap-1.5">
@@ -1705,206 +1599,205 @@ export function BeatvideoMusicPanel() {
             <span className="text-[10px] font-normal text-muted-foreground">Optional</span>
           </summary>
           <div className="mt-3 space-y-3">
-          <div className="grid grid-cols-2 gap-1.5">
-            <button
-              type="button"
-              aria-pressed={tagTool === 'producer'}
-              onClick={() => setTagTool('producer')}
-              className={`min-h-12 rounded-md border px-2.5 py-2 text-left transition-colors ${
-                tagTool === 'producer'
-                  ? 'border-primary/60 bg-primary/10 text-foreground'
-                  : 'border-border bg-secondary/25 text-muted-foreground hover:border-foreground/25 hover:bg-secondary/50 hover:text-foreground'
-              }`}
-            >
-              <span className="block text-[11px] font-semibold">Producer tag</span>
-              <span className="mt-0.5 block text-[10px] leading-tight opacity-75">
-                Place once at playhead
-              </span>
-            </button>
-            <button
-              type="button"
-              aria-pressed={tagTool === 'watermark'}
-              onClick={() => setTagTool('watermark')}
-              className={`min-h-12 rounded-md border px-2.5 py-2 text-left transition-colors ${
-                tagTool === 'watermark'
-                  ? 'border-primary/60 bg-primary/10 text-foreground'
-                  : 'border-border bg-secondary/25 text-muted-foreground hover:border-foreground/25 hover:bg-secondary/50 hover:text-foreground'
-              }`}
-            >
-              <span className="block text-[11px] font-semibold">Watermark</span>
-              <span className="mt-0.5 block text-[10px] leading-tight opacity-75">
-                Repeat across bars
-              </span>
-            </button>
-          </div>
+            <div className="grid grid-cols-2 gap-1.5">
+              <button
+                type="button"
+                aria-pressed={tagTool === 'producer'}
+                onClick={() => setTagTool('producer')}
+                className={`min-h-12 rounded-md border px-2.5 py-2 text-left transition-colors ${
+                  tagTool === 'producer'
+                    ? 'border-primary/60 bg-primary/10 text-foreground'
+                    : 'border-border bg-secondary/25 text-muted-foreground hover:border-foreground/25 hover:bg-secondary/50 hover:text-foreground'
+                }`}
+              >
+                <span className="block text-[11px] font-semibold">Producer tag</span>
+                <span className="mt-0.5 block text-[10px] leading-tight opacity-75">
+                  Place once at playhead
+                </span>
+              </button>
+              <button
+                type="button"
+                aria-pressed={tagTool === 'watermark'}
+                onClick={() => setTagTool('watermark')}
+                className={`min-h-12 rounded-md border px-2.5 py-2 text-left transition-colors ${
+                  tagTool === 'watermark'
+                    ? 'border-primary/60 bg-primary/10 text-foreground'
+                    : 'border-border bg-secondary/25 text-muted-foreground hover:border-foreground/25 hover:bg-secondary/50 hover:text-foreground'
+                }`}
+              >
+                <span className="block text-[11px] font-semibold">Watermark</span>
+                <span className="mt-0.5 block text-[10px] leading-tight opacity-75">
+                  Repeat across bars
+                </span>
+              </button>
+            </div>
 
-          <div className="space-y-2">
+            <div className="space-y-2">
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                className="w-full"
+                disabled={importingTag}
+                onClick={() => void importTagAudio(tagTool)}
+              >
+                {importingTag
+                  ? 'Importing…'
+                  : tagTool === 'producer'
+                    ? 'Import producer tag'
+                    : 'Import watermark'}
+              </Button>
 
-            <Button
-              type="button"
-              size="sm"
-              variant="outline"
-              className="w-full"
-              disabled={importingTag}
-              onClick={() => void importTagAudio(tagTool)}
-            >
-              {importingTag
-                ? 'Importing…'
-                : tagTool === 'producer'
-                  ? 'Import producer tag'
-                  : 'Import watermark'}
-            </Button>
+              <p className="text-[10px] leading-relaxed text-muted-foreground">
+                {tagTool === 'producer'
+                  ? 'One-shot producer tags go on their own Producer tags track.'
+                  : 'Repeated protection tags use a separate Watermarks track and never replace the producer tag.'}
+              </p>
 
-            <p className="text-[10px] leading-relaxed text-muted-foreground">
-              {tagTool === 'producer'
-                ? 'One-shot producer tags go on their own Producer tags track.'
-                : 'Repeated protection tags use a separate Watermarks track and never replace the producer tag.'}
-            </p>
-
-            {tagCandidates.length > 0 ? (
-              <>
-                <select
-                  value={activeTagMediaId}
-                  onChange={(event) => {
-                    if (tagTool === 'producer') setSelectedTagMediaId(event.target.value)
-                    else setSelectedWatermarkMediaId(event.target.value)
-                  }}
-                  className="h-8 w-full rounded-md border border-input bg-secondary px-2 text-xs text-foreground"
-                >
-                  <option value="">
-                    {tagTool === 'producer' ? 'Choose producer tag…' : 'Choose watermark…'}
-                  </option>
-                  {tagCandidates.map((media) => (
-                    <option key={media.id} value={media.id}>
-                      {media.fileName}
-                    </option>
-                  ))}
-                </select>
-
-                {tagTool === 'producer' ? (
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="outline"
-                    className="w-full"
-                    disabled={!selectedTagMediaId}
-                    onClick={() => void insertTagAudio('producer')}
+              {tagCandidates.length > 0 ? (
+                <>
+                  <select
+                    value={activeTagMediaId}
+                    onChange={(event) => {
+                      if (tagTool === 'producer') setSelectedTagMediaId(event.target.value)
+                      else setSelectedWatermarkMediaId(event.target.value)
+                    }}
+                    className="h-8 w-full rounded-md border border-input bg-secondary px-2 text-xs text-foreground"
                   >
-                    Place at playhead
-                  </Button>
-                ) : (
-                  <>
-                    <div className="grid grid-cols-2 gap-1.5">
-                      <label className="space-y-1 text-[10px] text-muted-foreground">
-                        <span>Start bar</span>
-                        <input
-                          type="number"
-                          min={1}
-                          step={1}
-                          value={tagFirstBar}
-                          onChange={(event) =>
-                            setTagFirstBar(Math.max(1, Number(event.target.value) || 1))
-                          }
-                          className="h-8 w-full rounded-md border border-input bg-secondary px-2 font-mono text-xs text-foreground"
-                        />
-                      </label>
-                      <label className="space-y-1 text-[10px] text-muted-foreground">
-                        <span>Every bars</span>
-                        <input
-                          type="number"
-                          min={1}
-                          step={1}
-                          list="watermark-repeat-presets"
-                          value={tagRepeatBars}
-                          onChange={(event) =>
-                            setTagRepeatBars(Math.max(1, Number(event.target.value) || 1))
-                          }
-                          className="h-8 w-full rounded-md border border-input bg-secondary px-2 font-mono text-xs text-foreground"
-                          aria-label="Watermark repeat interval"
-                        />
-                        <datalist id="watermark-repeat-presets">
-                          <option value="8" />
-                          <option value="16" />
-                          <option value="32" />
-                          <option value="64" />
-                        </datalist>
-                      </label>
-                    </div>
+                    <option value="">
+                      {tagTool === 'producer' ? 'Choose producer tag…' : 'Choose watermark…'}
+                    </option>
+                    {tagCandidates.map((media) => (
+                      <option key={media.id} value={media.id}>
+                        {media.fileName}
+                      </option>
+                    ))}
+                  </select>
+
+                  {tagTool === 'producer' ? (
                     <Button
                       type="button"
                       size="sm"
                       variant="outline"
                       className="w-full"
-                      disabled={!timelineGrid || !selectedWatermarkMediaId}
-                      onClick={() => void insertTagAudio('watermark')}
+                      disabled={!selectedTagMediaId}
+                      onClick={() => void insertTagAudio('producer')}
                     >
-                      Apply watermark pattern
+                      Place at playhead
                     </Button>
-                  </>
-                )}
-
-                <details className="border-t border-border pt-2">
-                  <summary className="cursor-pointer list-none text-[10px] font-medium text-foreground marker:hidden [&::-webkit-details-marker]:hidden">
-                    More timing options
-                  </summary>
-                  <div className="mt-2 grid grid-cols-2 gap-1.5">
-                    <label className="space-y-1 text-[10px] text-muted-foreground">
-                      <span>Trim start</span>
-                      <input
-                        type="number"
-                        min={0}
-                        step={0.01}
-                        value={tagTrimStartSeconds}
-                        onChange={(event) => setTagTrimStartSeconds(event.target.value)}
-                        className="h-8 w-full rounded-md border border-input bg-secondary px-2 font-mono text-xs text-foreground"
-                      />
-                    </label>
-                    <label className="space-y-1 text-[10px] text-muted-foreground">
-                      <span>Trim end</span>
-                      <input
-                        type="number"
-                        min={0}
-                        step={0.01}
-                        placeholder="Full"
-                        value={tagTrimEndSeconds}
-                        onChange={(event) => setTagTrimEndSeconds(event.target.value)}
-                        className="h-8 w-full rounded-md border border-input bg-secondary px-2 font-mono text-xs text-foreground"
-                      />
-                    </label>
-                    <label className="space-y-1 text-[10px] text-muted-foreground">
-                      <span>Tag hit (s)</span>
-                      <input
-                        type="number"
-                        min={0}
-                        step={0.01}
-                        value={tagAnchorSeconds}
-                        onChange={(event) => setTagAnchorSeconds(event.target.value)}
-                        className="h-8 w-full rounded-md border border-input bg-secondary px-2 font-mono text-xs text-foreground"
-                      />
-                    </label>
-                    <label className="space-y-1 text-[10px] text-muted-foreground">
-                      <span>Duck beat</span>
-                      <select
-                        value={tagDuckDb}
-                        onChange={(event) => setTagDuckDb(Number(event.target.value))}
-                        className="h-8 w-full rounded-md border border-input bg-secondary px-2 text-xs text-foreground"
+                  ) : (
+                    <>
+                      <div className="grid grid-cols-2 gap-1.5">
+                        <label className="space-y-1 text-[10px] text-muted-foreground">
+                          <span>Start bar</span>
+                          <input
+                            type="number"
+                            min={1}
+                            step={1}
+                            value={tagFirstBar}
+                            onChange={(event) =>
+                              setTagFirstBar(Math.max(1, Number(event.target.value) || 1))
+                            }
+                            className="h-8 w-full rounded-md border border-input bg-secondary px-2 font-mono text-xs text-foreground"
+                          />
+                        </label>
+                        <label className="space-y-1 text-[10px] text-muted-foreground">
+                          <span>Every bars</span>
+                          <input
+                            type="number"
+                            min={1}
+                            step={1}
+                            list="watermark-repeat-presets"
+                            value={tagRepeatBars}
+                            onChange={(event) =>
+                              setTagRepeatBars(Math.max(1, Number(event.target.value) || 1))
+                            }
+                            className="h-8 w-full rounded-md border border-input bg-secondary px-2 font-mono text-xs text-foreground"
+                            aria-label="Watermark repeat interval"
+                          />
+                          <datalist id="watermark-repeat-presets">
+                            <option value="8" />
+                            <option value="16" />
+                            <option value="32" />
+                            <option value="64" />
+                          </datalist>
+                        </label>
+                      </div>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        className="w-full"
+                        disabled={!timelineGrid || !selectedWatermarkMediaId}
+                        onClick={() => void insertTagAudio('watermark')}
                       >
-                        <option value={0}>Off</option>
-                        <option value={-2}>−2 dB</option>
-                        <option value={-3}>−3 dB</option>
-                        <option value={-4}>−4 dB</option>
-                        <option value={-6}>−6 dB</option>
-                      </select>
-                    </label>
-                  </div>
-                </details>
-              </>
-            ) : (
-              <div className="border-l-2 border-border pl-2 text-[10px] leading-relaxed text-muted-foreground">
-                Import a short audio file for the selected tag type.
-              </div>
-            )}
-          </div>
+                        Apply watermark pattern
+                      </Button>
+                    </>
+                  )}
+
+                  <details className="border-t border-border pt-2">
+                    <summary className="cursor-pointer list-none text-[10px] font-medium text-foreground marker:hidden [&::-webkit-details-marker]:hidden">
+                      More timing options
+                    </summary>
+                    <div className="mt-2 grid grid-cols-2 gap-1.5">
+                      <label className="space-y-1 text-[10px] text-muted-foreground">
+                        <span>Trim start</span>
+                        <input
+                          type="number"
+                          min={0}
+                          step={0.01}
+                          value={tagTrimStartSeconds}
+                          onChange={(event) => setTagTrimStartSeconds(event.target.value)}
+                          className="h-8 w-full rounded-md border border-input bg-secondary px-2 font-mono text-xs text-foreground"
+                        />
+                      </label>
+                      <label className="space-y-1 text-[10px] text-muted-foreground">
+                        <span>Trim end</span>
+                        <input
+                          type="number"
+                          min={0}
+                          step={0.01}
+                          placeholder="Full"
+                          value={tagTrimEndSeconds}
+                          onChange={(event) => setTagTrimEndSeconds(event.target.value)}
+                          className="h-8 w-full rounded-md border border-input bg-secondary px-2 font-mono text-xs text-foreground"
+                        />
+                      </label>
+                      <label className="space-y-1 text-[10px] text-muted-foreground">
+                        <span>Tag hit (s)</span>
+                        <input
+                          type="number"
+                          min={0}
+                          step={0.01}
+                          value={tagAnchorSeconds}
+                          onChange={(event) => setTagAnchorSeconds(event.target.value)}
+                          className="h-8 w-full rounded-md border border-input bg-secondary px-2 font-mono text-xs text-foreground"
+                        />
+                      </label>
+                      <label className="space-y-1 text-[10px] text-muted-foreground">
+                        <span>Duck beat</span>
+                        <select
+                          value={tagDuckDb}
+                          onChange={(event) => setTagDuckDb(Number(event.target.value))}
+                          className="h-8 w-full rounded-md border border-input bg-secondary px-2 text-xs text-foreground"
+                        >
+                          <option value={0}>Off</option>
+                          <option value={-2}>−2 dB</option>
+                          <option value={-3}>−3 dB</option>
+                          <option value={-4}>−4 dB</option>
+                          <option value={-6}>−6 dB</option>
+                        </select>
+                      </label>
+                    </div>
+                  </details>
+                </>
+              ) : (
+                <div className="border-l-2 border-border pl-2 text-[10px] leading-relaxed text-muted-foreground">
+                  Import a short audio file for the selected tag type.
+                </div>
+              )}
+            </div>
           </div>
         </details>
 

@@ -25,6 +25,19 @@ describe('track-heights', () => {
     expect(resolveTrackHeight('v1')).toBe(COMPACT_TRACK_HEIGHT)
   })
 
+  it('retains semantic waveform height while respecting explicit view preferences', () => {
+    expect(resolveTrackHeight('beat', 'audio')).toBe(74)
+    expect(resolveTrackHeight('tag', 'audio', 'Producer tags')).toBe(48)
+    expect(resolveTrackHeight('watermark', 'audio', 'Watermarks')).toBe(48)
+    setTrackHeightOverride('tag', 90)
+    expect(resolveTrackHeight('tag', 'audio', 'Producer tags')).toBe(90)
+    setTrackHeightOverride('beat', 90)
+    expect(resolveTrackHeight('beat', 'audio')).toBe(90)
+    clearTrackHeightOverride('beat')
+    useEditorStore.getState().setTrackSizePreset('compact')
+    expect(resolveTrackHeight('beat', 'audio')).toBe(COMPACT_TRACK_HEIGHT)
+  })
+
   it('clamps overrides into the supported range', () => {
     setTrackHeightOverride('v1', MAX_TRACK_HEIGHT + 500)
     expect(resolveTrackHeight('v1')).toBe(MAX_TRACK_HEIGHT)

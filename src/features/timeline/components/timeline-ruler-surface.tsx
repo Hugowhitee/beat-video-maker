@@ -1,9 +1,21 @@
-import { memo, useCallback, useEffect, useLayoutEffect, useRef, type RefObject } from 'react'
+import {
+  memo,
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  type RefObject,
+} from 'react'
 import { useZoomStore } from '../stores/zoom-store'
 import { TimelineMarkers } from './timeline-markers'
 import { BeatvideoGridOverlay } from './beatvideo-grid-overlay'
 import { applyTimelineLiveGeometry } from '../utils/timeline-live-geometry'
 import { EDITOR_LAYOUT_CSS_VALUES } from '@/config/editor-layout'
+import { useProjectStore } from '@/features/timeline/deps/projects'
+import { useItemsStore } from '../stores/items-store'
+import { useTimelineSettingsStore } from '../stores/timeline-settings-store'
+import { resolveBeatvideoTimelineGrid } from '../utils/beatvideo-timeline-grid'
 
 interface TimelineRulerSurfaceProps {
   duration: number
@@ -28,6 +40,18 @@ export const TimelineRulerSurface = memo(function TimelineRulerSurface({
   const localRulerRef = useRef<HTMLDivElement>(null)
   const rulerRef = coordinateSurfaceRef ?? localRulerRef
   const committedSurfaceRef = useRef<HTMLDivElement>(null)
+  const analysis = useProjectStore((state) => state.currentProject?.beatvideoMusic)
+  const items = useItemsStore((state) => state.items)
+  const fps = useTimelineSettingsStore((state) => state.fps)
+  const beatGridVisible = useTimelineSettingsStore((state) => state.beatGridVisible)
+  const alignedTimeRuler = useMemo(
+    () =>
+      musicalRuler &&
+      beatGridVisible &&
+      !!analysis &&
+      (resolveBeatvideoTimelineGrid(analysis, items, fps)?.grid.beats.length ?? 0) > 0,
+    [musicalRuler, beatGridVisible, analysis, items, fps],
+  )
 
   const applyRulerZoom = useCallback(() => {
     const outer = rulerRef.current
@@ -61,6 +85,7 @@ export const TimelineRulerSurface = memo(function TimelineRulerSurface({
     <div
       ref={rulerRef}
       className="relative z-30 shrink-0 timeline-ruler bg-background"
+      data-timeline-ruler={musicalRuler ? 'musical' : 'timecode'}
       style={{ width: `${initialWidth}px`, height: EDITOR_LAYOUT_CSS_VALUES.timelineRulerHeight }}
     >
       <div
@@ -74,9 +99,15 @@ export const TimelineRulerSurface = memo(function TimelineRulerSurface({
       >
         <TimelineMarkers
           duration={duration}
-          tone={musicalRuler ? 'light' : 'dark'}
+          tone="dark"
+          musicalRuler={musicalRuler}
+          hideTimecodeLabels={alignedTimeRuler}
         />
-        <BeatvideoGridOverlay duration={duration} variant="ruler" />
+        <BeatvideoGridOverlay
+          duration={duration}
+          variant="ruler"
+          alignedTimeRuler={alignedTimeRuler}
+        />
       </div>
     </div>
   )

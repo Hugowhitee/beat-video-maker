@@ -292,8 +292,8 @@ export const PreviewStage = memo(function PreviewStage({
   // Audio-only projects still need a visible editor canvas affordance. Do not
   // confuse a real black project background with an unmounted player.
   const hasVisualContent = inputProps.tracks.some((track) =>
-    track.items.some((item) =>
-      item.type !== 'audio' && item.type !== 'controller' && item.type !== 'adjustment',
+    track.items.some(
+      (item) => item.type !== 'audio' && item.type !== 'controller' && item.type !== 'adjustment',
     ),
   )
   const isSplitGradeComparison = colorGradeComparisonMode === 'split'
@@ -351,14 +351,16 @@ export const PreviewStage = memo(function PreviewStage({
   return (
     <div
       ref={backgroundRef}
-      className="relative h-full w-full bg-[#313630] [background-image:linear-gradient(to_right,rgba(255,255,255,0.035)_1px,transparent_1px),linear-gradient(to_bottom,rgba(255,255,255,0.035)_1px,transparent_1px)] [background-size:28px_28px]"
+      className="relative h-full w-full bg-program-surround"
       style={{ overflow: needsOverflow ? 'auto' : 'visible' }}
       onClick={onBackgroundClick}
       aria-label={t('preview.stage.videoPreview')}
     >
       <div
         className="min-w-full min-h-full grid place-items-center"
-        style={{ padding: `calc(${EDITOR_LAYOUT_CSS_VALUES.previewPadding} / 2)` }}
+        style={{
+          padding: `0 calc(${EDITOR_LAYOUT_CSS_VALUES.previewPadding} / 2) ${EDITOR_LAYOUT_CSS_VALUES.previewPadding}`,
+        }}
         onClick={onBackgroundClick}
       >
         <div
@@ -380,13 +382,11 @@ export const PreviewStage = memo(function PreviewStage({
             <div
               ref={setPixelSnappedPlayerContainerRef}
               data-player-container
-              className="relative shadow-[0_15px_50px_rgba(0,0,0,0.38)]"
+              className="relative"
               style={{
                 width: `${playerSize.width}px`,
                 height: `${playerSize.height}px`,
                 transition: 'none',
-                outline: '1px solid #818b7f',
-                outlineOffset: 0,
                 overflow: 'hidden',
                 contain: 'paint',
               }}
@@ -399,8 +399,8 @@ export const PreviewStage = memo(function PreviewStage({
               )}
 
               {!isResolving && !hasVisualContent && (
-                <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center bg-[#151916]/55 px-6 text-center">
-                  <div className="max-w-xs border border-white/15 bg-[#242a25]/90 px-5 py-4 text-white shadow-lg">
+                <div className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center bg-background/55 px-6 text-center">
+                  <div className="max-w-xs border border-border bg-panel-bg/90 px-5 py-4 text-foreground shadow-lg">
                     <p className="text-xs font-semibold">No visual layers</p>
                     <p className="mt-1 text-[11px] leading-4 text-white/65">
                       Add a cover, video or text in Visual. The preview updates here.

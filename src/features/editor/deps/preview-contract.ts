@@ -18,6 +18,14 @@ export const importColorScopesMonitor = () =>
   import('@/features/preview/components/color-scopes-monitor')
 
 export { useGizmoStore } from '@/features/preview/stores/gizmo-store'
+export {
+  buildGizmoTransformCommit,
+  buildGizmoAnchorCommit,
+} from '@/features/preview/utils/gizmo-transform-commit'
+export {
+  buildGroupScaledTextProperties,
+  buildGroupTextScaleCommit,
+} from '@/features/preview/utils/group-text-scale'
 export type { ItemPreview, ItemPropertiesPreview } from '@/features/preview/stores/gizmo-store'
 export { useMaskEditorStore } from '@/features/preview/stores/mask-editor-store'
 export { useCornerPinStore } from '@/features/preview/stores/corner-pin-store'

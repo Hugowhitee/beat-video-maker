@@ -1,6 +1,6 @@
 /**
  * Fired synchronously after the editor's RAF-driven timeline scroller changes
- * scrollLeft. Native `scroll` can arrive a paint later, which is too late for
+ * either scroll axis. Native `scroll` can arrive a paint later, too late for
  * overlays in a separate panel that must visually share the same axis.
  */
 export const TIMELINE_LIVE_SCROLL_EVENT = 'beatvideo:timeline-live-scroll'

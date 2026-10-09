@@ -29,6 +29,7 @@ import { PropertySection, PropertyRow, NumberInput, SliderInput } from '../compo
 import { applyAutoKeyframedTransformChange } from './auto-keyframe-transform'
 
 interface FillSectionProps {
+  compact?: boolean
   items: TimelineItem[]
   canvas: CanvasSettings
   onTransformChange: (ids: string[], updates: Partial<TransformProperties>) => void
@@ -41,6 +42,7 @@ type MixedValue = number | 'mixed'
  * Memoized to prevent re-renders when props haven't changed.
  */
 export const FillSection = memo(function FillSection({
+  compact = false,
   items,
   canvas,
   onTransformChange,
@@ -245,7 +247,7 @@ export const FillSection = memo(function FillSection({
     }
   }, [items, itemIds, onTransformChange, canvas])
 
-  return (
+  const fullControls = (
     <PropertySection title={t('editor.fillSection.composite')} icon={Droplet} defaultOpen={true}>
       {/* Opacity */}
       <PropertyRow label={t('editor.fillSection.opacity')}>
@@ -340,5 +342,17 @@ export const FillSection = memo(function FillSection({
         </div>
       </PropertyRow>
     </PropertySection>
+  )
+  if (!compact) return fullControls
+  return (
+    <SliderInput
+      label="Opacity"
+      value={opacity}
+      min={0}
+      max={100}
+      unit="%"
+      onChange={handleOpacityChange}
+      onLiveChange={handleOpacityLiveChange}
+    />
   )
 })

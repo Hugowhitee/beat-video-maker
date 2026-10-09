@@ -24,8 +24,10 @@ import {
 } from '@/features/editor/deps/keyframes'
 import { PropertySection, PropertyRow, NumberInput, SliderInput } from '../components'
 import { applyAutoKeyframedTransformChange } from './auto-keyframe-transform'
+import { buildUniformScalePlan, getUniformScaleValue } from './uniform-scale'
 
 interface LayoutSectionProps {
+  compact?: boolean
   items: TimelineItem[]
   mediaTransformItems?: Array<VideoItem | CompositionItem>
   canvas: CanvasSettings
@@ -63,6 +65,7 @@ function useStableItemIds(items: readonly TimelineItem[]): string[] {
 }
 
 interface PositionAxisControlProps {
+  compact?: boolean
   axis: PositionAxis
   itemIds: string[]
   canvas: CanvasSettings
@@ -105,12 +108,11 @@ function resolveMixedPositionValue({
   if (values.length === 0) return 0
 
   const firstValue = values[0]!
-  return values.every((value) => Math.abs(value - firstValue) < 0.1)
-    ? firstValue
-    : 'mixed'
+  return values.every((value) => Math.abs(value - firstValue) < 0.1) ? firstValue : 'mixed'
 }
 
 const PositionAxisControl = memo(function PositionAxisControl({
+  compact = false,
   axis,
   itemIds,
   canvas,
@@ -181,6 +183,19 @@ const PositionAxisControl = memo(function PositionAxisControl({
   const getCurrentValue = useCallback(() => currentValueRef.current, [])
   const displayedValue = liveValue ?? canonicalValue
 
+  if (compact)
+    return (
+      <SliderInput
+        label={`Position ${axis.toUpperCase()}`}
+        value={displayedValue}
+        onChange={onChange}
+        onLiveChange={onLiveChange}
+        min={-(axis === 'x' ? canvas.width : canvas.height)}
+        max={axis === 'x' ? canvas.width : canvas.height}
+        step={1}
+        unit="px"
+      />
+    )
   return (
     <div className="flex items-center gap-0.5">
       <NumberInput
@@ -202,11 +217,56 @@ const PositionAxisControl = memo(function PositionAxisControl({
   )
 })
 
+function MediaFlipControls({
+  horizontal,
+  vertical,
+  onHorizontalChange,
+  onVerticalChange,
+}: {
+  horizontal: boolean | 'mixed'
+  vertical: boolean | 'mixed'
+  onHorizontalChange: (value: boolean) => void
+  onVerticalChange: (value: boolean) => void
+}) {
+  const { t } = useTranslation()
+  return (
+    <PropertyRow label={t('editor.layoutSection.flip')}>
+      <div className="flex items-center justify-between gap-3 w-full">
+        <label className="flex items-center gap-2 text-xs text-muted-foreground">
+          <Switch
+            checked={horizontal === 'mixed' ? false : horizontal}
+            onCheckedChange={onHorizontalChange}
+            aria-label={t('editor.layoutSection.flipHorizontalAria')}
+          />
+          <span>
+            {horizontal === 'mixed'
+              ? t('editor.layoutSection.horizontalMixed')
+              : t('editor.layoutSection.horizontal')}
+          </span>
+        </label>
+        <label className="flex items-center gap-2 text-xs text-muted-foreground">
+          <Switch
+            checked={vertical === 'mixed' ? false : vertical}
+            onCheckedChange={onVerticalChange}
+            aria-label={t('editor.layoutSection.flipVerticalAria')}
+          />
+          <span>
+            {vertical === 'mixed'
+              ? t('editor.layoutSection.verticalMixed')
+              : t('editor.layoutSection.vertical')}
+          </span>
+        </label>
+      </div>
+    </PropertyRow>
+  )
+}
+
 /**
  * Transform section - position, dimensions, and rotation.
  * Memoized to prevent re-renders when props haven't changed.
  */
 export const LayoutSection = memo(function LayoutSection({
+  compact = false,
   items,
   mediaTransformItems = [],
   canvas,
@@ -257,9 +317,11 @@ export const LayoutSection = memo(function LayoutSection({
       const sourceDimensions = getSourceDimensions(item)
       const baseResolved = resolveTransform(item, canvas, sourceDimensions)
       const itemKeyframes = keyframesByItemId.get(item.id) ?? undefined
-      const transform = itemKeyframes
-        ? resolveAnimatedTransform(baseResolved, itemKeyframes, currentFrame - item.from)
-        : baseResolved
+      const transform = resolveAnimatedTransform(
+        baseResolved,
+        itemKeyframes,
+        currentFrame - item.from,
+      )
 
       resolved.set(item.id, {
         x: transform.x,
@@ -355,6 +417,31 @@ export const LayoutSection = memo(function LayoutSection({
   // Get batched keyframe action for auto-keyframing
   const applyAutoKeyframeOperations = useTimelineStore((s) => s.applyAutoKeyframeOperations)
   const updateItemsTransformMap = useTimelineStore((s) => s.updateItemsTransformMap)
+  const setPropertiesPreview = useGizmoStore((s) => s.setPropertiesPreviewNew)
+  const uniformScale = useMemo(
+    () => getUniformScaleValue(items, canvas, resolvedTransformsByItem),
+    [items, canvas, resolvedTransformsByItem],
+  )
+  const handleScaleLiveChange = useCallback(
+    (percent: number) => {
+      const plan = buildUniformScalePlan(items, canvas, keyframesByItemId, currentFrame, percent)
+      setTransformPreview(plan.previewTransforms)
+      setPropertiesPreview(plan.previewProperties)
+    },
+    [items, canvas, keyframesByItemId, currentFrame, setTransformPreview, setPropertiesPreview],
+  )
+  const handleScaleChange = useCallback(
+    (percent: number) => {
+      const plan = buildUniformScalePlan(items, canvas, keyframesByItemId, currentFrame, percent)
+      updateItemsTransformMap(plan.transforms, {
+        operation: 'resize',
+        itemUpdates: plan.itemUpdates,
+        autoKeyframeOperations: plan.autoKeyframeOperations,
+      })
+      queueMicrotask(clearPreview)
+    },
+    [items, canvas, keyframesByItemId, currentFrame, updateItemsTransformMap, clearPreview],
+  )
 
   // Helper: Build auto-keyframe operations for properties that are already animated.
   const getAutoKeyframeOperation = useCallback(
@@ -671,8 +758,8 @@ export const LayoutSection = memo(function LayoutSection({
   const handleMediaSizing = useCallback(
     (mode: 'original' | 'contain' | 'cover') => {
       for (const item of selectableMedia) {
-        const source = getSourceDimensions(item) ??
-          (item.mediaId ? mediaById[item.mediaId] : undefined)
+        const source =
+          getSourceDimensions(item) ?? (item.mediaId ? mediaById[item.mediaId] : undefined)
         if (!source?.width || !source?.height) continue
         const target = computeInitialTransform(
           source.width,
@@ -812,7 +899,7 @@ export const LayoutSection = memo(function LayoutSection({
     queueMicrotask(clearTransformUiState)
   }, [clearTransformUiState, mediaTransformItemIds, mediaTransformItems, onTransformChange])
 
-  return (
+  const fullControls = (
     <PropertySection title={t('editor.layoutSection.transform')} icon={Move} defaultOpen={true}>
       {/* Position */}
       <PropertyRow label={t('editor.layoutSection.position')}>
@@ -913,11 +1000,13 @@ export const LayoutSection = memo(function LayoutSection({
       {selectableMedia.length > 0 && selectableMedia.length === items.length && (
         <PropertyRow label="Frame">
           <div className="grid w-full grid-cols-3 gap-1" role="group" aria-label="Media sizing">
-            {([
-              { id: 'original', label: 'Original', tip: 'Use original pixel dimensions (100%)' },
-              { id: 'contain', label: 'Fit', tip: 'Show the entire image inside the frame' },
-              { id: 'cover', label: 'Fill', tip: 'Fill the frame without stretching' },
-            ] as const).map((action) => (
+            {(
+              [
+                { id: 'original', label: 'Original', tip: 'Use original pixel dimensions (100%)' },
+                { id: 'contain', label: 'Fit', tip: 'Show the entire image inside the frame' },
+                { id: 'cover', label: 'Fill', tip: 'Fill the frame without stretching' },
+              ] as const
+            ).map((action) => (
               <Button
                 key={action.id}
                 type="button"
@@ -1013,35 +1102,53 @@ export const LayoutSection = memo(function LayoutSection({
       )}
 
       {mediaTransformItems.length > 0 && (
-        <PropertyRow label={t('editor.layoutSection.flip')}>
-          <div className="flex items-center justify-between gap-3 w-full">
-            <label className="flex items-center gap-2 text-xs text-muted-foreground">
-              <Switch
-                checked={flipHorizontal === 'mixed' ? false : flipHorizontal}
-                onCheckedChange={handleFlipHorizontalChange}
-                aria-label={t('editor.layoutSection.flipHorizontalAria')}
-              />
-              <span>
-                {flipHorizontal === 'mixed'
-                  ? t('editor.layoutSection.horizontalMixed')
-                  : t('editor.layoutSection.horizontal')}
-              </span>
-            </label>
-            <label className="flex items-center gap-2 text-xs text-muted-foreground">
-              <Switch
-                checked={flipVertical === 'mixed' ? false : flipVertical}
-                onCheckedChange={handleFlipVerticalChange}
-                aria-label={t('editor.layoutSection.flipVerticalAria')}
-              />
-              <span>
-                {flipVertical === 'mixed'
-                  ? t('editor.layoutSection.verticalMixed')
-                  : t('editor.layoutSection.vertical')}
-              </span>
-            </label>
-          </div>
-        </PropertyRow>
+        <MediaFlipControls
+          horizontal={flipHorizontal}
+          vertical={flipVertical}
+          onHorizontalChange={handleFlipHorizontalChange}
+          onVerticalChange={handleFlipVerticalChange}
+        />
       )}
     </PropertySection>
+  )
+  if (!compact) return fullControls
+  return (
+    <div className="space-y-2" data-visual-transform-controls>
+      <div className="text-xs font-medium">Transform</div>
+      <PositionAxisControl
+        compact
+        axis="x"
+        itemIds={itemIds}
+        canvas={canvas}
+        onChange={handleXChange}
+        onLiveChange={handleXLiveChange}
+      />
+      <PositionAxisControl
+        compact
+        axis="y"
+        itemIds={itemIds}
+        canvas={canvas}
+        onChange={handleYChange}
+        onLiveChange={handleYLiveChange}
+      />
+      <SliderInput
+        label="Scale"
+        value={uniformScale}
+        min={1}
+        max={200}
+        unit="%"
+        onChange={handleScaleChange}
+        onLiveChange={handleScaleLiveChange}
+      />
+      <SliderInput
+        label="Rotation"
+        value={rotation}
+        min={-180}
+        max={180}
+        unit="°"
+        onChange={handleRotationChange}
+        onLiveChange={handleRotationLiveChange}
+      />
+    </div>
   )
 })

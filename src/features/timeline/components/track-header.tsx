@@ -16,7 +16,18 @@ import {
   Radio,
   FoldHorizontal,
   Link2,
+  Eye,
+  EyeOff,
+  ChevronRight,
+  ChevronDown,
+  MoreHorizontal,
 } from 'lucide-react'
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+} from '@/components/ui/dropdown-menu'
 import type { TimelineTrack } from '@/types/timeline'
 import { useTrackDrag } from '../hooks/use-track-drag'
 import { TIMELINE_SIDEBAR_WIDTH } from '../constants'
@@ -131,6 +142,8 @@ export const TrackHeader = memo(function TrackHeader({
           }}
           data-track-id={track.id}
           data-track-disabled={trackDisabled ? 'true' : undefined}
+          data-track-active={isActive ? 'true' : undefined}
+          data-track-selected={isSelected ? 'true' : undefined}
         >
           <div
             className={`
@@ -139,8 +152,8 @@ export const TrackHeader = memo(function TrackHeader({
               ${
                 simplified
                   ? isSelected
-                    ? 'bg-[#454a45]'
-                    : 'hover:bg-[#3b403b]'
+                    ? 'bg-accent/60'
+                    : 'hover:bg-accent/35'
                   : isSelected
                     ? 'bg-primary/10'
                     : trackDisabled
@@ -163,7 +176,7 @@ export const TrackHeader = memo(function TrackHeader({
           >
             {simplified ? (
               <div
-                className="flex h-full min-h-0 items-center px-2.5"
+                className="grid h-full min-h-0 grid-cols-[20px_minmax(0,1fr)_24px_24px_24px_24px] items-center gap-0.5 pl-3 pr-0.5"
                 data-collapsed={collapsed ? 'true' : undefined}
                 onDoubleClick={(event) => {
                   if (!onToggleCollapsed) return
@@ -171,168 +184,276 @@ export const TrackHeader = memo(function TrackHeader({
                   onToggleCollapsed()
                 }}
               >
+                {isActive || isSelected ? (
+                  <span aria-hidden="true" className="absolute inset-y-0 left-0 w-0.5 bg-primary" />
+                ) : null}
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-5 w-5"
+                  disabled={!onToggleCollapsed}
+                  aria-label={`${collapsed ? 'Expand' : 'Collapse'} ${producerTrackLabel} track`}
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    onToggleCollapsed?.()
+                  }}
+                >
+                  {collapsed ? (
+                    <ChevronRight className="h-3.5 w-3.5" />
+                  ) : (
+                    <ChevronDown className="h-3.5 w-3.5" />
+                  )}
+                </Button>
                 <span
-                  className={`min-w-0 flex-1 truncate text-[9px] font-medium leading-[11px] ${trackDisabled ? 'text-[#8d928b]' : 'text-[#d6dad4]'}`}
+                  className={`min-w-0 flex-1 truncate text-xs font-normal leading-4 ${trackDisabled ? 'text-muted-foreground' : 'text-foreground'}`}
+                  title={track.name}
                 >
                   {producerTrackLabel}
                 </span>
+                {track.kind === 'audio' ? (
+                  <>
+                    <Button
+                      variant="secondary"
+                      size="icon"
+                      className="h-6 w-6 font-mono text-[11px] font-normal aria-pressed:bg-primary aria-pressed:text-primary-foreground"
+                      aria-label={trackDisabled ? 'Unmute track' : 'Mute track'}
+                      aria-pressed={trackDisabled}
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        onToggleDisabled()
+                      }}
+                    >
+                      M
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      size="icon"
+                      className="h-6 w-6 font-mono text-[11px] font-normal aria-pressed:bg-primary aria-pressed:text-primary-foreground"
+                      aria-label={track.solo ? 'Unsolo track' : 'Solo track'}
+                      aria-pressed={track.solo}
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        onToggleSolo()
+                      }}
+                    >
+                      S
+                    </Button>
+                  </>
+                ) : (
+                  <>
+                    <span aria-hidden="true" />
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-6 w-6"
+                      aria-label={trackDisabled ? 'Show track' : 'Hide track'}
+                      aria-pressed={!trackDisabled}
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        onToggleDisabled()
+                      }}
+                    >
+                      {trackDisabled ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </Button>
+                  </>
+                )}
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-6 w-6"
+                  aria-label={track.locked ? 'Unlock track' : 'Lock track'}
+                  aria-pressed={track.locked}
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    onToggleLock()
+                  }}
+                >
+                  <Lock className="h-4 w-4" />
+                </Button>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-6 w-6"
+                      aria-label={`${producerTrackLabel} track options`}
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <MoreHorizontal className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="start">
+                    <DropdownMenuItem onSelect={onToggleSyncLock}>
+                      {syncLockEnabled ? 'Disable sync lock' : 'Enable sync lock'}
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onSelect={onCloseGaps}>Close all gaps</DropdownMenuItem>
+                    {canDeleteTrack ? (
+                      <DropdownMenuItem onSelect={onDeleteTrack}>Delete track</DropdownMenuItem>
+                    ) : null}
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </div>
             ) : (
               <>
-            <div className="flex h-6 shrink-0 items-center gap-0.5 overflow-hidden border-b border-border/60">
-              <div className="flex h-5 w-4 shrink-0 items-center justify-center">
-                <GripVertical className="w-3.5 h-3.5 text-muted-foreground" aria-hidden="true" />
-              </div>
-              {/* Disable Button */}
-              <Button
-                variant="ghost"
-                size="icon"
-                className="rounded hover:bg-secondary"
-                style={{
-                  width: EDITOR_LAYOUT_CSS_VALUES.toolbarButtonSize,
-                  height: EDITOR_LAYOUT_CSS_VALUES.toolbarButtonSize,
-                }}
-                onClick={(e) => {
-                  e.stopPropagation()
-                  onToggleDisabled()
-                }}
-                onMouseDown={(e) => e.stopPropagation()}
-                aria-label={
-                  trackDisabled
-                    ? t('timeline.trackHeader.enableTrack')
-                    : t('timeline.trackHeader.disableTrack')
-                }
-                data-tooltip={
-                  trackDisabled
-                    ? t('timeline.trackHeader.enableTrack')
-                    : t('timeline.trackHeader.disableTrack')
-                }
-              >
-                {trackDisabled ? (
-                  <PowerOff className="w-3 h-3 text-primary" />
-                ) : (
-                  <Power className="w-3 h-3 opacity-70" />
-                )}
-              </Button>
+                <div className="flex h-6 shrink-0 items-center gap-0.5 overflow-hidden border-b border-border/60">
+                  <div className="flex h-5 w-4 shrink-0 items-center justify-center">
+                    <GripVertical
+                      className="w-3.5 h-3.5 text-muted-foreground"
+                      aria-hidden="true"
+                    />
+                  </div>
+                  {/* Disable Button */}
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="rounded hover:bg-secondary"
+                    style={{
+                      width: EDITOR_LAYOUT_CSS_VALUES.toolbarButtonSize,
+                      height: EDITOR_LAYOUT_CSS_VALUES.toolbarButtonSize,
+                    }}
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      onToggleDisabled()
+                    }}
+                    onMouseDown={(e) => e.stopPropagation()}
+                    aria-label={
+                      trackDisabled
+                        ? t('timeline.trackHeader.enableTrack')
+                        : t('timeline.trackHeader.disableTrack')
+                    }
+                    data-tooltip={
+                      trackDisabled
+                        ? t('timeline.trackHeader.enableTrack')
+                        : t('timeline.trackHeader.disableTrack')
+                    }
+                  >
+                    {trackDisabled ? (
+                      <PowerOff className="w-3 h-3 text-primary" />
+                    ) : (
+                      <Power className="w-3 h-3 opacity-70" />
+                    )}
+                  </Button>
 
-              {/* Solo Button */}
-              <Button
-                variant="ghost"
-                size="icon"
-                className="rounded hover:bg-secondary"
-                style={{
-                  width: EDITOR_LAYOUT_CSS_VALUES.toolbarButtonSize,
-                  height: EDITOR_LAYOUT_CSS_VALUES.toolbarButtonSize,
-                }}
-                onClick={(e) => {
-                  e.stopPropagation()
-                  onToggleSolo()
-                }}
-                onMouseDown={(e) => e.stopPropagation()}
-                aria-label={
-                  track.solo
-                    ? t('timeline.trackHeader.unsoloTrack')
-                    : t('timeline.trackHeader.soloTrack')
-                }
-                data-tooltip={
-                  track.solo
-                    ? t('timeline.trackHeader.unsoloTrack')
-                    : t('timeline.trackHeader.soloTrack')
-                }
-              >
-                <Radio className={`w-3 h-3 ${track.solo ? 'text-primary' : ''}`} />
-              </Button>
+                  {/* Solo Button */}
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="rounded hover:bg-secondary"
+                    style={{
+                      width: EDITOR_LAYOUT_CSS_VALUES.toolbarButtonSize,
+                      height: EDITOR_LAYOUT_CSS_VALUES.toolbarButtonSize,
+                    }}
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      onToggleSolo()
+                    }}
+                    onMouseDown={(e) => e.stopPropagation()}
+                    aria-label={
+                      track.solo
+                        ? t('timeline.trackHeader.unsoloTrack')
+                        : t('timeline.trackHeader.soloTrack')
+                    }
+                    data-tooltip={
+                      track.solo
+                        ? t('timeline.trackHeader.unsoloTrack')
+                        : t('timeline.trackHeader.soloTrack')
+                    }
+                  >
+                    <Radio className={`w-3 h-3 ${track.solo ? 'text-primary' : ''}`} />
+                  </Button>
 
-              {/* Lock Button */}
-              <Button
-                variant="ghost"
-                size="icon"
-                className="rounded hover:bg-secondary"
-                style={{
-                  width: EDITOR_LAYOUT_CSS_VALUES.toolbarButtonSize,
-                  height: EDITOR_LAYOUT_CSS_VALUES.toolbarButtonSize,
-                }}
-                onClick={(e) => {
-                  e.stopPropagation()
-                  onToggleLock()
-                }}
-                onMouseDown={(e) => e.stopPropagation()}
-                aria-label={
-                  track.locked
-                    ? t('timeline.trackHeader.unlockTrack')
-                    : t('timeline.trackHeader.lockTrack')
-                }
-                data-tooltip={
-                  track.locked
-                    ? t('timeline.trackHeader.unlockTrack')
-                    : t('timeline.trackHeader.lockTrack')
-                }
-              >
-                <Lock className={`w-3 h-3 ${track.locked ? 'text-primary' : 'opacity-70'}`} />
-              </Button>
+                  {/* Lock Button */}
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="rounded hover:bg-secondary"
+                    style={{
+                      width: EDITOR_LAYOUT_CSS_VALUES.toolbarButtonSize,
+                      height: EDITOR_LAYOUT_CSS_VALUES.toolbarButtonSize,
+                    }}
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      onToggleLock()
+                    }}
+                    onMouseDown={(e) => e.stopPropagation()}
+                    aria-label={
+                      track.locked
+                        ? t('timeline.trackHeader.unlockTrack')
+                        : t('timeline.trackHeader.lockTrack')
+                    }
+                    data-tooltip={
+                      track.locked
+                        ? t('timeline.trackHeader.unlockTrack')
+                        : t('timeline.trackHeader.lockTrack')
+                    }
+                  >
+                    <Lock className={`w-3 h-3 ${track.locked ? 'text-primary' : 'opacity-70'}`} />
+                  </Button>
 
-              <Button
-                variant="ghost"
-                size="icon"
-                className="rounded hover:bg-secondary"
-                style={{
-                  width: EDITOR_LAYOUT_CSS_VALUES.toolbarButtonSize,
-                  height: EDITOR_LAYOUT_CSS_VALUES.toolbarButtonSize,
-                }}
-                onClick={(e) => {
-                  e.stopPropagation()
-                  onToggleSyncLock()
-                }}
-                onMouseDown={(e) => e.stopPropagation()}
-                aria-label={
-                  syncLockEnabled
-                    ? t('timeline.trackHeader.disableSyncLock')
-                    : t('timeline.trackHeader.enableSyncLock')
-                }
-                data-tooltip={
-                  syncLockEnabled
-                    ? t('timeline.trackHeader.disableSyncLock')
-                    : t('timeline.trackHeader.enableSyncLock')
-                }
-              >
-                <Link2 className={`w-3 h-3 ${syncLockEnabled ? 'text-primary' : 'opacity-70'}`} />
-              </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="rounded hover:bg-secondary"
+                    style={{
+                      width: EDITOR_LAYOUT_CSS_VALUES.toolbarButtonSize,
+                      height: EDITOR_LAYOUT_CSS_VALUES.toolbarButtonSize,
+                    }}
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      onToggleSyncLock()
+                    }}
+                    onMouseDown={(e) => e.stopPropagation()}
+                    aria-label={
+                      syncLockEnabled
+                        ? t('timeline.trackHeader.disableSyncLock')
+                        : t('timeline.trackHeader.enableSyncLock')
+                    }
+                    data-tooltip={
+                      syncLockEnabled
+                        ? t('timeline.trackHeader.disableSyncLock')
+                        : t('timeline.trackHeader.enableSyncLock')
+                    }
+                  >
+                    <Link2
+                      className={`w-3 h-3 ${syncLockEnabled ? 'text-primary' : 'opacity-70'}`}
+                    />
+                  </Button>
 
-              <Button
-                variant="ghost"
-                size="icon"
-                className="rounded hover:bg-secondary"
-                style={{
-                  width: EDITOR_LAYOUT_CSS_VALUES.toolbarButtonSize,
-                  height: EDITOR_LAYOUT_CSS_VALUES.toolbarButtonSize,
-                }}
-                onClick={(e) => {
-                  e.stopPropagation()
-                  onCloseGaps?.()
-                }}
-                onMouseDown={(e) => e.stopPropagation()}
-                aria-label={t('timeline.trackHeader.closeAllGaps')}
-                data-tooltip={t('timeline.trackHeader.closeAllGaps')}
-              >
-                <FoldHorizontal className="w-3 h-3" />
-              </Button>
-            </div>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="rounded hover:bg-secondary"
+                    style={{
+                      width: EDITOR_LAYOUT_CSS_VALUES.toolbarButtonSize,
+                      height: EDITOR_LAYOUT_CSS_VALUES.toolbarButtonSize,
+                    }}
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      onCloseGaps?.()
+                    }}
+                    onMouseDown={(e) => e.stopPropagation()}
+                    aria-label={t('timeline.trackHeader.closeAllGaps')}
+                    data-tooltip={t('timeline.trackHeader.closeAllGaps')}
+                  >
+                    <FoldHorizontal className="w-3 h-3" />
+                  </Button>
+                </div>
 
-            <div className="flex min-h-0 flex-1 items-center gap-1.5 overflow-hidden px-1.5">
-              {displayTrackColor ? (
-                <span
-                  className="h-2 w-2 shrink-0 rounded-[2px]"
-                  style={{ backgroundColor: displayTrackColor }}
-                  aria-hidden="true"
-                />
-              ) : null}
-              <span className="min-w-0 truncate text-xs font-semibold leading-none font-mono">
-                {track.name}
-              </span>
-              <span className="shrink-0 text-[10px] leading-none text-muted-foreground">
-                {itemCountLabel}
-              </span>
-            </div>
+                <div className="flex min-h-0 flex-1 items-center gap-1.5 overflow-hidden px-1.5">
+                  {displayTrackColor ? (
+                    <span
+                      className="h-2 w-2 shrink-0 rounded-[2px]"
+                      style={{ backgroundColor: displayTrackColor }}
+                      aria-hidden="true"
+                    />
+                  ) : null}
+                  <span className="min-w-0 truncate text-xs font-semibold leading-none font-mono">
+                    {track.name}
+                  </span>
+                  <span className="shrink-0 text-[10px] leading-none text-muted-foreground">
+                    {itemCountLabel}
+                  </span>
+                </div>
               </>
             )}
           </div>
@@ -340,15 +461,23 @@ export const TrackHeader = memo(function TrackHeader({
       </ContextMenuTrigger>
 
       <ContextMenuContent className="w-52">
+        {simplified && onToggleCollapsed ? (
+          <>
+            <ContextMenuItem onClick={onToggleCollapsed}>
+              {collapsed
+                ? t('timeline.trackHeader.expandTrack', { defaultValue: 'Expand track' })
+                : t('timeline.trackHeader.collapseTrack', { defaultValue: 'Collapse track' })}
+            </ContextMenuItem>
+            <ContextMenuSeparator />
+          </>
+        ) : null}
         <ContextMenuItem onClick={onToggleDisabled}>
           {trackDisabled
             ? t('timeline.trackHeader.enableTrack')
             : t('timeline.trackHeader.disableTrack')}
         </ContextMenuItem>
         <ContextMenuItem onClick={onToggleSolo}>
-          {track.solo
-            ? t('timeline.trackHeader.unsoloTrack')
-            : t('timeline.trackHeader.soloTrack')}
+          {track.solo ? t('timeline.trackHeader.unsoloTrack') : t('timeline.trackHeader.soloTrack')}
         </ContextMenuItem>
         <ContextMenuItem onClick={onToggleLock}>
           {track.locked

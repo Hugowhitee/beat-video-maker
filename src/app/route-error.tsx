@@ -21,7 +21,7 @@ import {
 } from 'lucide-react'
 
 import { createLogger } from '@/shared/logging/logger'
-import { useStudioV2DocumentTheme } from '@/shared/ui/use-studio-v2-document-theme'
+import { useStudioDocumentTheme } from '@/shared/ui/use-studio-document-theme'
 import {
   ensureKnownWorkspaceForCurrent,
   getWorkspaceHandleRecord,
@@ -43,7 +43,7 @@ const CAUSE_EXPLANATION_KEYS: Record<string, string> = {
 }
 
 export function RouteErrorScreen({ error, reset }: ErrorComponentProps) {
-  useStudioV2DocumentTheme()
+  useStudioDocumentTheme()
   const { t } = useTranslation()
   const router = useRouter()
   const [isSwitchingFolder, setIsSwitchingFolder] = useState(false)
@@ -104,10 +104,7 @@ export function RouteErrorScreen({ error, reset }: ErrorComponentProps) {
   }
 
   return (
-    <div
-      data-studio-v2="true"
-      className="min-h-dvh bg-[#d9dbd6] text-foreground"
-    >
+    <div data-studio="true" className="min-h-dvh bg-background text-foreground">
       <header className="flex h-12 items-center bg-[#242724] px-[18px] text-[#f6f7f3]">
         <Link to="/projects" className="flex items-baseline gap-1.5">
           <span className="text-[10px] font-semibold">BEAT VIDEO</span>
@@ -178,7 +175,7 @@ export function RouteErrorScreen({ error, reset }: ErrorComponentProps) {
           <summary className="cursor-pointer list-none text-[10px] font-medium text-muted-foreground marker:hidden hover:text-foreground [&::-webkit-details-marker]:hidden">
             Error details
           </summary>
-          <div className="mt-3 rounded-[3px] bg-[#d1d4ce] p-3">
+          <div className="mt-3 rounded-[3px] bg-secondary p-3">
             <p className="break-words font-mono text-[9px] leading-4 text-foreground">
               {shortDetail}
             </p>

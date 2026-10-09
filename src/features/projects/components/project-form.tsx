@@ -123,7 +123,7 @@ function ProjectFormBase({
       <div className={isInlineSurface ? '' : 'max-w-[1400px] mx-auto px-6 py-8'}>
         <form
           onSubmit={handleSubmit(onSubmit)}
-          className="mx-auto max-w-[820px] space-y-7 rounded-[4px] bg-[#e8e9e5] p-5 sm:p-6"
+          className="mx-auto max-w-[820px] space-y-7 rounded-[4px] bg-panel-bg p-5 sm:p-6"
         >
           <input type="hidden" {...register('beatvideoMode')} />
           <div>
@@ -131,7 +131,7 @@ function ProjectFormBase({
               Project type
             </div>
             <div className="grid grid-cols-2 gap-2">
-              {([
+              {[
                 {
                   id: 'photo' as const,
                   label: 'Photo',
@@ -141,10 +141,11 @@ function ProjectFormBase({
                 {
                   id: 'video' as const,
                   label: 'Video',
-                  description: 'Footage + beat. Cut clips, add transitions and use manual or assisted editing.',
+                  description:
+                    'Footage + beat. Cut clips, add transitions and use manual or assisted editing.',
                   icon: Clapperboard,
                 },
-              ]).map((modeOption) => {
+              ].map((modeOption) => {
                 const Icon = modeOption.icon
                 const selected = beatvideoMode === modeOption.id
                 return (
@@ -163,11 +164,13 @@ function ProjectFormBase({
                       'flex h-11 items-center gap-2.5 rounded-[3px] border px-3 text-left transition-colors',
                       selected
                         ? 'border-[#242724] bg-[#242724] text-[#f6f7f3]'
-                        : 'border-transparent bg-[#d1d4ce] text-foreground hover:border-border hover:bg-[#c7cac4]',
+                        : 'border-transparent bg-secondary text-foreground hover:border-border hover:bg-panel-header',
                     )}
                   >
                     <Icon className="h-4 w-4 shrink-0" />
-                    <strong className="truncate text-[11px] font-semibold">{modeOption.label}</strong>
+                    <strong className="truncate text-[11px] font-semibold">
+                      {modeOption.label}
+                    </strong>
                   </button>
                 )
               })}
@@ -175,9 +178,7 @@ function ProjectFormBase({
           </div>
           <div className="grid grid-cols-1 gap-8">
             {/* Project Details */}
-            <div
-              className="border-t border-border pt-6"
-            >
+            <div className="border-t border-border pt-6">
               <div className="mb-5 text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
                 {t('projects.form.projectDetails')}
               </div>
@@ -192,7 +193,7 @@ function ProjectFormBase({
                     id="name"
                     type="text"
                     {...register('name')}
-                    className="h-10 w-full rounded-[3px] border border-input bg-[#d9dbd6] px-3 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+                    className="h-10 w-full rounded-[3px] border border-input bg-background px-3 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
                     placeholder={t('projects.form.projectNamePlaceholder')}
                   />
                   {errors.name && (
@@ -215,11 +216,13 @@ function ProjectFormBase({
                       id="description"
                       rows={3}
                       {...register('description')}
-                      className="w-full resize-none rounded-[3px] border border-input bg-[#d9dbd6] px-3 py-2 text-[11px] text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+                      className="w-full resize-none rounded-[3px] border border-input bg-background px-3 py-2 text-[11px] text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
                       placeholder={t('projects.form.descriptionPlaceholder')}
                     />
                     {errors.description && (
-                      <p className="mt-1.5 text-[10px] text-destructive">{errors.description.message}</p>
+                      <p className="mt-1.5 text-[10px] text-destructive">
+                        {errors.description.message}
+                      </p>
                     )}
                   </div>
 
@@ -241,14 +244,14 @@ function ProjectFormBase({
                               shouldValidate: true,
                             })
                           }
-                          className="h-9 w-11 cursor-pointer rounded-[3px] border border-input bg-[#d9dbd6] p-1"
+                          className="h-9 w-11 cursor-pointer rounded-[3px] border border-input bg-background p-1"
                           aria-label="Canvas background color"
                         />
                         <input
                           id="backgroundColor"
                           type="text"
                           {...register('backgroundColor')}
-                          className="h-9 min-w-0 flex-1 rounded-[3px] border border-input bg-[#d9dbd6] px-3 font-mono text-[10px] text-foreground uppercase focus:outline-none focus:ring-1 focus:ring-ring"
+                          className="h-9 min-w-0 flex-1 rounded-[3px] border border-input bg-background px-3 font-mono text-[10px] text-foreground uppercase focus:outline-none focus:ring-1 focus:ring-ring"
                           placeholder="#000000"
                         />
                       </div>
@@ -287,7 +290,7 @@ function ProjectFormBase({
                       id="width"
                       type="number"
                       {...register('width', { valueAsNumber: true })}
-                      className="h-10 w-full rounded-[3px] border border-input bg-[#d9dbd6] px-3 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+                      className="h-10 w-full rounded-[3px] border border-input bg-background px-3 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
                       placeholder="1920"
                       min={320}
                     />
@@ -307,7 +310,7 @@ function ProjectFormBase({
                       id="height"
                       type="number"
                       {...register('height', { valueAsNumber: true })}
-                      className="h-10 w-full rounded-[3px] border border-input bg-[#d9dbd6] px-3 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
+                      className="h-10 w-full rounded-[3px] border border-input bg-background px-3 text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring"
                       placeholder="1080"
                       min={240}
                     />
@@ -366,34 +369,40 @@ function ProjectFormBase({
             {/* Actions */}
             <div className="grid w-full shrink-0 grid-cols-2 gap-2 sm:w-auto sm:flex sm:justify-end sm:gap-2">
               {onCancel ? (
-              <Button
-                type="button"
-                variant="outline"
-                size="lg"
-                disabled={isSubmitting}
-                onClick={onCancel}
-              >
-                {t('common.cancel')}
-              </Button>
-            ) : (
-              <Link to="/projects">
-                <Button type="button" variant="outline" size="lg" className="w-full" disabled={isSubmitting}>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="lg"
+                  disabled={isSubmitting}
+                  onClick={onCancel}
+                >
                   {t('common.cancel')}
                 </Button>
-              </Link>
-            )}
-            <Button
-              type="submit"
-              size="lg"
-              className="w-full sm:w-auto sm:min-w-[160px]"
-              disabled={!isValid || isSubmitting}
-            >
-              {isSubmitting
-                ? t('common.saving')
-                : isEditing
-                  ? t('projects.form.updateProject')
-                  : t('projects.form.createProject')}
-            </Button>
+              ) : (
+                <Link to="/projects">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="lg"
+                    className="w-full"
+                    disabled={isSubmitting}
+                  >
+                    {t('common.cancel')}
+                  </Button>
+                </Link>
+              )}
+              <Button
+                type="submit"
+                size="lg"
+                className="w-full sm:w-auto sm:min-w-[160px]"
+                disabled={!isValid || isSubmitting}
+              >
+                {isSubmitting
+                  ? t('common.saving')
+                  : isEditing
+                    ? t('projects.form.updateProject')
+                    : t('projects.form.createProject')}
+              </Button>
             </div>
           </div>
         </form>

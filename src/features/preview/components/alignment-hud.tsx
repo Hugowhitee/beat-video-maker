@@ -75,13 +75,7 @@ const DeferredAlignmentToolbar = memo(function DeferredAlignmentToolbar({
   compact = false,
 }: DeferredAlignmentToolbarProps) {
   const deferredItems = useRafDeferredValue(itemsSnapshot)
-  return (
-    <AlignmentToolbarCore
-      projectSize={projectSize}
-      items={deferredItems}
-      compact={compact}
-    />
-  )
+  return <AlignmentToolbarCore projectSize={projectSize} items={deferredItems} compact={compact} />
 })
 
 interface AlignmentToolbarCoreProps extends AlignmentToolbarProps {
@@ -264,7 +258,11 @@ const AlignmentToolbarCore = memo(function AlignmentToolbarCore({
   const showDistribution = !compact || itemCount >= 3
 
   return (
-    <>
+    <div
+      className="inline-flex shrink-0 items-center gap-0.5"
+      role="group"
+      aria-label="Canvas alignment"
+    >
       {ALIGNMENT_ACTIONS.slice(0, 3).map(renderButton)}
       <div className="w-px h-3.5 bg-border mx-0.5 shrink-0" />
       {ALIGNMENT_ACTIONS.slice(3, 6).map(renderButton)}
@@ -294,7 +292,7 @@ const AlignmentToolbarCore = memo(function AlignmentToolbarCore({
       >
         <Magnet className="w-3.5 h-3.5" />
       </Button>
-    </>
+    </div>
   )
 })
 

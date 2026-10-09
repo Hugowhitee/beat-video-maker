@@ -1,7 +1,7 @@
 import { fireEvent, render, screen } from '@testing-library/react'
 import { beforeEach, describe, expect, it } from 'vite-plus/test'
 import { useEditorStore } from '@/shared/state/editor'
-import { DEFAULT_TRACK_HEIGHT } from '../constants'
+import { DEFAULT_TRACK_HEIGHT, MIN_TRACK_HEIGHT } from '../constants'
 import { useTrackHeightResize } from './use-track-height-resize'
 import { useItemsStore } from '../stores/items-store'
 import { useTimelineCommandStore } from '../stores/timeline-command-store'
@@ -63,11 +63,7 @@ describe('useTrackHeightResize', () => {
   })
 
   it('resolves track heights from the preset, ignoring the stored height', () => {
-    expect(trackHeights()).toEqual([
-      DEFAULT_TRACK_HEIGHT,
-      DEFAULT_TRACK_HEIGHT,
-      DEFAULT_TRACK_HEIGHT,
-    ])
+    expect(trackHeights()).toEqual([DEFAULT_TRACK_HEIGHT, DEFAULT_TRACK_HEIGHT, 74])
   })
 
   it('alt-drag resizes every track header together', () => {
@@ -81,7 +77,7 @@ describe('useTrackHeightResize', () => {
     fireEvent.mouseMove(document, { clientY: 110 })
     fireEvent.mouseUp(document, { clientY: 110 })
 
-    const expectedHeight = DEFAULT_TRACK_HEIGHT - 10
+    const expectedHeight = Math.max(MIN_TRACK_HEIGHT, DEFAULT_TRACK_HEIGHT - 10)
     expect(trackHeights()).toEqual([expectedHeight, expectedHeight, expectedHeight])
   })
 
@@ -102,7 +98,7 @@ describe('useTrackHeightResize', () => {
     fireEvent.mouseMove(document, { clientY: 110 })
     fireEvent.mouseUp(document, { clientY: 110 })
 
-    expect(trackHeights()[0]).toBe(DEFAULT_TRACK_HEIGHT - 10)
+    expect(trackHeights()[0]).toBe(Math.max(MIN_TRACK_HEIGHT, DEFAULT_TRACK_HEIGHT - 10))
     expect(useTimelineCommandStore.getState().undoStack).toHaveLength(0)
     expect(useTimelineSettingsStore.getState().isDirty).toBe(false)
   })
@@ -117,11 +113,7 @@ describe('useTrackHeightResize', () => {
     render(<Harness />)
     fireEvent.doubleClick(screen.getByRole('button', { name: 'Reset V1' }), { altKey: true })
 
-    expect(trackHeights()).toEqual([
-      DEFAULT_TRACK_HEIGHT,
-      DEFAULT_TRACK_HEIGHT,
-      DEFAULT_TRACK_HEIGHT,
-    ])
+    expect(trackHeights()).toEqual([DEFAULT_TRACK_HEIGHT, DEFAULT_TRACK_HEIGHT, 74])
     expect(useTimelineCommandStore.getState().undoStack).toHaveLength(0)
   })
 
@@ -133,6 +125,6 @@ describe('useTrackHeightResize', () => {
     render(<Harness />)
     fireEvent.doubleClick(screen.getByRole('button', { name: 'Reset V1' }))
 
-    expect(trackHeights()).toEqual([DEFAULT_TRACK_HEIGHT, 130, DEFAULT_TRACK_HEIGHT])
+    expect(trackHeights()).toEqual([DEFAULT_TRACK_HEIGHT, 130, 74])
   })
 })

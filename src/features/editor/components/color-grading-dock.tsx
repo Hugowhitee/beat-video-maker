@@ -20,28 +20,19 @@ export const ColorGradingDock = memo(function ColorGradingDock() {
     () =>
       items.find(
         (item) =>
-          item.type === 'adjustment' &&
-          item.label === GLOBAL_COLOR_GRADE_LABEL &&
-          item.from === 0,
+          item.type === 'adjustment' && item.label === GLOBAL_COLOR_GRADE_LABEL && item.from === 0,
       ) ?? null,
     [items],
   )
   const visualProgramItems = useMemo(
     () =>
       items.filter(
-        (item) =>
-          item.type !== 'audio' &&
-          item.type !== 'adjustment' &&
-          item.type !== 'controller',
+        (item) => item.type !== 'audio' && item.type !== 'adjustment' && item.type !== 'controller',
       ),
     [items],
   )
   const globalGradeDuration = useMemo(
-    () =>
-      Math.max(
-        1,
-        ...visualProgramItems.map((item) => item.from + item.durationInFrames),
-      ),
+    () => Math.max(1, ...visualProgramItems.map((item) => item.from + item.durationInFrames)),
     [visualProgramItems],
   )
 
@@ -61,17 +52,11 @@ export const ColorGradingDock = memo(function ColorGradingDock() {
     if (!selectedItemIds.includes(globalGrade.id)) {
       useSelectionStore.getState().selectItems([globalGrade.id])
     }
-  }, [
-    globalGrade,
-    globalGradeDuration,
-    scope,
-    selectedItemIds,
-    visualProgramItems.length,
-  ])
+  }, [globalGrade, globalGradeDuration, scope, selectedItemIds, visualProgramItems.length])
 
   return (
     <section
-      className="panel-bg flex h-full min-h-0 min-w-0 flex-col bg-[#e8e9e5]"
+      className="panel-bg flex h-full min-h-0 min-w-0 flex-col bg-panel-bg"
       aria-label={t('editor.colorPanel.dockLabel')}
       data-testid="color-grading-dock"
     >

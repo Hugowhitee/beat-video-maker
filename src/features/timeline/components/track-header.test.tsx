@@ -29,7 +29,7 @@ function makeTrack(overrides: Partial<TimelineTrack> = {}): TimelineTrack {
   }
 }
 
-function renderTrackHeader(track: TimelineTrack, onToggleDisabled = vi.fn()) {
+function renderTrackHeader(track: TimelineTrack, onToggleDisabled = vi.fn(), displayName?: string) {
   const renderResult = render(
     <TrackHeader
       track={track}
@@ -37,6 +37,8 @@ function renderTrackHeader(track: TimelineTrack, onToggleDisabled = vi.fn()) {
       isSelected={false}
       canDeleteTrack
       canDeleteEmptyTracks
+      simplified={displayName !== undefined}
+      displayName={displayName}
       onToggleLock={() => undefined}
       onToggleSyncLock={() => undefined}
       onToggleDisabled={onToggleDisabled}
@@ -98,10 +100,10 @@ describe('TrackHeader', () => {
     expect(onToggleDisabled).toHaveBeenCalledTimes(1)
   })
 
-  it('keeps producer track headers text-first without permanent control icons', () => {
+  it('exposes semantic producer controls on fixed columns', () => {
     render(
       <TrackHeader
-        track={makeTrack({ name: 'Beat', color: '#38bdf8' })}
+        track={makeTrack({ name: 'Beat', kind: 'audio', color: '#38bdf8' })}
         isActive={false}
         isSelected={false}
         canDeleteTrack
@@ -122,12 +124,19 @@ describe('TrackHeader', () => {
 
     expect(screen.getByText('Beat')).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Disable track' })).not.toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: 'Solo track' })).not.toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: 'Lock track' })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Solo track' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Lock track' })).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Disable sync lock' })).not.toBeInTheDocument()
   })
 
-  it('keeps collapse available without adding producer-header icon chrome', () => {
+  it('shows the semantic producer name while retaining the full underlying track name', () => {
+    renderTrackHeader(makeTrack({ name: 'V1 · Original footage' }), vi.fn(), 'Media')
+
+    expect(screen.getByText('Media')).toHaveAttribute('title', 'V1 · Original footage')
+    expect(screen.queryByText('V1 · Original footage')).not.toBeInTheDocument()
+  })
+
+  it('keeps both discoverable fold control and direct double-click collapse', () => {
     const onToggleCollapsed = vi.fn()
     render(
       <TrackHeader
@@ -152,9 +161,13 @@ describe('TrackHeader', () => {
       />,
     )
 
-    expect(screen.queryByRole('button', { name: /collapse beat track/i })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /collapse beat track/i })).toBeInTheDocument()
     fireEvent.doubleClick(screen.getByText('Beat'))
     expect(onToggleCollapsed).toHaveBeenCalledTimes(1)
+
+    fireEvent.contextMenu(screen.getByText('Beat'))
+    fireEvent.click(screen.getByRole('menuitem', { name: 'Collapse track' }))
+    expect(onToggleCollapsed).toHaveBeenCalledTimes(2)
   })
 
   it('renders sync lock enabled by default and toggles the label when disabled', () => {

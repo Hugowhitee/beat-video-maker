@@ -189,8 +189,8 @@ export function ProjectCard({
       aria-label={t('projects.card.openProject')}
       className={`group relative flex aspect-square min-h-0 flex-col overflow-hidden rounded-[3px] border transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring ${
         isSelected
-          ? 'border-foreground bg-[#d1d4ce]'
-          : 'border-transparent bg-[#e8e9e5] hover:border-border hover:bg-[#dfe1dc]'
+          ? 'border-foreground bg-secondary'
+          : 'border-transparent bg-panel-bg hover:border-border hover:bg-accent'
       }`}
     >
       {isSelected ? (
@@ -254,7 +254,7 @@ export function ProjectCard({
                 <MoreVertical className="h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-48" data-studio-v2="true">
+            <DropdownMenuContent align="end" className="w-48" data-studio="true">
               <DropdownMenuItem asChild>
                 <Link
                   to="/editor/$projectId"
@@ -298,7 +298,7 @@ export function ProjectCard({
           if (!open) setClearLocalFiles(false)
         }}
       >
-        <AlertDialogContent onClick={(e) => e.stopPropagation()} data-studio-v2="true">
+        <AlertDialogContent onClick={(e) => e.stopPropagation()} data-studio="true">
           <AlertDialogHeader>
             <AlertDialogTitle className="flex items-center gap-2">
               <AlertTriangle className="h-5 w-5 text-destructive" />
@@ -347,4 +347,5 @@ export function ProjectCard({
         </AlertDialogContent>
       </AlertDialog>
     </div>
-  )}
+  )
+}

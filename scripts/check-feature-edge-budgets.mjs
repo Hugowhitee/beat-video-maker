@@ -12,12 +12,17 @@ const EDGE_BUDGETS = [
   // Re-baselined for the editor's intentionally split timeline adapter surface:
   // store, hooks, UI, panels, motion, subscriptions, cache and test helpers all
   // cross the feature boundary through dedicated deps/* contracts.
-  { edge: 'editor -> timeline', maxImports: 73, maxFiles: 11 },
-  // The editor preview contract added one supported preview export. Keep the
-  // file budget tight so this remains consolidated behind the existing adapter.
-  { edge: 'editor -> preview', maxImports: 16, maxFiles: 2 },
+  // Recovery commit9151758 already uses80 imports in12 adapter files. Source
+  // trim adds the canonical transitions store through that existing store seam.
+  { edge: 'editor -> timeline', maxImports: 81, maxFiles: 12 },
+  // Uniform Scale reuses canonical gizmo transform/anchor and text-scale commits
+  // through the existing preview contract instead of duplicating edit maths.
+  // Reviewed against9151758:16 ->18 imports, still one adapter file.
+  { edge: 'editor -> preview', maxImports: 18, maxFiles: 1 },
   { edge: 'editor -> media-library', maxImports: 13, maxFiles: 2 },
-  { edge: 'preview -> timeline', maxImports: 2, maxFiles: 2 },
+  // Recovery baseline already has the timeline contract, lazy filmstrip cache
+  // and the Node import-boundary test in these two adapter files.
+  { edge: 'preview -> timeline', maxImports: 3, maxFiles: 2 },
   { edge: 'preview -> player', maxImports: 2, maxFiles: 2 },
   // Raised for the on-device transcription + caption feature: the timeline
   // transcript editor / auto-captions and the media-library Parakeet/Whisper

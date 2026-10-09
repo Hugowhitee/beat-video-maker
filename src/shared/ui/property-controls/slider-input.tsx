@@ -5,7 +5,6 @@ type MixedValue = number | 'mixed'
 
 const LIVE_CHANGE_THROTTLE_MS = 16 // ~60fps max
 const CLICK_THRESHOLD = 3 // px — distinguishes click from drag
-const SNAP_TOLERANCE = 0.03125 // 1/32 — magnetic snap to deciles
 const MAX_STRETCH = 6 // px — max rubber-band overflow
 const DEAD_ZONE = 24 // px — distance past edge before rubber-band starts
 const MAX_CURSOR_RANGE = 160 // px — cursor distance at max stretch
@@ -39,15 +38,6 @@ function decimalsForStep(step: number): number {
 function roundToStep(val: number, step: number): number {
   const raw = Math.round(val / step) * step
   return parseFloat(raw.toFixed(decimalsForStep(step)))
-}
-
-function snapToDecile(rawValue: number, min: number, max: number): number {
-  const normalized = (rawValue - min) / (max - min)
-  const nearest = Math.round(normalized * 10) / 10
-  if (Math.abs(normalized - nearest) <= SNAP_TOLERANCE) {
-    return min + nearest * (max - min)
-  }
-  return rawValue
 }
 
 /** Simple spring animation using rAF */
@@ -94,16 +84,7 @@ function animateSpring(
   }
 }
 
-/**
- * DialKit-inspired slider with:
- * - Label + value inline inside the track
- * - Click-to-snap with spring animation
- * - Rubber-band overflow when dragging past bounds
- * - Smart magnetic snapping to deciles on click
- * - Handle dodge (fades when overlapping text)
- * - Click value or double-click track to type exact value
- * - Hash marks at decile intervals
- */
+/** Precision parameter row: label, rail, and typed value occupy separate columns. */
 export const SliderInput = memo(function SliderInput({
   value,
   onChange,
@@ -127,7 +108,6 @@ export const SliderInput = memo(function SliderInput({
   const trackRef = useRef<HTMLDivElement>(null)
   const fillRef = useRef<HTMLDivElement>(null)
   const handleRef = useRef<HTMLDivElement>(null)
-  const labelRef = useRef<HTMLSpanElement>(null)
   const valueSpanRef = useRef<HTMLSpanElement>(null)
   const inputRef = useRef<HTMLInputElement>(null)
   const lastLiveChangeRef = useRef<number>(0)
@@ -184,7 +164,7 @@ export const SliderInput = memo(function SliderInput({
     (v: number) => {
       if (formatValueProp) return formatValueProp(v)
       const formatted = v.toFixed(decimalsForStep(step))
-      return unit ? `${formatted}${unit}` : formatted
+      return unit ? `${formatted} ${unit}` : formatted
     },
     [formatValueProp, step, unit],
   )
@@ -215,10 +195,13 @@ export const SliderInput = memo(function SliderInput({
   const updateFillVisual = useCallback(
     (
       nextFillPercent: number,
-      options?: {
+      {
+        active = isInteracting || isHovered,
+        dragging = isDragging,
+      }: {
         active?: boolean
         dragging?: boolean
-      },
+      } = {},
     ) => {
       fillPercentRef.current = nextFillPercent
       const clampedFillPercent = Math.max(0, Math.min(100, nextFillPercent))
@@ -229,27 +212,9 @@ export const SliderInput = memo(function SliderInput({
 
       if (!handleRef.current) return
 
-      const isActiveNow = options?.active ?? (isInteracting || isHovered)
-      const isDraggingNow = options?.dragging ?? isDragging
-      let valueDodge = false
-
-      // Inactive sliders hide their handle, so measuring label/value overlap is
-      // wasted work. offsetWidth would also force layout when an unrelated
-      // property update rerenders a large inspector.
-      if (isActiveNow) {
-        const trackWidth = trackRef.current?.offsetWidth ?? 200
-        const labelWidth = labelRef.current?.offsetWidth ?? 30
-        const valueWidth = valueSpanRef.current?.offsetWidth ?? 40
-        const handleBuffer = 8
-        const leftThreshold = ((8 + labelWidth + handleBuffer) / trackWidth) * 100
-        const rightThreshold = ((trackWidth - 8 - valueWidth - handleBuffer) / trackWidth) * 100
-        valueDodge = nextFillPercent < leftThreshold || nextFillPercent > rightThreshold
-      }
-      const handleOpacity = !isActiveNow ? 0 : valueDodge ? 0.1 : isDraggingNow ? 0.9 : 0.5
-
-      handleRef.current.style.left = `max(4px, calc(${clampedFillPercent}% - 1.5px))`
-      handleRef.current.style.transform = `translateY(-50%) scaleX(${isActiveNow ? 1 : 0.25}) scaleY(${isActiveNow && valueDodge ? 0.75 : 1})`
-      handleRef.current.style.opacity = String(handleOpacity)
+      handleRef.current.style.left = `clamp(0px, calc(${clampedFillPercent}% - 4px), calc(100% - 8px))`
+      handleRef.current.style.opacity = active ? '1' : '0.8'
+      handleRef.current.style.transform = `translateY(-50%) scaleY(${dragging ? 1.1 : 1})`
     },
     [isDragging, isHovered, isInteracting],
   )
@@ -447,7 +412,7 @@ export const SliderInput = memo(function SliderInput({
         const snappedValue =
           discreteSteps <= 10
             ? Math.max(min, Math.min(max, min + Math.round((rawValue - min) / step) * step))
-            : roundToStep(snapToDecile(rawValue, min, max), step)
+            : roundToStep(rawValue, step)
 
         const targetPct = ((snappedValue - min) / (max - min)) * 100
         const currentPct = fillPercentRef.current
@@ -548,37 +513,60 @@ export const SliderInput = memo(function SliderInput({
     inputValueRef.current = e.target.value
   }
 
-  // Handle dodge — fade handle when it overlaps label or value
   const isActive = isInteracting || isHovered
-  // Accurate overlap styling is applied imperatively by updateFillVisual after
-  // render. Avoid synchronous DOM measurements in React's render phase.
-  const handleOpacity = !isActive ? 0 : isDragging ? 0.9 : 0.5
-
-  // Hash marks — decile tick marks
-  const discreteSteps = (max - min) / step
-  const hashMarks =
-    discreteSteps <= 10
-      ? Array.from(
-          { length: Math.max(0, discreteSteps - 1) },
-          (_, i) => (((i + 1) * step) / (max - min)) * 100,
-        )
-      : [10, 20, 30, 40, 50, 60, 70, 80, 90]
-
   const stretchWidth = Math.abs(rubberStretch)
   const stretchX = rubberStretch < 0 ? rubberStretch : 0
 
+  const handleSliderKeyDown = (e: React.KeyboardEvent) => {
+    if (disabled || showInput) return
+    const amount = step * (e.shiftKey ? 10 : 1)
+    const values: Record<string, number> = {
+      ArrowRight: displayNumericValue + amount,
+      ArrowUp: displayNumericValue + amount,
+      ArrowLeft: displayNumericValue - amount,
+      ArrowDown: displayNumericValue - amount,
+      Home: min,
+      End: max,
+    }
+    const next = values[e.key]
+    if (next === undefined) return
+    e.preventDefault()
+    e.stopPropagation()
+    const clamped = roundToStep(Math.max(min, Math.min(max, next)), step)
+    setLocalValue(clamped)
+    onChange(clamped)
+  }
+
   return (
-    <div className={cn('min-w-0 flex-1', className)}>
+    <div
+      className={cn(
+        'relative flex min-w-0 flex-1 items-center gap-2 h-8',
+        disabled && 'opacity-50',
+        className,
+      )}
+      data-parameter-row
+    >
+      {label && (
+        <span
+          className="w-[72px] min-w-0 shrink-0 truncate text-xs font-medium text-foreground"
+          title={label}
+        >
+          {label}
+        </span>
+      )}
       <div
         ref={trackRef}
+        role="slider"
+        tabIndex={disabled ? -1 : 0}
+        aria-label={label ?? 'Parameter'}
+        aria-valuemin={min}
+        aria-valuemax={max}
+        aria-valuenow={isMixed ? undefined : displayNumericValue}
+        aria-valuetext={displayValue}
+        aria-disabled={disabled}
         className={cn(
-          'relative flex items-center h-7 rounded-md overflow-hidden select-none touch-none',
-          'bg-secondary border border-input',
-          'transition-colors duration-150',
-          isActive && 'border-ring/50',
-          isDragging && 'border-ring',
-          disabled && 'opacity-50 pointer-events-none',
-          !disabled && 'cursor-pointer',
+          'relative h-7 min-w-6 flex-1 touch-none select-none rounded-sm outline-none focus-visible:ring-1 focus-visible:ring-ring',
+          disabled ? 'pointer-events-none' : 'cursor-ew-resize',
         )}
         style={{
           width: stretchWidth > 0 ? `calc(100% + ${stretchWidth}px)` : undefined,
@@ -587,90 +575,75 @@ export const SliderInput = memo(function SliderInput({
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
         onPointerUp={handlePointerUp}
+        onPointerCancel={handlePointerUp}
         onDoubleClick={handleDoubleClick}
+        onKeyDown={handleSliderKeyDown}
         onMouseEnter={() => setIsHovered(true)}
         onMouseLeave={() => setIsHovered(false)}
       >
-        {/* Hash marks */}
-        <div className="absolute inset-0 pointer-events-none">
-          {hashMarks.map((pct) => (
-            <div
-              key={pct}
-              className={cn(
-                'absolute top-1/2 -translate-y-1/2 w-px h-2 rounded-full',
-                'transition-opacity duration-150',
-                isActive ? 'bg-foreground/15' : 'bg-foreground/8',
-              )}
-              style={{ left: `${pct}%` }}
-            />
-          ))}
-        </div>
-
-        {/* Fill */}
+        <div className="pointer-events-none absolute inset-x-0 top-1/2 h-1 -translate-y-1/2 rounded-full bg-border" />
         <div
           ref={fillRef}
-          className={cn('absolute inset-y-0 left-0 rounded-md', 'transition-colors duration-150')}
-          style={{
-            width: `${Math.max(0, Math.min(100, fillPercentRef.current))}%`,
-            background: isActive
-              ? 'hsl(var(--foreground) / 0.12)'
-              : 'hsl(var(--foreground) / 0.08)',
-          }}
+          className="pointer-events-none absolute left-0 top-1/2 h-1 -translate-y-1/2 rounded-full bg-muted-foreground"
+          style={{ width: `${Math.max(0, Math.min(100, fillPercentRef.current))}%` }}
         />
-
-        {/* Handle */}
+        {min < 0 && max > 0 && (
+          <div
+            className="pointer-events-none absolute top-1/2 h-2 w-px -translate-y-1/2 bg-foreground/50"
+            style={{ left: `${(-min / (max - min)) * 100}%` }}
+          />
+        )}
         <div
           ref={handleRef}
-          className="absolute top-1/2 w-[3px] h-3.5 rounded-full bg-foreground/90 pointer-events-none"
+          className="pointer-events-none absolute top-1/2 h-3 w-2 bg-control-cap"
           style={{
-            left: `max(4px, calc(${Math.max(0, Math.min(100, fillPercentRef.current))}% - 1.5px))`,
-            transform: `translateY(-50%) scaleX(${isActive ? 1 : 0.25}) scaleY(1)`,
-            opacity: handleOpacity,
-            transition: 'opacity 150ms, transform 200ms var(--ease-out-strong)',
+            left: `clamp(0px, calc(${Math.max(0, Math.min(100, fillPercentRef.current))}% - 4px), calc(100% - 8px))`,
+            transform: 'translateY(-50%)',
+            opacity: isActive ? 1 : 0.8,
           }}
         />
-
-        {/* Label (left) */}
-        {label && (
-          <span
-            ref={labelRef}
-            className="absolute left-2 top-1/2 -translate-y-1/2 text-[10px] text-muted-foreground pointer-events-none"
-          >
-            {label}
-          </span>
-        )}
-
-        {/* Value (right) — click to edit */}
-        {showInput ? (
-          <input
-            ref={inputRef}
-            type="text"
-            autoComplete="off"
-            data-bwignore="true"
-            inputMode="decimal"
-            className="absolute right-1.5 top-1/2 -translate-y-1/2 w-14 h-5 text-xs font-mono tabular-nums text-foreground text-right bg-background/80 border border-ring rounded px-1 outline-none"
-            value={inputValue}
-            onChange={handleInputChange}
-            onKeyDown={handleInputKeyDown}
-            onBlur={commitTextInput}
-            onClick={(e) => e.stopPropagation()}
-            onPointerDown={(e) => e.stopPropagation()}
-          />
-        ) : (
-          <span
-            ref={valueSpanRef}
-            className={cn(
-              'absolute right-2 top-1/2 -translate-y-1/2 text-xs font-mono tabular-nums cursor-text',
-              'text-muted-foreground hover:text-foreground transition-colors duration-150',
-              isMixed && localValue === null && 'italic opacity-50',
-            )}
-            onClick={handleValueClick}
-            onPointerDown={(e) => e.stopPropagation()}
-          >
-            {displayValue}
-          </span>
-        )}
       </div>
+      {showInput ? (
+        <input
+          ref={inputRef}
+          type="text"
+          autoComplete="off"
+          data-bwignore="true"
+          inputMode="decimal"
+          aria-label={label ? `${label} value` : 'Parameter value'}
+          className="h-7 w-20 shrink-0 rounded-[3px] border border-ring bg-background px-3.5 text-left font-mono text-xs font-medium tabular-nums outline-none"
+          value={inputValue}
+          onChange={handleInputChange}
+          onKeyDown={handleInputKeyDown}
+          onBlur={commitTextInput}
+          onClick={(e) => e.stopPropagation()}
+          onPointerDown={(e) => e.stopPropagation()}
+        />
+      ) : (
+        <span
+          ref={valueSpanRef}
+          role="button"
+          tabIndex={disabled ? -1 : 0}
+          aria-label={label ? `Edit ${label} value` : 'Edit parameter value'}
+          aria-disabled={disabled}
+          className={cn(
+            'flex h-7 w-20 shrink-0 items-center justify-start rounded-[3px] border border-input bg-background px-3.5 font-mono text-xs font-medium tabular-nums outline-none focus-visible:ring-1 focus-visible:ring-ring',
+            !disabled && 'cursor-text hover:border-muted-foreground',
+            isMixed && localValue === null && 'italic',
+          )}
+          onClick={disabled ? undefined : handleValueClick}
+          onKeyDown={(e) => {
+            if (!disabled && (e.key === 'Enter' || e.key === ' ')) {
+              e.preventDefault()
+              e.stopPropagation()
+              openTextInput()
+            }
+          }}
+          onPointerDown={(e) => e.stopPropagation()}
+        >
+          {displayValue}
+        </span>
+      )}
     </div>
   )
 })

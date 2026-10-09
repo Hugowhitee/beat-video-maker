@@ -1,4 +1,5 @@
 import { fireEvent, render } from '@testing-library/react'
+import type { ComponentProps } from 'react'
 import { describe, expect, it, vi } from 'vite-plus/test'
 import { AudioMixerView } from './audio-mixer-view'
 
@@ -99,7 +100,89 @@ function renderDraggedTrackFader(handleTrackVolumeChange = vi.fn()) {
   }
 }
 
+function renderMixer(overrides: Partial<ComponentProps<typeof AudioMixerView>> = {}) {
+  return render(
+    <AudioMixerView
+      tracks={[{ id: 'beat', name: 'Beat', muted: false, solo: false, volume: 0, itemIds: [] }]}
+      perTrackLevels={new Map()}
+      masterEstimate={{ left: 0, right: 0, unresolvedSourceCount: 0, resolvedSourceCount: 0 }}
+      isPlaying={false}
+      masterVolumeDb={0}
+      masterMuted={false}
+      onMasterVolumeChange={() => undefined}
+      onMasterMuteToggle={() => undefined}
+      onTrackVolumeChange={() => undefined}
+      onTrackMuteToggle={() => undefined}
+      onTrackSoloToggle={() => undefined}
+      {...overrides}
+    />,
+  )
+}
+
 describe('AudioMixerView', () => {
+  it('keeps the contextual track mix before Master with accessible precise gain and unity reset', () => {
+    const onTrackVolumeChange = vi.fn()
+    const { getByRole, queryByRole } = renderMixer({ showMasterStrip: false, onTrackVolumeChange })
+    const fader = getByRole('slider', { name: 'Beat volume' })
+    expect(queryByRole('slider', { name: 'Master volume' })).toBeNull()
+    expect(fader).toHaveAttribute('aria-orientation', 'vertical')
+
+    fireEvent.keyDown(fader, { key: 'ArrowDown' })
+    expect(onTrackVolumeChange).toHaveBeenLastCalledWith('beat', -1)
+    fireEvent.keyDown(fader, { key: 'ArrowDown', shiftKey: true })
+    expect(onTrackVolumeChange).toHaveBeenLastCalledWith('beat', -1.1)
+    expect(fader).toHaveAttribute('aria-valuetext', '-1.1 dB')
+    fireEvent.keyDown(fader, { key: 'Enter' })
+    expect(onTrackVolumeChange).toHaveBeenLastCalledWith('beat', 0)
+    fireEvent.keyDown(fader, { key: 'Home' })
+    expect(onTrackVolumeChange).toHaveBeenLastCalledWith('beat', -60)
+    expect(fader).toHaveAttribute('aria-valuetext', '-60.0 dB')
+    fireEvent.doubleClick(fader)
+    expect(onTrackVolumeChange).toHaveBeenLastCalledWith('beat', 0)
+  })
+
+  it('keeps every real channel reachable when the floating mixer width is constrained', () => {
+    const tracks = Array.from({ length: 20 }, (_, index) => ({
+      id: `track-${index}`,
+      name: `Audio ${index + 1}`,
+      muted: false,
+      solo: false,
+      volume: 0,
+      itemIds: [],
+    }))
+    const { container, getAllByRole, queryByRole } = renderMixer({
+      tracks,
+      expanded: true,
+      showMasterStrip: false,
+    })
+    expect(getAllByRole('slider')).toHaveLength(20)
+    expect(container.querySelector('[data-mixer-channels]')).toHaveClass('overflow-x-auto')
+    expect(queryByRole('button', { name: 'Tuck mixer' })).toBeNull()
+  })
+
+  it('commits typed channel gain in dB and offers an explicit unity reset', () => {
+    const onTrackVolumeChange = vi.fn()
+    const { getByRole } = renderMixer({ showMasterStrip: false, onTrackVolumeChange })
+    const readout = getByRole('textbox', { name: 'Beat gain in dB' })
+    fireEvent.change(readout, { target: { value: '-7.3' } })
+    fireEvent.blur(readout)
+    expect(onTrackVolumeChange).toHaveBeenLastCalledWith('beat', -7.3)
+    fireEvent.click(getByRole('button', { name: 'Reset Beat gain to unity' }))
+    expect(onTrackVolumeChange).toHaveBeenLastCalledWith('beat', 0)
+  })
+
+  it('commits cancelled master fader gestures consistently with track faders', () => {
+    const onMasterVolumeChange = vi.fn()
+    const { getByRole } = renderMixer({ onMasterVolumeChange })
+    const fader = getByRole('slider', { name: 'Master volume' }) as HTMLDivElement
+    stubFaderGeometry(fader)
+    beginFaderDrag(fader)
+    fireEvent.pointerMove(fader, { pointerId: 1, clientY: 43.5 })
+    fireEvent.pointerCancel(fader, { pointerId: 1, clientY: 43.5 })
+    expect(onMasterVolumeChange).toHaveBeenCalledTimes(1)
+    expect(onMasterVolumeChange.mock.calls[0]?.[0]).toBeGreaterThan(0)
+  })
+
   it('shows scanning fallback bars while waveform data is unresolved', () => {
     const { container } = render(
       <AudioMixerView

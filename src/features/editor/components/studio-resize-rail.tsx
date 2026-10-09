@@ -7,10 +7,11 @@ interface StudioResizeRailProps {
   onWidthChange: (width: number) => void
   label: string
   defaultWidth: number
+  side?: 'left' | 'right'
 }
 
 /**
- * An actual split rail *between* panes, not an overlay on top of a scrollbar.
+ * A split rail centred on the boundary between panes.
  * Codex-style hover treatment: the 1px dividing line becomes an accent on
  * hover/focus/drag, while the easy-to-grab 10px hit target stays transparent.
  */
@@ -21,6 +22,7 @@ export const StudioResizeRail = memo(function StudioResizeRail({
   onWidthChange,
   label,
   defaultWidth,
+  side = 'right',
 }: StudioResizeRailProps) {
   const interaction = useRef<{ id: number; x: number; width: number } | null>(null)
   const clamp = (value: number) => Math.round(Math.max(minWidth, Math.min(maxWidth, value)))
@@ -46,14 +48,18 @@ export const StudioResizeRail = memo(function StudioResizeRail({
   const handlePointerMove = (event: PointerEvent<HTMLDivElement>) => {
     const start = interaction.current
     if (!start || start.id !== event.pointerId) return
-    // This rail sits to the left of the right panel.
-    onWidthChange(clamp(start.width + start.x - event.clientX))
+    const delta = event.clientX - start.x
+    onWidthChange(clamp(start.width + (side === 'left' ? delta : -delta)))
   }
   const handleKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
-    const delta = event.key === 'ArrowLeft' ? 24 : event.key === 'ArrowRight' ? -24 : 0
+    const direction = side === 'left' ? 1 : -1
+    const delta =
+      event.key === 'ArrowLeft' ? -24 * direction : event.key === 'ArrowRight' ? 24 * direction : 0
     if (delta === 0 && event.key !== 'Home' && event.key !== 'End') return
     event.preventDefault()
-    onWidthChange(clamp(event.key === 'Home' ? minWidth : event.key === 'End' ? maxWidth : width + delta))
+    onWidthChange(
+      clamp(event.key === 'Home' ? minWidth : event.key === 'End' ? maxWidth : width + delta),
+    )
   }
 
   return (
@@ -77,11 +83,11 @@ export const StudioResizeRail = memo(function StudioResizeRail({
       }}
       onKeyDown={handleKeyDown}
       onDoubleClick={() => onWidthChange(clamp(defaultWidth))}
-      className="group relative z-20 h-full w-[10px] shrink-0 cursor-col-resize touch-none bg-transparent outline-none before:pointer-events-none before:absolute before:inset-y-0 before:left-1/2 before:w-px before:-translate-x-1/2 before:bg-[#abb3aa] before:transition-[width,background-color] hover:before:w-[2px] hover:before:bg-[#526955] focus-visible:before:w-[2px] focus-visible:before:bg-[#526955] active:before:w-[2px] active:before:bg-[#526955]"
+      className="group relative z-20 -mx-[5px] h-full w-[10px] shrink-0 cursor-col-resize touch-none bg-transparent outline-none before:pointer-events-none before:absolute before:inset-y-0 before:left-1/2 before:w-px before:-translate-x-1/2 before:bg-border before:transition-[width,background-color] hover:before:w-[2px] hover:before:bg-primary focus-visible:before:w-[2px] focus-visible:before:bg-primary active:before:w-[2px] active:before:bg-primary"
     >
       <span
         aria-hidden="true"
-        className="pointer-events-none absolute left-1/2 top-1/2 h-9 w-[3px] -translate-x-1/2 -translate-y-1/2 bg-[#526955] opacity-0 transition-opacity group-hover:opacity-75 group-focus-visible:opacity-75 group-active:opacity-100"
+        className="pointer-events-none absolute left-1/2 top-1/2 h-9 w-[3px] -translate-x-1/2 -translate-y-1/2 bg-primary opacity-0 transition-opacity group-hover:opacity-75 group-focus-visible:opacity-75 group-active:opacity-100"
       />
     </div>
   )

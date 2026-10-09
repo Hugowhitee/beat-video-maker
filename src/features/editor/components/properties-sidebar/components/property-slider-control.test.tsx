@@ -24,7 +24,7 @@ describe('PropertySliderControl', () => {
       />,
     )
 
-    expect(screen.getByText('25%')).toBeInTheDocument()
+    expect(screen.getByText('25 %')).toBeInTheDocument()
     expect(screen.getByTestId('keyframe-toggle')).toHaveAttribute('data-property', 'trimPathStart')
     fireEvent.click(screen.getByRole('button', { name: 'Reset to default' }))
     expect(onReset).toHaveBeenCalledOnce()
@@ -34,6 +34,7 @@ describe('PropertySliderControl', () => {
     render(<PropertySliderControl value={4} onChange={vi.fn()} min={0} max={50} unit="px" />)
 
     expect(screen.queryByTestId('keyframe-toggle')).not.toBeInTheDocument()
-    expect(screen.queryByRole('button')).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /reset/i })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Edit parameter value' })).toBeInTheDocument()
   })
 })

@@ -106,10 +106,7 @@ const LazyTranscriptEditorPanel = lazy(() =>
     default: TranscriptEditorPanel,
   })),
 )
-import {
-  TEXT_STYLE_PRESETS,
-  type TextStylePreset,
-} from '@/shared/typography/text-style-presets'
+import { TEXT_STYLE_PRESETS, type TextStylePreset } from '@/shared/typography/text-style-presets'
 import {
   EDITOR_LAYOUT_CSS_VALUES,
   clampLeftEditorSidebarWidth,
@@ -340,11 +337,7 @@ function renderTextTemplatePreview(
 
 const DEFAULT_TEXT_TEMPLATE_LABEL = 'Text'
 
-type ProducerTextPresetId =
-  | 'corner-mark'
-  | 'lower-third'
-  | 'center-stamp'
-  | 'beat-title'
+type ProducerTextPresetId = 'corner-mark' | 'lower-third' | 'center-stamp' | 'beat-title'
 
 const PRODUCER_TEXT_PRESETS: ReadonlyArray<{
   id: ProducerTextPresetId
@@ -397,26 +390,42 @@ function renderProducerTextPreview(preset: (typeof PRODUCER_TEXT_PRESETS)[number
   return (
     <div className="relative aspect-video w-full overflow-hidden border border-[#474d46] bg-[#252923] text-white">
       {preset.id === 'corner-mark' && (
-        <span className="absolute right-[7%] top-[9%] text-[9px] leading-none tracking-[0.04em]" style={displayFont}>
+        <span
+          className="absolute right-[7%] top-[9%] text-[9px] leading-none tracking-[0.04em]"
+          style={displayFont}
+        >
           PROD. NAME
         </span>
       )}
       {preset.id === 'lower-third' && (
         <div className="absolute bottom-[13%] left-[8%] flex flex-col items-start">
-          <span className="text-[13px] leading-none tracking-[0.01em]" style={displayFont}>PROD. NAME</span>
-          <span className="mt-0.5 text-[10px] leading-none text-[#e9f0df]" style={signatureFont}>Beat by Hugo White</span>
+          <span className="text-[13px] leading-none tracking-[0.01em]" style={displayFont}>
+            PROD. NAME
+          </span>
+          <span className="mt-0.5 text-[10px] leading-none text-[#e9f0df]" style={signatureFont}>
+            Beat by Hugo White
+          </span>
         </div>
       )}
       {preset.id === 'center-stamp' && (
-        <span className="absolute inset-0 flex items-center justify-center text-[17px] tracking-[0.025em]" style={displayFont}>
+        <span
+          className="absolute inset-0 flex items-center justify-center text-[17px] tracking-[0.025em]"
+          style={displayFont}
+        >
           HUGOWHITE
         </span>
       )}
       {preset.id === 'beat-title' && (
         <div className="absolute inset-x-[5%] top-[9%] flex flex-col items-center">
-          <span className="text-[20px] leading-[0.9] tracking-[-0.025em]" style={displayFont}>GLOCK IT</span>
-          <span className="mt-[5%] text-[9px] leading-none text-[#ff5a1f]" style={displayFont}>KEVIN TYPE BEAT</span>
-          <span className="mt-0.5 text-[10px] leading-none text-white" style={signatureFont}>Hugo White</span>
+          <span className="text-[20px] leading-[0.9] tracking-[-0.025em]" style={displayFont}>
+            GLOCK IT
+          </span>
+          <span className="mt-[5%] text-[9px] leading-none text-[#ff5a1f]" style={displayFont}>
+            KEVIN TYPE BEAT
+          </span>
+          <span className="mt-0.5 text-[10px] leading-none text-white" style={signatureFont}>
+            Hugo White
+          </span>
         </div>
       )}
     </div>
@@ -427,9 +436,7 @@ const REACTIVE_EFFECT_PRESET_IDS = new Set<BeatvideoReactiveGraphicPresetId>([
   'beat-flash',
   'pulse-frame',
 ])
-const REACTIVE_GRAPHIC_PRESET_IDS = new Set<BeatvideoReactiveGraphicPresetId>([
-  'three-band-bars',
-])
+const REACTIVE_GRAPHIC_PRESET_IDS = new Set<BeatvideoReactiveGraphicPresetId>(['three-band-bars'])
 
 function renderReactiveGraphicPreview(presetId: BeatvideoReactiveGraphicPresetId) {
   return (
@@ -448,7 +455,7 @@ function renderReactiveGraphicPreview(presetId: BeatvideoReactiveGraphicPresetId
       ) : (
         <div className="absolute inset-x-[24%] bottom-[18%] top-[18%] flex items-end justify-center gap-[8%]">
           <span className="h-[42%] w-[22%] bg-white/75" />
-          <span className="h-[86%] w-[22%] bg-[#c7e85a]" />
+          <span className="h-[86%] w-[22%] bg-primary" />
           <span className="h-[62%] w-[22%] bg-white/75" />
         </div>
       )}
@@ -475,11 +482,7 @@ function clampMasterSidebarWidth(width: number): number {
     typeof window === 'undefined'
       ? MASTER_SIDEBAR_MAX_WIDTH
       : Math.max(MASTER_SIDEBAR_MIN_WIDTH, Math.floor(window.innerWidth * 0.48))
-  return Math.min(
-    MASTER_SIDEBAR_MAX_WIDTH,
-    viewportMax,
-    Math.max(MASTER_SIDEBAR_MIN_WIDTH, width),
-  )
+  return Math.min(MASTER_SIDEBAR_MAX_WIDTH, viewportMax, Math.max(MASTER_SIDEBAR_MIN_WIDTH, width))
 }
 
 function loadMasterSidebarWidth(): number {
@@ -524,8 +527,7 @@ export const MediaSidebar = memo(function MediaSidebar({
   const setSidebarWidth = useEditorStore((s) => s.setSidebarWidth)
   const prefersReducedMotion = useReducedMotion()
   const [masterSidebarWidth, setMasterSidebarWidth] = useState(loadMasterSidebarWidth)
-  const effectiveSidebarWidth =
-    workspace === 'master' ? masterSidebarWidth : sidebarWidth
+  const effectiveSidebarWidth = workspace === 'master' ? masterSidebarWidth : sidebarWidth
 
   const [beatTabActivated, setBeatTabActivated] = useState(activeTab === 'beat')
   const [aiTabActivated, setAiTabActivated] = useState(activeTab === 'ai')
@@ -744,10 +746,16 @@ export const MediaSidebar = memo(function MediaSidebar({
       const name: TextItem = {
         ...nameBase,
         label: 'Producer name',
-        fontFamily: 'Staatliches', fontWeight: 'normal',
-        color: '#ffffff', fontSize: Math.round(canvasHeight * 0.063),
-        lineHeight: 0.96, textPadding: 0, textSpans: undefined,
-        backgroundColor: undefined, stroke: undefined, textStylePresetId: undefined,
+        fontFamily: 'Staatliches',
+        fontWeight: 'normal',
+        color: '#ffffff',
+        fontSize: Math.round(canvasHeight * 0.063),
+        lineHeight: 0.96,
+        textPadding: 0,
+        textSpans: undefined,
+        backgroundColor: undefined,
+        stroke: undefined,
+        textStylePresetId: undefined,
         transform: {
           ...nameBase.transform,
           x: Math.round(-canvasWidth * 0.22),
@@ -759,10 +767,16 @@ export const MediaSidebar = memo(function MediaSidebar({
       const signature: TextItem = {
         ...creditBase,
         label: 'Producer signature',
-        fontFamily: 'Caveat', fontWeight: 'normal',
-        color: '#ffffff', fontSize: Math.round(canvasHeight * 0.045),
-        lineHeight: 1, textPadding: 0, textSpans: undefined,
-        backgroundColor: undefined, stroke: undefined, textStylePresetId: undefined,
+        fontFamily: 'Caveat',
+        fontWeight: 'normal',
+        color: '#ffffff',
+        fontSize: Math.round(canvasHeight * 0.045),
+        lineHeight: 1,
+        textPadding: 0,
+        textSpans: undefined,
+        backgroundColor: undefined,
+        stroke: undefined,
+        textStylePresetId: undefined,
         transform: {
           ...creditBase.transform,
           x: Math.round(-canvasWidth * 0.22),
@@ -788,12 +802,17 @@ export const MediaSidebar = memo(function MediaSidebar({
     const item: TextItem = {
       ...baseItem,
       label: preset.label,
-      fontFamily: 'Staatliches', fontWeight: 'normal',
+      fontFamily: 'Staatliches',
+      fontWeight: 'normal',
       fontSize: Math.round(canvasHeight * (isCorner ? 0.046 : 0.12)),
-      lineHeight: 0.95, letterSpacing: 0,
-      color: '#ffffff', textPadding: 0,
-      backgroundColor: undefined, stroke: undefined,
-      textSpans: undefined, textStylePresetId: undefined,
+      lineHeight: 0.95,
+      letterSpacing: 0,
+      color: '#ffffff',
+      textPadding: 0,
+      backgroundColor: undefined,
+      stroke: undefined,
+      textSpans: undefined,
+      textStylePresetId: undefined,
       transform: {
         ...baseItem.transform,
         x: isCorner ? Math.round(canvasWidth * 0.32) : 0,
@@ -834,23 +853,16 @@ export const MediaSidebar = memo(function MediaSidebar({
       const existingCoverTrack = timeline.tracks.find(
         (track) => track.kind === 'video' && track.name === 'Cover',
       )
-      const maxOrder = timeline.tracks.reduce(
-        (max, track) => Math.max(max, track.order ?? 0),
-        0,
-      )
-      const coverTrack =
-        existingCoverTrack ??
-        {
-          ...createClassicTrack({
-            tracks: timeline.tracks,
-            kind: 'video',
-            order: maxOrder + 1,
-          }),
-          name: 'Cover',
-        }
-      const nextTracks = existingCoverTrack
-        ? timeline.tracks
-        : [...timeline.tracks, coverTrack]
+      const maxOrder = timeline.tracks.reduce((max, track) => Math.max(max, track.order ?? 0), 0)
+      const coverTrack = existingCoverTrack ?? {
+        ...createClassicTrack({
+          tracks: timeline.tracks,
+          kind: 'video',
+          order: maxOrder + 1,
+        }),
+        name: 'Cover',
+      }
+      const nextTracks = existingCoverTrack ? timeline.tracks : [...timeline.tracks, coverTrack]
       const publishDuration = resolvePhotoPublishingDurationInFrames(timeline.fps, {
         beatvideoMode: 'photo',
         beatvideoMusic: currentProject?.beatvideoMusic,
@@ -956,8 +968,7 @@ export const MediaSidebar = memo(function MediaSidebar({
     const { tracks, fps, addItemOnNewTrack } = useTimelineStore.getState()
     const { activeTrackId, selectItems, setActiveTrack } = useSelectionStore.getState()
     const currentProject = useProjectStore.getState().currentProject
-    const activeCompositionId =
-      useCompositionNavigationStore.getState().activeCompositionId
+    const activeCompositionId = useCompositionNavigationStore.getState().activeCompositionId
     const activeComposition = activeCompositionId
       ? useCompositionsStore.getState().getComposition(activeCompositionId)
       : undefined
@@ -994,85 +1005,75 @@ export const MediaSidebar = memo(function MediaSidebar({
     selectItems([shapeItem.id])
   }, [])
 
-  const handleAddReactiveGraphic = useCallback(
-    (presetId: BeatvideoReactiveGraphicPresetId) => {
-      const timeline = useTimelineStore.getState()
-      const selection = useSelectionStore.getState()
-      const currentProject = useProjectStore.getState().currentProject
-      const activeCompositionId =
-        useCompositionNavigationStore.getState().activeCompositionId
+  const handleAddReactiveGraphic = useCallback((presetId: BeatvideoReactiveGraphicPresetId) => {
+    const timeline = useTimelineStore.getState()
+    const selection = useSelectionStore.getState()
+    const currentProject = useProjectStore.getState().currentProject
+    const activeCompositionId = useCompositionNavigationStore.getState().activeCompositionId
 
-      if (activeCompositionId) {
-        toast.warning('Return to Main to add beat-driven graphics')
-        return
-      }
+    if (activeCompositionId) {
+      toast.warning('Return to Main to add beat-driven graphics')
+      return
+    }
 
-      const analysis = currentProject?.beatvideoMusic
-      if (!analysis) {
-        toast.error('Analyze and place the beat first')
-        return
-      }
+    const analysis = currentProject?.beatvideoMusic
+    if (!analysis) {
+      toast.error('Analyze and place the beat first')
+      return
+    }
 
-      const timelineGrid = resolveBeatvideoTimelineGrid(
-        analysis,
-        timeline.items,
-        timeline.fps,
-      )
-      if (!timelineGrid) {
-        toast.error('Place the analyzed beat on the timeline first')
-        return
-      }
+    const timelineGrid = resolveBeatvideoTimelineGrid(analysis, timeline.items, timeline.fps)
+    if (!timelineGrid) {
+      toast.error('Place the analyzed beat on the timeline first')
+      return
+    }
 
-      const preset = BEATVIDEO_REACTIVE_GRAPHIC_PRESETS.find(
-        (candidate) => candidate.id === presetId,
-      )
-      if (!preset) return
+    const preset = BEATVIDEO_REACTIVE_GRAPHIC_PRESETS.find((candidate) => candidate.id === presetId)
+    if (!preset) return
 
-      let workingTracks = timeline.tracks
-      let anchorTrackId = selection.activeTrackId
-      const trackIds: string[] = []
+    let workingTracks = timeline.tracks
+    let anchorTrackId = selection.activeTrackId
+    const trackIds: string[] = []
 
-      for (const trackName of preset.trackNames) {
-        const created = createOverlayLayerTrack({
-          tracks: workingTracks,
-          activeTrackId: anchorTrackId,
-        })
-        if (!created) {
-          toast.error('Could not create the reactive graphic layers')
-          return
-        }
-
-        workingTracks = created.tracks.map((track) =>
-          track.id === created.trackId ? { ...track, name: trackName } : track,
-        )
-        trackIds.push(created.trackId)
-        anchorTrackId = created.trackId
-      }
-
-      const canvasWidth = currentProject?.metadata.width ?? DEFAULT_PROJECT_WIDTH
-      const canvasHeight = currentProject?.metadata.height ?? DEFAULT_PROJECT_HEIGHT
-      const items = buildBeatvideoReactiveGraphicItems({
-        presetId,
-        grid: timelineGrid.grid,
-        fps: timeline.fps,
-        from: timelineGrid.placement.from,
-        durationInFrames: timelineGrid.placement.durationInFrames,
-        canvasWidth,
-        canvasHeight,
-        trackIds,
+    for (const trackName of preset.trackNames) {
+      const created = createOverlayLayerTrack({
+        tracks: workingTracks,
+        activeTrackId: anchorTrackId,
       })
-      if (items.length === 0) {
-        toast.error('Could not build the reactive graphic')
+      if (!created) {
+        toast.error('Could not create the reactive graphic layers')
         return
       }
 
-      addItemsOnNewTracks(items, workingTracks)
-      selection.setActiveTrack(items[0]!.trackId)
-      selection.selectItems(items.map((item) => item.id))
-      toast.success(`${preset.label} added`)
-    },
-    [],
-  )
+      workingTracks = created.tracks.map((track) =>
+        track.id === created.trackId ? { ...track, name: trackName } : track,
+      )
+      trackIds.push(created.trackId)
+      anchorTrackId = created.trackId
+    }
+
+    const canvasWidth = currentProject?.metadata.width ?? DEFAULT_PROJECT_WIDTH
+    const canvasHeight = currentProject?.metadata.height ?? DEFAULT_PROJECT_HEIGHT
+    const items = buildBeatvideoReactiveGraphicItems({
+      presetId,
+      grid: timelineGrid.grid,
+      fps: timeline.fps,
+      from: timelineGrid.placement.from,
+      durationInFrames: timelineGrid.placement.durationInFrames,
+      canvasWidth,
+      canvasHeight,
+      trackIds,
+    })
+    if (items.length === 0) {
+      toast.error('Could not build the reactive graphic')
+      return
+    }
+
+    addItemsOnNewTracks(items, workingTracks)
+    selection.setActiveTrack(items[0]!.trackId)
+    selection.selectItems(items.map((item) => item.id))
+    toast.success(`${preset.label} added`)
+  }, [])
 
   const revealAppliedEffects = useCallback((itemIds?: string[]) => {
     if (itemIds && itemIds.length > 0) {
@@ -1110,11 +1111,7 @@ export const MediaSidebar = memo(function MediaSidebar({
         })
         const coverId = items.find((item) => item.type === 'image')?.id
         const visualIds =
-          selectedVisualIds.length > 0
-            ? selectedVisualIds
-            : coverId
-              ? [coverId]
-              : []
+          selectedVisualIds.length > 0 ? selectedVisualIds : coverId ? [coverId] : []
 
         if (visualIds.length > 0) {
           preset.effects.forEach((effect) => {
@@ -1147,15 +1144,9 @@ export const MediaSidebar = memo(function MediaSidebar({
         )
       })
       const photoCoverId =
-        beatvideoMode === 'photo'
-          ? items.find((item) => item.type === 'image')?.id
-          : undefined
+        beatvideoMode === 'photo' ? items.find((item) => item.type === 'image')?.id : undefined
       const visualIds =
-        selectedVisualIds.length > 0
-          ? selectedVisualIds
-          : photoCoverId
-            ? [photoCoverId]
-            : []
+        selectedVisualIds.length > 0 ? selectedVisualIds : photoCoverId ? [photoCoverId] : []
 
       if (visualIds.length > 0) {
         const defaults = getGpuEffectDefaultParams(gpuEffectId)
@@ -1188,7 +1179,6 @@ export const MediaSidebar = memo(function MediaSidebar({
   // Which effect/preset tile is hovered — drives its live sweep animation.
   const [hoveredEffectKey, setHoveredEffectKey] = useState<string | null>(null)
 
-
   // Category items for the vertical nav
   const categories = [
     { id: 'media' as const, icon: Film, label: t('editor.mediaSidebar.media') },
@@ -1206,19 +1196,16 @@ export const MediaSidebar = memo(function MediaSidebar({
       isSidebarTabVisibleForWorkspace(id, workspace),
   )
 
-  const primaryVisualTabs = categories.filter(({ id }) =>
-    id === 'media' || id === 'text' || id === 'effects' || id === 'transitions',
+  const primaryVisualTabs = categories.filter(
+    ({ id }) => id === 'media' || id === 'text' || id === 'effects' || id === 'transitions',
   )
-  const secondaryVisualTabs = categories.filter(({ id }) =>
-    id === 'lottie' || id === 'transcript' || id === 'ai',
+  const secondaryVisualTabs = categories.filter(
+    ({ id }) => id === 'lottie' || id === 'transcript' || id === 'ai',
   )
   const selectedSecondaryTab = secondaryVisualTabs.find(({ id }) => id === activeTab)
 
   const producerShell =
-    workspace === 'beat' ||
-    workspace === 'edit' ||
-    workspace === 'color' ||
-    workspace === 'master'
+    workspace === 'beat' || workspace === 'edit' || workspace === 'color' || workspace === 'master'
 
   useEffect(() => {
     // Existing saved selections of the old Graphics tab now open the unified
@@ -1284,53 +1271,53 @@ export const MediaSidebar = memo(function MediaSidebar({
       {/* The advanced editor icon rail remains available outside the focused
           Beatvideo producer flow. Producer workspaces use labeled tabs instead. */}
       {!mobile && !producerShell ? (
-      <div
-        className="panel-header border-r border-border flex flex-col items-center flex-shrink-0"
-        style={{ width: EDITOR_LAYOUT_CSS_VALUES.sidebarRailWidth }}
-      >
-        {/* Header row - aligned with content panel header */}
         <div
-          className="flex items-center justify-center border-b border-border w-full"
-          style={{ height: EDITOR_LAYOUT_CSS_VALUES.sidebarHeaderHeight }}
+          className="panel-header border-r border-border flex flex-col items-center flex-shrink-0"
+          style={{ width: EDITOR_LAYOUT_CSS_VALUES.sidebarRailWidth }}
         >
-          <button
-            onClick={toggleLeftSidebar}
-            className="rounded-lg flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-secondary/50 transition-colors"
-            style={{
-              width: EDITOR_LAYOUT_CSS_VALUES.sidebarHeaderButtonSize,
-              height: EDITOR_LAYOUT_CSS_VALUES.sidebarHeaderButtonSize,
-            }}
-            data-tooltip={
-              leftSidebarOpen
-                ? t('editor.mediaSidebar.collapsePanel')
-                : t('editor.mediaSidebar.expandPanel')
-            }
-            data-tooltip-side="right"
+          {/* Header row - aligned with content panel header */}
+          <div
+            className="flex items-center justify-center border-b border-border w-full"
+            style={{ height: EDITOR_LAYOUT_CSS_VALUES.sidebarHeaderHeight }}
           >
-            {leftSidebarOpen ? (
-              <ChevronLeft className="w-3.5 h-3.5" />
-            ) : (
-              <ChevronRight className="w-3.5 h-3.5" />
-            )}
-          </button>
-        </div>
-
-        {/* Category Icons — single-purpose Beat/Master workspaces do not repeat themselves here. */}
-        {categories.length > 1 ? (
-          <div className="flex flex-col gap-1 py-1.5">
-          {categories.map(({ id, icon: Icon, label }) => (
             <button
-              key={id}
-              onClick={() => {
-                if (activeTab === id && leftSidebarOpen) {
-                  toggleLeftSidebar()
-                } else {
-                  setActiveTab(id)
-                  if (!leftSidebarOpen) toggleLeftSidebar()
-                  if (id === 'effects') triggerPreviews()
-                }
+              onClick={toggleLeftSidebar}
+              className="rounded-lg flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-secondary/50 transition-colors"
+              style={{
+                width: EDITOR_LAYOUT_CSS_VALUES.sidebarHeaderButtonSize,
+                height: EDITOR_LAYOUT_CSS_VALUES.sidebarHeaderButtonSize,
               }}
-              className={`
+              data-tooltip={
+                leftSidebarOpen
+                  ? t('editor.mediaSidebar.collapsePanel')
+                  : t('editor.mediaSidebar.expandPanel')
+              }
+              data-tooltip-side="right"
+            >
+              {leftSidebarOpen ? (
+                <ChevronLeft className="w-3.5 h-3.5" />
+              ) : (
+                <ChevronRight className="w-3.5 h-3.5" />
+              )}
+            </button>
+          </div>
+
+          {/* Category Icons — single-purpose Beat/Master workspaces do not repeat themselves here. */}
+          {categories.length > 1 ? (
+            <div className="flex flex-col gap-1 py-1.5">
+              {categories.map(({ id, icon: Icon, label }) => (
+                <button
+                  key={id}
+                  onClick={() => {
+                    if (activeTab === id && leftSidebarOpen) {
+                      toggleLeftSidebar()
+                    } else {
+                      setActiveTab(id)
+                      if (!leftSidebarOpen) toggleLeftSidebar()
+                      if (id === 'effects') triggerPreviews()
+                    }
+                  }}
+                  className={`
                 w-9 h-9 rounded-lg flex items-center justify-center transition-[transform,background-color,color] duration-150 active:scale-95
                 ${
                   activeTab === id && leftSidebarOpen
@@ -1338,15 +1325,15 @@ export const MediaSidebar = memo(function MediaSidebar({
                     : 'text-muted-foreground hover:text-foreground hover:bg-secondary/50'
                 }
               `}
-              data-tooltip={label}
-              data-tooltip-side="right"
-            >
-              <Icon className="w-4 h-4" />
-            </button>
-          ))}
-          </div>
-        ) : null}
-      </div>
+                  data-tooltip={label}
+                  data-tooltip-side="right"
+                >
+                  <Icon className="w-4 h-4" />
+                </button>
+              ))}
+            </div>
+          ) : null}
+        </div>
       ) : null}
 
       {/* Content Panel — width animated via motion for the open/close toggle.
@@ -1360,9 +1347,7 @@ export const MediaSidebar = memo(function MediaSidebar({
       <motion.div
         className={cn(
           'panel-bg overflow-hidden relative',
-          mobile || studioTaskColumn
-            ? 'w-full flex-1 border-r-0'
-            : 'border-r border-border',
+          mobile || studioTaskColumn ? 'w-full flex-1 border-r-0' : 'border-r border-border',
         )}
         initial={false}
         animate={{
@@ -1401,7 +1386,7 @@ export const MediaSidebar = memo(function MediaSidebar({
             <div
               className={cn(
                 'flex items-center justify-between border-b border-border flex-shrink-0',
-                studioTaskColumn && workspace === 'edit' ? 'h-[62px] px-5' : 'px-3',
+                studioTaskColumn && workspace === 'edit' ? 'h-9 px-4' : 'px-3',
               )}
               style={
                 studioTaskColumn && workspace === 'edit'
@@ -1412,11 +1397,8 @@ export const MediaSidebar = memo(function MediaSidebar({
               {studioTaskColumn && workspace === 'edit' ? (
                 <div className="min-w-0">
                   <div className="text-[11px] font-semibold uppercase tracking-[0.08em] text-foreground">
-                    Visual
+                    Add sources & layers
                   </div>
-                  <p className="mt-1.5 truncate text-[10px] text-muted-foreground">
-                    Build the picture, then refine selected clips in Inspector.
-                  </p>
                 </div>
               ) : (
                 <span className="text-sm font-medium text-foreground">
@@ -1441,9 +1423,7 @@ export const MediaSidebar = memo(function MediaSidebar({
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end" className="min-w-40">
-                      <DropdownMenuItem
-                        onSelect={() => handleAddText()}
-                      >
+                      <DropdownMenuItem onSelect={() => handleAddText()}>
                         <Type className="mr-2 h-3.5 w-3.5" />
                         Text layer
                       </DropdownMenuItem>
@@ -1459,34 +1439,34 @@ export const MediaSidebar = memo(function MediaSidebar({
                   </DropdownMenu>
                 ) : null}
                 {!mobile && !studioTaskColumn ? (
-                <Button
-                variant="ghost"
-                size="icon"
-                className="shrink-0"
-                style={{
-                  width: EDITOR_LAYOUT_CSS_VALUES.sidebarHeaderButtonSize,
-                  height: EDITOR_LAYOUT_CSS_VALUES.sidebarHeaderButtonSize,
-                }}
-                onClick={toggleMediaFullColumn}
-                aria-label={
-                  mediaFullColumn
-                    ? t('editor.propertiesSidebar.dockToPreview')
-                    : t('editor.propertiesSidebar.expandFullColumn')
-                }
-                data-tooltip={
-                  mediaFullColumn
-                    ? t('editor.propertiesSidebar.dockToPreview')
-                    : t('editor.propertiesSidebar.expandFullColumn')
-                }
-                data-tooltip-side="bottom"
-              >
-                {mediaFullColumn ? (
-                  <ChevronUp className="w-3 h-3" />
-                ) : (
-                  <ChevronDown className="w-3 h-3" />
-                )}
-              </Button>
-              ) : null}
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="shrink-0"
+                    style={{
+                      width: EDITOR_LAYOUT_CSS_VALUES.sidebarHeaderButtonSize,
+                      height: EDITOR_LAYOUT_CSS_VALUES.sidebarHeaderButtonSize,
+                    }}
+                    onClick={toggleMediaFullColumn}
+                    aria-label={
+                      mediaFullColumn
+                        ? t('editor.propertiesSidebar.dockToPreview')
+                        : t('editor.propertiesSidebar.expandFullColumn')
+                    }
+                    data-tooltip={
+                      mediaFullColumn
+                        ? t('editor.propertiesSidebar.dockToPreview')
+                        : t('editor.propertiesSidebar.expandFullColumn')
+                    }
+                    data-tooltip-side="bottom"
+                  >
+                    {mediaFullColumn ? (
+                      <ChevronUp className="w-3 h-3" />
+                    ) : (
+                      <ChevronDown className="w-3 h-3" />
+                    )}
+                  </Button>
+                ) : null}
               </div>
             </div>
 
@@ -1521,11 +1501,14 @@ export const MediaSidebar = memo(function MediaSidebar({
                           type="button"
                           aria-label="More Visual tools"
                           className={cn(
-                            'flex h-8 max-w-[98px] shrink-0 items-center gap-1 border border-border px-2 text-xs font-medium hover:bg-[#d1d4ce]',
-                            selectedSecondaryTab && 'bg-[#c9cec6] text-foreground',
+                            'flex h-8 max-w-[98px] shrink-0 items-center gap-1 border border-border px-2 text-xs font-medium hover:bg-secondary',
+                            selectedSecondaryTab &&
+                              'bg-background text-primary shadow-[inset_0_-2px_0_var(--primary)]',
                           )}
                         >
-                          <span className="min-w-0 truncate">{selectedSecondaryTab?.label ?? 'More'}</span>
+                          <span className="min-w-0 truncate">
+                            {selectedSecondaryTab?.label ?? 'More'}
+                          </span>
                           <ChevronDown className="h-3 w-3 shrink-0" />
                         </button>
                       </DropdownMenuTrigger>
@@ -1596,7 +1579,7 @@ export const MediaSidebar = memo(function MediaSidebar({
                         key={preset.id}
                         type="button"
                         onClick={() => handleAddProducerText(preset.id)}
-                        className="rounded-[3px] bg-[#d9dbd6] p-2 text-left transition-colors hover:bg-[#d1d4ce]"
+                        className="rounded-[3px] bg-background p-2 text-left transition-colors hover:bg-secondary"
                       >
                         {renderProducerTextPreview(preset)}
                         <span className="mt-1.5 block truncate text-[9px] font-semibold text-foreground">
@@ -1626,7 +1609,7 @@ export const MediaSidebar = memo(function MediaSidebar({
                         if (shouldSuppressGeneratedItemClick()) return
                         handleAddText()
                       }}
-                      className="rounded-[3px] bg-[#d9dbd6] p-2 text-left transition-colors hover:bg-[#d1d4ce]"
+                      className="rounded-[3px] bg-background p-2 text-left transition-colors hover:bg-secondary"
                     >
                       {renderTextTemplatePreview()}
                       <span className="mt-1.5 block text-[9px] font-semibold text-foreground">
@@ -1649,7 +1632,7 @@ export const MediaSidebar = memo(function MediaSidebar({
                           if (shouldSuppressGeneratedItemClick()) return
                           handleAddText(preset.id)
                         }}
-                        className="rounded-[3px] bg-[#d9dbd6] p-2 text-left transition-colors hover:bg-[#d1d4ce]"
+                        className="rounded-[3px] bg-background p-2 text-left transition-colors hover:bg-secondary"
                       >
                         {renderTextTemplatePreview(preset)}
                         <span className="mt-1.5 block truncate text-[9px] font-semibold text-foreground">
@@ -1659,7 +1642,8 @@ export const MediaSidebar = memo(function MediaSidebar({
                     ))}
                   </div>
                   <p className="mt-3 text-[8px] leading-3 text-muted-foreground">
-                    Click to add. Drag to place. Edit content, type, motion and effects in Inspector.
+                    Click to add. Drag to place. Edit content, type, motion and effects in
+                    Inspector.
                   </p>
                 </section>
               </div>
@@ -1672,239 +1656,239 @@ export const MediaSidebar = memo(function MediaSidebar({
                   <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" />
                 </summary>
                 <div className="pt-3">
-              <section className="mb-3 border-b border-border pb-3">
-                <div className="mb-2 text-[11px] font-medium text-foreground">
-                  Reactive graphic
-                </div>
-                <div className="grid grid-cols-2 gap-2">
-                  {BEATVIDEO_REACTIVE_GRAPHIC_PRESETS.filter((preset) =>
-                    REACTIVE_GRAPHIC_PRESET_IDS.has(preset.id),
-                  ).map((preset) => (
+                  <section className="mb-3 border-b border-border pb-3">
+                    <div className="mb-2 text-[11px] font-medium text-foreground">
+                      Reactive graphic
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      {BEATVIDEO_REACTIVE_GRAPHIC_PRESETS.filter((preset) =>
+                        REACTIVE_GRAPHIC_PRESET_IDS.has(preset.id),
+                      ).map((preset) => (
+                        <button
+                          key={preset.id}
+                          type="button"
+                          onClick={() => handleAddReactiveGraphic(preset.id)}
+                          className="rounded-[3px] bg-background p-2 text-left transition-colors hover:bg-secondary"
+                        >
+                          {renderReactiveGraphicPreview(preset.id)}
+                          <span className="mt-1.5 block truncate text-[9px] font-semibold text-foreground">
+                            {preset.label}
+                          </span>
+                        </button>
+                      ))}
+                    </div>
+                  </section>
+
+                  <div className="grid grid-cols-3 gap-1.5">
                     <button
-                      key={preset.id}
-                      type="button"
-                      onClick={() => handleAddReactiveGraphic(preset.id)}
-                      className="rounded-[3px] bg-[#d9dbd6] p-2 text-left transition-colors hover:bg-[#d1d4ce]"
+                      draggable={true}
+                      onDragStart={handleTemplateDragStart({
+                        itemType: 'shape',
+                        label: t('editor.shapeSection.solidColor'),
+                        shapeType: 'rectangle',
+                        shapePreset: 'solid',
+                      })}
+                      onDragEnd={handleTemplateDragEnd}
+                      onClick={() => {
+                        if (shouldSuppressGeneratedItemClick()) return
+                        handleAddShape('rectangle', 'solid')
+                      }}
+                      className="flex flex-col items-center justify-center gap-1 p-2 rounded-lg border border-border bg-secondary/30 hover:bg-secondary/50 hover:border-primary/50 transition-[transform,background-color,border-color,color] duration-150 active:scale-[0.98] group"
                     >
-                      {renderReactiveGraphicPreview(preset.id)}
-                      <span className="mt-1.5 block truncate text-[9px] font-semibold text-foreground">
-                        {preset.label}
+                      <div className="w-7 h-7 rounded border border-border bg-[#2d2d2d] shadow-inner group-hover:border-primary/50" />
+                      <span className="text-[9px] text-muted-foreground group-hover:text-foreground">
+                        {t('editor.shapeSection.solidColor')}
                       </span>
                     </button>
-                  ))}
-                </div>
-              </section>
 
-              <div className="grid grid-cols-3 gap-1.5">
-                <button
-                  draggable={true}
-                  onDragStart={handleTemplateDragStart({
-                    itemType: 'shape',
-                    label: t('editor.shapeSection.solidColor'),
-                    shapeType: 'rectangle',
-                    shapePreset: 'solid',
-                  })}
-                  onDragEnd={handleTemplateDragEnd}
-                  onClick={() => {
-                    if (shouldSuppressGeneratedItemClick()) return
-                    handleAddShape('rectangle', 'solid')
-                  }}
-                  className="flex flex-col items-center justify-center gap-1 p-2 rounded-lg border border-border bg-secondary/30 hover:bg-secondary/50 hover:border-primary/50 transition-[transform,background-color,border-color,color] duration-150 active:scale-[0.98] group"
-                >
-                  <div className="w-7 h-7 rounded border border-border bg-[#2d2d2d] shadow-inner group-hover:border-primary/50" />
-                  <span className="text-[9px] text-muted-foreground group-hover:text-foreground">
-                    {t('editor.shapeSection.solidColor')}
-                  </span>
-                </button>
+                    <button
+                      draggable={true}
+                      onDragStart={handleTemplateDragStart({
+                        itemType: 'shape',
+                        label: t('editor.shapeSection.gradient'),
+                        shapeType: 'rectangle',
+                        shapePreset: 'gradient',
+                      })}
+                      onDragEnd={handleTemplateDragEnd}
+                      onClick={() => {
+                        if (shouldSuppressGeneratedItemClick()) return
+                        handleAddShape('rectangle', 'gradient')
+                      }}
+                      className="flex flex-col items-center justify-center gap-1 p-2 rounded-lg border border-border bg-secondary/30 hover:bg-secondary/50 hover:border-primary/50 transition-[transform,background-color,border-color,color] duration-150 active:scale-[0.98] group"
+                    >
+                      <div className="w-7 h-7 rounded border border-border bg-gradient-to-r from-blue-500 to-violet-500 shadow-inner group-hover:border-primary/50" />
+                      <span className="text-[9px] text-muted-foreground group-hover:text-foreground">
+                        {t('editor.shapeSection.gradient')}
+                      </span>
+                    </button>
 
-                <button
-                  draggable={true}
-                  onDragStart={handleTemplateDragStart({
-                    itemType: 'shape',
-                    label: t('editor.shapeSection.gradient'),
-                    shapeType: 'rectangle',
-                    shapePreset: 'gradient',
-                  })}
-                  onDragEnd={handleTemplateDragEnd}
-                  onClick={() => {
-                    if (shouldSuppressGeneratedItemClick()) return
-                    handleAddShape('rectangle', 'gradient')
-                  }}
-                  className="flex flex-col items-center justify-center gap-1 p-2 rounded-lg border border-border bg-secondary/30 hover:bg-secondary/50 hover:border-primary/50 transition-[transform,background-color,border-color,color] duration-150 active:scale-[0.98] group"
-                >
-                  <div className="w-7 h-7 rounded border border-border bg-gradient-to-r from-blue-500 to-violet-500 shadow-inner group-hover:border-primary/50" />
-                  <span className="text-[9px] text-muted-foreground group-hover:text-foreground">
-                    {t('editor.shapeSection.gradient')}
-                  </span>
-                </button>
+                    <button
+                      draggable={true}
+                      onDragStart={handleTemplateDragStart({
+                        itemType: 'shape',
+                        label: t('editor.shapeSection.typeRectangle'),
+                        shapeType: 'rectangle',
+                      })}
+                      onDragEnd={handleTemplateDragEnd}
+                      onClick={() => {
+                        if (shouldSuppressGeneratedItemClick()) return
+                        handleAddShape('rectangle')
+                      }}
+                      className="flex flex-col items-center justify-center gap-1 p-2 rounded-lg border border-border bg-secondary/30 hover:bg-secondary/50 hover:border-primary/50 transition-[transform,background-color,border-color,color] duration-150 active:scale-[0.98] group"
+                    >
+                      <div className="w-7 h-7 rounded border border-border bg-secondary/50 flex items-center justify-center group-hover:bg-secondary/70">
+                        <Square className="w-3.5 h-3.5 text-muted-foreground group-hover:text-foreground" />
+                      </div>
+                      <span className="text-[9px] text-muted-foreground group-hover:text-foreground">
+                        {t('editor.shapeSection.typeRectangle')}
+                      </span>
+                    </button>
 
-                <button
-                  draggable={true}
-                  onDragStart={handleTemplateDragStart({
-                    itemType: 'shape',
-                    label: t('editor.shapeSection.typeRectangle'),
-                    shapeType: 'rectangle',
-                  })}
-                  onDragEnd={handleTemplateDragEnd}
-                  onClick={() => {
-                    if (shouldSuppressGeneratedItemClick()) return
-                    handleAddShape('rectangle')
-                  }}
-                  className="flex flex-col items-center justify-center gap-1 p-2 rounded-lg border border-border bg-secondary/30 hover:bg-secondary/50 hover:border-primary/50 transition-[transform,background-color,border-color,color] duration-150 active:scale-[0.98] group"
-                >
-                  <div className="w-7 h-7 rounded border border-border bg-secondary/50 flex items-center justify-center group-hover:bg-secondary/70">
-                    <Square className="w-3.5 h-3.5 text-muted-foreground group-hover:text-foreground" />
+                    <button
+                      draggable={true}
+                      onDragStart={handleTemplateDragStart({
+                        itemType: 'shape',
+                        label: t('editor.shapeSection.typeCircle'),
+                        shapeType: 'circle',
+                      })}
+                      onDragEnd={handleTemplateDragEnd}
+                      onClick={() => {
+                        if (shouldSuppressGeneratedItemClick()) return
+                        handleAddShape('circle')
+                      }}
+                      className="flex flex-col items-center justify-center gap-1 p-2 rounded-lg border border-border bg-secondary/30 hover:bg-secondary/50 hover:border-primary/50 transition-[transform,background-color,border-color,color] duration-150 active:scale-[0.98] group"
+                    >
+                      <div className="w-7 h-7 rounded border border-border bg-secondary/50 flex items-center justify-center group-hover:bg-secondary/70">
+                        <Circle className="w-3.5 h-3.5 text-muted-foreground group-hover:text-foreground" />
+                      </div>
+                      <span className="text-[9px] text-muted-foreground group-hover:text-foreground">
+                        {t('editor.shapeSection.typeCircle')}
+                      </span>
+                    </button>
+
+                    <button
+                      draggable={true}
+                      onDragStart={handleTemplateDragStart({
+                        itemType: 'shape',
+                        label: t('editor.shapeSection.typeTriangle'),
+                        shapeType: 'triangle',
+                      })}
+                      onDragEnd={handleTemplateDragEnd}
+                      onClick={() => {
+                        if (shouldSuppressGeneratedItemClick()) return
+                        handleAddShape('triangle')
+                      }}
+                      className="flex flex-col items-center justify-center gap-1 p-2 rounded-lg border border-border bg-secondary/30 hover:bg-secondary/50 hover:border-primary/50 transition-[transform,background-color,border-color,color] duration-150 active:scale-[0.98] group"
+                    >
+                      <div className="w-7 h-7 rounded border border-border bg-secondary/50 flex items-center justify-center group-hover:bg-secondary/70">
+                        <Triangle className="w-3.5 h-3.5 text-muted-foreground group-hover:text-foreground" />
+                      </div>
+                      <span className="text-[9px] text-muted-foreground group-hover:text-foreground">
+                        {t('editor.shapeSection.typeTriangle')}
+                      </span>
+                    </button>
+
+                    <button
+                      draggable={true}
+                      onDragStart={handleTemplateDragStart({
+                        itemType: 'shape',
+                        label: t('editor.shapeSection.typeEllipse'),
+                        shapeType: 'ellipse',
+                      })}
+                      onDragEnd={handleTemplateDragEnd}
+                      onClick={() => {
+                        if (shouldSuppressGeneratedItemClick()) return
+                        handleAddShape('ellipse')
+                      }}
+                      className="flex flex-col items-center justify-center gap-1 p-2 rounded-lg border border-border bg-secondary/30 hover:bg-secondary/50 hover:border-primary/50 transition-[transform,background-color,border-color,color] duration-150 active:scale-[0.98] group"
+                    >
+                      <div className="w-7 h-7 rounded border border-border bg-secondary/50 flex items-center justify-center group-hover:bg-secondary/70">
+                        <Circle className="w-3.5 h-2.5 text-muted-foreground group-hover:text-foreground" />
+                      </div>
+                      <span className="text-[9px] text-muted-foreground group-hover:text-foreground">
+                        {t('editor.shapeSection.typeEllipse')}
+                      </span>
+                    </button>
+
+                    <button
+                      draggable={true}
+                      onDragStart={handleTemplateDragStart({
+                        itemType: 'shape',
+                        label: t('editor.shapeSection.typeStar'),
+                        shapeType: 'star',
+                      })}
+                      onDragEnd={handleTemplateDragEnd}
+                      onClick={() => {
+                        if (shouldSuppressGeneratedItemClick()) return
+                        handleAddShape('star')
+                      }}
+                      className="flex flex-col items-center justify-center gap-1 p-2 rounded-lg border border-border bg-secondary/30 hover:bg-secondary/50 hover:border-primary/50 transition-[transform,background-color,border-color,color] duration-150 active:scale-[0.98] group"
+                    >
+                      <div className="w-7 h-7 rounded border border-border bg-secondary/50 flex items-center justify-center group-hover:bg-secondary/70">
+                        <Star className="w-3.5 h-3.5 text-muted-foreground group-hover:text-foreground" />
+                      </div>
+                      <span className="text-[9px] text-muted-foreground group-hover:text-foreground">
+                        {t('editor.shapeSection.typeStar')}
+                      </span>
+                    </button>
+
+                    <button
+                      draggable={true}
+                      onDragStart={handleTemplateDragStart({
+                        itemType: 'shape',
+                        label: t('editor.shapeSection.typePolygon'),
+                        shapeType: 'polygon',
+                      })}
+                      onDragEnd={handleTemplateDragEnd}
+                      onClick={() => {
+                        if (shouldSuppressGeneratedItemClick()) return
+                        handleAddShape('polygon')
+                      }}
+                      className="flex flex-col items-center justify-center gap-1 p-2 rounded-lg border border-border bg-secondary/30 hover:bg-secondary/50 hover:border-primary/50 transition-[transform,background-color,border-color,color] duration-150 active:scale-[0.98] group"
+                    >
+                      <div className="w-7 h-7 rounded border border-border bg-secondary/50 flex items-center justify-center group-hover:bg-secondary/70">
+                        <Hexagon className="w-3.5 h-3.5 text-muted-foreground group-hover:text-foreground" />
+                      </div>
+                      <span className="text-[9px] text-muted-foreground group-hover:text-foreground">
+                        {t('editor.shapeSection.typePolygon')}
+                      </span>
+                    </button>
+
+                    <button
+                      draggable={true}
+                      onDragStart={handleTemplateDragStart({
+                        itemType: 'shape',
+                        label: t('editor.shapeSection.typeHeart'),
+                        shapeType: 'heart',
+                      })}
+                      onDragEnd={handleTemplateDragEnd}
+                      onClick={() => {
+                        if (shouldSuppressGeneratedItemClick()) return
+                        handleAddShape('heart')
+                      }}
+                      className="flex flex-col items-center justify-center gap-1 p-2 rounded-lg border border-border bg-secondary/30 hover:bg-secondary/50 hover:border-primary/50 transition-[transform,background-color,border-color,color] duration-150 active:scale-[0.98] group"
+                    >
+                      <div className="w-7 h-7 rounded border border-border bg-secondary/50 flex items-center justify-center group-hover:bg-secondary/70">
+                        <Heart className="w-3.5 h-3.5 text-muted-foreground group-hover:text-foreground" />
+                      </div>
+                      <span className="text-[9px] text-muted-foreground group-hover:text-foreground">
+                        {t('editor.shapeSection.typeHeart')}
+                      </span>
+                    </button>
+
+                    <button
+                      onClick={() => useMaskEditorStore.getState().startShapePenMode()}
+                      className="flex flex-col items-center justify-center gap-1 p-2 rounded-lg border border-border bg-secondary/30 hover:bg-secondary/50 hover:border-primary/50 transition-[transform,background-color,border-color,color] duration-150 active:scale-[0.98] group"
+                      title={t('editor.mediaSidebar.penToolHint')}
+                    >
+                      <div className="w-7 h-7 rounded border border-border bg-secondary/50 flex items-center justify-center group-hover:bg-secondary/70">
+                        <Pen className="w-3.5 h-3.5 text-muted-foreground group-hover:text-foreground" />
+                      </div>
+                      <span className="text-[9px] text-muted-foreground group-hover:text-foreground">
+                        {t('editor.mediaSidebar.pen')}
+                      </span>
+                    </button>
                   </div>
-                  <span className="text-[9px] text-muted-foreground group-hover:text-foreground">
-                    {t('editor.shapeSection.typeRectangle')}
-                  </span>
-                </button>
-
-                <button
-                  draggable={true}
-                  onDragStart={handleTemplateDragStart({
-                    itemType: 'shape',
-                    label: t('editor.shapeSection.typeCircle'),
-                    shapeType: 'circle',
-                  })}
-                  onDragEnd={handleTemplateDragEnd}
-                  onClick={() => {
-                    if (shouldSuppressGeneratedItemClick()) return
-                    handleAddShape('circle')
-                  }}
-                  className="flex flex-col items-center justify-center gap-1 p-2 rounded-lg border border-border bg-secondary/30 hover:bg-secondary/50 hover:border-primary/50 transition-[transform,background-color,border-color,color] duration-150 active:scale-[0.98] group"
-                >
-                  <div className="w-7 h-7 rounded border border-border bg-secondary/50 flex items-center justify-center group-hover:bg-secondary/70">
-                    <Circle className="w-3.5 h-3.5 text-muted-foreground group-hover:text-foreground" />
-                  </div>
-                  <span className="text-[9px] text-muted-foreground group-hover:text-foreground">
-                    {t('editor.shapeSection.typeCircle')}
-                  </span>
-                </button>
-
-                <button
-                  draggable={true}
-                  onDragStart={handleTemplateDragStart({
-                    itemType: 'shape',
-                    label: t('editor.shapeSection.typeTriangle'),
-                    shapeType: 'triangle',
-                  })}
-                  onDragEnd={handleTemplateDragEnd}
-                  onClick={() => {
-                    if (shouldSuppressGeneratedItemClick()) return
-                    handleAddShape('triangle')
-                  }}
-                  className="flex flex-col items-center justify-center gap-1 p-2 rounded-lg border border-border bg-secondary/30 hover:bg-secondary/50 hover:border-primary/50 transition-[transform,background-color,border-color,color] duration-150 active:scale-[0.98] group"
-                >
-                  <div className="w-7 h-7 rounded border border-border bg-secondary/50 flex items-center justify-center group-hover:bg-secondary/70">
-                    <Triangle className="w-3.5 h-3.5 text-muted-foreground group-hover:text-foreground" />
-                  </div>
-                  <span className="text-[9px] text-muted-foreground group-hover:text-foreground">
-                    {t('editor.shapeSection.typeTriangle')}
-                  </span>
-                </button>
-
-                <button
-                  draggable={true}
-                  onDragStart={handleTemplateDragStart({
-                    itemType: 'shape',
-                    label: t('editor.shapeSection.typeEllipse'),
-                    shapeType: 'ellipse',
-                  })}
-                  onDragEnd={handleTemplateDragEnd}
-                  onClick={() => {
-                    if (shouldSuppressGeneratedItemClick()) return
-                    handleAddShape('ellipse')
-                  }}
-                  className="flex flex-col items-center justify-center gap-1 p-2 rounded-lg border border-border bg-secondary/30 hover:bg-secondary/50 hover:border-primary/50 transition-[transform,background-color,border-color,color] duration-150 active:scale-[0.98] group"
-                >
-                  <div className="w-7 h-7 rounded border border-border bg-secondary/50 flex items-center justify-center group-hover:bg-secondary/70">
-                    <Circle className="w-3.5 h-2.5 text-muted-foreground group-hover:text-foreground" />
-                  </div>
-                  <span className="text-[9px] text-muted-foreground group-hover:text-foreground">
-                    {t('editor.shapeSection.typeEllipse')}
-                  </span>
-                </button>
-
-                <button
-                  draggable={true}
-                  onDragStart={handleTemplateDragStart({
-                    itemType: 'shape',
-                    label: t('editor.shapeSection.typeStar'),
-                    shapeType: 'star',
-                  })}
-                  onDragEnd={handleTemplateDragEnd}
-                  onClick={() => {
-                    if (shouldSuppressGeneratedItemClick()) return
-                    handleAddShape('star')
-                  }}
-                  className="flex flex-col items-center justify-center gap-1 p-2 rounded-lg border border-border bg-secondary/30 hover:bg-secondary/50 hover:border-primary/50 transition-[transform,background-color,border-color,color] duration-150 active:scale-[0.98] group"
-                >
-                  <div className="w-7 h-7 rounded border border-border bg-secondary/50 flex items-center justify-center group-hover:bg-secondary/70">
-                    <Star className="w-3.5 h-3.5 text-muted-foreground group-hover:text-foreground" />
-                  </div>
-                  <span className="text-[9px] text-muted-foreground group-hover:text-foreground">
-                    {t('editor.shapeSection.typeStar')}
-                  </span>
-                </button>
-
-                <button
-                  draggable={true}
-                  onDragStart={handleTemplateDragStart({
-                    itemType: 'shape',
-                    label: t('editor.shapeSection.typePolygon'),
-                    shapeType: 'polygon',
-                  })}
-                  onDragEnd={handleTemplateDragEnd}
-                  onClick={() => {
-                    if (shouldSuppressGeneratedItemClick()) return
-                    handleAddShape('polygon')
-                  }}
-                  className="flex flex-col items-center justify-center gap-1 p-2 rounded-lg border border-border bg-secondary/30 hover:bg-secondary/50 hover:border-primary/50 transition-[transform,background-color,border-color,color] duration-150 active:scale-[0.98] group"
-                >
-                  <div className="w-7 h-7 rounded border border-border bg-secondary/50 flex items-center justify-center group-hover:bg-secondary/70">
-                    <Hexagon className="w-3.5 h-3.5 text-muted-foreground group-hover:text-foreground" />
-                  </div>
-                  <span className="text-[9px] text-muted-foreground group-hover:text-foreground">
-                    {t('editor.shapeSection.typePolygon')}
-                  </span>
-                </button>
-
-                <button
-                  draggable={true}
-                  onDragStart={handleTemplateDragStart({
-                    itemType: 'shape',
-                    label: t('editor.shapeSection.typeHeart'),
-                    shapeType: 'heart',
-                  })}
-                  onDragEnd={handleTemplateDragEnd}
-                  onClick={() => {
-                    if (shouldSuppressGeneratedItemClick()) return
-                    handleAddShape('heart')
-                  }}
-                  className="flex flex-col items-center justify-center gap-1 p-2 rounded-lg border border-border bg-secondary/30 hover:bg-secondary/50 hover:border-primary/50 transition-[transform,background-color,border-color,color] duration-150 active:scale-[0.98] group"
-                >
-                  <div className="w-7 h-7 rounded border border-border bg-secondary/50 flex items-center justify-center group-hover:bg-secondary/70">
-                    <Heart className="w-3.5 h-3.5 text-muted-foreground group-hover:text-foreground" />
-                  </div>
-                  <span className="text-[9px] text-muted-foreground group-hover:text-foreground">
-                    {t('editor.shapeSection.typeHeart')}
-                  </span>
-                </button>
-
-                <button
-                  onClick={() => useMaskEditorStore.getState().startShapePenMode()}
-                  className="flex flex-col items-center justify-center gap-1 p-2 rounded-lg border border-border bg-secondary/30 hover:bg-secondary/50 hover:border-primary/50 transition-[transform,background-color,border-color,color] duration-150 active:scale-[0.98] group"
-                  title={t('editor.mediaSidebar.penToolHint')}
-                >
-                  <div className="w-7 h-7 rounded border border-border bg-secondary/50 flex items-center justify-center group-hover:bg-secondary/70">
-                    <Pen className="w-3.5 h-3.5 text-muted-foreground group-hover:text-foreground" />
-                  </div>
-                  <span className="text-[9px] text-muted-foreground group-hover:text-foreground">
-                    {t('editor.mediaSidebar.pen')}
-                  </span>
-                </button>
-              </div>
                 </div>
               </details>
             </div>
@@ -1992,121 +1976,123 @@ export const MediaSidebar = memo(function MediaSidebar({
 
                 {beatvideoMode !== 'photo' || showAllPhotoEffects ? (
                   <>
-                {/* Blank Adjustment Layer */}
-                <button
-                  draggable={true}
-                  onDragStart={handleTemplateDragStart({
-                    itemType: 'adjustment',
-                    label: t('editor.mediaSidebar.adjustmentLayer'),
-                  })}
-                  onDragEnd={handleTemplateDragEnd}
-                  onClick={() => {
-                    if (shouldSuppressGeneratedItemClick()) return
-                    handleAddAdjustmentLayer()
-                  }}
-                  className="w-full flex items-center gap-3 p-2.5 rounded-lg border border-border bg-secondary/30 hover:bg-secondary/50 hover:border-primary/50 transition-[transform,background-color,border-color,color] duration-150 active:scale-[0.98] group"
-                >
-                  <div className="w-8 h-8 rounded-md border border-border bg-secondary/50 flex items-center justify-center group-hover:bg-secondary/70 flex-shrink-0">
-                    <Layers className="w-4 h-4 text-muted-foreground group-hover:text-foreground" />
-                  </div>
-                  <div className="text-left">
-                    <div className="text-xs text-muted-foreground group-hover:text-foreground">
-                      {t('editor.mediaSidebar.blankAdjustmentLayer')}
-                    </div>
-                  </div>
-                </button>
+                    {/* Blank Adjustment Layer */}
+                    <button
+                      draggable={true}
+                      onDragStart={handleTemplateDragStart({
+                        itemType: 'adjustment',
+                        label: t('editor.mediaSidebar.adjustmentLayer'),
+                      })}
+                      onDragEnd={handleTemplateDragEnd}
+                      onClick={() => {
+                        if (shouldSuppressGeneratedItemClick()) return
+                        handleAddAdjustmentLayer()
+                      }}
+                      className="w-full flex items-center gap-3 p-2.5 rounded-lg border border-border bg-secondary/30 hover:bg-secondary/50 hover:border-primary/50 transition-[transform,background-color,border-color,color] duration-150 active:scale-[0.98] group"
+                    >
+                      <div className="w-8 h-8 rounded-md border border-border bg-secondary/50 flex items-center justify-center group-hover:bg-secondary/70 flex-shrink-0">
+                        <Layers className="w-4 h-4 text-muted-foreground group-hover:text-foreground" />
+                      </div>
+                      <div className="text-left">
+                        <div className="text-xs text-muted-foreground group-hover:text-foreground">
+                          {t('editor.mediaSidebar.blankAdjustmentLayer')}
+                        </div>
+                      </div>
+                    </button>
 
-                {/* Presets */}
-                <div>
-                  <div className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider mb-1.5">
-                    {t('editor.mediaSidebar.presets')}
-                  </div>
-                  <div className="grid grid-cols-3 gap-1.5">
-                    {EFFECT_PRESETS.map((preset) => (
-                      <button
-                        key={preset.id}
-                        draggable={true}
-                        onDragStart={handleTemplateDragStart({
-                          itemType: 'adjustment',
-                          label: preset.name,
-                          effects: preset.effects,
-                        })}
-                        onDragEnd={handleTemplateDragEnd}
-                        onMouseEnter={() => setHoveredEffectKey(`preset:${preset.id}`)}
-                        onMouseLeave={() =>
-                          setHoveredEffectKey((k) => (k === `preset:${preset.id}` ? null : k))
-                        }
-                        onClick={() => {
-                          if (shouldSuppressGeneratedItemClick()) return
-                          handleAddPreset(preset.id)
-                        }}
-                        className="flex flex-col items-center gap-1 p-1.5 rounded-md border border-border bg-secondary/30 hover:bg-secondary/50 hover:border-primary/50 transition-[transform,background-color,border-color,color] duration-150 active:scale-[0.98] group"
-                      >
-                        <EffectThumbnail
-                          effects={preset.effects}
-                          active={hoveredEffectKey === `preset:${preset.id}`}
-                          className="w-full aspect-video rounded-sm"
-                        />
-                        <span className="text-[9px] text-muted-foreground group-hover:text-foreground text-center leading-tight">
-                          {preset.name}
-                        </span>
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {/* GPU Effects by Category */}
-                {gpuCategories.map(({ category, effects: catEffects }) => (
-                  <div key={category}>
-                    <div className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider mb-1.5">
-                      {category}
-                    </div>
-                    <div className="grid grid-cols-3 gap-1.5">
-                      {catEffects.map((def) => (
-                        <button
-                          key={def.id}
-                          draggable={true}
-                          onDragStart={handleTemplateDragStart({
-                            itemType: 'adjustment',
-                            label: def.name,
-                            effects: [
-                              {
-                                type: 'gpu-effect',
-                                gpuEffectType: def.id,
-                                params: getGpuEffectDefaultParams(def.id),
-                              },
-                            ],
-                          })}
-                          onDragEnd={handleTemplateDragEnd}
-                          onMouseEnter={() => setHoveredEffectKey(def.id)}
-                          onMouseLeave={() => setHoveredEffectKey((k) => (k === def.id ? null : k))}
-                          onClick={() => {
-                            if (shouldSuppressGeneratedItemClick()) return
-                            handleAddGpuEffect(def.id)
-                          }}
-                          className="flex flex-col items-center gap-1 p-1.5 rounded-md border border-border bg-secondary/30 hover:bg-secondary/50 hover:border-primary/50 transition-[transform,background-color,border-color,color] duration-150 active:scale-[0.98] group"
-                        >
-                          <div className="relative w-full">
+                    {/* Presets */}
+                    <div>
+                      <div className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider mb-1.5">
+                        {t('editor.mediaSidebar.presets')}
+                      </div>
+                      <div className="grid grid-cols-3 gap-1.5">
+                        {EFFECT_PRESETS.map((preset) => (
+                          <button
+                            key={preset.id}
+                            draggable={true}
+                            onDragStart={handleTemplateDragStart({
+                              itemType: 'adjustment',
+                              label: preset.name,
+                              effects: preset.effects,
+                            })}
+                            onDragEnd={handleTemplateDragEnd}
+                            onMouseEnter={() => setHoveredEffectKey(`preset:${preset.id}`)}
+                            onMouseLeave={() =>
+                              setHoveredEffectKey((k) => (k === `preset:${preset.id}` ? null : k))
+                            }
+                            onClick={() => {
+                              if (shouldSuppressGeneratedItemClick()) return
+                              handleAddPreset(preset.id)
+                            }}
+                            className="flex flex-col items-center gap-1 p-1.5 rounded-md border border-border bg-secondary/30 hover:bg-secondary/50 hover:border-primary/50 transition-[transform,background-color,border-color,color] duration-150 active:scale-[0.98] group"
+                          >
                             <EffectThumbnail
-                              effectId={def.id}
-                              active={hoveredEffectKey === def.id}
+                              effects={preset.effects}
+                              active={hoveredEffectKey === `preset:${preset.id}`}
                               className="w-full aspect-video rounded-sm"
                             />
-                            {Object.values(def.params).some(isAudioReactiveParam) ? (
-                              <span className="absolute right-1 top-1 inline-flex items-center gap-0.5 rounded-sm border border-primary/40 bg-background/85 px-1 py-0.5 text-[8px] font-semibold text-primary">
-                                <AudioLines className="h-2.5 w-2.5" />
-                                React
-                              </span>
-                            ) : null}
-                          </div>
-                          <span className="text-[9px] text-muted-foreground group-hover:text-foreground text-center leading-tight truncate w-full">
-                            {def.name}
-                          </span>
-                        </button>
-                      ))}
+                            <span className="text-[9px] text-muted-foreground group-hover:text-foreground text-center leading-tight">
+                              {preset.name}
+                            </span>
+                          </button>
+                        ))}
+                      </div>
                     </div>
-                  </div>
-                ))}
+
+                    {/* GPU Effects by Category */}
+                    {gpuCategories.map(({ category, effects: catEffects }) => (
+                      <div key={category}>
+                        <div className="text-[10px] font-medium text-muted-foreground uppercase tracking-wider mb-1.5">
+                          {category}
+                        </div>
+                        <div className="grid grid-cols-3 gap-1.5">
+                          {catEffects.map((def) => (
+                            <button
+                              key={def.id}
+                              draggable={true}
+                              onDragStart={handleTemplateDragStart({
+                                itemType: 'adjustment',
+                                label: def.name,
+                                effects: [
+                                  {
+                                    type: 'gpu-effect',
+                                    gpuEffectType: def.id,
+                                    params: getGpuEffectDefaultParams(def.id),
+                                  },
+                                ],
+                              })}
+                              onDragEnd={handleTemplateDragEnd}
+                              onMouseEnter={() => setHoveredEffectKey(def.id)}
+                              onMouseLeave={() =>
+                                setHoveredEffectKey((k) => (k === def.id ? null : k))
+                              }
+                              onClick={() => {
+                                if (shouldSuppressGeneratedItemClick()) return
+                                handleAddGpuEffect(def.id)
+                              }}
+                              className="flex flex-col items-center gap-1 p-1.5 rounded-md border border-border bg-secondary/30 hover:bg-secondary/50 hover:border-primary/50 transition-[transform,background-color,border-color,color] duration-150 active:scale-[0.98] group"
+                            >
+                              <div className="relative w-full">
+                                <EffectThumbnail
+                                  effectId={def.id}
+                                  active={hoveredEffectKey === def.id}
+                                  className="w-full aspect-video rounded-sm"
+                                />
+                                {Object.values(def.params).some(isAudioReactiveParam) ? (
+                                  <span className="absolute right-1 top-1 inline-flex items-center gap-0.5 rounded-sm border border-primary/40 bg-background/85 px-1 py-0.5 text-[8px] font-semibold text-primary">
+                                    <AudioLines className="h-2.5 w-2.5" />
+                                    React
+                                  </span>
+                                ) : null}
+                              </div>
+                              <span className="text-[9px] text-muted-foreground group-hover:text-foreground text-center leading-tight truncate w-full">
+                                {def.name}
+                              </span>
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
                   </>
                 ) : null}
               </div>

@@ -98,4 +98,5 @@ ds-bundle/
 .design-sync/freecut-tailwind.css
 
 artifacts/
+output/
 .playwright-cli/
