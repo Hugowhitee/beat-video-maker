@@ -479,7 +479,7 @@
           "toggleSnap": "Toggle snap",
           "toggleCanvasSnap": "Toggle canvas (gizmo) snap",
           "editWorkspace": "Switch to Edit workspace",
-          "colorWorkspace": "Switch to Color workspace",
+          "colorWorkspace": "Switch to Nodes workspace",
           "copy": "Copy selected items or keyframes",
           "cut": "Cut selected items or keyframes",
           "paste": "Paste items or keyframes",

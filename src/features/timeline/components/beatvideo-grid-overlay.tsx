@@ -7,10 +7,12 @@ import { resolveBeatvideoTimelineGrid } from '../utils/beatvideo-timeline-grid'
 import { resolveBeatGridMarkers } from '../utils/beatvideo-grid-resolution'
 import { createTimelineTrackContentLayerRef } from '../utils/timeline-live-geometry'
 import type { MusicSection } from '@/types/beatvideo'
+import { formatTimecodeCompact, secondsToFrames } from '@/shared/utils/time-utils'
 
 interface BeatvideoGridOverlayProps {
   duration: number
   variant: 'ruler' | 'tracks'
+  alignedTimeRuler?: boolean
 }
 
 function leftPercent(time: number, duration: number) {
@@ -44,6 +46,7 @@ function sectionLabel(section: MusicSection, index: number) {
 export const BeatvideoGridOverlay = memo(function BeatvideoGridOverlay({
   duration,
   variant,
+  alignedTimeRuler = false,
 }: BeatvideoGridOverlayProps) {
   const analysis = useProjectStore((state) => state.currentProject?.beatvideoMusic)
   const items = useItemsStore((state) => state.items)
@@ -68,12 +71,17 @@ export const BeatvideoGridOverlay = memo(function BeatvideoGridOverlay({
     barOneTime: barOneTimelineTime,
     resolution: beatGridResolution,
     pixelsPerSecond,
+    minimumLabelSpacingPx: alignedTimeRuler ? 112 : undefined,
   })
 
   return (
     <div
       ref={variant === 'ruler' ? contentLayerRef : undefined}
-      style={variant === 'tracks' ? { width: 'var(--timeline-content-width, 100%)' } : undefined}
+      style={
+        variant === 'tracks'
+          ? { width: 'var(--timeline-content-width, 100%)' }
+          : { top: alignedTimeRuler ? 0 : 20, height: alignedTimeRuler ? 37 : 17 }
+      }
       aria-hidden="true"
       data-beatvideo-grid-overlay={variant}
       data-beatvideo-grid-placement={timelineGrid.placement.id}
@@ -126,8 +134,11 @@ export const BeatvideoGridOverlay = memo(function BeatvideoGridOverlay({
           <div
             key={`${beat.index}:${beat.time.toFixed(4)}`}
             data-musical-marker={isBarOne ? 'bar-one' : isPhraseBar ? 'phrase' : kind}
-            className="absolute inset-y-0"
-            style={{ left: `${leftPercent(beat.time, duration)}%` }}
+            className="absolute bottom-0"
+            style={{
+              left: `${leftPercent(beat.time, duration)}%`,
+              height: variant === 'ruler' ? 17 : '100%',
+            }}
           >
             <div
               className={
@@ -136,21 +147,20 @@ export const BeatvideoGridOverlay = memo(function BeatvideoGridOverlay({
                   : kind === 'subdivision'
                     ? 'h-full w-px bg-foreground/[0.09]'
                     : isPhraseBar
-                      ? 'h-full w-[2px] bg-foreground/50'
+                      ? 'h-full w-[2px] bg-[#56666f]/70'
                       : kind === 'bar'
-                        ? 'h-full w-px bg-foreground/35'
-                        : 'h-full w-px bg-foreground/24'
+                        ? 'h-full w-px bg-[#56666f]/45'
+                        : 'h-full w-px bg-[#56666f]/25'
               }
             />
+            {showBarLabel && alignedTimeRuler ? (
+              <span className="absolute left-1 -top-[17px] whitespace-nowrap font-mono text-[10px] font-normal leading-none text-foreground">
+                {formatTimecodeCompact(secondsToFrames(beat.time, fps), fps)}
+              </span>
+            ) : null}
             {showBarLabel ? (
-              <span
-                className={
-                  isBarOne
-                    ? 'absolute left-1 top-1 bg-primary px-1 py-0.5 font-mono text-[10px] font-semibold leading-none text-primary-foreground'
-                    : 'absolute left-1 top-1 bg-background/90 px-1 py-0.5 font-mono text-[10px] font-medium leading-none text-foreground/85'
-                }
-              >
-                {barNumber}
+              <span className="absolute left-1 top-1 font-mono text-[10px] font-normal leading-none text-foreground">
+                {String(barNumber).padStart(2, '0')}
               </span>
             ) : null}
           </div>

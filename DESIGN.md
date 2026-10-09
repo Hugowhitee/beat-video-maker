@@ -2,22 +2,22 @@
 name: Beat Video Maker
 description: A local-first, beat-driven photo and video editor with precision timeline controls.
 colors:
-  background: "oklch(0.225 0.008 78)"
-  foreground: "oklch(0.94 0.004 78)"
-  surface: "oklch(0.265 0.008 78)"
-  panel-header: "oklch(0.23 0.008 78)"
-  popover: "oklch(0.255 0.008 78)"
-  timeline-bg: "oklch(0.19 0.007 78)"
+  background: "#1b2228"
+  foreground: "#e9eef0"
+  surface: "#282f36"
+  panel-header: "#39424b"
+  popover: "#282f36"
+  timeline-bg: "#1c242a"
   primary: "#b4dc4b"
   primary-foreground: "#17200d"
-  secondary: "oklch(0.31 0.008 78)"
-  muted: "oklch(0.285 0.007 78)"
-  muted-foreground: "oklch(0.68 0.006 78)"
-  accent: "oklch(0.34 0.009 78)"
+  secondary: "#39424b"
+  muted: "#28333a"
+  muted-foreground: "#abb6bc"
+  accent: "#39424b"
   warning: "#d6a04b"
   destructive: "oklch(0.58 0.22 25)"
-  border: "oklch(0.365 0.008 78)"
-  input: "oklch(0.35 0.008 78)"
+  border: "#4d5861"
+  input: "#4d5861"
   ring: "#b4dc4b"
   clip-video: "oklch(0.3991 0.0401 250)"
   clip-audio: "oklch(0.22 0.02 302)"
@@ -68,8 +68,8 @@ spacing:
 # Design System: Beat Video Maker
 
 The shared runtime tokens in `src/index.css` use the preferred Figma editor's
-(AYtUttGMSahwYUDLBIoUO9, frame 7:2) graphite surface ramp and lime signal. The editor-scoped
-`[data-studio-v2='true']` grammar defines active/selected/enabled states.
+(AYtUttGMSahwYUDLBIoUO9, canonical Visual frame 38:459) graphite surface ramp and lime signal. The editor-scoped
+`[data-studio='true']` grammar defines active/selected/enabled states.
 
 ## 1. Creative direction
 
@@ -81,7 +81,7 @@ precise controls, restrained chrome, and real media as the most visually dominan
 content.
 
 The product may borrow the density and directness of FL Studio, DJ software and
-professional NLEs, while staying simpler around the Beat → Visual → Color → Master
+professional NLEs, while staying simpler around the Beat → Visual → Nodes → Master
 workflow. Precision surfaces may be dense; everything else should stay quiet.
 
 Avoid both extremes:
@@ -152,7 +152,7 @@ rail and an 80px typed value column. Text never sits on the rail. Bipolar contro
 show a zero detent; ordinary parameters snap only to their declared step. Keyboard
 and typed edits use the same commit/history path as pointer edits.
 
-Console level faders use one 14 × 32px nickel cap with grip ribs. Scale, tick/rail,
+Console level faders use one nickel cap primitive: 20 × 39px for channel strips and 24 × 47px for Master Output with grip ribs. Scale, tick/rail,
 stereo meter and typed dB readout occupy separate columns. Unity is available by
 double-click, Enter and the visible reset action. The floating mixer scrolls
 horizontally rather than shrinking channel strips.
@@ -193,7 +193,7 @@ Every Program monitor uses the same transport family and order:
 
 Play is a neutral action when playback is stopped; it should not look like an
 enabled toggle. Monitor mute, monitor volume and Program fullscreen use the same
-component family across Beat, Visual, Color and Master.
+component family across Beat, Visual, Nodes and Master.
 
 ### Toolbar icons
 
@@ -215,7 +215,7 @@ Global top bar owns project-level actions only:
 - overflow.
 
 Below it, the producer workflow is a separate sequential rail:
-**Beat → Visual → Color → Master**.
+**Beat → Visual → Nodes → Master**.
 
 The normal producer shell has **no permanent left project-content rail**. Media,
 overlays, effects and sequences belong to the active Visual tools/timeline; beat status and

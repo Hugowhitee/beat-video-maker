@@ -49,7 +49,7 @@ export class ErrorBoundary extends Component<Props, State> {
       const { level = 'component' } = this.props
 
       return (
-        <div data-studio-v2="true" className="min-h-[240px] bg-background p-6 text-foreground">
+        <div data-studio="true" className="min-h-[240px] bg-background p-6 text-foreground">
           <div className="mx-auto max-w-[560px] border-y border-border py-6">
             <div className="flex items-center gap-2 text-muted-foreground">
               <AlertTriangle className="h-4 w-4" />

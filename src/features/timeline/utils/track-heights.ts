@@ -61,8 +61,18 @@ export function getPresetTrackHeight(): number {
   return TRACK_SIZE_PRESET_HEIGHTS[useEditorStore.getState().trackSizePreset]
 }
 
-export function resolveTrackHeight(trackId: string): number {
-  return overrides.get(trackId) ?? getPresetTrackHeight()
+export function resolveTrackHeight(
+  trackId: string,
+  kind?: 'video' | 'audio',
+  name?: string,
+): number {
+  // Audio needs a taller waveform lane; custom heights and explicit compact /
+  // large preferences still take precedence over the semantic default.
+  const preset = useEditorStore.getState().trackSizePreset
+  const producerExtra = name === 'Producer tags' || name === 'Watermarks'
+  const base =
+    preset === 'medium' && kind === 'audio' ? (producerExtra ? 48 : 74) : getPresetTrackHeight()
+  return overrides.get(trackId) ?? base
 }
 
 /** Swap the override set to the given project. Flushes the outgoing project first. */

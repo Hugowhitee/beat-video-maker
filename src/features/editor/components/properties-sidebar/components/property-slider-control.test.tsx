@@ -24,7 +24,7 @@ describe('PropertySliderControl', () => {
       />,
     )
 
-    expect(screen.getByText('25%')).toBeInTheDocument()
+    expect(screen.getByText('25 %')).toBeInTheDocument()
     expect(screen.getByTestId('keyframe-toggle')).toHaveAttribute('data-property', 'trimPathStart')
     fireEvent.click(screen.getByRole('button', { name: 'Reset to default' }))
     expect(onReset).toHaveBeenCalledOnce()

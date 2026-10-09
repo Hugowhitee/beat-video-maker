@@ -575,7 +575,7 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
-        data-studio-v2="true"
+        data-studio="true"
         className="max-w-2xl gap-0 overflow-hidden bg-panel-bg p-0 sm:top-16 sm:max-h-[calc(100vh-4rem)] sm:translate-y-0 sm:origin-top"
       >
         <DialogHeader className="flex flex-row items-center justify-between border-b px-6 py-4 pr-14">
@@ -1116,7 +1116,7 @@ export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
       </DialogContent>
 
       <AlertDialog open={showClearConfirm} onOpenChange={setShowClearConfirm}>
-        <AlertDialogContent data-studio-v2="true">
+        <AlertDialogContent data-studio="true">
           <AlertDialogHeader>
             <AlertDialogTitle>{t('settings.storage.clearCacheConfirmTitle')}</AlertDialogTitle>
             <AlertDialogDescription>

@@ -479,7 +479,7 @@
           "toggleSnap": "Alternar ajuste",
           "toggleCanvasSnap": "Alternar ajuste del lienzo (gizmo)",
           "editWorkspace": "Cambiar al espacio de trabajo de Edición",
-          "colorWorkspace": "Cambiar al espacio de trabajo de Color",
+          "colorWorkspace": "Cambiar al espacio de trabajo Nodes",
           "copy": "Copiar elementos o fotogramas clave seleccionados",
           "cut": "Cortar elementos o fotogramas clave seleccionados",
           "paste": "Pegar elementos o fotogramas clave",

@@ -21,7 +21,7 @@ import {
 } from 'lucide-react'
 
 import { createLogger } from '@/shared/logging/logger'
-import { useStudioV2DocumentTheme } from '@/shared/ui/use-studio-v2-document-theme'
+import { useStudioDocumentTheme } from '@/shared/ui/use-studio-document-theme'
 import {
   ensureKnownWorkspaceForCurrent,
   getWorkspaceHandleRecord,
@@ -43,7 +43,7 @@ const CAUSE_EXPLANATION_KEYS: Record<string, string> = {
 }
 
 export function RouteErrorScreen({ error, reset }: ErrorComponentProps) {
-  useStudioV2DocumentTheme()
+  useStudioDocumentTheme()
   const { t } = useTranslation()
   const router = useRouter()
   const [isSwitchingFolder, setIsSwitchingFolder] = useState(false)
@@ -104,7 +104,7 @@ export function RouteErrorScreen({ error, reset }: ErrorComponentProps) {
   }
 
   return (
-    <div data-studio-v2="true" className="min-h-dvh bg-background text-foreground">
+    <div data-studio="true" className="min-h-dvh bg-background text-foreground">
       <header className="flex h-12 items-center bg-[#242724] px-[18px] text-[#f6f7f3]">
         <Link to="/projects" className="flex items-baseline gap-1.5">
           <span className="text-[10px] font-semibold">BEAT VIDEO</span>

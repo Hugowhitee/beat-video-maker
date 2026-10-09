@@ -1,4 +1,5 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vite-plus/test'
 import { usePlaybackStore } from '@/shared/state/playback'
 import { usePreviewBridgeStore } from '@/shared/state/preview-bridge'
@@ -73,13 +74,7 @@ describe('PlaybackControls frame capture', () => {
 
   it('exposes viewer fullscreen as a transport action', () => {
     const onToggleFullscreen = vi.fn()
-    render(
-      <PlaybackControls
-        totalFrames={1000}
-        fps={30}
-        onToggleFullscreen={onToggleFullscreen}
-      />,
-    )
+    render(<PlaybackControls totalFrames={1000} fps={30} onToggleFullscreen={onToggleFullscreen} />)
 
     fireEvent.click(screen.getByRole('button', { name: 'Fullscreen' }))
     expect(onToggleFullscreen).toHaveBeenCalledOnce()
@@ -123,7 +118,8 @@ describe('PlaybackControls frame capture', () => {
 
     render(<PlaybackControls totalFrames={1000} fps={30} />)
 
-    fireEvent.click(screen.getByRole('button', { name: 'Save frame' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Program actions' }))
+    await userEvent.click(screen.getByRole('menuitem', { name: 'Save frame' }))
 
     await waitFor(() => {
       expect(importGeneratedImageSpy).toHaveBeenCalledTimes(1)

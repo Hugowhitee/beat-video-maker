@@ -44,6 +44,7 @@ interface TimelineMarkersProps {
   duration: number // Total timeline duration in seconds
   width?: number // Explicit width in pixels (optional)
   hideTimecodeLabels?: boolean
+  musicalRuler?: boolean
   tone?: TimelineRulerTone
 }
 
@@ -353,7 +354,7 @@ function syncLabels(
       span = document.createElement('span')
       span.className = 'absolute text-xs select-none whitespace-nowrap'
       span.style.top = '2px'
-      span.style.fontFamily = 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace'
+      span.style.fontFamily = 'var(--font-mono)'
       span.style.fontFeatureSettings = '"tnum"'
       span.style.color = palette.label
       span.style.textShadow = palette.labelShadow
@@ -399,6 +400,7 @@ export const TimelineMarkers = memo(function TimelineMarkers({
   duration,
   width,
   hideTimecodeLabels = false,
+  musicalRuler = false,
   tone = 'dark',
 }: TimelineMarkersProps) {
   perfMarkRender('TimelineMarkers')
@@ -556,7 +558,7 @@ export const TimelineMarkers = memo(function TimelineMarkers({
   const displayWidth = width || Math.max(timelineContentWidth, viewportWidth)
   // Ticks live in the lane below the IO bar, so the canvas is the ruler height
   // minus the IO lane.
-  const canvasHeight = editorLayout.timelineRulerHeight - IO_LANE_HEIGHT
+  const canvasHeight = musicalRuler ? 20 : editorLayout.timelineRulerHeight - IO_LANE_HEIGHT
 
   // Quantize PPS for cache keys - allows cache reuse across similar zoom levels
   // This dramatically reduces redraws during continuous zoom
@@ -1181,13 +1183,13 @@ export const TimelineMarkers = memo(function TimelineMarkers({
       {/* Tiled canvas container (tick lines only) — below the IO lane */}
       <div
         className="absolute left-0 right-0 bottom-0 pointer-events-none"
-        style={{ top: IO_LANE_HEIGHT }}
+        style={{ top: musicalRuler ? 0 : IO_LANE_HEIGHT }}
       >
         <canvas
           ref={rulerCanvasRef}
           data-main-timeline-ruler-canvas
           aria-hidden="true"
-          className="sticky left-0 block pointer-events-none text-[10px] text-muted-foreground"
+          className="sticky left-0 block pointer-events-none font-mono text-[10px] text-muted-foreground"
           style={{
             width: viewportWidth || undefined,
             height: canvasHeight,
@@ -1199,14 +1201,16 @@ export const TimelineMarkers = memo(function TimelineMarkers({
       {/* Imperative label pool — managed by syncRulerScroll, zero React re-renders on scroll */}
       {/* IO lane backdrop + divider so the in/out bar reads as its own track
           rather than floating over the ruler ticks. */}
-      <div
-        className={
-          tone === 'light'
-            ? 'absolute left-0 right-0 top-0 border-b border-border/70 bg-black/[0.045] pointer-events-none'
-            : 'absolute left-0 right-0 top-0 border-b border-border/70 bg-black/25 pointer-events-none'
-        }
-        style={{ height: IO_LANE_HEIGHT, zIndex: 8 }}
-      />
+      {!musicalRuler && (
+        <div
+          className={
+            tone === 'light'
+              ? 'absolute left-0 right-0 top-0 border-b border-border/70 bg-black/[0.045] pointer-events-none'
+              : 'absolute left-0 right-0 top-0 border-b border-border/70 bg-black/25 pointer-events-none'
+          }
+          style={{ height: IO_LANE_HEIGHT, zIndex: 8 }}
+        />
+      )}
 
       {/* Draggable in/out strip — its own lane at the top of the ruler */}
       {safeInPoint !== null && safeOutPoint !== null && (

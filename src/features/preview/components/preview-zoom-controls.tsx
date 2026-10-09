@@ -8,7 +8,6 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { EDITOR_LAYOUT_CSS_VALUES } from '@/config/editor-layout'
 import { usePreviewZoom } from '../hooks/use-preview-zoom'
 
 export function PreviewZoomControls() {
@@ -36,7 +35,7 @@ export function PreviewZoomControls() {
           ref={triggerRef}
           variant="ghost"
           className="flex-shrink-0 text-muted-foreground hover:text-foreground gap-1 px-1.5"
-          style={{ height: EDITOR_LAYOUT_CSS_VALUES.previewControlButtonSize }}
+          style={{ height: 22 }}
           data-tooltip={t('preview.zoom.tooltip', { label: currentLabel })}
           aria-label={t('preview.zoom.ariaLabel', { label: currentLabel })}
           onKeyDown={(e) => {

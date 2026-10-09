@@ -164,7 +164,7 @@ export const SliderInput = memo(function SliderInput({
     (v: number) => {
       if (formatValueProp) return formatValueProp(v)
       const formatted = v.toFixed(decimalsForStep(step))
-      return unit ? `${formatted}${unit}` : formatted
+      return unit ? `${formatted} ${unit}` : formatted
     },
     [formatValueProp, step, unit],
   )
@@ -195,10 +195,13 @@ export const SliderInput = memo(function SliderInput({
   const updateFillVisual = useCallback(
     (
       nextFillPercent: number,
-      options?: {
+      {
+        active = isInteracting || isHovered,
+        dragging = isDragging,
+      }: {
         active?: boolean
         dragging?: boolean
-      },
+      } = {},
     ) => {
       fillPercentRef.current = nextFillPercent
       const clampedFillPercent = Math.max(0, Math.min(100, nextFillPercent))
@@ -209,11 +212,9 @@ export const SliderInput = memo(function SliderInput({
 
       if (!handleRef.current) return
 
-      const isActiveNow = options?.active ?? (isInteracting || isHovered)
-      const isDraggingNow = options?.dragging ?? isDragging
       handleRef.current.style.left = `clamp(0px, calc(${clampedFillPercent}% - 4px), calc(100% - 8px))`
-      handleRef.current.style.opacity = isActiveNow ? '1' : '0.8'
-      handleRef.current.style.transform = `translateY(-50%) scaleY(${isDraggingNow ? 1.1 : 1})`
+      handleRef.current.style.opacity = active ? '1' : '0.8'
+      handleRef.current.style.transform = `translateY(-50%) scaleY(${dragging ? 1.1 : 1})`
     },
     [isDragging, isHovered, isInteracting],
   )
@@ -518,12 +519,16 @@ export const SliderInput = memo(function SliderInput({
 
   const handleSliderKeyDown = (e: React.KeyboardEvent) => {
     if (disabled || showInput) return
-    let next: number | undefined
     const amount = step * (e.shiftKey ? 10 : 1)
-    if (e.key === 'ArrowRight' || e.key === 'ArrowUp') next = displayNumericValue + amount
-    if (e.key === 'ArrowLeft' || e.key === 'ArrowDown') next = displayNumericValue - amount
-    if (e.key === 'Home') next = min
-    if (e.key === 'End') next = max
+    const values: Record<string, number> = {
+      ArrowRight: displayNumericValue + amount,
+      ArrowUp: displayNumericValue + amount,
+      ArrowLeft: displayNumericValue - amount,
+      ArrowDown: displayNumericValue - amount,
+      Home: min,
+      End: max,
+    }
+    const next = values[e.key]
     if (next === undefined) return
     e.preventDefault()
     e.stopPropagation()
@@ -535,7 +540,7 @@ export const SliderInput = memo(function SliderInput({
   return (
     <div
       className={cn(
-        'relative flex min-w-0 flex-1 items-center gap-2 h-7',
+        'relative flex min-w-0 flex-1 items-center gap-2 h-8',
         disabled && 'opacity-50',
         className,
       )}
@@ -543,7 +548,7 @@ export const SliderInput = memo(function SliderInput({
     >
       {label && (
         <span
-          className="w-20 min-w-0 shrink-0 truncate text-xs text-muted-foreground"
+          className="w-[72px] min-w-0 shrink-0 truncate text-xs font-medium text-foreground"
           title={label}
         >
           {label}
@@ -590,7 +595,7 @@ export const SliderInput = memo(function SliderInput({
         )}
         <div
           ref={handleRef}
-          className="pointer-events-none absolute top-1/2 h-3 w-2 rounded-[2px] border border-muted-foreground bg-foreground shadow-sm"
+          className="pointer-events-none absolute top-1/2 h-3 w-2 bg-control-cap"
           style={{
             left: `clamp(0px, calc(${Math.max(0, Math.min(100, fillPercentRef.current))}% - 4px), calc(100% - 8px))`,
             transform: 'translateY(-50%)',
@@ -606,7 +611,7 @@ export const SliderInput = memo(function SliderInput({
           data-bwignore="true"
           inputMode="decimal"
           aria-label={label ? `${label} value` : 'Parameter value'}
-          className="h-6 w-20 shrink-0 rounded-[3px] border border-ring bg-background px-1.5 text-right font-mono text-xs tabular-nums outline-none"
+          className="h-7 w-20 shrink-0 rounded-[3px] border border-ring bg-background px-3.5 text-left font-mono text-xs font-medium tabular-nums outline-none"
           value={inputValue}
           onChange={handleInputChange}
           onKeyDown={handleInputKeyDown}
@@ -622,7 +627,7 @@ export const SliderInput = memo(function SliderInput({
           aria-label={label ? `Edit ${label} value` : 'Edit parameter value'}
           aria-disabled={disabled}
           className={cn(
-            'flex h-6 w-20 shrink-0 items-center justify-end rounded-[3px] border border-input bg-background px-1.5 font-mono text-xs tabular-nums outline-none focus-visible:ring-1 focus-visible:ring-ring',
+            'flex h-7 w-20 shrink-0 items-center justify-start rounded-[3px] border border-input bg-background px-3.5 font-mono text-xs font-medium tabular-nums outline-none focus-visible:ring-1 focus-visible:ring-ring',
             !disabled && 'cursor-text hover:border-muted-foreground',
             isMixed && localValue === null && 'italic',
           )}

@@ -1152,7 +1152,7 @@ export const AudioMeterPanel = memo(function AudioMeterPanel({
         {detachedEqPanel}
         {floatingMixer}
         <div
-          className="relative h-[148px] w-[70px] shrink-0"
+          className="relative h-[192px] w-[48px] shrink-0"
           aria-label={t('editor.audioMeters.audioMeter')}
         >
           <span className="absolute left-[6px] top-[39px] font-mono text-[9px] leading-[11px] text-muted-foreground">
@@ -1164,7 +1164,7 @@ export const AudioMeterPanel = memo(function AudioMeterPanel({
           <span className="absolute left-0 top-[134px] font-mono text-[9px] leading-[11px] text-muted-foreground">
             −24
           </span>
-          <div className="absolute left-[38px] top-0 h-[148px] w-8 rounded-[2px] bg-[#242724]">
+          <div className="absolute left-[24px] top-0 h-[192px] w-6 rounded-[2px] bg-background">
             <div
               ref={meterVisualRootRef}
               className="absolute bottom-1 left-1 right-1 top-1 flex gap-[2px]"

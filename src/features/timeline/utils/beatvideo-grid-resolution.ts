@@ -117,9 +117,7 @@ function interpolateBeat(
  * Temporarily thin the musical grid while dragging. Shift keeps snapping enabled,
  * but lets the user bypass dense subdivisions without changing the saved view.
  */
-export function coarsenBeatGridResolution(
-  resolution: BeatGridResolution,
-): BeatGridResolution {
+export function coarsenBeatGridResolution(resolution: BeatGridResolution): BeatGridResolution {
   if (resolution === 'quarter-beat' || resolution === 'half-beat') return 'beat'
   if (resolution === 'auto' || resolution === 'beat') return 'bar'
   if (resolution === 'bar') return '2-bars'
@@ -134,6 +132,7 @@ export function resolveBeatGridMarkers(params: {
   barOneTime: number | null
   resolution: BeatGridResolution
   pixelsPerSecond: number
+  minimumLabelSpacingPx?: number
 }): {
   markers: BeatGridMarker[]
   labelStride: number
@@ -160,15 +159,17 @@ export function resolveBeatGridMarkers(params: {
       ? measuredBarSpacingPx
       : beatSpacingPx * Math.max(1, params.beatsPerBar)
 
-  const autoDensity = resolveBeatGridDensity(beatSpacingPx, barSpacingPx)
-  const barOneDownbeatIndex =
-    barOneTime === null ? -1 : closestIndex(downbeatTimes, barOneTime)
+  const autoDensity = resolveBeatGridDensity(
+    beatSpacingPx,
+    barSpacingPx,
+    params.minimumLabelSpacingPx,
+  )
+  const barOneDownbeatIndex = barOneTime === null ? -1 : closestIndex(downbeatTimes, barOneTime)
   const anchorIndex = Math.max(0, barOneDownbeatIndex)
 
   const divisions = subdivisionCount(resolution)
   const showIndividualBeats =
-    divisions > 1 ||
-    resolution === 'beat'
+    divisions > 1 || resolution === 'beat'
       ? true
       : resolution === 'auto'
         ? autoDensity.showIndividualBeats
@@ -177,9 +178,7 @@ export function resolveBeatGridMarkers(params: {
     manualBarStride(resolution) ??
     (resolution === 'beat' || divisions > 1 ? 1 : autoDensity.barStride)
   const labelStride =
-    resolution === 'auto'
-      ? autoDensity.labelStride
-      : Math.max(barStride, autoDensity.labelStride)
+    resolution === 'auto' ? autoDensity.labelStride : Math.max(barStride, autoDensity.labelStride)
 
   const markers = beats.flatMap((beat): BeatGridMarker[] => {
     const isBarOne =
@@ -187,16 +186,11 @@ export function resolveBeatGridMarkers(params: {
       Math.abs(beat.time - barOneTime) <= Math.max(0.012, medianBeatInterval * 0.12)
 
     if (!beat.downbeat) {
-      return showIndividualBeats
-        ? [{ beat, isBarOne: false, barNumber: null, kind: 'beat' }]
-        : []
+      return showIndividualBeats ? [{ beat, isBarOne: false, barNumber: null, kind: 'beat' }] : []
     }
 
-    const downbeatIndex = downbeatTimes.findIndex(
-      (time) => Math.abs(time - beat.time) <= 1e-6,
-    )
-    const barDistance =
-      downbeatIndex >= 0 ? Math.abs(downbeatIndex - anchorIndex) : 0
+    const downbeatIndex = downbeatTimes.findIndex((time) => Math.abs(time - beat.time) <= 1e-6)
+    const barDistance = downbeatIndex >= 0 ? Math.abs(downbeatIndex - anchorIndex) : 0
     if (!isBarOne && barDistance % barStride !== 0) return []
 
     const barNumber =

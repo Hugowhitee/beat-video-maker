@@ -85,7 +85,7 @@ export function RotaryKnob({
 
   const onDown = useCallback(
     (e: React.PointerEvent) => {
-      if (isMixed || disabled) return
+      if (isMixed || disabled || e.button !== 0) return
       e.preventDefault()
       const el = elRef.current
       if (!el) return

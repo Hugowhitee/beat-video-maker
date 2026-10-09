@@ -582,37 +582,42 @@ export const TimelineItem = memo(function TimelineItem({
       case 'image':
         return 'bg-timeline-image/30 border-timeline-image'
       case 'text':
-        return 'bg-timeline-text/30 border-timeline-text'
+        return 'bg-timeline-bg border-timeline-text'
       case 'shape':
         return 'bg-timeline-shape/30 border-timeline-shape'
       case 'adjustment':
         return 'bg-purple-500/30 border-purple-400'
       case 'composition':
-        return 'bg-violet-600/40 border-violet-400'
+        return 'bg-timeline-composition border-timeline-composition'
       default:
         return 'bg-timeline-video border-timeline-video'
     }
   }, [item.type])
 
-  const { handleClick, handleDoubleClick, handleMouseDown, handlePointerDown, handleSmartTrimStart } =
-    useTimelineItemPointerHandlers({
-      item,
-      trackLocked,
-      activeTool,
-      activeToolRef,
-      smartTrimIntentRef,
-      smartBodyIntent,
-      dragWasActiveRef,
-      isTrimming,
-      isStretching,
-      isSlipSlideActive,
-      hoveredEdge,
-      handleDragStart,
-      handleSlipSlideStart,
-      handleStretchStart,
-      handleTrimStart,
-      setPointerHint,
-    })
+  const {
+    handleClick,
+    handleDoubleClick,
+    handleMouseDown,
+    handlePointerDown,
+    handleSmartTrimStart,
+  } = useTimelineItemPointerHandlers({
+    item,
+    trackLocked,
+    activeTool,
+    activeToolRef,
+    smartTrimIntentRef,
+    smartBodyIntent,
+    dragWasActiveRef,
+    isTrimming,
+    isStretching,
+    isSlipSlideActive,
+    hoveredEdge,
+    handleDragStart,
+    handleSlipSlideStart,
+    handleStretchStart,
+    handleTrimStart,
+    setPointerHint,
+  })
 
   // Cursor class based on state
   const cursorClass = getClipCursorClass({

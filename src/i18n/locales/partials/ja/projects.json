@@ -479,7 +479,7 @@
           "toggleSnap": "スナップを切り替え",
           "toggleCanvasSnap": "キャンバス（ギズモ）スナップを切り替え",
           "editWorkspace": "編集ワークスペースに切り替え",
-          "colorWorkspace": "カラーワークスペースに切り替え",
+          "colorWorkspace": "Nodesワークスペースに切り替え",
           "copy": "選択した項目またはキーフレームをコピー",
           "cut": "選択した項目またはキーフレームをカット",
           "paste": "項目またはキーフレームをペースト",

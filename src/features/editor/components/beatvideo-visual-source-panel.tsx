@@ -780,59 +780,57 @@ export function BeatvideoVisualSourcePanel({
     ],
   )
 
+  const getSelectedShotPlayer = useCallback(() => {
+    const player = useSourcePlayerStore.getState()
+    if (!selectedSourceShot || !selectedShotMedia || player.currentMediaId !== selectedShotMedia.id)
+      return null
+    return { shot: selectedSourceShot, source: selectedShotMedia, player }
+  }, [selectedShotMedia, selectedSourceShot])
+
   const saveSelectedShotInOut = useCallback(() => {
     if (!selectedSourceShot) return
-    const source = videoCandidates.find((media) => media.id === selectedSourceShot.sourceId)
-    const player = useSourcePlayerStore.getState()
-    if (
-      !source ||
-      player.currentMediaId !== source.id ||
-      player.inPoint === null ||
-      player.outPoint === null
-    ) {
+    const review = getSelectedShotPlayer()
+    if (!review || review.player.inPoint === null || review.player.outPoint === null) {
       toast.warning('Open the shot and set In/Out in the Source player first.')
       return
     }
+    const { source } = review
     const sourceFps = Math.max(1, source.fps || 30)
     void handleReviewSourceShot({
       kind: 'trim',
       shotId: selectedSourceShot.id,
-      start: player.inPoint / sourceFps,
-      end: player.outPoint / sourceFps,
+      start: review.player.inPoint / sourceFps,
+      end: review.player.outPoint / sourceFps,
     })
-  }, [handleReviewSourceShot, selectedSourceShot, videoCandidates])
+  }, [getSelectedShotPlayer, handleReviewSourceShot, selectedSourceShot])
 
   const cancelSelectedShotInOut = useCallback(() => {
-    if (!selectedSourceShot) return
-    const source = videoCandidates.find((media) => media.id === selectedSourceShot.sourceId)
-    const player = useSourcePlayerStore.getState()
-    if (!source || player.currentMediaId !== source.id) return
+    const review = getSelectedShotPlayer()
+    if (!review) return
+    const { source, player, shot } = review
     const sourceFps = Math.max(1, source.fps || 30)
-    const originalStartFrame = Math.max(0, Math.round(selectedSourceShot.start * sourceFps))
-    const originalEndFrame = Math.max(
-      originalStartFrame + 1,
-      Math.round(selectedSourceShot.end * sourceFps),
-    )
+    const originalStartFrame = Math.max(0, Math.round(shot.start * sourceFps))
+    const originalEndFrame = Math.max(originalStartFrame + 1, Math.round(shot.end * sourceFps))
     player.setInPoint(originalStartFrame)
     player.setOutPoint(originalEndFrame)
     player.setPreviewSourceFrame(null)
     player.setPendingSeekFrame(originalStartFrame)
-  }, [selectedSourceShot, videoCandidates])
+  }, [getSelectedShotPlayer])
 
   const splitSelectedShotAtPlayhead = useCallback(() => {
     if (!selectedSourceShot) return
-    const source = videoCandidates.find((media) => media.id === selectedSourceShot.sourceId)
-    const player = useSourcePlayerStore.getState()
-    if (!source || player.currentMediaId !== source.id) {
+    const review = getSelectedShotPlayer()
+    if (!review) {
       toast.warning('Open the shot in Source before splitting.')
       return
     }
+    const { source, player } = review
     void handleReviewSourceShot({
       kind: 'split',
       shotId: selectedSourceShot.id,
       time: player.currentSourceFrame / Math.max(1, source.fps || 30),
     })
-  }, [handleReviewSourceShot, selectedSourceShot, videoCandidates])
+  }, [getSelectedShotPlayer, handleReviewSourceShot, selectedSourceShot])
 
   // Reuse the canonical source monitor for precise video In/Out editing.
   // Musical timeline boundaries stay fixed when applying the source slip.

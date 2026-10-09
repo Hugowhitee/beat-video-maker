@@ -83,4 +83,18 @@ describe('timeline canvas clip rendering', () => {
   it('uses distinct palettes for timeline item types', () => {
     expect(getTimelineCanvasClipPalette('video')).not.toEqual(getTimelineCanvasClipPalette('audio'))
   })
+
+  it('keeps dense clips on the live DOM theme when tokens change', () => {
+    const tokens = {
+      '--color-timeline-text': '#ab80bd',
+      '--timeline-bg': '#202830',
+      '--foreground': '#eef3f5',
+    }
+    expect(getTimelineCanvasClipPalette('text', tokens)).toEqual({
+      fill: '#202830',
+      stroke: '#ab80bd',
+      labelFill: '#ab80bd',
+      text: '#eef3f5',
+    })
+  })
 })

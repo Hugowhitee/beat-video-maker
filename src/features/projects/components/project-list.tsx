@@ -388,7 +388,7 @@ export function ProjectList({ onEditProject, onImportProject }: ProjectListProps
               <SelectTrigger className="h-9 w-full border-border bg-background text-[10px] shadow-none sm:w-[150px]">
                 <SelectValue placeholder={t('projects.list.allResolutions')} />
               </SelectTrigger>
-              <SelectContent data-studio-v2="true">
+              <SelectContent data-studio="true">
                 <SelectItem value="all">{t('projects.list.allResolutions')}</SelectItem>
                 {uniqueResolutions.map((res) => (
                   <SelectItem key={res} value={res}>
@@ -432,7 +432,7 @@ export function ProjectList({ onEditProject, onImportProject }: ProjectListProps
                 <span className="sr-only sm:inline">Sort projects</span>
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-48" data-studio-v2="true">
+            <DropdownMenuContent align="end" className="w-48" data-studio="true">
               <DropdownMenuLabel>{t('projects.list.sortBy')}</DropdownMenuLabel>
               <DropdownMenuSeparator />
               <DropdownMenuItem onClick={() => setSortField('name')}>
@@ -469,7 +469,7 @@ export function ProjectList({ onEditProject, onImportProject }: ProjectListProps
                 <SelectTrigger className="h-9 w-full border-border bg-background text-[10px] shadow-none">
                   <SelectValue placeholder={t('projects.list.allResolutions')} />
                 </SelectTrigger>
-                <SelectContent data-studio-v2="true">
+                <SelectContent data-studio="true">
                   <SelectItem value="all">{t('projects.list.allResolutions')}</SelectItem>
                   {uniqueResolutions.map((res) => (
                     <SelectItem key={res} value={res}>
@@ -485,7 +485,7 @@ export function ProjectList({ onEditProject, onImportProject }: ProjectListProps
                 <SelectTrigger className="h-9 w-full border-border bg-background text-[10px] shadow-none">
                   <SelectValue placeholder={t('projects.list.allFps')} />
                 </SelectTrigger>
-                <SelectContent data-studio-v2="true">
+                <SelectContent data-studio="true">
                   <SelectItem value="all">{t('projects.list.allFps')}</SelectItem>
                   {uniqueFps.map((fps) => (
                     <SelectItem key={fps} value={fps.toString()}>
@@ -624,7 +624,7 @@ export function ProjectList({ onEditProject, onImportProject }: ProjectListProps
 
       {/* Bulk delete confirm */}
       <AlertDialog open={showBulkDeleteDialog} onOpenChange={setShowBulkDeleteDialog}>
-        <AlertDialogContent data-studio-v2="true">
+        <AlertDialogContent data-studio="true">
           <AlertDialogHeader>
             <AlertDialogTitle className="flex items-center gap-2">
               <AlertTriangle className="h-5 w-5 text-destructive" />

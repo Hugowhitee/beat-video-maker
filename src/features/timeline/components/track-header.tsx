@@ -8,7 +8,26 @@ import {
   ContextMenuSeparator,
   ContextMenuTrigger,
 } from '@/components/ui/context-menu'
-import { Power, PowerOff, Lock, GripVertical, Radio, FoldHorizontal, Link2 } from 'lucide-react'
+import {
+  Power,
+  PowerOff,
+  Lock,
+  GripVertical,
+  Radio,
+  FoldHorizontal,
+  Link2,
+  Eye,
+  EyeOff,
+  ChevronRight,
+  ChevronDown,
+  MoreHorizontal,
+} from 'lucide-react'
+import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuItem,
+} from '@/components/ui/dropdown-menu'
 import type { TimelineTrack } from '@/types/timeline'
 import { useTrackDrag } from '../hooks/use-track-drag'
 import { TIMELINE_SIDEBAR_WIDTH } from '../constants'
@@ -157,7 +176,7 @@ export const TrackHeader = memo(function TrackHeader({
           >
             {simplified ? (
               <div
-                className="flex h-full min-h-0 items-center px-2.5"
+                className="grid h-full min-h-0 grid-cols-[20px_minmax(0,1fr)_24px_24px_24px_24px] items-center gap-0.5 pl-3 pr-0.5"
                 data-collapsed={collapsed ? 'true' : undefined}
                 onDoubleClick={(event) => {
                   if (!onToggleCollapsed) return
@@ -168,12 +187,111 @@ export const TrackHeader = memo(function TrackHeader({
                 {isActive || isSelected ? (
                   <span aria-hidden="true" className="absolute inset-y-0 left-0 w-0.5 bg-primary" />
                 ) : null}
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-5 w-5"
+                  disabled={!onToggleCollapsed}
+                  aria-label={`${collapsed ? 'Expand' : 'Collapse'} ${producerTrackLabel} track`}
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    onToggleCollapsed?.()
+                  }}
+                >
+                  {collapsed ? (
+                    <ChevronRight className="h-3.5 w-3.5" />
+                  ) : (
+                    <ChevronDown className="h-3.5 w-3.5" />
+                  )}
+                </Button>
                 <span
-                  className={`min-w-0 flex-1 truncate text-[11px] font-medium leading-4 ${trackDisabled ? 'text-muted-foreground' : 'text-foreground'}`}
+                  className={`min-w-0 flex-1 truncate text-xs font-normal leading-4 ${trackDisabled ? 'text-muted-foreground' : 'text-foreground'}`}
                   title={track.name}
                 >
                   {producerTrackLabel}
                 </span>
+                {track.kind === 'audio' ? (
+                  <>
+                    <Button
+                      variant="secondary"
+                      size="icon"
+                      className="h-6 w-6 font-mono text-[11px] font-normal aria-pressed:bg-primary aria-pressed:text-primary-foreground"
+                      aria-label={trackDisabled ? 'Unmute track' : 'Mute track'}
+                      aria-pressed={trackDisabled}
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        onToggleDisabled()
+                      }}
+                    >
+                      M
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      size="icon"
+                      className="h-6 w-6 font-mono text-[11px] font-normal aria-pressed:bg-primary aria-pressed:text-primary-foreground"
+                      aria-label={track.solo ? 'Unsolo track' : 'Solo track'}
+                      aria-pressed={track.solo}
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        onToggleSolo()
+                      }}
+                    >
+                      S
+                    </Button>
+                  </>
+                ) : (
+                  <>
+                    <span aria-hidden="true" />
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-6 w-6"
+                      aria-label={trackDisabled ? 'Show track' : 'Hide track'}
+                      aria-pressed={!trackDisabled}
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        onToggleDisabled()
+                      }}
+                    >
+                      {trackDisabled ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </Button>
+                  </>
+                )}
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-6 w-6"
+                  aria-label={track.locked ? 'Unlock track' : 'Lock track'}
+                  aria-pressed={track.locked}
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    onToggleLock()
+                  }}
+                >
+                  <Lock className="h-4 w-4" />
+                </Button>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-6 w-6"
+                      aria-label={`${producerTrackLabel} track options`}
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <MoreHorizontal className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="start">
+                    <DropdownMenuItem onSelect={onToggleSyncLock}>
+                      {syncLockEnabled ? 'Disable sync lock' : 'Enable sync lock'}
+                    </DropdownMenuItem>
+                    <DropdownMenuItem onSelect={onCloseGaps}>Close all gaps</DropdownMenuItem>
+                    {canDeleteTrack ? (
+                      <DropdownMenuItem onSelect={onDeleteTrack}>Delete track</DropdownMenuItem>
+                    ) : null}
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </div>
             ) : (
               <>

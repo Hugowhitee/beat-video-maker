@@ -5,16 +5,37 @@ import { fireEvent, render, screen } from '@testing-library/react'
 import { StudioResizeRail } from './studio-resize-rail'
 
 describe('Studio panel resize rail', () => {
+  it('follows the physical direction of a left task column', () => {
+    const onWidthChange = vi.fn()
+    render(
+      <StudioResizeRail
+        side="left"
+        label="Resize left task"
+        width={400}
+        minWidth={320}
+        maxWidth={640}
+        defaultWidth={320}
+        onWidthChange={onWidthChange}
+      />,
+    )
+    const rail = screen.getByRole('separator', { name: 'Resize left task' })
+    fireEvent.keyDown(rail, { key: 'ArrowRight' })
+    expect(onWidthChange).toHaveBeenLastCalledWith(424)
+    fireEvent.keyDown(rail, { key: 'ArrowLeft' })
+    expect(onWidthChange).toHaveBeenLastCalledWith(376)
+  })
   it('provides an accessible resizable split separate from the panel scrollbar', () => {
     const onWidthChange = vi.fn()
-    render(<StudioResizeRail
-      label="Resize Visual tools"
-      width={400}
-      minWidth={320}
-      maxWidth={640}
-      defaultWidth={400}
-      onWidthChange={onWidthChange}
-    />)
+    render(
+      <StudioResizeRail
+        label="Resize Visual tools"
+        width={400}
+        minWidth={320}
+        maxWidth={640}
+        defaultWidth={400}
+        onWidthChange={onWidthChange}
+      />,
+    )
 
     const rail = screen.getByRole('separator', { name: 'Resize Visual tools' })
     expect(rail).toHaveAttribute('aria-orientation', 'vertical')

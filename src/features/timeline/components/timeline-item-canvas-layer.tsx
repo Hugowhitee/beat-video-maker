@@ -51,6 +51,11 @@ export const TimelineItemCanvasLayer = memo(function TimelineItemCanvasLayer({
   const viewportWidthRef = useRef(0)
   const scrollContainerRef = useRef<HTMLElement | null>(null)
   const drawRafRef = useRef<number | null>(null)
+  const themeRef = useRef({
+    tokens: {} as Record<string, string>,
+    font: '500 11px "IBM Plex Sans", sans-serif',
+    labelRowHeight: 16,
+  })
 
   itemsRef.current = items
   promotedItemIdsRef.current = promotedItemIds
@@ -73,7 +78,7 @@ export const TimelineItemCanvasLayer = memo(function TimelineItemCanvasLayer({
     context.setTransform(dpr, 0, 0, dpr, 0, 0)
     context.clearRect(0, 0, viewportWidth, liveTrackHeight)
     context.globalAlpha = trackHiddenRef.current ? 0.35 : 1
-    context.font = '500 11px system-ui, sans-serif'
+    context.font = themeRef.current.font
     context.textBaseline = 'middle'
 
     const { pixelsPerSecond } = useZoomStore.getState()
@@ -88,6 +93,8 @@ export const TimelineItemCanvasLayer = memo(function TimelineItemCanvasLayer({
       scrollLeft,
       trackHeight: liveTrackHeight,
       viewportWidth,
+      tokens: themeRef.current.tokens,
+      labelRowHeight: themeRef.current.labelRowHeight,
     })
 
     context.globalAlpha = 1
@@ -105,6 +112,22 @@ export const TimelineItemCanvasLayer = memo(function TimelineItemCanvasLayer({
     if (!canvas) return
     const scrollContainer = canvas.closest('.timeline-container') as HTMLElement | null
     if (!scrollContainer) return
+
+    // Resolve styles once when the drawing surface mounts, not per clip or scroll.
+    const styles = getComputedStyle(canvas)
+    const names = [
+      '--foreground',
+      '--timeline-bg',
+      ...['video', 'audio', 'image', 'text', 'shape', 'composition'].map(
+        (type) => `--color-timeline-${type}`,
+      ),
+    ]
+    themeRef.current = {
+      tokens: Object.fromEntries(names.map((name) => [name, styles.getPropertyValue(name)])),
+      font: `500 11px ${styles.fontFamily}`,
+      labelRowHeight:
+        parseFloat(styles.getPropertyValue('--editor-timeline-clip-label-row-height')) || 16,
+    }
 
     scrollContainerRef.current = scrollContainer
     const updateViewportWidth = () => {

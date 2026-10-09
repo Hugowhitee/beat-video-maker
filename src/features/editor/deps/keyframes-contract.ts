@@ -5,6 +5,8 @@
 
 export { KeyframeToggle } from '@/features/keyframes/components/keyframe-toggle'
 export { resolveAnimatedTransform } from '@/features/keyframes/utils/animated-transform-resolver'
+export { resolveAnimatedTextItem } from '@/features/keyframes/utils/animated-text-item'
+export { resetAutoKeyframeStore } from '@/features/keyframes/stores/auto-keyframe-store'
 export {
   getCropPropertyValue,
   resolveAnimatedCrop,

@@ -1,5 +1,6 @@
 import {
   useMemo,
+  useState,
   useCallback,
   useDeferredValue,
   useEffect,
@@ -13,6 +14,7 @@ import { useTranslation } from 'react-i18next'
 import { cn } from '@/shared/ui/cn'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
 import { Separator } from '@/components/ui/separator'
+import { Button } from '@/components/ui/button'
 import { useEditorStore } from '@/shared/state/editor'
 import { useSelectionStore } from '@/shared/state/selection'
 import { useItemsStore, useTimelineStore } from '@/features/editor/deps/timeline-store'
@@ -114,7 +116,7 @@ function computeItemTypeInfo(items: TimelineItem[]) {
   }
 }
 
-export const ClipPanel = memo(function ClipPanel() {
+export const ClipPanel = memo(function ClipPanel({ compact = false }: { compact?: boolean }) {
   const selectedItemIds = useSelectionStore(
     (s: SelectionState & SelectionActions) => s.selectedItemIds,
   )
@@ -133,7 +135,7 @@ export const ClipPanel = memo(function ClipPanel() {
   // deferred boundary here can leave its controls one selection behind while
   // playback keeps higher-priority preview work active. Remounting only when
   // the selected IDs change preserves deferred same-item store updates.
-  return <DeferredClipPanel key={selectionKey} snapshot={snapshot} />
+  return <DeferredClipPanel key={selectionKey} snapshot={snapshot} compact={compact} />
 })
 
 interface ClipPanelSnapshot {
@@ -376,12 +378,15 @@ function createClipPanelSnapshotBridge(selectedIds: readonly string[]): {
  */
 const DeferredClipPanel = memo(function DeferredClipPanel({
   snapshot,
+  compact,
 }: {
   snapshot: ClipPanelSnapshot
+  compact: boolean
 }) {
   const deferredSnapshot = useDeferredValue(snapshot)
   return (
     <ClipPanelCore
+      compact={compact}
       selectedItems={deferredSnapshot.selectedItems}
       audioPanelItems={deferredSnapshot.audioPanelItems}
     />
@@ -397,13 +402,17 @@ const DeferredClipPanel = memo(function DeferredClipPanel({
  * preview exact while these controls catch up.
  */
 const ClipPanelCore = memo(function ClipPanelCore({
+  compact,
   selectedItems,
   audioPanelItems,
 }: {
+  compact: boolean
   selectedItems: TimelineItem[]
   audioPanelItems: TimelineItem[]
 }) {
   const { t } = useTranslation()
+  const [textEditorOpen, setTextEditorOpen] = useState(false)
+  const [advancedOpen, setAdvancedOpen] = useState(false)
   // Granular selectors with explicit types
   const clipInspectorTab = useEditorStore((s) => s.clipInspectorTab)
   const workspace = useEditorStore((s) => s.workspace)
@@ -602,36 +611,64 @@ const ClipPanelCore = memo(function ClipPanelCore({
   const motionUsesFullHeight = activeTab === 'motion' && showFullMotionLibrary
 
   return (
-    <div className={cn(motionUsesFullHeight ? 'h-full min-h-0' : 'space-y-3')}>
+    <div
+      className={cn(motionUsesFullHeight ? 'h-full min-h-0' : compact ? 'space-y-2' : 'space-y-3')}
+    >
       {/* Tabbed sections */}
       <Tabs
         value={activeTab}
         onValueChange={handleTabChange}
         className={cn('w-full', motionUsesFullHeight && 'flex h-full min-h-0 flex-col')}
       >
-        <TabsList
-          className={cn(
-            'studio-segmented grid h-8 w-full shrink-0 p-0.5',
-            tabGridColsClass,
-          )}
-        >
-          {availableTabs.map((value) => (
-            <TabsTrigger
-              key={value}
-              value={value}
-              className="studio-segment h-7 rounded-sm px-2 py-0 text-[10px] font-medium shadow-none active:scale-100"
+        {!compact && (
+          <TabsList
+            className={cn('studio-segmented grid h-8 w-full shrink-0 p-0.5', tabGridColsClass)}
+          >
+            {availableTabs.map((value) => (
+              <TabsTrigger
+                key={value}
+                value={value}
+                className="studio-segment h-7 rounded-sm px-2 py-0 text-[10px] font-medium shadow-none active:scale-100"
+              >
+                {getTabLabel(value)}
+              </TabsTrigger>
+            ))}
+          </TabsList>
+        )}
+
+        {compact && activeTab === 'video' && hasTextItems && (
+          <div className="mb-2">
+            <Button
+              type="button"
+              variant="secondary"
+              className="h-8 w-full justify-start text-xs font-medium"
+              aria-expanded={textEditorOpen}
+              onClick={() => setTextEditorOpen(!textEditorOpen)}
             >
-              {getTabLabel(value)}
-            </TabsTrigger>
-          ))}
-        </TabsList>
+              Edit text
+            </Button>
+            {textEditorOpen && (
+              <Suspense fallback={null}>
+                <LazyTextContentSection items={selectedItems} canvas={canvas} />
+                <LazyTextStyleSection items={selectedItems} canvas={canvas} />
+              </Suspense>
+            )}
+          </div>
+        )}
 
         {/* Video Tab - visual layout, content, and clip-specific controls */}
-        <TabsContent value="video" className="mt-2">
+        <TabsContent value="video" className="mt-0">
           {showVideoTab && (
-            <div className="divide-y divide-border [&>*]:py-4 [&>*:first-child]:pt-0 [&>*:last-child]:pb-0">
+            <div
+              className={
+                compact
+                  ? 'space-y-2'
+                  : 'divide-y divide-border [&>*]:py-4 [&>*:first-child]:pt-0 [&>*:last-child]:pb-0'
+              }
+            >
               {showVideoTab && (
                 <LayoutSection
+                  compact={compact}
                   items={layoutFillItems}
                   mediaTransformItems={mediaTransformItems}
                   canvas={canvas}
@@ -644,20 +681,23 @@ const ClipPanelCore = memo(function ClipPanelCore({
               {(hasVideoItems || hasCompositionItems) && <VideoSection items={selectedItems} />}
               {paintableLayoutItems.length > 0 && (
                 <FillSection
+                  compact={compact}
                   items={paintableLayoutItems}
                   canvas={canvas}
                   onTransformChange={handleTransformChange}
                 />
               )}
-              {paintableLayoutItems.length > 0 && <CornerPinSection items={paintableLayoutItems} />}
-              {hasTextItems && (
+              {!compact && paintableLayoutItems.length > 0 && (
+                <CornerPinSection items={paintableLayoutItems} />
+              )}
+              {!compact && hasTextItems && (
                 <Suspense fallback={null}>
                   <LazyTextContentSection items={selectedItems} canvas={canvas} />
                 </Suspense>
               )}
               {/* Text-only: Style (shadow/stroke) lives with the text, not on
                   the Effects tab. Mixed selections keep it under Effects. */}
-              {isOnlyText && (
+              {!compact && isOnlyText && (
                 <Suspense fallback={null}>
                   <LazyTextStyleSection items={selectedItems} canvas={canvas} />
                 </Suspense>
@@ -732,6 +772,51 @@ const ClipPanelCore = memo(function ClipPanelCore({
           )}
         </TabsContent>
       </Tabs>
+      {compact && (
+        <div className="flex flex-wrap gap-x-4 gap-y-2">
+          {availableTabs.map((value) => (
+            <button
+              key={value}
+              type="button"
+              className="text-xs text-muted-foreground hover:text-foreground"
+              aria-pressed={activeTab === value}
+              onClick={() => handleTabChange(value)}
+            >
+              {value === 'video' ? 'Transform' : getTabLabel(value)}
+            </button>
+          ))}
+        </div>
+      )}
+      {compact && (
+        <div>
+          <button
+            type="button"
+            className="text-xs text-muted-foreground hover:text-foreground"
+            aria-expanded={advancedOpen}
+            onClick={() => setAdvancedOpen(!advancedOpen)}
+          >
+            More properties
+          </button>
+          {advancedOpen && (
+            <div className="space-y-4 pt-2">
+              <LayoutSection
+                items={layoutFillItems}
+                mediaTransformItems={mediaTransformItems}
+                canvas={canvas}
+                onTransformChange={handleTransformChange}
+                aspectLocked={aspectLocked}
+                onAspectLockToggle={handleAspectLockToggle}
+              />
+              <FillSection
+                items={paintableLayoutItems}
+                canvas={canvas}
+                onTransformChange={handleTransformChange}
+              />
+              <CornerPinSection items={paintableLayoutItems} />
+            </div>
+          )}
+        </div>
+      )}
     </div>
   )
 })

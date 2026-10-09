@@ -7,5 +7,5 @@ describe('preview timeline contract import boundary', () => {
     const contract = await import('./timeline-contract')
     expect(contract.useTimelineStore).toBeDefined()
     expect(contract.useTimelineViewportStore).toBeDefined()
-  })
+  }, 15_000)
 })

@@ -25,7 +25,7 @@ export const MAX_TRACK_HEIGHT = 140
 
 // "Compact" track-size preset — comfortably above the bare minimum so clip
 // content stays legible.
-export const COMPACT_TRACK_HEIGHT = 72
+export const COMPACT_TRACK_HEIGHT = 48
 export const TRACK_SECTION_DIVIDER_HEIGHT = 3
 
 // Track heights behind the Track Size presets. The chosen preset is persisted
@@ -108,5 +108,5 @@ export const SLIP_SLIDE_TOOLS_ENABLED = false
 // =============================================================================
 
 // Waveform colors (canvas doesn't support CSS vars)
-export const WAVEFORM_FILL_COLOR = 'rgba(158, 107, 214, 0.5)'
-export const WAVEFORM_STROKE_COLOR = 'rgba(158, 107, 214, 0.8)'
+export const WAVEFORM_FILL_COLOR = 'rgba(171, 190, 198, 0.5)'
+export const WAVEFORM_STROKE_COLOR = 'rgba(211, 225, 229, 0.9)'

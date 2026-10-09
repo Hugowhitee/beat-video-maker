@@ -13,33 +13,36 @@ const EDITOR_DENSITY_PRESETS = {
     sidebarRailWidth: 44,
     sidebarHeaderHeight: 36,
     sidebarHeaderButtonSize: 20,
-    toolbarButtonSize: 20,
+    toolbarButtonSize: 32,
     leftSidebarDefaultWidth: 320,
     leftSidebarMinWidth: 240,
     leftSidebarMaxWidth: 560,
     rightSidebarDefaultWidth: 288,
     rightSidebarMinWidth: 280,
     rightSidebarMaxWidth: 420,
-    previewPadding: 32,
+    previewPadding: 16,
     previewSplitHeaderHeight: 32,
-    previewControlsHeight: 32,
-    previewControlButtonSize: 30,
-    timelineDefaultSize: 28,
+    previewControlsHeight: 40,
+    previewControlButtonSize: 32,
+    // Canonical desktop split: 438px Program/task area and 410px timeline
+    // within the 848px workspace below the 112px shell. Resize hit regions
+    // overlap the boundary rather than consuming additional layout space.
+    timelineDefaultSize: (410 / 848) * 100,
     timelineMinSize: 14,
     timelineMaxSize: 80,
     graphPanelSizeIncrease: 10,
-    timelineHeaderHeight: 40,
-    // Ruler + its left-column header are kept equal so track rows align on both
-    // sides. The ruler now hosts a top IO lane (12px) + a shorter tick ruler.
-    timelineTracksHeaderHeight: 34,
-    timelineRulerHeight: 34,
+    timelineHeaderHeight: 44,
+    // The musical ruler reserves 20px for time and 17px for bars. Advanced
+    // editing retains its in/out strip within the same ruler container.
+    timelineTracksHeaderHeight: 37,
+    timelineRulerHeight: 37,
     // The Edit track header follows the classic dopesheet property column so
     // both timeline surfaces share the same ruler and playhead origin.
     timelineSidebarWidth: EDIT_DOPESHEET_COLUMN_WIDTH,
     timelineMeterWidth: 84,
     timelineMixerWidth: 260,
-    timelineTrackHeight: 100,
-    timelineClipLabelRowHeight: 24,
+    timelineTrackHeight: 52,
+    timelineClipLabelRowHeight: 16,
     timelineWaveformRowHeight: 24,
   },
 } as const

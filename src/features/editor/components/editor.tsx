@@ -78,7 +78,7 @@ const LazyProjectSettingsDialog = lazy(() =>
 const LazyColorGradingDock = lazy(() =>
   import('./color-grading-dock').then(({ ColorGradingDock }) => ({ default: ColorGradingDock })),
 )
-import { useStudioV2DocumentTheme } from '@/shared/ui/use-studio-v2-document-theme'
+import { useStudioDocumentTheme } from '@/shared/ui/use-studio-document-theme'
 
 const EDITOR_PROJECT_ROUTE_ID = '/editor/$projectId'
 
@@ -92,9 +92,9 @@ function getStudioColumnMaxWidth(): number {
   )
 }
 function readStudioColumnWidth(workspace: EditorWorkspaceId): number {
-  const fallback = workspace === 'master' || workspace === 'color' ? 480 : 400
+  const fallback = workspace === 'master' || workspace === 'color' ? 480 : 320
   try {
-    const stored = Number(window.localStorage.getItem(`editor:studioColumnWidth:${workspace}`))
+    const stored = Number(window.localStorage.getItem(`editor:producerTaskWidth:${workspace}`))
     return Math.max(
       STUDIO_COLUMN_MIN_WIDTH,
       Math.min(
@@ -127,7 +127,7 @@ function getMobileEditorSurfaces(
   }
   if (workspace === 'color') {
     return [
-      { id: 'color', label: 'Color' },
+      { id: 'color', label: 'Nodes' },
       { id: 'preview', label: 'Preview' },
     ]
   }
@@ -154,7 +154,7 @@ function getMobileEditorSurfaces(
 }
 
 function workspaceTimelineSizeStorageKey(workspace: EditorWorkspaceId): string {
-  return `editor:workspaceTimelineSize:${workspace}`
+  return `editor:producerTimelineSize:${workspace}`
 }
 
 function loadWorkspaceTimelineSize(workspace: EditorWorkspaceId): number | null {
@@ -463,7 +463,7 @@ export const LoadedEditor = memo(function LoadedEditor({
   migration,
 }: EditorProps) {
   const { t } = useTranslation()
-  useStudioV2DocumentTheme()
+  useStudioDocumentTheme()
   const router = useRouter()
   const [exportDialogOpen, setExportDialogOpen] = useState(false)
   const [bundleExportDialogOpen, setBundleExportDialogOpen] = useState(false)
@@ -492,7 +492,7 @@ export const LoadedEditor = memo(function LoadedEditor({
       const clamped = Math.max(STUDIO_COLUMN_MIN_WIDTH, Math.min(getStudioColumnMaxWidth(), width))
       setStudioColumnWidth(clamped)
       try {
-        window.localStorage.setItem(`editor:studioColumnWidth:${workspace}`, String(clamped))
+        window.localStorage.setItem(`editor:producerTaskWidth:${workspace}`, String(clamped))
       } catch {
         /* Persisting a layout preference must not block the editor. */
       }
@@ -811,7 +811,7 @@ export const LoadedEditor = memo(function LoadedEditor({
       role="application"
       aria-label={t('editor.editor.appLabel')}
       data-beatvideo-mode={beatvideoMode}
-      data-studio-v2="true"
+      data-studio="true"
     >
       <AutoSaveController onSave={handleSave} />
       <TimelineShortcutsController />
@@ -840,7 +840,7 @@ export const LoadedEditor = memo(function LoadedEditor({
                 className={
                   mobileSurface === 'preview'
                     ? 'relative h-full min-h-0'
-                    : 'pointer-events-none invisible absolute inset-0'
+                    : 'pointer-events-none invisible absolute inset-0 opacity-0'
                 }
                 aria-hidden={mobileSurface === 'preview' ? undefined : true}
                 data-mobile-preview-runtime
@@ -961,7 +961,7 @@ export const LoadedEditor = memo(function LoadedEditor({
             <ResizablePanelGroup
               direction="vertical"
               className="flex-1 min-w-0"
-              autoSaveId="editor:timeline-layout"
+              autoSaveId="editor:producer-layout"
             >
               {/* Top - Preview + Properties (inline mode) */}
               <ResizablePanel
@@ -970,6 +970,117 @@ export const LoadedEditor = memo(function LoadedEditor({
                 maxSize={100 - editorLayout.timelineMinSize}
               >
                 <div className="h-full flex overflow-hidden relative">
+                  {isProducerWorkspace ? (
+                    <div className="studio-workspace-controls flex h-full shrink-0 flex-row-reverse">
+                      {isColorWorkspace ? (
+                        <>
+                          <StudioResizeRail
+                            side="left"
+                            label="Resize Nodes controls"
+                            width={visibleStudioColumnWidth}
+                            minWidth={STUDIO_COLUMN_MIN_WIDTH}
+                            maxWidth={getStudioColumnMaxWidth()}
+                            defaultWidth={480}
+                            onWidthChange={updateStudioColumnWidth}
+                          />
+                          <InteractionLockRegion
+                            locked={isMaskEditingActive}
+                            className="h-full min-w-0 shrink-0 bg-panel-bg"
+                            style={{ width: visibleStudioColumnWidth }}
+                          >
+                            <ErrorBoundary level="feature">
+                              <Suspense fallback={null}>
+                                <LazyColorGradingDock />
+                              </Suspense>
+                            </ErrorBoundary>
+                          </InteractionLockRegion>
+                        </>
+                      ) : isMasterWorkspace ? (
+                        <>
+                          <StudioResizeRail
+                            side="left"
+                            label="Resize Master controls"
+                            width={visibleStudioColumnWidth}
+                            minWidth={STUDIO_COLUMN_MIN_WIDTH}
+                            maxWidth={getStudioColumnMaxWidth()}
+                            defaultWidth={480}
+                            onWidthChange={updateStudioColumnWidth}
+                          />
+                          <InteractionLockRegion
+                            locked={isMaskEditingActive}
+                            className="studio-master-column h-full shrink-0"
+                            style={{ width: visibleStudioColumnWidth }}
+                          >
+                            <ErrorBoundary level="feature">
+                              <BeatvideoMasterPanel />
+                            </ErrorBoundary>
+                          </InteractionLockRegion>
+                        </>
+                      ) : workspace === 'beat' || workspace === 'edit' ? (
+                        <>
+                          <StudioResizeRail
+                            side="left"
+                            label={
+                              workspace === 'beat' ? 'Resize Beat controls' : 'Resize Visual tools'
+                            }
+                            width={visibleStudioColumnWidth}
+                            minWidth={STUDIO_COLUMN_MIN_WIDTH}
+                            maxWidth={getStudioColumnMaxWidth()}
+                            defaultWidth={320}
+                            onWidthChange={updateStudioColumnWidth}
+                          />
+                          <InteractionLockRegion
+                            locked={isMaskEditingActive}
+                            className="studio-task-column h-full shrink-0 bg-panel-bg"
+                            style={{ width: visibleStudioColumnWidth }}
+                          >
+                            {workspace === 'edit' ? (
+                              <div className="flex h-full min-h-0 flex-col">
+                                <div className="shrink-0 bg-panel-bg px-4 pt-4 pb-2">
+                                  <div className="mb-2 text-xs font-medium uppercase">Visual</div>
+                                  <div className="studio-segmented grid h-8 grid-cols-2">
+                                    <button
+                                      type="button"
+                                      className="studio-segment h-8 text-xs font-normal"
+                                      aria-pressed={!rightSidebarOpen}
+                                      onClick={() => setRightSidebarOpen(false)}
+                                    >
+                                      Add
+                                    </button>
+                                    <button
+                                      type="button"
+                                      className="studio-segment h-8 text-xs font-normal"
+                                      aria-pressed={rightSidebarOpen}
+                                      onClick={() => setRightSidebarOpen(true)}
+                                    >
+                                      Edit
+                                    </button>
+                                  </div>
+                                </div>
+                                <div className="min-h-0 flex-1">
+                                  <ErrorBoundary level="feature">
+                                    {rightSidebarOpen ? (
+                                      <PropertiesSidebar studioTaskColumn />
+                                    ) : (
+                                      <MediaSidebar
+                                        beatvideoMode={beatvideoMode}
+                                        studioTaskColumn
+                                      />
+                                    )}
+                                  </ErrorBoundary>
+                                </div>
+                              </div>
+                            ) : (
+                              <ErrorBoundary level="feature">
+                                <MediaSidebar beatvideoMode={beatvideoMode} studioTaskColumn />
+                              </ErrorBoundary>
+                            )}
+                          </InteractionLockRegion>
+                        </>
+                      ) : null}
+                    </div>
+                  ) : null}
+
                   {/* Left Sidebar - Media Library (inline with preview) */}
                   {!mediaFullColumn && !isProducerWorkspace && (
                     <InteractionLockRegion locked={isMaskEditingActive}>
@@ -1001,7 +1112,10 @@ export const LoadedEditor = memo(function LoadedEditor({
 
               <ResizableHandle
                 aria-label="Resize preview and timeline"
-                className={`group data-[panel-group-direction=vertical]:h-[10px] data-[panel-group-direction=vertical]:cursor-row-resize data-[panel-group-direction=vertical]:bg-transparent data-[panel-group-direction=vertical]:before:pointer-events-none data-[panel-group-direction=vertical]:before:absolute data-[panel-group-direction=vertical]:before:inset-x-0 data-[panel-group-direction=vertical]:before:top-1/2 data-[panel-group-direction=vertical]:before:h-px data-[panel-group-direction=vertical]:before:-translate-y-1/2 data-[panel-group-direction=vertical]:before:bg-[#aeb6ac] data-[panel-group-direction=vertical]:hover:before:h-[2px] data-[panel-group-direction=vertical]:hover:before:bg-[#526955] data-[panel-group-direction=vertical]:focus-visible:before:h-[2px] data-[panel-group-direction=vertical]:focus-visible:before:bg-[#526955] data-[panel-group-direction=vertical]:data-[resize-handle-active]:before:bg-[#526955] ${
+                withHandle
+                handleVariant="bar"
+                hitAreaMargins={{ fine: 10, coarse: 15 }}
+                className={`group data-[panel-group-direction=vertical]:h-0 data-[panel-group-direction=vertical]:after:h-[20px] data-[panel-group-direction=vertical]:cursor-row-resize data-[panel-group-direction=vertical]:bg-transparent data-[panel-group-direction=vertical]:before:pointer-events-none data-[panel-group-direction=vertical]:before:absolute data-[panel-group-direction=vertical]:before:inset-x-0 data-[panel-group-direction=vertical]:before:top-1/2 data-[panel-group-direction=vertical]:before:h-px data-[panel-group-direction=vertical]:before:-translate-y-1/2 data-[panel-group-direction=vertical]:before:bg-border data-[panel-group-direction=vertical]:hover:before:h-[2px] data-[panel-group-direction=vertical]:hover:before:bg-primary data-[panel-group-direction=vertical]:focus-visible:before:h-[2px] data-[panel-group-direction=vertical]:focus-visible:before:bg-primary data-[panel-group-direction=vertical]:data-[resize-handle-active]:before:bg-primary ${
                   isMaskEditingActive ? 'pointer-events-none opacity-60' : ''
                 }`}
               />
@@ -1028,112 +1142,11 @@ export const LoadedEditor = memo(function LoadedEditor({
                           </Suspense>
                         )}
                       </div>
-                      {workspace === 'edit' && beatvideoMode === 'video' ? (
-                        <AudioMeterPanel key="editor-meter" initialMode="meter" />
-                      ) : null}
                     </div>
                   </ErrorBoundary>
                 </InteractionLockRegion>
               </ResizablePanel>
             </ResizablePanelGroup>
-
-            {isColorWorkspace ? (
-              <>
-                <StudioResizeRail
-                  label="Resize Color controls"
-                  width={visibleStudioColumnWidth}
-                  minWidth={STUDIO_COLUMN_MIN_WIDTH}
-                  maxWidth={getStudioColumnMaxWidth()}
-                  defaultWidth={480}
-                  onWidthChange={updateStudioColumnWidth}
-                />
-                <InteractionLockRegion
-                  locked={isMaskEditingActive}
-                  className="h-full min-w-0 shrink-0 bg-panel-bg"
-                  style={{ width: visibleStudioColumnWidth }}
-                >
-                  <ErrorBoundary level="feature">
-                    <Suspense fallback={null}>
-                      <LazyColorGradingDock />
-                    </Suspense>
-                  </ErrorBoundary>
-                </InteractionLockRegion>
-              </>
-            ) : isMasterWorkspace ? (
-              <>
-                <StudioResizeRail
-                  label="Resize Master controls"
-                  width={visibleStudioColumnWidth}
-                  minWidth={STUDIO_COLUMN_MIN_WIDTH}
-                  maxWidth={getStudioColumnMaxWidth()}
-                  defaultWidth={480}
-                  onWidthChange={updateStudioColumnWidth}
-                />
-                <InteractionLockRegion
-                  locked={isMaskEditingActive}
-                  className="studio-master-column h-full shrink-0"
-                  style={{ width: visibleStudioColumnWidth }}
-                >
-                  <ErrorBoundary level="feature">
-                    <BeatvideoMasterPanel />
-                  </ErrorBoundary>
-                </InteractionLockRegion>
-              </>
-            ) : workspace === 'beat' || workspace === 'edit' ? (
-              <>
-                <StudioResizeRail
-                  label={workspace === 'beat' ? 'Resize Beat controls' : 'Resize Visual tools'}
-                  width={visibleStudioColumnWidth}
-                  minWidth={STUDIO_COLUMN_MIN_WIDTH}
-                  maxWidth={getStudioColumnMaxWidth()}
-                  defaultWidth={400}
-                  onWidthChange={updateStudioColumnWidth}
-                />
-                <InteractionLockRegion
-                  locked={isMaskEditingActive}
-                  className="studio-task-column h-full shrink-0 bg-panel-bg"
-                  style={{ width: visibleStudioColumnWidth }}
-                >
-                  {workspace === 'edit' ? (
-                    <div className="flex h-full min-h-0 flex-col">
-                      <div className="shrink-0 border-b border-border bg-panel-bg px-3 py-2">
-                        <div className="studio-segmented grid h-8 grid-cols-2">
-                          <button
-                            type="button"
-                            className="studio-segment h-8 text-[10px] font-semibold"
-                            aria-pressed={!rightSidebarOpen}
-                            onClick={() => setRightSidebarOpen(false)}
-                          >
-                            Add
-                          </button>
-                          <button
-                            type="button"
-                            className="studio-segment h-8 text-[10px] font-semibold"
-                            aria-pressed={rightSidebarOpen}
-                            onClick={() => setRightSidebarOpen(true)}
-                          >
-                            Edit
-                          </button>
-                        </div>
-                      </div>
-                      <div className="min-h-0 flex-1">
-                        <ErrorBoundary level="feature">
-                          {rightSidebarOpen ? (
-                            <PropertiesSidebar studioTaskColumn />
-                          ) : (
-                            <MediaSidebar beatvideoMode={beatvideoMode} studioTaskColumn />
-                          )}
-                        </ErrorBoundary>
-                      </div>
-                    </div>
-                  ) : (
-                    <ErrorBoundary level="feature">
-                      <MediaSidebar beatvideoMode={beatvideoMode} studioTaskColumn />
-                    </ErrorBoundary>
-                  )}
-                </InteractionLockRegion>
-              </>
-            ) : null}
 
             {/* Right Sidebar - Properties (full column mode) */}
             {propertiesFullColumn && !hidesDefaultSidebars && !isProducerWorkspace && (

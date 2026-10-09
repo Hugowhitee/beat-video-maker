@@ -112,6 +112,7 @@
     "@testing-library/dom": "10.4.1",
     "@testing-library/jest-dom": "6.9.1",
     "@testing-library/react": "16.3.2",
+    "@testing-library/user-event": "14.6.1",
     "@types/node": "22.19.17",
     "@types/react": "19.2.14",
     "@types/react-dom": "19.2.3",
@@ -126,10 +127,10 @@
   },
   "overrides": {
     "esbuild": "0.28.1",
-    "typescript": "7.0.2",
+    "protobufjs": "7.6.5",
     "seroval": "1.5.3",
     "tar": "7.5.18",
-    "protobufjs": "7.6.5"
+    "typescript": "7.0.2"
   },
   "packageManager": "npm@11.8.0"
 }

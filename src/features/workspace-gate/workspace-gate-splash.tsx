@@ -18,7 +18,7 @@ export function WorkspaceGateSplash({ status, error, onPickFolder, onReconnect }
   const { t } = useTranslation()
 
   return (
-    <div data-studio-v2="true" className="min-h-dvh bg-background text-foreground">
+    <div data-studio="true" className="min-h-dvh bg-background text-foreground">
       <header className="flex h-12 items-center bg-[#242724] px-[18px] text-[#f6f7f3]">
         <div className="flex items-baseline gap-1.5">
           <span className="text-[10px] font-semibold">BEAT VIDEO</span>

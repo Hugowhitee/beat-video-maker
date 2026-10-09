@@ -39,7 +39,6 @@ describe('BeatvideoMasterPanel gain staging', () => {
 
   it('commits typed Output independently after the rack and restores it with Undo', () => {
     const { getByRole } = render(<BeatvideoMasterPanel />)
-    fireEvent.click(getByRole('button', { name: 'Edit Output value' }))
     const valueInput = getByRole('textbox', { name: 'Output value' })
     fireEvent.change(valueInput, { target: { value: '-3.5' } })
     fireEvent.keyDown(valueInput, { key: 'Enter' })

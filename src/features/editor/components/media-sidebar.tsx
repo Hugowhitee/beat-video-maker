@@ -1386,7 +1386,7 @@ export const MediaSidebar = memo(function MediaSidebar({
             <div
               className={cn(
                 'flex items-center justify-between border-b border-border flex-shrink-0',
-                studioTaskColumn && workspace === 'edit' ? 'h-[62px] px-5' : 'px-3',
+                studioTaskColumn && workspace === 'edit' ? 'h-9 px-4' : 'px-3',
               )}
               style={
                 studioTaskColumn && workspace === 'edit'
@@ -1397,11 +1397,8 @@ export const MediaSidebar = memo(function MediaSidebar({
               {studioTaskColumn && workspace === 'edit' ? (
                 <div className="min-w-0">
                   <div className="text-[11px] font-semibold uppercase tracking-[0.08em] text-foreground">
-                    Visual
+                    Add sources & layers
                   </div>
-                  <p className="mt-1.5 truncate text-[10px] text-muted-foreground">
-                    Build the picture, then refine selected clips in Inspector.
-                  </p>
                 </div>
               ) : (
                 <span className="text-sm font-medium text-foreground">

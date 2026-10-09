@@ -12,6 +12,20 @@ function beats(count = 32): MusicBeat[] {
 }
 
 describe('Beatvideo grid resolution', () => {
+  it('can thin paired time/bar labels without changing the snap markers', () => {
+    const params = {
+      beats: beats(32),
+      beatsPerBar: 4,
+      barOneTime: 0,
+      resolution: 'bar' as const,
+      pixelsPerSecond: 50,
+    }
+    const ordinary = resolveBeatGridMarkers(params)
+    const paired = resolveBeatGridMarkers({ ...params, minimumLabelSpacingPx: 112 })
+    expect(paired.markers).toEqual(ordinary.markers)
+    expect(ordinary.labelStride).toBe(1)
+    expect(paired.labelStride).toBe(2)
+  })
   it('uses every beat in Beat mode', () => {
     const result = resolveBeatGridMarkers({
       beats: beats(16),

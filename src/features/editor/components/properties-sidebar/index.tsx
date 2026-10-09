@@ -149,6 +149,7 @@ export const PropertiesSidebar = memo(function PropertiesSidebar({
   const selectedMarkerId = useSelectionStore((s) => s.selectedMarkerId)
   const selectedTransitionId = useSelectionStore((s) => s.selectedTransitionId)
   const beatMediaId = useProjectStore((s) => s.currentProject?.beatvideoMusic?.mediaId ?? null)
+  const projectName = useProjectStore((s) => s.currentProject?.name ?? '')
   const activeCompositionId = useCompositionNavigationStore((s) => s.activeCompositionId)
   const activeCompositionName = useCompositionsStore((s) =>
     activeCompositionId ? s.compositionById[activeCompositionId]?.name : undefined,
@@ -216,7 +217,10 @@ export const PropertiesSidebar = memo(function PropertiesSidebar({
         : motionCompositionHeader
           ? t('editor.propertiesSidebar.composition', { defaultValue: 'Composition' })
           : t('editor.propertiesSidebar.title')
-  const headerContext = activeClipHeader?.text ?? motionCompositionHeader
+  const headerContext =
+    studioTaskColumn && workspace === 'edit' && selectedItems.length === 1
+      ? `${projectName} · ${selectedItems[0]!.type[0]!.toUpperCase()}${selectedItems[0]!.type.slice(1)}`
+      : (activeClipHeader?.text ?? motionCompositionHeader)
   const headerTitle = activeClipHeader?.title ?? motionCompositionHeader ?? undefined
   const producerWorkspace = workspace === 'beat' || workspace === 'edit' || workspace === 'master'
 
@@ -315,8 +319,16 @@ export const PropertiesSidebar = memo(function PropertiesSidebar({
           >
             {/* Sidebar Header */}
             <div
-              className="flex items-center justify-between px-3 border-b border-border flex-shrink-0"
-              style={{ height: EDITOR_LAYOUT_CSS_VALUES.sidebarHeaderHeight }}
+              className={
+                studioTaskColumn
+                  ? 'flex items-center px-4 pb-2 shrink-0'
+                  : 'flex items-center justify-between px-3 border-b border-border flex-shrink-0'
+              }
+              style={
+                studioTaskColumn
+                  ? undefined
+                  : { height: EDITOR_LAYOUT_CSS_VALUES.sidebarHeaderHeight }
+              }
             >
               <div className="min-w-0 flex items-center gap-1.5">
                 {!mobile && !studioTaskColumn && !producerWorkspace ? (
@@ -352,12 +364,18 @@ export const PropertiesSidebar = memo(function PropertiesSidebar({
                   className="min-w-0 leading-none"
                   aria-label={headerContext ? `${headerLabel}-${headerContext}` : headerLabel}
                 >
-                  <span className="block text-[9px] font-medium text-muted-foreground">
-                    {headerLabel}
-                  </span>
+                  {!studioTaskColumn && (
+                    <span className="block text-[9px] font-medium text-muted-foreground">
+                      {headerLabel}
+                    </span>
+                  )}
                   {headerContext ? (
                     <span
-                      className="mt-1 block truncate text-[11px] font-medium text-foreground"
+                      className={
+                        studioTaskColumn
+                          ? 'block truncate text-xs font-medium text-foreground'
+                          : 'mt-1 block truncate text-[11px] font-medium text-foreground'
+                      }
                       title={headerTitle}
                     >
                       {headerContext}
@@ -384,9 +402,11 @@ export const PropertiesSidebar = memo(function PropertiesSidebar({
             {/* Properties Panel */}
             <div
               className={
-                workspace === 'motion' && clipInspectorTab === 'motion' && hasClipSelection
-                  ? 'min-h-0 flex-1 overflow-hidden px-2.5 py-2'
-                  : 'flex-1 overflow-y-auto overflow-x-hidden px-2.5 py-2 [scrollbar-gutter:stable]'
+                studioTaskColumn
+                  ? 'min-h-0 flex-1 overflow-y-auto overflow-x-hidden px-4 pb-4'
+                  : workspace === 'motion' && clipInspectorTab === 'motion' && hasClipSelection
+                    ? 'min-h-0 flex-1 overflow-hidden px-2.5 py-2'
+                    : 'flex-1 overflow-y-auto overflow-x-hidden px-2.5 py-2 [scrollbar-gutter:stable]'
               }
             >
               {selectedTransitionId ? (
@@ -413,7 +433,7 @@ export const PropertiesSidebar = memo(function PropertiesSidebar({
                     }
                   >
                     <Suspense fallback={<PropertiesPanelLoadingFallback />}>
-                      <LazyClipPanel />
+                      <LazyClipPanel compact={studioTaskColumn} />
                     </Suspense>
                   </div>
                   {!hasClipSelection &&

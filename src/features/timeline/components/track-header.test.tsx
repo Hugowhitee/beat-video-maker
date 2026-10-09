@@ -100,10 +100,10 @@ describe('TrackHeader', () => {
     expect(onToggleDisabled).toHaveBeenCalledTimes(1)
   })
 
-  it('keeps producer track headers text-first without permanent control icons', () => {
+  it('exposes semantic producer controls on fixed columns', () => {
     render(
       <TrackHeader
-        track={makeTrack({ name: 'Beat', color: '#38bdf8' })}
+        track={makeTrack({ name: 'Beat', kind: 'audio', color: '#38bdf8' })}
         isActive={false}
         isSelected={false}
         canDeleteTrack
@@ -124,8 +124,8 @@ describe('TrackHeader', () => {
 
     expect(screen.getByText('Beat')).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Disable track' })).not.toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: 'Solo track' })).not.toBeInTheDocument()
-    expect(screen.queryByRole('button', { name: 'Lock track' })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Solo track' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Lock track' })).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Disable sync lock' })).not.toBeInTheDocument()
   })
 
@@ -136,7 +136,7 @@ describe('TrackHeader', () => {
     expect(screen.queryByText('V1 · Original footage')).not.toBeInTheDocument()
   })
 
-  it('keeps collapse available without adding producer-header icon chrome', () => {
+  it('keeps both discoverable fold control and direct double-click collapse', () => {
     const onToggleCollapsed = vi.fn()
     render(
       <TrackHeader
@@ -161,7 +161,7 @@ describe('TrackHeader', () => {
       />,
     )
 
-    expect(screen.queryByRole('button', { name: /collapse beat track/i })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /collapse beat track/i })).toBeInTheDocument()
     fireEvent.doubleClick(screen.getByText('Beat'))
     expect(onToggleCollapsed).toHaveBeenCalledTimes(1)
 

@@ -110,7 +110,7 @@ describe('TimelineHeader zoom slider', () => {
 
     fireEvent.mouseDown(screen.getByRole('slider'))
 
-    expect(screen.getByTestId('zoom-slider-thumb-positioner').style.left).toBe('calc(75% - 4px)')
+    expect(screen.getByTestId('zoom-slider-thumb-positioner').style.left).toBe('calc(75% - 2px)')
     expect(screen.getByTestId('zoom-slider-range').style.right).toBe('25%')
     expect(onZoomChange).toHaveBeenLastCalledWith(targetZoom)
     expect(animationFrameSpy).not.toHaveBeenCalled()
@@ -333,6 +333,16 @@ describe('TimelineHeader zoom slider', () => {
 
     expect(readout).toHaveTextContent('35%')
     expect(sliderRenderSpy).toHaveBeenCalledTimes(1)
+  })
+
+  it('commits typed zoom through the existing viewport owner', () => {
+    render(<TimelineHeader simplifiedBeatvideo />)
+    fireEvent.click(screen.getByRole('status', { name: 'Timeline zoom level' }))
+    const input = screen.getByRole('textbox', { name: 'Timeline zoom percent' })
+    fireEvent.change(input, { target: { value: '50' } })
+    fireEvent.blur(input)
+    expect(useZoomStore.getState().level).toBe(0.5)
+    expect(screen.getByRole('status', { name: 'Timeline zoom level' })).toHaveTextContent('50%')
   })
 
   it('toggles the keyframe panel without a selected clip', () => {

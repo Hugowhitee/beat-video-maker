@@ -351,14 +351,16 @@ export const PreviewStage = memo(function PreviewStage({
   return (
     <div
       ref={backgroundRef}
-      className="relative h-full w-full bg-background [background-image:linear-gradient(to_right,rgba(255,255,255,0.035)_1px,transparent_1px),linear-gradient(to_bottom,rgba(255,255,255,0.035)_1px,transparent_1px)] [background-size:28px_28px]"
+      className="relative h-full w-full bg-program-surround"
       style={{ overflow: needsOverflow ? 'auto' : 'visible' }}
       onClick={onBackgroundClick}
       aria-label={t('preview.stage.videoPreview')}
     >
       <div
         className="min-w-full min-h-full grid place-items-center"
-        style={{ padding: `calc(${EDITOR_LAYOUT_CSS_VALUES.previewPadding} / 2)` }}
+        style={{
+          padding: `0 calc(${EDITOR_LAYOUT_CSS_VALUES.previewPadding} / 2) ${EDITOR_LAYOUT_CSS_VALUES.previewPadding}`,
+        }}
         onClick={onBackgroundClick}
       >
         <div
@@ -380,13 +382,11 @@ export const PreviewStage = memo(function PreviewStage({
             <div
               ref={setPixelSnappedPlayerContainerRef}
               data-player-container
-              className="relative shadow-[0_15px_50px_rgba(0,0,0,0.38)]"
+              className="relative"
               style={{
                 width: `${playerSize.width}px`,
                 height: `${playerSize.height}px`,
                 transition: 'none',
-                outline: '1px solid #818b7f',
-                outlineOffset: 0,
                 overflow: 'hidden',
                 contain: 'paint',
               }}

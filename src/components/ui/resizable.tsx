@@ -17,10 +17,13 @@ const ResizablePanel = ResizablePrimitive.Panel
 
 const ResizableHandle = ({
   withHandle,
+  handleVariant = 'grip',
   className,
   ...props
 }: React.ComponentProps<typeof ResizablePrimitive.PanelResizeHandle> & {
   withHandle?: boolean
+  /** The horizontal bar keeps the shared producer viewer/timeline split discoverable. */
+  handleVariant?: 'grip' | 'bar'
 }) => (
   <ResizablePrimitive.PanelResizeHandle
     className={cn(
@@ -29,11 +32,17 @@ const ResizableHandle = ({
     )}
     {...props}
   >
-    {withHandle && (
-      <div className="z-10 flex h-4 w-3 items-center justify-center rounded-sm border bg-border">
-        <GripVertical className="h-2.5 w-2.5" />
-      </div>
-    )}
+    {withHandle &&
+      (handleVariant === 'bar' ? (
+        <span
+          aria-hidden="true"
+          className="pointer-events-none absolute left-1/2 top-1.5 z-10 h-1 w-[42px] -translate-x-1/2 rounded-full bg-muted-foreground/75"
+        />
+      ) : (
+        <div className="z-10 flex h-4 w-3 items-center justify-center rounded-sm border bg-border">
+          <GripVertical className="h-2.5 w-2.5" />
+        </div>
+      ))}
   </ResizablePrimitive.PanelResizeHandle>
 )
 

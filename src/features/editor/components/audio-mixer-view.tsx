@@ -21,6 +21,18 @@ import {
 import { getMixerLiveGain, setMixerLiveGains } from '@/shared/state/mixer-live-gain'
 import { NumberInput } from '@/shared/ui/property-controls/number-input'
 import { RotateCcw } from 'lucide-react'
+import { ConsoleFaderFace } from '@/shared/ui/property-controls/console-fader'
+import {
+  FADER_DB_MIN,
+  FADER_DB_MAX,
+  FADER_KNOB_HEIGHT_PX,
+  FADER_KNOB_DRAG_TOLERANCE_PX,
+  FADER_SCALE_MARKS,
+  dbToFaderPercent,
+  faderPercentToDb,
+  formatFaderDb,
+  faderKeyboardValue,
+} from '@/shared/ui/property-controls/console-fader-calibration'
 
 // ---------------------------------------------------------------------------
 // Types
@@ -78,30 +90,6 @@ interface AudioMixerViewProps {
 // ---------------------------------------------------------------------------
 // dB <-> fader mapping
 // ---------------------------------------------------------------------------
-
-const FADER_DB_MIN = -60
-const FADER_DB_MAX = 12
-const FADER_DB_RANGE = FADER_DB_MAX - FADER_DB_MIN // 72
-const FADER_KNOB_HEIGHT_PX = 32
-const FADER_KNOB_DRAG_TOLERANCE_PX = 16
-
-function dbToFaderPercent(db: number): number {
-  if (!Number.isFinite(db)) return 83.33 // 0 dB default for NaN/Infinity
-  const clamped = Math.max(FADER_DB_MIN, Math.min(FADER_DB_MAX, db))
-  if (clamped <= FADER_DB_MIN) return 0
-  if (clamped >= FADER_DB_MAX) return 100
-  return ((clamped - FADER_DB_MIN) / FADER_DB_RANGE) * 100
-}
-
-function faderPercentToDb(percent: number): number {
-  const clamped = Math.max(0, Math.min(100, percent))
-  return (clamped / 100) * FADER_DB_RANGE + FADER_DB_MIN
-}
-
-function formatFaderDb(db: number): string {
-  if (!Number.isFinite(db)) return '+0.0'
-  return `${db >= 0 ? '+' : ''}${db.toFixed(1)}`
-}
 
 function MixerGainReadout({
   volumeDb,
@@ -217,83 +205,6 @@ const SegmentedMeterBar = memo(function SegmentedMeterBar({
 // ---------------------------------------------------------------------------
 // Scale marks (shared left column)
 // ---------------------------------------------------------------------------
-
-const FADER_SCALE_MARKS = [12, 0, -12, -24, -36, -48, -60] as const
-
-/** One visual mechanism for channel and master console faders. The owning
- * controls retain the canonical live-gain gesture and commit lifecycle. */
-function ConsoleFaderFace({
-  volumeDb,
-  knobRef,
-  trackId,
-}: {
-  volumeDb: number
-  knobRef: RefObject<HTMLDivElement | null>
-  trackId?: string
-}) {
-  return (
-    <>
-      <div className="pointer-events-none absolute inset-y-0 left-1/2 w-[3px] -translate-x-1/2 rounded-[2px] border-x border-black/30 bg-background shadow-[inset_1px_0_1px_rgba(0,0,0,0.45)]" />
-      {FADER_SCALE_MARKS.map((mark) => (
-        <div
-          key={mark}
-          aria-hidden="true"
-          className={`pointer-events-none absolute left-[2px] h-px ${mark === 0 ? 'w-[10px] bg-foreground/65' : 'w-[5px] bg-muted-foreground/40'}`}
-          style={{ top: `${100 - dbToFaderPercent(mark)}%` }}
-        />
-      ))}
-      <div
-        ref={knobRef}
-        data-track-id={trackId}
-        data-fader-knob="true"
-        className="pointer-events-none absolute left-1/2 -translate-x-1/2 -translate-y-1/2"
-        style={{
-          top: `${100 - dbToFaderPercent(volumeDb)}%`,
-          width: 14,
-          height: FADER_KNOB_HEIGHT_PX,
-        }}
-      >
-        <div className="relative h-full w-full rounded-[2px] border border-[#8c8e86] bg-gradient-to-r from-[#aaaDA5] via-[#d0d2cb] to-[#b1b4ab] shadow-[0_1px_2px_rgba(0,0,0,0.55),inset_0_1px_0_rgba(255,255,255,0.3)]">
-          <div
-            className="absolute inset-x-[2px] top-[6px] h-[6px]"
-            style={{
-              background:
-                'repeating-linear-gradient(to bottom, rgba(50,53,47,.25) 0 1px, transparent 1px 3px)',
-            }}
-          />
-          <div
-            className="absolute inset-x-[2px] bottom-[6px] h-[6px]"
-            style={{
-              background:
-                'repeating-linear-gradient(to bottom, rgba(50,53,47,.25) 0 1px, transparent 1px 3px)',
-            }}
-          />
-          <div className="absolute inset-x-0 top-1/2 h-px -translate-y-1/2 bg-[#40453b]/75" />
-        </div>
-      </div>
-    </>
-  )
-}
-
-function faderKeyboardValue(event: React.KeyboardEvent, currentDb: number): number | null {
-  const step = event.shiftKey ? 0.1 : 1
-  switch (event.key) {
-    case 'ArrowUp':
-    case 'ArrowRight':
-      return Math.min(FADER_DB_MAX, currentDb + step)
-    case 'ArrowDown':
-    case 'ArrowLeft':
-      return Math.max(FADER_DB_MIN, currentDb - step)
-    case 'Home':
-      return FADER_DB_MIN
-    case 'End':
-      return FADER_DB_MAX
-    case 'Enter':
-      return 0
-    default:
-      return null
-  }
-}
 
 function getMeterFallbackPercent(params: {
   unresolvedSourceCount: number
@@ -1005,7 +916,7 @@ const BusMeter = memo(function BusMeter({
                 clearLiveBusVolumeOverride()
               }}
             >
-              <ConsoleFaderFace volumeDb={volumeDb} knobRef={knobRef} />
+              <ConsoleFaderFace volumeDb={volumeDb} knobRef={knobRef} role="master" />
             </div>
           </div>
         </div>
@@ -1078,6 +989,54 @@ interface MixerBodyProps {
   onBusEqToggle?: () => void
   busEqEnabled?: boolean
   showMasterStrip?: boolean
+}
+
+type MixerChannelStripsProps = Pick<
+  MixerBodyProps,
+  | 'tracks'
+  | 'perTrackLevels'
+  | 'isPlaying'
+  | 'onTrackVolumeChange'
+  | 'onTrackMuteToggle'
+  | 'onTrackSoloToggle'
+  | 'onTrackEqToggle'
+>
+
+function MixerChannelStrips({
+  tracks,
+  perTrackLevels,
+  isPlaying,
+  onTrackVolumeChange,
+  onTrackMuteToggle,
+  onTrackSoloToggle,
+  onTrackEqToggle,
+}: MixerChannelStripsProps) {
+  return (
+    <>
+      {tracks.map((track) => (
+        <ChannelStrip
+          key={track.id}
+          track={track}
+          level={perTrackLevels.get(track.id)}
+          isPlaying={isPlaying}
+          onVolumeChange={onTrackVolumeChange}
+          onMuteToggle={onTrackMuteToggle}
+          onSoloToggle={onTrackSoloToggle}
+          onEqToggle={onTrackEqToggle}
+          eqActive={!!track.eqEnabled}
+        />
+      ))}
+
+      {/* Trailing border after last strip */}
+      {tracks.length > 0 && <div className="w-[2px] shrink-0 bg-border/40" />}
+
+      {tracks.length === 0 && (
+        <div className="flex flex-1 items-center justify-center text-xs text-muted-foreground">
+          No audio tracks
+        </div>
+      )}
+    </>
+  )
 }
 
 const MixerBody = memo(function MixerBody({
@@ -1192,28 +1151,15 @@ const MixerBody = memo(function MixerBody({
       >
         <div className="flex h-full min-w-max">
           {expanded && <ScaleColumn sticky />}
-          {tracks.map((track) => (
-            <ChannelStrip
-              key={track.id}
-              track={track}
-              level={perTrackLevels.get(track.id)}
-              isPlaying={isPlaying}
-              onVolumeChange={onTrackVolumeChange}
-              onMuteToggle={onTrackMuteToggle}
-              onSoloToggle={onTrackSoloToggle}
-              onEqToggle={onTrackEqToggle}
-              eqActive={!!track.eqEnabled}
-            />
-          ))}
-
-          {/* Trailing border after last strip */}
-          {tracks.length > 0 && <div className="w-[2px] shrink-0 bg-border/40" />}
-
-          {tracks.length === 0 && (
-            <div className="flex flex-1 items-center justify-center text-xs text-muted-foreground">
-              No audio tracks
-            </div>
-          )}
+          <MixerChannelStrips
+            tracks={tracks}
+            perTrackLevels={perTrackLevels}
+            isPlaying={isPlaying}
+            onTrackVolumeChange={onTrackVolumeChange}
+            onTrackMuteToggle={onTrackMuteToggle}
+            onTrackSoloToggle={onTrackSoloToggle}
+            onTrackEqToggle={onTrackEqToggle}
+          />
           {expanded && showMasterStrip ? (
             <BusMeter
               masterEstimate={masterEstimate}

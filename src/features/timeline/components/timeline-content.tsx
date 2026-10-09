@@ -41,6 +41,8 @@ import { TimelinePlayhead } from './timeline-playhead'
 import { TimelinePreviewScrubber } from './timeline-preview-scrubber'
 import { TimelineRulerSurface } from './timeline-ruler-surface'
 import { TimelineTrack } from './timeline-track'
+import { ProducerTrackSectionHeading } from './producer-track-section-heading'
+import { getProducerTrackSection } from '../utils/producer-track-sections'
 import { TimelineGuidelines } from './timeline-guidelines'
 import { TimelineMediaDropZone } from './timeline-media-drop-zone'
 import { TimelineRecordingOverlay } from './timeline-recording-overlay'
@@ -92,6 +94,27 @@ const FINE_ZOOM_FACTOR = 1.1
 const DENSE_TIMELINE_HOVER_PREVIEW_DELAY_MS = 150
 
 type TrackScrollbarSection = 'video' | 'audio' | 'single'
+
+function getTrackScrollbarLayout(element: HTMLDivElement, railHeight: number) {
+  const overflowHeight = element.scrollHeight - element.clientHeight
+  const thumbHeight =
+    overflowHeight > 0
+      ? Math.min(
+          railHeight,
+          Math.max(24, (element.clientHeight / element.scrollHeight) * railHeight),
+        )
+      : 0
+  const maxThumbTravel = Math.max(0, railHeight - thumbHeight)
+  const progress = overflowHeight > 0 ? element.scrollTop / overflowHeight : 0
+  return {
+    railHeight,
+    thumbHeight,
+    maxThumbTravel,
+    overflowHeight,
+    thumbTop: progress * maxThumbTravel,
+    percent: Math.round(progress * 100),
+  }
+}
 
 function revealTrackInScrollContainer(container: HTMLDivElement | null, trackId: string): boolean {
   if (!container) {
@@ -187,13 +210,14 @@ function TrackSectionScrollbarOverlay({
   scrollRef?: React.RefObject<HTMLDivElement | null>
 }) {
   const railRef = useRef<HTMLDivElement | null>(null)
+  const controlRef = useRef<HTMLDivElement | null>(null)
   const thumbRef = useRef<HTMLDivElement | null>(null)
   const dragOffsetRef = useRef(0)
   const detachDragListenersRef = useRef<(() => void) | null>(null)
   // Cache layout-derived values in refs so drag/scroll handlers use current values
   // without needing React re-renders
   const layoutRef = useRef({ railHeight: 0, thumbHeight: 0, maxThumbTravel: 0, overflowHeight: 0 })
-  const railInset = 4
+  const railInset = 0
 
   // Compute layout metrics and update thumb size/position imperatively
   const updateThumbLayout = useCallback(() => {
@@ -201,23 +225,15 @@ function TrackSectionScrollbarOverlay({
     const thumb = thumbRef.current
     if (!element || !thumb) return
 
-    const clientHeight = element.clientHeight
-    const scrollHeight = element.scrollHeight
-    const overflowHeight = scrollHeight - clientHeight
     const railHeight = Math.max(0, (railRef.current?.clientHeight ?? height) - railInset * 2)
-    const thumbHeight =
-      overflowHeight > 0
-        ? Math.min(railHeight, Math.max(24, (clientHeight / scrollHeight) * railHeight))
-        : 0
-    const maxThumbTravel = Math.max(0, railHeight - thumbHeight)
-    const scrollTop = element.scrollTop
-    const thumbTop = overflowHeight > 0 ? (scrollTop / overflowHeight) * maxThumbTravel : 0
-
-    layoutRef.current = { railHeight, thumbHeight, maxThumbTravel, overflowHeight }
+    const metrics = getTrackScrollbarLayout(element, railHeight)
+    const { thumbHeight, thumbTop } = metrics
+    layoutRef.current = metrics
 
     thumb.style.height = `${thumbHeight}px`
     thumb.style.top = `${railInset + thumbTop}px`
     thumb.style.display = thumbHeight > 0 ? '' : 'none'
+    controlRef.current?.setAttribute('aria-valuenow', String(metrics.percent))
   }, [height, scrollRef])
 
   // Update thumb position only (cheaper — called on scroll)
@@ -231,6 +247,10 @@ function TrackSectionScrollbarOverlay({
 
     const thumbTop = (element.scrollTop / overflowHeight) * maxThumbTravel
     thumb.style.top = `${railInset + thumbTop}px`
+    controlRef.current?.setAttribute(
+      'aria-valuenow',
+      String(Math.round((element.scrollTop / overflowHeight) * 100)),
+    )
   }, [scrollRef])
 
   // Listen for scroll + resize, update thumb imperatively (no setState)
@@ -288,6 +308,7 @@ function TrackSectionScrollbarOverlay({
       )
 
       scrollElement.scrollTop = (nextThumbTop / maxThumbTravel) * overflowHeight
+      notifyTimelineLiveScroll(scrollElement)
     },
     [scrollRef],
   )
@@ -349,7 +370,8 @@ function TrackSectionScrollbarOverlay({
 
   return (
     <div
-      className="relative shrink-0"
+      ref={controlRef}
+      className="relative shrink-0 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-inset focus-visible:ring-ring"
       style={{
         height:
           section === 'single'
@@ -357,12 +379,40 @@ function TrackSectionScrollbarOverlay({
             : `var(--timeline-${section}-pane-height, ${height}px)`,
       }}
       role="scrollbar"
-      aria-label={`${section} track section scrollbar`}
+      aria-label={
+        section === 'single'
+          ? 'Scroll timeline tracks vertically'
+          : `Scroll ${section} tracks vertically`
+      }
       aria-controls="timeline-track-sections"
       aria-orientation="vertical"
       aria-valuemin={0}
       aria-valuemax={100}
-      tabIndex={-1}
+      aria-valuenow={0}
+      tabIndex={0}
+      onKeyDown={(event) => {
+        const element = scrollRef?.current
+        if (!element) return
+        const max = Math.max(0, element.scrollHeight - element.clientHeight)
+        const deltas: Record<string, number> = {
+          ArrowUp: -40,
+          ArrowDown: 40,
+          PageUp: -element.clientHeight,
+          PageDown: element.clientHeight,
+        }
+        if (event.key === 'Home' || event.key === 'End' || event.key in deltas) {
+          event.preventDefault()
+          event.stopPropagation()
+          element.scrollTop =
+            event.key === 'Home'
+              ? 0
+              : event.key === 'End'
+                ? max
+                : Math.max(0, Math.min(max, element.scrollTop + deltas[event.key]!))
+          notifyTimelineLiveScroll(element)
+          updateThumbPosition()
+        }
+      }}
       onPointerDown={handlePointerDown}
     >
       <div ref={railRef} className="absolute inset-y-1 inset-x-0.5 rounded-sm bg-secondary/70">
@@ -644,6 +694,11 @@ const TimelineTrackSectionsSurface = memo(function TimelineTrackSectionsSurface(
               : TrackRowFrame
           return (
             <RowFrame key={track.id}>
+              {unifiedTrackStack && getProducerTrackSection(sectionTracks, index) && (
+                <ProducerTrackSectionHeading
+                  section={getProducerTrackSection(sectionTracks, index)!}
+                />
+              )}
               <TimelineTrack track={track} />
             </RowFrame>
           )
@@ -774,8 +829,7 @@ export const TimelineContent = memo(function TimelineContent({
     () => tracks.filter((track) => getTrackKind(track) === 'audio'),
     [tracks],
   )
-  const hasTrackSections =
-    !unifiedTrackStack && videoTracks.length > 0 && audioTracks.length > 0
+  const hasTrackSections = !unifiedTrackStack && videoTracks.length > 0 && audioTracks.length > 0
   const firstTrackId = tracks[0]?.id ?? null
   const lastTrackId = tracks[tracks.length - 1]?.id ?? null
   const topZoneAnchorTrackId =
@@ -1941,6 +1995,7 @@ export const TimelineContent = memo(function TimelineContent({
       const verticalScrollTarget = verticalScrollTargetRef.current
       if (verticalScrollTarget && Math.abs(velocityYRef.current) > SCROLL_MIN_VELOCITY) {
         verticalScrollTarget.scrollTop += velocityYRef.current * frames
+        notifyTimelineLiveScroll(verticalScrollTarget)
         velocityYRef.current *= scrollDecay
         hasScrollMomentum = true
       } else {
@@ -2106,17 +2161,23 @@ export const TimelineContent = memo(function TimelineContent({
       velocityZoomRef.current = 0
       const smoothingFactor = 1 - SCROLL_SMOOTHING
 
-      // Shift + scroll = vertical scroll ONLY
-      if (event.shiftKey) {
+      // Producer stacks use ordinary wheel movement for tracks and Shift for
+      // time. Advanced split panes retain their established wheel convention.
+      const scrollVertically = unifiedTrackStack
+        ? !event.shiftKey && Math.abs(event.deltaY) >= Math.abs(event.deltaX)
+        : event.shiftKey
+      if (scrollVertically) {
         verticalScrollTargetRef.current = getVerticalScrollTarget(event.target)
         velocityXRef.current = 0
         const delta = (event.deltaX || event.deltaY) * SCROLL_SENSITIVITY
         velocityYRef.current = velocityYRef.current * smoothingFactor + delta * SCROLL_SMOOTHING
       } else {
         verticalScrollTargetRef.current = null
-        // Default scroll = horizontal scroll ONLY
+        // Horizontal trackpad movement and Shift+wheel preserve time-axis pan.
         velocityYRef.current = 0
-        const delta = (event.deltaY || event.deltaX) * SCROLL_SENSITIVITY
+        const delta =
+          (event.shiftKey ? event.deltaY || event.deltaX : event.deltaX || event.deltaY) *
+          SCROLL_SENSITIVITY
         velocityXRef.current = velocityXRef.current * smoothingFactor + delta * SCROLL_SMOOTHING
       }
 
@@ -2144,8 +2205,7 @@ export const TimelineContent = memo(function TimelineContent({
     : videoTracks.length > 0
       ? videoTracks
       : audioTracks
-  const singleSectionKind =
-    unifiedTrackStack ? 'video' : videoTracks.length > 0 ? 'video' : 'audio'
+  const singleSectionKind = unifiedTrackStack ? 'video' : videoTracks.length > 0 ? 'video' : 'audio'
   const singleSectionHeight = unifiedTrackStack
     ? videoPaneHeight
     : videoTracks.length > 0

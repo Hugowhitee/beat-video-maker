@@ -1,0 +1,343 @@
+{
+  "viewport": { "width": 1600, "height": 960 },
+  "state": { "frame": "317", "canvasSnap": "false" },
+  "program": {
+    "x": 320,
+    "y": 112,
+    "width": 1280,
+    "height": 438.015625,
+    "top": 112,
+    "right": 1600,
+    "bottom": 550.015625,
+    "left": 320
+  },
+  "canvas": {
+    "x": 656,
+    "y": 136,
+    "width": 608,
+    "height": 342,
+    "top": 136,
+    "right": 1264,
+    "bottom": 478,
+    "left": 656
+  },
+  "split": {
+    "x": 0,
+    "y": 550.015625,
+    "width": 1600,
+    "height": 0,
+    "top": 550.015625,
+    "right": 1600,
+    "bottom": 550.015625,
+    "left": 0
+  },
+  "splitGrip": {
+    "x": 779,
+    "y": 556.015625,
+    "width": 42,
+    "height": 4,
+    "top": 556.015625,
+    "right": 821,
+    "bottom": 560.015625,
+    "left": 779
+  },
+  "toolbars": [
+    {
+      "name": "Editor toolbar",
+      "rect": {
+        "x": 0,
+        "y": 0,
+        "width": 1600,
+        "height": 112,
+        "top": 0,
+        "right": 1600,
+        "bottom": 112,
+        "left": 0
+      }
+    },
+    {
+      "name": "Controls",
+      "rect": {
+        "x": 0,
+        "y": 551.015625,
+        "width": 1600,
+        "height": 44,
+        "top": 551.015625,
+        "right": 1600,
+        "bottom": 595.015625,
+        "left": 0
+      }
+    }
+  ],
+  "rulers": [
+    {
+      "kind": "musical",
+      "rect": {
+        "x": 246,
+        "y": 595.015625,
+        "width": 7369.6875,
+        "height": 37,
+        "top": 595.015625,
+        "right": 7615.6875,
+        "bottom": 632.015625,
+        "left": 246
+      }
+    }
+  ],
+  "tracks": [
+    {
+      "name": "Overlays",
+      "rect": {
+        "x": 0,
+        "y": 658.015625,
+        "width": 245,
+        "height": 52,
+        "top": 658.015625,
+        "right": 245,
+        "bottom": 710.015625,
+        "left": 0
+      },
+      "background": "rgba(0, 0, 0, 0)"
+    },
+    {
+      "name": "Media",
+      "rect": {
+        "x": 0,
+        "y": 710.015625,
+        "width": 245,
+        "height": 52,
+        "top": 710.015625,
+        "right": 245,
+        "bottom": 762.015625,
+        "left": 0
+      },
+      "background": "rgba(0, 0, 0, 0)"
+    },
+    {
+      "name": "Beat\nM\nS",
+      "rect": {
+        "x": 0,
+        "y": 786.015625,
+        "width": 245,
+        "height": 74,
+        "top": 786.015625,
+        "right": 245,
+        "bottom": 860.015625,
+        "left": 0
+      },
+      "background": "rgba(0, 0, 0, 0)"
+    },
+    {
+      "name": "Producer tags\nM\nS",
+      "rect": {
+        "x": 0,
+        "y": 860.015625,
+        "width": 245,
+        "height": 48,
+        "top": 860.015625,
+        "right": 245,
+        "bottom": 908.015625,
+        "left": 0
+      },
+      "background": "rgba(0, 0, 0, 0)"
+    },
+    {
+      "name": "Watermarks\nM\nS",
+      "rect": {
+        "x": 0,
+        "y": 908.015625,
+        "width": 245,
+        "height": 48,
+        "top": 908.015625,
+        "right": 245,
+        "bottom": 956.015625,
+        "left": 0
+      },
+      "background": "rgba(0, 0, 0, 0)"
+    }
+  ],
+  "parameters": [
+    {
+      "label": "Position X",
+      "rect": {
+        "x": 16,
+        "y": 280,
+        "width": 288,
+        "height": 32,
+        "top": 280,
+        "right": 304,
+        "bottom": 312,
+        "left": 16
+      },
+      "labelRect": {
+        "x": 16,
+        "y": 288,
+        "width": 72,
+        "height": 16,
+        "top": 288,
+        "right": 88,
+        "bottom": 304,
+        "left": 16
+      },
+      "labelStyle": {
+        "font": "\"IBM Plex Sans\", -apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif",
+        "size": "12px",
+        "weight": "500",
+        "lineHeight": "16px",
+        "color": "rgb(233, 238, 240)"
+      }
+    },
+    {
+      "label": "Position Y",
+      "rect": {
+        "x": 16,
+        "y": 320,
+        "width": 288,
+        "height": 32,
+        "top": 320,
+        "right": 304,
+        "bottom": 352,
+        "left": 16
+      },
+      "labelRect": {
+        "x": 16,
+        "y": 328,
+        "width": 72,
+        "height": 16,
+        "top": 328,
+        "right": 88,
+        "bottom": 344,
+        "left": 16
+      },
+      "labelStyle": {
+        "font": "\"IBM Plex Sans\", -apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif",
+        "size": "12px",
+        "weight": "500",
+        "lineHeight": "16px",
+        "color": "rgb(233, 238, 240)"
+      }
+    },
+    {
+      "label": "Scale",
+      "rect": {
+        "x": 16,
+        "y": 360,
+        "width": 288,
+        "height": 32,
+        "top": 360,
+        "right": 304,
+        "bottom": 392,
+        "left": 16
+      },
+      "labelRect": {
+        "x": 16,
+        "y": 368,
+        "width": 72,
+        "height": 16,
+        "top": 368,
+        "right": 88,
+        "bottom": 384,
+        "left": 16
+      },
+      "labelStyle": {
+        "font": "\"IBM Plex Sans\", -apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif",
+        "size": "12px",
+        "weight": "500",
+        "lineHeight": "16px",
+        "color": "rgb(233, 238, 240)"
+      }
+    },
+    {
+      "label": "Rotation",
+      "rect": {
+        "x": 16,
+        "y": 400,
+        "width": 288,
+        "height": 32,
+        "top": 400,
+        "right": 304,
+        "bottom": 432,
+        "left": 16
+      },
+      "labelRect": {
+        "x": 16,
+        "y": 408,
+        "width": 72,
+        "height": 16,
+        "top": 408,
+        "right": 88,
+        "bottom": 424,
+        "left": 16
+      },
+      "labelStyle": {
+        "font": "\"IBM Plex Sans\", -apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif",
+        "size": "12px",
+        "weight": "500",
+        "lineHeight": "16px",
+        "color": "rgb(233, 238, 240)"
+      }
+    },
+    {
+      "label": "Opacity",
+      "rect": {
+        "x": 16,
+        "y": 440,
+        "width": 288,
+        "height": 32,
+        "top": 440,
+        "right": 304,
+        "bottom": 472,
+        "left": 16
+      },
+      "labelRect": {
+        "x": 16,
+        "y": 448,
+        "width": 72,
+        "height": 16,
+        "top": 448,
+        "right": 88,
+        "bottom": 464,
+        "left": 16
+      },
+      "labelStyle": {
+        "font": "\"IBM Plex Sans\", -apple-system, BlinkMacSystemFont, \"Segoe UI\", sans-serif",
+        "size": "12px",
+        "weight": "500",
+        "lineHeight": "16px",
+        "color": "rgb(233, 238, 240)"
+      }
+    }
+  ],
+  "scrollbars": [
+    {
+      "name": "Scroll timeline tracks vertically",
+      "rect": {
+        "x": 1588,
+        "y": 632.015625,
+        "width": 12,
+        "height": 308,
+        "top": 632.015625,
+        "right": 1600,
+        "bottom": 940.015625,
+        "left": 1588
+      },
+      "value": "0",
+      "max": "100"
+    },
+    {
+      "name": "Scroll timeline horizontally",
+      "rect": {
+        "x": 254,
+        "y": 945,
+        "width": 243.640625,
+        "height": 11,
+        "top": 945,
+        "right": 497.640625,
+        "bottom": 956,
+        "left": 254
+      },
+      "value": "0",
+      "max": "6028"
+    }
+  ]
+}

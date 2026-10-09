@@ -4,6 +4,7 @@ import { PreviewArea } from './preview-area'
 import { useMaskEditorStore, useItemsStore } from '@/features/editor/deps/preview'
 import { useProjectStore } from '@/features/editor/deps/projects'
 import { useEditorStore } from '@/shared/state/editor'
+import { useSelectionStore } from '@/shared/state/selection'
 
 vi.mock('@/features/editor/deps/preview', async () => {
   const actual = await vi.importActual<typeof import('@/features/editor/deps/preview')>(
@@ -73,6 +74,7 @@ vi.mock('@/features/editor/deps/preview', async () => {
 })
 
 function resetStores() {
+  useSelectionStore.getState().clearItemSelection()
   useProjectStore.setState({ currentProject: null })
   useMaskEditorStore.getState().stopEditing()
   useItemsStore.getState().setItems([])
@@ -241,6 +243,7 @@ describe('PreviewArea mask editor toolbar', () => {
   })
 
   it('uses full edit preview chrome outside color workspace', () => {
+    useSelectionStore.getState().selectItems(['selected-visual'])
     render(<PreviewArea project={{ width: 1920, height: 1080, fps: 30 }} />)
 
     expect(screen.getByTestId('video-preview')).toBeInTheDocument()
@@ -249,14 +252,9 @@ describe('PreviewArea mask editor toolbar', () => {
   })
 
   it('uses one non-overlapping transport row and scroll-safe alignment on compact preview', () => {
-    render(
-      <PreviewArea
-        project={{ width: 1920, height: 1080, fps: 30 }}
-        compact
-      />,
-    )
+    render(<PreviewArea project={{ width: 1920, height: 1080, fps: 30 }} compact />)
 
-    expect(screen.getByTestId('alignment-toolbar')).toHaveAttribute('data-compact', 'true')
+    expect(screen.queryByTestId('alignment-toolbar')).not.toBeInTheDocument()
     expect(screen.getByTestId('playback-controls')).toHaveAttribute('data-compact', 'true')
     expect(screen.queryByTestId('timecode-display')).not.toBeInTheDocument()
     expect(screen.queryByTestId('preview-zoom-controls')).not.toBeInTheDocument()
@@ -303,10 +301,7 @@ describe('PreviewArea mask editor toolbar', () => {
     expect(screen.getByTestId('video-preview')).toHaveAttribute('data-width', '1440')
     expect(screen.getByTestId('video-preview')).toHaveAttribute('data-height', '1080')
     expect(screen.getByTestId('video-preview')).toHaveAttribute('data-fps', '24')
-    expect(screen.getByTestId('video-preview')).toHaveAttribute(
-      'data-background-color',
-      '#123456',
-    )
+    expect(screen.getByTestId('video-preview')).toHaveAttribute('data-background-color', '#123456')
     expect(screen.getByTestId('playback-controls')).toHaveAttribute('data-total-frames', '240')
     expect(screen.getByTestId('timecode-display')).toHaveAttribute('data-total-frames', '240')
   })
@@ -331,9 +326,7 @@ describe('PreviewArea mask editor toolbar', () => {
   })
 
   it('preserves the program preview DOM while switching workspace chrome', () => {
-    const { rerender } = render(
-      <PreviewArea project={{ width: 1920, height: 1080, fps: 30 }} />,
-    )
+    const { rerender } = render(<PreviewArea project={{ width: 1920, height: 1080, fps: 30 }} />)
     const previewNode = screen.getByTestId('video-preview')
 
     act(() => {

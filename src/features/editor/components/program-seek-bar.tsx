@@ -26,6 +26,9 @@ export const ProgramSeekBar = memo(function ProgramSeekBar({
   const maxFrame = Math.max(0, totalFrames - 1)
   const clampedFrame = Math.max(0, Math.min(maxFrame, currentFrame))
   const percent = maxFrame > 0 ? (clampedFrame / maxFrame) * 100 : 0
+  // Native range thumbs travel between their inset centres, not the full rail
+  // endpoints. Keep the progress face under that same 12px listening/seek cap.
+  const progressStop = `calc(${percent}% + ${6 - percent * 0.12}px)`
   const seek = (frame: number) => {
     usePlaybackStore.getState().setPreviewFrame(null)
     usePreviewBridgeStore.getState().setDisplayedFrame(null)
@@ -35,10 +38,7 @@ export const ProgramSeekBar = memo(function ProgramSeekBar({
   }
 
   return (
-    <div
-      className="group flex h-[15px] w-full items-center gap-2 px-3"
-      data-testid="program-seek-bar"
-    >
+    <div className="group flex h-4 w-full items-center gap-2 px-4" data-testid="program-seek-bar">
       <input
         type="range"
         min={0}
@@ -49,9 +49,9 @@ export const ProgramSeekBar = memo(function ProgramSeekBar({
         onChange={(event) => seek(Number(event.currentTarget.value))}
         aria-label="Seek in program"
         aria-valuetext={`${formatClock(clampedFrame, fps)} of ${formatClock(maxFrame, fps)}`}
-        className="peer relative z-10 h-[15px] w-full min-w-0 cursor-pointer appearance-none bg-transparent outline-none disabled:cursor-default [&::-moz-range-thumb]:h-[12px] [&::-moz-range-thumb]:w-[12px] [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:border-0 [&::-moz-range-thumb]:bg-[#526955] [&::-moz-range-thumb]:opacity-0 [&::-webkit-slider-thumb]:h-[12px] [&::-webkit-slider-thumb]:w-[12px] [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:border-0 [&::-webkit-slider-thumb]:bg-[#526955] [&::-webkit-slider-thumb]:opacity-0 hover:[&::-webkit-slider-thumb]:opacity-100 focus-visible:[&::-webkit-slider-thumb]:opacity-100 hover:[&::-moz-range-thumb]:opacity-100 focus-visible:[&::-moz-range-thumb]:opacity-100"
+        className="peer relative z-10 h-4 w-full min-w-0 cursor-pointer appearance-none bg-transparent outline-none disabled:cursor-default [&::-moz-range-thumb]:h-[12px] [&::-moz-range-thumb]:w-[12px] [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:border-0 [&::-moz-range-thumb]:bg-primary [&::-moz-range-thumb]:opacity-100 [&::-webkit-slider-thumb]:h-[12px] [&::-webkit-slider-thumb]:w-[12px] [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:border-0 [&::-webkit-slider-thumb]:bg-primary [&::-webkit-slider-thumb]:opacity-100"
         style={{
-          background: `linear-gradient(to right, var(--muted-foreground) ${percent}%, var(--border) ${percent}%) center / 100% 3px no-repeat`,
+          background: `linear-gradient(to right, var(--primary) ${progressStop}, var(--border) ${progressStop}) center / 100% 4px no-repeat`,
         }}
       />
     </div>

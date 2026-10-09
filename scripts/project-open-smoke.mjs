@@ -3,8 +3,10 @@ import { spawn } from 'node:child_process'
 import { Buffer } from 'node:buffer'
 import path from 'node:path'
 import process from 'node:process'
+import { fileURLToPath } from 'node:url'
+import { mkdir } from 'node:fs/promises'
 
-const repoRoot = path.resolve(new URL('..', import.meta.url).pathname)
+const repoRoot = fileURLToPath(new URL('..', import.meta.url))
 const vpBin =
   process.platform === 'win32'
     ? path.join(repoRoot, 'node_modules', '.bin', 'vp.cmd')
@@ -157,30 +159,33 @@ async function main() {
   }, 240_000)
 
   const port = 4179
-  const baseUrl = `http://127.0.0.1:${port}`
-  const preview = spawn(
+  const baseUrl = process.env.BVM_SMOKE_URL?.replace(/\/$/, '') ?? `http://127.0.0.1:${port}`
+  const preview = process.env.BVM_SMOKE_URL ? null : spawn(
     vpBin,
     ['preview', '--host', '127.0.0.1', '--strictPort', '--port', String(port)],
     {
       cwd: repoRoot,
       stdio: ['ignore', 'pipe', 'pipe'],
       env: process.env,
+      shell: process.platform === 'win32',
       detached: process.platform !== 'win32',
     },
   )
 
   let previewOutput = ''
-  preview.stdout.on('data', (chunk) => {
+  preview?.stdout.on('data', (chunk) => {
     previewOutput += chunk.toString()
   })
-  preview.stderr.on('data', (chunk) => {
+  preview?.stderr.on('data', (chunk) => {
     previewOutput += chunk.toString()
   })
 
   let browser
   try {
     console.log('Smoke: waiting for production preview')
-    await waitForPreview(baseUrl, preview)
+    if (preview) await waitForPreview(baseUrl, preview)
+    const shotsDir = path.join(repoRoot, 'output', 'ui-migration', process.env.BVM_SMOKE_URL ? 'online' : 'local')
+    await mkdir(shotsDir, { recursive: true })
     console.log('Smoke: preview ready; launching Chrome')
 
     browser = await chromium.launch({
@@ -226,7 +231,7 @@ async function main() {
     await page.locator('button[type="submit"]').click()
     console.log('Smoke: project created; waiting for editor route')
 
-    const editor = page.locator('[role="application"][data-studio-v2="true"]')
+    const editor = page.locator('[role="application"][data-studio="true"]')
     const loadingError = page.getByText('Something went wrong', { exact: true })
 
     const result = await Promise.race([
@@ -370,7 +375,7 @@ async function main() {
     await desktopPage.locator('#name').fill('Workspace geometry smoke')
     await desktopPage.getByRole('button', { name: 'Video', exact: true }).click()
     await desktopPage.locator('button[type="submit"]').click()
-    await desktopPage.locator('[role="application"][data-studio-v2="true"]').waitFor({
+    await desktopPage.locator('[role="application"][data-studio="true"]').waitFor({
       state: 'visible', timeout: 30_000,
     })
 
@@ -402,11 +407,12 @@ async function main() {
       if (!trimBox || !autoLevelBox || !stillFixedOutputBox ||
         trimBox.width < 80 || trimBox.x < 0 || trimBox.x + trimBox.width > viewport.width + 2 ||
         autoLevelBox.x < 0 || autoLevelBox.x + autoLevelBox.width > viewport.width + 2 ||
-        autoLevelBox.y + autoLevelBox.height > stillFixedOutputBox.y + 2 ||
+        autoLevelBox.y + autoLevelBox.height > programBox.y + programBox.height + 2 ||
         stillFixedOutputBox.y + stillFixedOutputBox.height > viewport.height + 2) {
         throw new Error(`Master plugin/Auto level layout clipped at ${viewport.width}×${viewport.height}: ${JSON.stringify({ trimBox, autoLevelBox, stillFixedOutputBox })}`)
       }
-      await desktopPage.getByRole('tab', { name: 'Color' }).click()
+      await desktopPage.screenshot({ path: path.join(shotsDir, 'master-'+viewport.width+'.png') })
+      await desktopPage.getByRole('tab', { name: 'Nodes' }).click()
       const grade = desktopPage.getByTestId('color-grading-dock')
       await grade.waitFor({ state: 'attached' })
       await grade.scrollIntoViewIfNeeded()
@@ -490,6 +496,7 @@ async function main() {
       { timeout: 20_000 },
     )
 
+    await desktopPage.screenshot({ path: path.join(shotsDir, 'source-trim.png') })
     const trimmedShotText = await firstShotRange.innerText()
     if (trimmedShotText === originalShotText) {
       throw new Error(`Shot review did not persist the Source trim: ${trimmedShotText}`)
@@ -585,7 +592,7 @@ async function main() {
 
     const clipInspector = desktopPage.getByTestId('properties-clip-panel-host')
     await clipInspector.waitFor({ state: 'visible', timeout: 20_000 })
-    await clipInspector.getByRole('tab', { name: 'Effects', exact: true }).click()
+    await clipInspector.getByRole('button', { name: 'Effects', exact: true }).click()
     const effectsSection = clipInspector.getByTestId('effects-section')
     await effectsSection.waitFor({ state: 'visible', timeout: 20_000 })
     await effectsSection.getByRole('button', { name: 'Add Effect', exact: true }).click()
@@ -604,8 +611,10 @@ async function main() {
     }).waitFor({ state: 'visible', timeout: 10_000 })
     await clipInspector.getByRole('button', { name: 'Enable Effect' }).first().click()
     await activeEffectIndicator.waitFor({ state: 'visible', timeout: 10_000 })
+    await desktopPage.setViewportSize({ width: 1600, height: 960 })
+    await desktopPage.screenshot({ path: path.join(shotsDir, 'visual-1600.png') })
 
-    await desktopPage.getByRole('tab', { name: 'Color', exact: true }).click()
+    await desktopPage.getByRole('tab', { name: 'Nodes', exact: true }).click()
     const compareButton = desktopPage.getByRole('button', {
       name: /Before \/ After .*Shift \+ B/i,
     }).first()
@@ -625,6 +634,7 @@ async function main() {
     )
 
     const persistedItemCount = await desktopPage.locator('[data-timeline-item]').count()
+    await desktopPage.screenshot({ path: path.join(shotsDir, 'color-1600.png') })
     await desktopPage.getByRole('button', { name: 'Save project' }).click()
     await desktopPage.getByText('Project saved', { exact: true }).waitFor({
       state: 'visible',
@@ -641,7 +651,7 @@ async function main() {
       .first()
     await desktopCard.waitFor({ state: 'visible', timeout: 20_000 })
     await desktopCard.getByRole('button', { name: 'Open', exact: true }).click()
-    await desktopPage.locator('[role="application"][data-studio-v2="true"]').waitFor({
+    await desktopPage.locator('[role="application"][data-studio="true"]').waitFor({
       state: 'visible',
       timeout: 30_000,
     })
@@ -764,6 +774,8 @@ async function main() {
     await desktopPage.getByRole('button', { name: 'Download', exact: true }).click()
     const download = await downloadPromise
     const suggestedName = download.suggestedFilename()
+    await download.saveAs(path.join(shotsDir, suggestedName))
+    await desktopPage.screenshot({ path: path.join(shotsDir, 'export-complete.png') })
     if (!/\.(mp4|webm|mov|mkv)$/i.test(suggestedName)) {
       throw new Error(`Unexpected exported video filename: ${suggestedName}`)
     }
@@ -778,8 +790,8 @@ async function main() {
   } finally {
     clearTimeout(hardTimeout)
     if (browser) await browser.close().catch(() => {})
-    await stopPreview(preview)
-    if (preview.exitCode && preview.exitCode !== 0 && preview.exitCode !== 143) {
+    if (preview) await stopPreview(preview)
+    if (preview?.exitCode && preview.exitCode !== 0 && preview.exitCode !== 143) {
       process.stderr.write(previewOutput)
     }
   }

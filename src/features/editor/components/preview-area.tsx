@@ -21,6 +21,7 @@ import { ProgramSeekBar } from './program-seek-bar'
 import { Button } from '@/components/ui/button'
 import { ErrorBoundary } from '@/app/error-boundary'
 import { useTranslation } from 'react-i18next'
+import { useSelectionStore } from '@/shared/state/selection'
 import { usePlaybackStore } from '@/shared/state/playback'
 import { ShuttleIndicator } from '@/shared/ui/shuttle-indicator'
 import type { BeatvideoMusicAnalysis } from '@/types/beatvideo'
@@ -191,6 +192,7 @@ export const PreviewArea = memo(function PreviewArea({
   compact = false,
 }: PreviewAreaProps) {
   const { t } = useTranslation()
+  const hasVisualSelection = useSelectionStore((s) => s.selectedItemIds.length > 0)
   const previewContainerRef = useRef<HTMLDivElement>(null)
   const programMonitorRef = useRef<HTMLDivElement>(null)
   const [isProgramFullscreen, setIsProgramFullscreen] = useState(false)
@@ -593,20 +595,23 @@ export const PreviewArea = memo(function PreviewArea({
 
       <div
         ref={programMonitorRef}
-        className={`flex flex-col min-w-0 min-h-0 overflow-hidden bg-background ${hasSidePanels ? '' : 'flex-1'}`}
+        className={`flex flex-col min-w-0 min-h-0 overflow-hidden bg-program-surround ${hasSidePanels ? '' : 'flex-1'}`}
         style={hasSidePanels ? { width: `${programPanelPercent}%` } : undefined}
         role="region"
         aria-label="Program monitor"
         data-program-monitor
       >
-        {hasSidePanels && (
-          <div
-            className="border-b border-border flex items-center px-3 flex-shrink-0"
-            style={{ height: EDITOR_LAYOUT_CSS_VALUES.previewSplitHeaderHeight }}
-          >
-            <span className="text-xs text-muted-foreground">Program</span>
-          </div>
-        )}
+        <div className="flex h-6 shrink-0 items-center gap-3 px-3 bg-program-surround">
+          <span className="text-xs font-medium uppercase">Program</span>
+          {hasVisualSelection && previewChrome === 'edit' && !compact ? (
+            <div className="min-w-0 flex-1 overflow-hidden">
+              <AlignmentToolbar projectSize={{ width, height }} />
+            </div>
+          ) : (
+            <div className="flex-1" />
+          )}
+          {!compact ? <PreviewZoomControls /> : null}
+        </div>
 
         <div className="flex-1 flex flex-col min-w-0 min-h-0">
           <div
@@ -632,10 +637,7 @@ export const PreviewArea = memo(function PreviewArea({
             />
           </div>
 
-          <div
-            className="shrink-0 border-t border-border/70 bg-panel-bg"
-            aria-label="Program progress"
-          >
+          <div className="shrink-0 bg-program-surround" aria-label="Program progress">
             <ProgramSeekBar totalFrames={totalFrames} fps={fps} disabled={isMaskEditingActive} />
           </div>
 
@@ -747,20 +749,6 @@ export const PreviewArea = memo(function PreviewArea({
           ) : (
             <InteractionLockRegion locked={false} overlayClassName="rounded-none">
               <div className="flex flex-col flex-shrink-0">
-                {(workspace === 'edit' || workspace === 'motion') && previewChrome === 'edit' && (
-                  <div
-                    className={
-                      compact
-                        ? 'border-t border-border panel-header flex h-10 items-center justify-start overflow-x-auto px-1'
-                        : 'border-t border-border panel-header flex h-7 items-center justify-center overflow-hidden px-3'
-                    }
-                  >
-                    <div className="flex w-max items-center gap-0">
-                      <AlignmentToolbar projectSize={{ width, height }} compact={compact} />
-                    </div>
-                  </div>
-                )}
-
                 {/* Playback controls row */}
                 {compact ? (
                   <div className="@container flex h-10 items-center justify-center overflow-x-auto border-t border-border panel-header px-1">
@@ -774,7 +762,7 @@ export const PreviewArea = memo(function PreviewArea({
                   </div>
                 ) : (
                   <div
-                    className="@container border-t border-border panel-header relative flex items-center px-3 overflow-hidden"
+                    className="@container bg-program-surround relative flex items-center px-3 overflow-hidden"
                     style={{ height: EDITOR_LAYOUT_CSS_VALUES.previewControlsHeight }}
                   >
                     <div className="flex flex-shrink-0 items-center gap-2">
@@ -783,7 +771,7 @@ export const PreviewArea = memo(function PreviewArea({
                     </div>
 
                     <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                      <div className="flex items-center gap-2.5 pointer-events-auto">
+                      <div className="w-full pointer-events-auto">
                         <PlaybackControls
                           totalFrames={totalFrames}
                           fps={fps}
@@ -791,10 +779,6 @@ export const PreviewArea = memo(function PreviewArea({
                           onToggleFullscreen={toggleProgramFullscreen}
                         />
                       </div>
-                    </div>
-
-                    <div className="ml-auto flex-shrink-0">
-                      <PreviewZoomControls />
                     </div>
                   </div>
                 )}

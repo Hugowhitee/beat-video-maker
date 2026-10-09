@@ -10,12 +10,12 @@ const PRIMARY_WORKSPACES: readonly {
 }[] = [
   { id: 'beat', label: 'Beat' },
   { id: 'edit', label: 'Visual' },
-  { id: 'color', label: 'Color' },
+  { id: 'color', label: 'Nodes' },
   { id: 'master', label: 'Master' },
 ]
 
 /**
- * Producer workflow: Beat → Visual → Color → Master.
+ * Producer workflow: Beat → Visual → Nodes → Master.
  *
  * Motion stays a capability of selected visual items in the Inspector. The
  * internal Motion/composition workspace still exists for composition editing,
@@ -30,13 +30,15 @@ export const WorkspaceSwitcher = memo(function WorkspaceSwitcher({
   const workspace = useEditorStore((s) => s.workspace)
   const setWorkspace = useEditorStore((s) => s.setWorkspace)
   const visualHint =
-    beatvideoMode === 'photo' ? 'Photo, text, motion and effects' : 'Footage, cuts, motion and effects'
+    beatvideoMode === 'photo'
+      ? 'Photo, text, motion and effects'
+      : 'Footage, cuts, motion and effects'
 
   return (
     <div
       role="tablist"
       aria-label={t('toolbar.workspaces.label')}
-      className="studio-workspace-tabs flex h-full items-center gap-[6px]"
+      className="studio-workspace-tabs flex h-full items-center"
     >
       {PRIMARY_WORKSPACES.map(({ id, label }) => {
         const isActive = workspace === id
@@ -46,12 +48,9 @@ export const WorkspaceSwitcher = memo(function WorkspaceSwitcher({
             type="button"
             role="tab"
             aria-selected={isActive}
-            title={id === 'edit' ? visualHint : undefined}
+            title={id === 'edit' ? visualHint : id === 'color' ? 'Grading and effects' : undefined}
             onClick={() => setWorkspace(id)}
-            className="studio-workspace-tab flex h-[30px] items-center justify-center px-3 text-[11px] font-medium"
-            style={{
-              width: id === 'beat' ? 68 : id === 'edit' ? 72 : id === 'color' ? 70 : 78,
-            }}
+            className={`studio-workspace-tab flex items-center justify-center ${isActive ? 'font-semibold' : 'font-medium'}`}
           >
             {label}
           </button>

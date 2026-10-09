@@ -92,7 +92,7 @@ export function PwaInstallPrompt() {
 
   return (
     <aside
-      data-studio-v2="true"
+      data-studio="true"
       aria-label={t('appShell.installPrompt.label')}
       className="fixed bottom-4 left-4 z-50 w-[min(calc(100vw-2rem),340px)] rounded-[3px] border border-border bg-panel-bg p-3 text-foreground shadow-[0_8px_28px_rgba(23,25,23,0.16)]"
     >

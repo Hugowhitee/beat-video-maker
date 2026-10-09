@@ -36,7 +36,7 @@ import { TrashSection } from '@/features/projects/components/trash-section'
 import { WorkspaceIndicator } from '@/features/workspace-gate'
 import { LanguageSwitcher } from '@/shared/ui/language-switcher'
 import { resolveBeatvideoProjectMode } from '@/config/beatvideo'
-import { useStudioV2DocumentTheme } from '@/shared/ui/use-studio-v2-document-theme'
+import { useStudioDocumentTheme } from '@/shared/ui/use-studio-document-theme'
 import {
   DEFAULT_PROJECT_FPS,
   DEFAULT_PROJECT_HEIGHT,
@@ -55,7 +55,7 @@ export const Route = createFileRoute('/projects/')({
 })
 
 function ProjectsIndex() {
-  useStudioV2DocumentTheme()
+  useStudioDocumentTheme()
   const navigate = useNavigate()
   const { t } = useTranslation()
   const [editingProject, setEditingProject] = useState<Project | null>(null)
@@ -263,10 +263,7 @@ function ProjectsIndex() {
 
   return (
     <>
-      <div
-        data-studio-v2="true"
-        className="min-h-dvh overflow-x-hidden bg-background text-foreground"
-      >
+      <div data-studio="true" className="min-h-dvh overflow-x-hidden bg-background text-foreground">
         <div
           className="flex h-12 items-center bg-[#242724] px-[18px] text-[#f6f7f3]"
           data-no-marquee
@@ -356,7 +353,7 @@ function ProjectsIndex() {
       {/* Edit Project Dialog */}
       <Dialog open={!!editingProject} onOpenChange={(open) => !open && setEditingProject(null)}>
         <DialogContent
-          data-studio-v2="true"
+          data-studio="true"
           className="max-w-[920px] w-[95vw] max-h-[90vh] overflow-y-auto bg-background"
         >
           <DialogHeader>
@@ -388,7 +385,7 @@ function ProjectsIndex() {
           if (!open) handleCloseImportDialog()
         }}
       >
-        <DialogContent data-studio-v2="true" className="max-w-md bg-panel-bg">
+        <DialogContent data-studio="true" className="max-w-md bg-panel-bg">
           <DialogHeader>
             <DialogTitle>
               {importError

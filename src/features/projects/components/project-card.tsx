@@ -254,7 +254,7 @@ export function ProjectCard({
                 <MoreVertical className="h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-48" data-studio-v2="true">
+            <DropdownMenuContent align="end" className="w-48" data-studio="true">
               <DropdownMenuItem asChild>
                 <Link
                   to="/editor/$projectId"
@@ -298,7 +298,7 @@ export function ProjectCard({
           if (!open) setClearLocalFiles(false)
         }}
       >
-        <AlertDialogContent onClick={(e) => e.stopPropagation()} data-studio-v2="true">
+        <AlertDialogContent onClick={(e) => e.stopPropagation()} data-studio="true">
           <AlertDialogHeader>
             <AlertDialogTitle className="flex items-center gap-2">
               <AlertTriangle className="h-5 w-5 text-destructive" />

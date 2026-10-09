@@ -91,15 +91,15 @@ export function TimecodeDisplay({ fps, totalFrames }: TimecodeDisplayProps) {
   return (
     <div className="inline-flex items-center gap-2 font-mono text-xs tabular-nums text-muted-foreground">
       <div className="inline-flex items-center gap-1.5" style={{ width: reservedDisplayWidth }}>
-      <span ref={currentTimeRef} className="text-foreground font-semibold">
-        {showFrames
-          ? formatFrameNumber(getVisibleFrame())
-          : formatTimecodeCompact(getVisibleFrame(), fps)}
-      </span>
-      <span className="text-muted-foreground">/</span>
-      <span>
-        {showFrames ? formatFrameNumber(lastFrame) : formatTimecodeCompact(lastFrame, fps)}
-      </span>
+        <span ref={currentTimeRef} className="text-foreground font-normal">
+          {showFrames
+            ? formatFrameNumber(getVisibleFrame())
+            : formatTimecodeCompact(getVisibleFrame(), fps)}
+        </span>
+        <span className="text-muted-foreground">/</span>
+        <span>
+          {showFrames ? formatFrameNumber(lastFrame) : formatTimecodeCompact(lastFrame, fps)}
+        </span>
       </div>
       <TimeDisplayFormatSelect showFrames={showFrames} onChange={setShowFrames} />
     </div>

@@ -10,6 +10,7 @@ interface NumberInputProps {
   /** Called during scrub/drag for live preview. If not provided, onChange is used. */
   onLiveChange?: (value: number) => void
   label?: string
+  ariaLabel?: string
   unit?: string
   min?: number
   max?: number
@@ -41,6 +42,7 @@ export function NumberInput({
   onChange,
   onLiveChange,
   label,
+  ariaLabel,
   unit,
   min,
   max,
@@ -237,6 +239,7 @@ export function NumberInput({
       <input
         ref={inputRef}
         type="text"
+        aria-label={ariaLabel ?? label}
         autoComplete="off"
         data-bwignore="true"
         inputMode="decimal"
